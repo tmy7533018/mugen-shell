@@ -1,0 +1,71 @@
+# ===============================================
+#      Mugen Anonymous Starship Prompt
+#     (No emoji / No username / No hostname)
+# ===============================================
+
+# ──────────────────────────────────────────────
+# FIRST LINE: directory + git + duration
+# ──────────────────────────────────────────────
+
+[username]
+disabled = true
+
+[hostname]
+disabled = true
+
+[directory]
+truncate_to_repo = true
+style = "bold blue"
+read_only = " [RO]"
+format = "[$path]($style) "
+
+[git_branch]
+symbol = ""
+style = "bold red"
+format = "[$branch]($style) "
+
+[git_status]
+style = "yellow"
+format = "[$all_status$ahead_behind]($style)"
+
+[cmd_duration]
+min_time = 500
+format = " [took $duration]($style)"
+style = "cyan"
+
+# ──────────────────────────────────────────────
+# SECOND LINE: time + battery + status + prompt
+# ──────────────────────────────────────────────
+
+[time]
+disabled = false
+time_format = "%H:%M"
+format = "[$time]($style) "
+style = "white"
+
+[battery]
+disabled = false
+format = "[$percentage]($style)"
+
+[[battery.display]]
+threshold = 15
+style = "bold red"
+
+[[battery.display]]
+threshold = 50
+style = "yellow"
+
+[[battery.display]]
+threshold = 80
+style = "green"
+
+[status]
+disabled = false
+format = "[$status]($style) "
+style = "red"
+
+[character]
+format = "$symbol "
+success_symbol = "[>>>](bold blue)"
+error_symbol  = "[✘](bold red)"
+disabled = false

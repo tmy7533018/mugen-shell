@@ -1,0 +1,20 @@
+#!/bin/sh
+cd ~
+# user preferred settings
+
+#cursor size
+export XCURSOR_SIZE=24
+
+# text editor
+export EDITOR=$HOME/.local/bin/cursor
+
+#browser
+export BROWSER=zen-browser
+
+#terminal
+export TERM=kitty
+
+#mail
+#export MAIL=thunderbird
+
+# check /usr/local/bin/hyprstart 

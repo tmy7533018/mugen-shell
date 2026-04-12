@@ -1,0 +1,14 @@
+{
+  "autoCloseTimer": {
+    "interval": 5000,
+    "enabled": true
+  },
+  "barBackground": {
+    "gradientEnabled": true
+  },
+  "animations": {
+    "speed": "normal",
+    "durationMultiplier": 1.0
+  }
+}
+

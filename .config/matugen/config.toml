@@ -1,0 +1,31 @@
+[config.wallpaper]
+command = "swww"
+arguments = ["img", "--transition-type", "any", "--transition-fps", "60"]
+set = false
+
+[templates.hyprland]
+input_path  = '~/.config/matugen/templates/hyprland-colors.conf'
+output_path = '~/.config/hypr/colors.conf'
+post_hook   = 'hyprctl reload'
+
+[templates.gtk3]
+input_path  = '~/.config/matugen/templates/gtk-colors.css'
+output_path = '~/.config/gtk-3.0/colors.css'
+
+[templates.gtk4]
+input_path  = '~/.config/matugen/templates/gtk-colors.css'
+output_path = '~/.config/gtk-4.0/colors.css'
+
+[templates.kitty]
+input_path  = '~/.config/matugen/templates/kitty-colors.conf'
+output_path = '~/.config/kitty/colors.conf'
+post_hook   = "kill -SIGUSR1 $(pidof kitty)"
+
+[templates.cava]
+input_path  = '~/.config/matugen/templates/matugen-cava'
+output_path = '~/.config/cava/themes/colors.conf'
+post_hook   = "pkill -USR1 cava"
+
+[templates.quickshell-json]
+input_path = '~/.config/matugen/templates/quickshell-colors.json'
+output_path = '~/.config/quickshell/mugen-shell/.cache/colors/Colors.json'

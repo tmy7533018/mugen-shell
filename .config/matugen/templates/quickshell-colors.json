@@ -1,0 +1,13 @@
+{
+    "colors": {
+        "primary": {
+            "hex": "{{ colors.primary.default.hex }}"
+        },
+        "secondary": {
+            "hex": "{{ colors.secondary.default.hex }}"
+        },
+        "tertiary": {
+            "hex": "{{ colors.tertiary.default.hex }}"
+        }
+    }
+}
