@@ -95,34 +95,34 @@ is_video() {
 }
 
 swww_ready() {
-  swww query >/dev/null 2>&1
+  awww query >/dev/null 2>&1
 }
 
 start_swww() {
-  setsid nohup swww-daemon --format xrgb >/dev/null 2>&1 &
+  setsid nohup awww-daemon --format xrgb --no-cache >/dev/null 2>&1 &
 }
 
 ensure_swww() {
-  debug_log "ensure_swww: checking swww-daemon status"
+  debug_log "ensure_swww: checking awww-daemon status"
   if ! swww_ready; then
-    debug_log "ensure_swww: swww-daemon not ready, starting..."
-    pkill -x swww-daemon >/dev/null 2>&1 || true
+    debug_log "ensure_swww: awww-daemon not ready, starting..."
+    pkill -x awww-daemon >/dev/null 2>&1 || true
     start_swww
   fi
 
   for _ in {1..60}; do
-    swww_ready && { debug_log "ensure_swww: swww-daemon ready"; return 0; }
+    swww_ready && { debug_log "ensure_swww: awww-daemon ready"; return 0; }
     sleep 0.05
   done
 
-  echo "swww-daemon not ready" >&2
-  debug_log "ensure_swww: FAILED - swww-daemon not ready"
+  echo "awww-daemon not ready" >&2
+  debug_log "ensure_swww: FAILED - awww-daemon not ready"
   return 1
 }
 
 ensure_swww_top_if_mpvpaper() {
   if pgrep -x mpvpaper >/dev/null 2>&1; then
-    pkill -x swww-daemon >/dev/null 2>&1 || true
+    pkill -x awww-daemon >/dev/null 2>&1 || true
     start_swww
     for _ in {1..60}; do
       swww_ready && return 0
@@ -136,11 +136,11 @@ ensure_swww_top_if_mpvpaper() {
 swww_set_no_transition() {
   ensure_swww || return 1
 
-  if swww img --help 2>/dev/null | grep -q -- '--transition-type'; then
-    swww img --resize crop "$1" --transition-type none --transition-duration 0 --transition-fps 1 2>/dev/null \
-    || swww img --resize crop "$1" --transition-duration 0 --transition-fps 1
+  if awww img --help 2>/dev/null | grep -q -- '--transition-type'; then
+    awww img --resize crop "$1" --transition-type none --transition-duration 0 --transition-fps 1 2>/dev/null \
+    || awww img --resize crop "$1" --transition-duration 0 --transition-fps 1
   else
-    swww img --resize crop "$1" --transition-duration 0 --transition-fps 1
+    awww img --resize crop "$1" --transition-duration 0 --transition-fps 1
   fi
 }
 
@@ -259,13 +259,13 @@ if is_image "$WALLPAPER_ABS"; then
   fi
 
   ensure_swww
-  debug_log "Running swww img with TRANS_OPTS"
-  if swww_output=$(swww img --resize crop "$WALLPAPER_ABS" "${TRANS_OPTS[@]}" 2>&1); then
+  debug_log "Running awww img with TRANS_OPTS"
+  if swww_output=$(awww img --resize crop "$WALLPAPER_ABS" "${TRANS_OPTS[@]}" 2>&1); then
     echo "$swww_output" >> "$DEBUG_LOG"
-    debug_log "swww img: success"
+    debug_log "awww img: success"
   else
     echo "$swww_output" >> "$DEBUG_LOG"
-    debug_log "swww img: FAILED with exit code $?"
+    debug_log "awww img: FAILED with exit code $?"
   fi
 
   sleep "$TRANS_SEC"
@@ -300,11 +300,11 @@ elif is_video "$WALLPAPER_ABS"; then
 
   ensure_swww
   if [[ -f "$THUMB_FILE" ]]; then
-    swww img --resize crop "$THUMB_FILE" "${TRANS_OPTS[@]}"
+    awww img --resize crop "$THUMB_FILE" "${TRANS_OPTS[@]}"
   else
     if command -v ffmpeg >/dev/null 2>&1; then
       ffmpeg -v error -f lavfi -i color=c=#222222:s=1920x1080 -frames:v 1 -y "$THUMB_FILE" >/dev/null 2>&1 || true
-      [[ -f "$THUMB_FILE" ]] && swww img --resize crop "$THUMB_FILE" "${TRANS_OPTS[@]}"
+      [[ -f "$THUMB_FILE" ]] && awww img --resize crop "$THUMB_FILE" "${TRANS_OPTS[@]}"
     fi
   fi
 
