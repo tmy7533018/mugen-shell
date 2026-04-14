@@ -27,6 +27,12 @@ Hyprland keybinds and shell control are managed via **[mugen-ctl](https://github
 
 ---
 
+## AI Assistant
+
+Local AI chat panel (`Super + A`) powered by **[mugen-ai](https://github.com/tmy7533018/mugen-ai)** — an optional Go server that bridges mugen-shell to a local [Ollama](https://ollama.com) model.
+
+---
+
 ## Preview
 
 [TikTok demo — @ripnk6498](https://www.tiktok.com/@ripnk6498/video/7579183858038492433?is_from_webapp=1&sender_device=pc)
@@ -44,6 +50,7 @@ Hyprland keybinds and shell control are managed via **[mugen-ctl](https://github
 - App Launcher / Window Switcher
 - Screenshot gallery
 - Power menu
+- AI chat panel (via mugen-ai + Ollama)
 
 ---
 
