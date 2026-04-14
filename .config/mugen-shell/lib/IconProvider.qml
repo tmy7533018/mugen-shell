@@ -48,6 +48,9 @@ QtObject {
 
     readonly property string clipboardSvg: basePath + "/clipboard.svg"
 
+    readonly property string aiSvg: basePath + "/ai.svg"
+    readonly property string trashSvg: basePath + "/trash.svg"
+
     readonly property string appLauncherSvg: basePath + "/app-launcher.svg"
     readonly property string clockSvg: basePath + "/clock.svg"
     readonly property string searchSvg: basePath + "/search.svg"
@@ -70,6 +73,7 @@ QtObject {
         property var notification: ({ type: "svg", value: notificationSvg })
         property var wallpaper: ({ type: "svg", value: wallpaperSvg })
         property var clipboard: ({ type: "svg", value: clipboardSvg })
+        property var ai: ({ type: "svg", value: aiSvg })
         property var eyeOpen: ({ type: "svg", value: basePath + "/eye-open.svg" })
         property var eyeClosed: ({ type: "svg", value: basePath + "/eye-closed.svg" })
         property var screenshot: ({ type: "svg", value: basePath + "/screenshot.svg" })

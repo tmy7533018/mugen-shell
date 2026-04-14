@@ -588,6 +588,84 @@ RowLayout {
             z: 1
         }
     }
-    
+
+    Separator {}
+
+    Item {
+        id: aiContainer
+        implicitWidth: scaled(24)
+        implicitHeight: scaled(24)
+        Layout.alignment: Qt.AlignVCenter
+        Layout.leftMargin: scaled(4)
+
+        function generateRandomColor() {
+            let hue = (Date.now() % 360) + Math.random() * 360
+            if (hue > 360) hue = hue % 360
+            let saturation = 0.3 + Math.random() * 0.4
+            let value = 0.8 + Math.random() * 0.2
+            return Qt.hsva(hue / 360, saturation, value, 0.3)
+        }
+
+        property color blobColor: generateRandomColor()
+
+        Common.BlobEffect {
+            anchors.fill: parent
+            anchors.leftMargin: scaled(-20)
+            anchors.rightMargin: scaled(-20)
+            anchors.topMargin: scaled(-14)
+            anchors.bottomMargin: scaled(-14)
+            blobColor: aiContainer.blobColor
+            layers: 3
+            waveAmplitude: 2.0
+            baseOpacity: 0.4
+            animationSpeed: 0.08
+            pointCount: 12
+            z: -1
+            opacity: aiMouseArea.containsMouse ? 1.0 : 0.0
+            visible: opacity > 0.01
+            running: aiMouseArea.containsMouse
+
+            Behavior on opacity {
+                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+            }
+        }
+
+        UI.SvgIcon {
+            id: aiIconSvg
+            anchors.centerIn: parent
+            width: scaled(24)
+            height: scaled(24)
+            source: root.icons ? root.icons.aiSvg : ""
+            color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+            opacity: aiMouseArea.containsMouse ? 1.0 : 0.6
+            scale: aiMouseArea.containsMouse ? 1.3 : 1.0
+
+            Behavior on opacity {
+                NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+            }
+
+            Behavior on scale {
+                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+            }
+        }
+
+        MouseArea {
+            id: aiMouseArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                if (root.modeManager) {
+                    root.modeManager.switchMode("ai")
+                }
+            }
+            onContainsMouseChanged: {
+                if (containsMouse) {
+                    aiContainer.blobColor = aiContainer.generateRandomColor()
+                }
+            }
+        }
+    }
+
 }
 

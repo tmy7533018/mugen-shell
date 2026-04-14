@@ -391,6 +391,16 @@ PanelWindow {
         icons: icons
     }
 
+    Content.AiAssistantContent {
+        id: aiAssistantContent
+        anchors.fill: parent
+        z: 2
+        visible: modeManager.isMode("ai")
+        modeManager: modeManager
+        theme: theme
+        icons: icons
+    }
+
     Content.AppLauncherContent {
         icons: icons
         id: appLauncherContent
