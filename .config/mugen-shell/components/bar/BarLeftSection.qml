@@ -596,7 +596,8 @@ RowLayout {
         implicitWidth: scaled(24)
         implicitHeight: scaled(24)
         Layout.alignment: Qt.AlignVCenter
-        Layout.leftMargin: scaled(4)
+        Layout.leftMargin: 0
+        Layout.rightMargin: 0
 
         function generateRandomColor() {
             let hue = (Date.now() % 360) + Math.random() * 360

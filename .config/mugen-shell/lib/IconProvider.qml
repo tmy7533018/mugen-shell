@@ -12,7 +12,6 @@ QtObject {
     readonly property string basePath: Quickshell.shellDir + "/assets/icons"
 
     readonly property string circleSvg: basePath + "/circle.svg"
-    readonly property string starSvg: basePath + "/circle.svg"
     readonly property string lockSvg: basePath + "/lock.svg"
     readonly property string logoutSvg: basePath + "/logout.svg"
     readonly property string sleepSvg: basePath + "/sleep.svg"
@@ -59,7 +58,7 @@ QtObject {
     readonly property string refreshOutlineSvg: basePath + "/refresh-outline.svg"
 
     readonly property var iconData: QtObject {
-        property var menu: ({ type: usePowerIcons ? "svg" : "text", value: usePowerIcons ? starSvg : "⚡" })
+        property var menu: ({ type: usePowerIcons ? "svg" : "text", value: usePowerIcons ? circleSvg : "⚡" })
         property var lock: ({ type: usePowerIcons ? "svg" : "text", value: usePowerIcons ? lockSvg : "🔒" })
         property var logout: ({ type: usePowerIcons ? "svg" : "text", value: usePowerIcons ? logoutSvg : "🚪" })
         property var sleep: ({ type: usePowerIcons ? "svg" : "text", value: usePowerIcons ? sleepSvg : "😴" })
