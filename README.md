@@ -31,6 +31,15 @@ Hyprland keybinds and shell control are managed via **[mugen-ctl](https://github
 
 Local AI chat panel (`Super + A`) powered by **[mugen-ai](https://github.com/tmy7533018/mugen-ai)** — an optional Go server that bridges mugen-shell to a local [Ollama](https://ollama.com) model.
 
+- Streaming SSE responses with stop button
+- Runtime model switching from the UI
+- Welcome screen with suggestion chips
+- Multiline input (Shift + Enter)
+- Copy button per message
+- Smart auto-scroll
+- BlobEffect breathing indicator
+- Configurable personality and real-time context injection (date/time, weather)
+
 ---
 
 ## Preview
@@ -43,14 +52,16 @@ Local AI chat panel (`Super + A`) powered by **[mugen-ai](https://github.com/tmy
 
 - Wallpaper-driven Material You color scheme via Matugen
 - Video and image wallpaper switching (mpvpaper + swww)
-- Music player integration (playerctl / MPRIS)
+- Music player integration (playerctl / MPRIS) with YouTube thumbnail fallback
 - Cava audio visualizer
-- Notification center / Clipboard history
+- Notification center
+- Clipboard history (`Super + V`) with item limit
 - WiFi / Bluetooth / IME management
 - App Launcher / Window Switcher
+- Screenshot capture with clipboard copy (`Super + F12`)
 - Screenshot gallery
 - Power menu
-- AI chat panel (via mugen-ai + Ollama)
+- AI chat panel (`Super + A`) — streaming, model switching, multiline input, BlobEffect indicator
 
 ---
 
