@@ -29,8 +29,10 @@ QtObject {
         selectProcess.running = true
     }
     
+    property int maxItems: 50
+
     property Process historyProcess: Process {
-        command: ["cliphist", "list"]
+        command: ["bash", "-c", "cliphist list | head -n " + root.maxItems]
         running: false
         property var lines: []
         
