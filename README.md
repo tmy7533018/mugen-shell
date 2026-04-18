@@ -1,6 +1,6 @@
 # mugen-shell
 
-![Mugen Shell Banner](.config/mugen-shell/assets/branding/mugen-shell-banner.png)
+https://github.com/user-attachments/assets/c82fab1d-ac78-4d50-b770-a7dbd00ec94f
 
 Built with **Quickshell + Hyprland**.
 
