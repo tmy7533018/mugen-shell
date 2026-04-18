@@ -9,3 +9,6 @@ output_path="$OUTPUT_DIR/$filename"
 
 grim -g "$(slurp)" "$output_path"
 
+wl-copy < "$output_path"
+echo "$output_path"
+
