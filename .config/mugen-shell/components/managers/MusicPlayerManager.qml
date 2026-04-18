@@ -100,11 +100,17 @@ QtObject {
         }
     }
 
+    function extractYoutubeThumbnail(url) {
+        if (!url) return ""
+        var match = url.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/)|youtu\.be\/|music\.youtube\.com\/watch\?.*v=)([\w-]{11})/)
+        return match ? "https://img.youtube.com/vi/" + match[1] + "/mqdefault.jpg" : ""
+    }
+
     property Process metadataProcess: Process {
         running: false
         command: activePlayer !== ""
             ? ["playerctl", "-p", activePlayer, "metadata",
-               "--format", "{{title}}|||{{artist}}|||{{album}}|||{{mpris:artUrl}}|||{{status}}"]
+               "--format", "{{title}}|||{{artist}}|||{{album}}|||{{mpris:artUrl}}|||{{status}}|||{{xesam:url}}"]
             : []
 
         property string outputData: ""
@@ -122,7 +128,12 @@ QtObject {
                     let newAlbum = parts[2] ? parts[2].trim() : ""
                     let newArtUrl = parts[3] ? parts[3].trim() : ""
                     let newStatus = parts[4] ? parts[4].trim() : "Stopped"
-                    
+                    let newUrl = (parts.length >= 6 && parts[5]) ? parts[5].trim() : ""
+
+                    if (newArtUrl === "" && newUrl !== "") {
+                        newArtUrl = musicManager.extractYoutubeThumbnail(newUrl)
+                    }
+
                     // Fallback: some players only expose xesam:title
                     if (newTitle === "" || newTitle === "Unknown") {
                         if (!altMetadataProcess.running) {
@@ -131,7 +142,7 @@ QtObject {
                             })
                         }
                     }
-                    
+
                     musicManager.title = newTitle || ""
                     musicManager.artist = newArtist || ""
                     musicManager.album = newAlbum || ""

@@ -139,27 +139,24 @@ Item {
         colorExtractorProcess.running = true
     }
     
+    property bool hasArt: root.musicManager && root.musicManager.artUrl !== ""
+
     Rectangle {
         id: artBackground
         anchors.centerIn: parent
         width: modeManager.scale(80)
         height: modeManager.scale(80)
-        radius: width / 2
+        radius: root.hasArt ? modeManager.scale(12) : width / 2
         color: "transparent"
         border.width: 0
         z: 1
-        
-        property real targetScale: 1.0 + (root.cavaManager ? root.cavaManager.audioLevel * 0.15 : 0)
-        
-        scale: targetScale
-        
-        Behavior on targetScale {
-            NumberAnimation { 
-                duration: 150
-                easing.type: Easing.OutCubic 
-            }
+
+        Behavior on radius {
+            NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
         }
-        
+
+        scale: 1.0
+
         Image {
             id: albumArt
             anchors.fill: parent
@@ -168,7 +165,7 @@ Item {
             visible: false
             asynchronous: true
             cache: true
-            
+
             onStatusChanged: {
                 if (status === Image.Ready && source && source !== "") {
                     Qt.callLater(() => {
@@ -176,22 +173,22 @@ Item {
                     })
                 }
             }
-            
+
             onSourceChanged: {
             }
         }
-        
+
         OpacityMask {
             anchors.fill: albumArt
             source: albumArt
             maskSource: Rectangle {
                 width: albumArt.width
                 height: albumArt.height
-                radius: width / 2
+                radius: artBackground.radius
             }
-            visible: root.musicManager && root.musicManager.artUrl !== ""
+            visible: root.hasArt
         }
-        
+
         UI.SvgIcon {
             anchors.centerIn: parent
             width: modeManager.scale(48)
@@ -199,7 +196,7 @@ Item {
             source: root.icons ? root.icons.musicSvg : ""
             color: root.theme ? root.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.60)
             opacity: 0.5
-            visible: !root.musicManager || root.musicManager.artUrl === ""
+            visible: !root.hasArt
         }
     }
     
