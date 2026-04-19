@@ -24,6 +24,7 @@ FocusScope {
     property var messages: []
     property bool streaming: false
     property bool aiAvailable: false
+    property bool hasModel: false
     property bool healthChecked: false
     property bool userScrolled: false
     property string currentModel: ""
@@ -278,7 +279,7 @@ FocusScope {
                         width: 32
                         height: 32
                         radius: width / 2
-                        visible: root.aiAvailable
+                        visible: root.aiAvailable && root.hasModel
                         color: Qt.rgba(0.75, 0.45, 0.45, clearMouse.containsMouse ? 0.4 : 0.3)
 
                         Behavior on color {
@@ -356,12 +357,45 @@ FocusScope {
                 }
             }
 
+            // No models configured state
+            Item {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: modeManager.scale(600)
+                Layout.preferredHeight: modeManager.scale(260)
+                visible: root.aiAvailable && !root.hasModel
+
+                ColumnLayout {
+                    anchors.centerIn: parent
+                    spacing: modeManager.scale(10)
+
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: "No models available"
+                        color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                        font.pixelSize: modeManager.scale(15)
+                        font.weight: Font.Medium
+                        font.family: "M PLUS 2"
+                        font.letterSpacing: 0.5
+                    }
+
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        horizontalAlignment: Text.AlignHCenter
+                        text: "Pull an Ollama model (e.g. `ollama pull gemma3:4b`)\nor configure Gemini in ~/.config/mugen-ai/config.toml"
+                        color: root.theme ? root.theme.textFaint : Qt.rgba(0.72, 0.72, 0.82, 0.70)
+                        font.pixelSize: modeManager.scale(12)
+                        font.family: "M PLUS 2"
+                        lineHeight: 1.4
+                    }
+                }
+            }
+
             // Welcome state
             Item {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.preferredWidth: modeManager.scale(600)
                 Layout.preferredHeight: modeManager.scale(260)
-                visible: root.aiAvailable && root.messages.length === 0
+                visible: root.aiAvailable && root.hasModel && root.messages.length === 0
 
                 ColumnLayout {
                     anchors.centerIn: parent
@@ -442,7 +476,7 @@ FocusScope {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.preferredWidth: modeManager.scale(600)
                 Layout.preferredHeight: modeManager.scale(260)
-                visible: root.aiAvailable && root.messages.length > 0
+                visible: root.aiAvailable && root.hasModel && root.messages.length > 0
                 clip: true
                 spacing: modeManager.scale(8)
                 model: root.messages
@@ -638,7 +672,7 @@ FocusScope {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.preferredWidth: modeManager.scale(600)
                 Layout.preferredHeight: Math.min(Math.max(inputField.contentHeight + modeManager.scale(16), modeManager.scale(40)), modeManager.scale(120))
-                visible: root.aiAvailable
+                visible: root.aiAvailable && root.hasModel
                 color: "transparent"
                 border.color: root.theme ? root.theme.surfaceBorder : Qt.rgba(0.70, 0.65, 0.90, 0.3)
                 border.width: 2
@@ -821,7 +855,8 @@ FocusScope {
             if (exitCode === 0) {
                 try {
                     let obj = JSON.parse(buf)
-                    if (obj.model) root.currentModel = obj.model
+                    root.currentModel = obj.model || ""
+                    root.hasModel = obj.status === "ok"
                 } catch (e) {}
                 modelsProcess.running = true
             }
