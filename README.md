@@ -29,7 +29,7 @@ Hyprland keybinds and shell control are managed via **[mugen-ctl](https://github
 
 ## AI Assistant
 
-Local AI chat panel (`Super + A`) powered by **[mugen-ai](https://github.com/tmy7533018/mugen-ai)** — an optional Go server that bridges mugen-shell to a local [Ollama](https://ollama.com) model.
+AI chat panel (`Super + A`) powered by **[mugen-ai](https://github.com/tmy7533018/mugen-ai)** — an optional Go server supporting local [Ollama](https://ollama.com) models and Google Gemini.
 
 - Streaming SSE responses with stop button
 - Runtime model switching from the UI
