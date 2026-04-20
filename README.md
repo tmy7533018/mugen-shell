@@ -14,8 +14,7 @@ Built with **Quickshell + Hyprland**.
 | WM | Hyprland |
 | Shell | Zsh + Starship |
 | Terminal | Kitty |
-| Browser | Zen Browser |
-| Shell UI | QuickShell |
+| Desktop Shell | Quickshell |
 | Wallpaper | swww / mpvpaper |
 | Colors | Matugen (Material You) |
 
@@ -54,15 +53,19 @@ AI chat panel (`Super + A`) powered by **[mugen-ai](https://github.com/tmy753301
 
 - Wallpaper-driven Material You color scheme via Matugen
 - Video and image wallpaper switching (mpvpaper + swww)
+- Wallpaper picker UI
 - Music player integration (playerctl / MPRIS) with YouTube thumbnail fallback
 - Cava audio visualizer
 - Notification center
+- Calendar widget
 - Clipboard history (`Super + V`) with item limit
 - WiFi / Bluetooth / IME management
+- Idle inhibitor toggle
 - App Launcher / Window Switcher
 - Screenshot capture with clipboard copy (`Super + F12`)
 - Screenshot gallery
 - Power menu
+- In-shell settings panel
 
 ---
 
