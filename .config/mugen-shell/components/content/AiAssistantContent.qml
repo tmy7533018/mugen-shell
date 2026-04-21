@@ -911,6 +911,10 @@ FocusScope {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("ai", root)
+            if (modeManager.isMode("ai")) {
+                healthProcess.running = true
+                focusTimer.restart()
+            }
         }
     }
 }

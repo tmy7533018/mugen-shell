@@ -361,144 +361,274 @@ PanelWindow {
         visible: opacity > 0.01
     }
 
-    Content.PowerMenuContent {
-        id: powerMenuContent
+    Loader {
+        id: powerMenuLoader
         anchors.fill: parent
         z: 2
-        visible: modeManager.isMode("powermenu")
-        modeManager: modeManager
-        icons: icons
+        property var modeManagerRef: modeManager
+        property var iconsRef: icons
+        property bool everLoaded: false
+        active: modeManagerRef.isMode("powermenu") || everLoaded
+        onLoaded: everLoaded = true
+        sourceComponent: Content.PowerMenuContent {
+            anchors.fill: parent
+            visible: powerMenuLoader.modeManagerRef.isMode("powermenu")
+            modeManager: powerMenuLoader.modeManagerRef
+            icons: powerMenuLoader.iconsRef
+        }
     }
 
-    Content.CalendarContent {
-        id: calendarContent
+    Loader {
+        id: calendarLoader
         anchors.fill: parent
         z: 2
-        visible: modeManager.isMode("calendar")
-        modeManager: modeManager
-        theme: theme
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property bool everLoaded: false
+        active: modeManagerRef.isMode("calendar") || everLoaded
+        onLoaded: everLoaded = true
+        sourceComponent: Content.CalendarContent {
+            anchors.fill: parent
+            visible: calendarLoader.modeManagerRef.isMode("calendar")
+            modeManager: calendarLoader.modeManagerRef
+            theme: calendarLoader.themeRef
+        }
     }
 
-    Content.MusicPlayerContent {
-        id: musicPlayerContent
+    Loader {
+        id: musicPlayerLoader
         anchors.fill: parent
         z: 2
-        visible: modeManager.isMode("music")
-        modeManager: modeManager
-        musicManager: musicPlayerManager
-        cavaManager: cavaManager
-        theme: theme
-        icons: icons
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var iconsRef: icons
+        property var musicManagerRef: musicPlayerManager
+        property var cavaManagerRef: cavaManager
+        property bool everLoaded: false
+        active: modeManagerRef.isMode("music") || everLoaded
+        onLoaded: everLoaded = true
+        sourceComponent: Content.MusicPlayerContent {
+            anchors.fill: parent
+            visible: musicPlayerLoader.modeManagerRef.isMode("music")
+            modeManager: musicPlayerLoader.modeManagerRef
+            musicManager: musicPlayerLoader.musicManagerRef
+            cavaManager: musicPlayerLoader.cavaManagerRef
+            theme: musicPlayerLoader.themeRef
+            icons: musicPlayerLoader.iconsRef
+        }
     }
 
-    Content.AiAssistantContent {
-        id: aiAssistantContent
+    Loader {
+        id: aiAssistantLoader
         anchors.fill: parent
         z: 2
-        visible: modeManager.isMode("ai")
-        modeManager: modeManager
-        theme: theme
-        icons: icons
+
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var iconsRef: icons
+
+        property bool everLoaded: false
+        active: modeManagerRef.isMode("ai") || everLoaded
+        onLoaded: everLoaded = true
+
+        sourceComponent: Content.AiAssistantContent {
+            anchors.fill: parent
+            visible: aiAssistantLoader.modeManagerRef.isMode("ai")
+            modeManager: aiAssistantLoader.modeManagerRef
+            theme: aiAssistantLoader.themeRef
+            icons: aiAssistantLoader.iconsRef
+        }
     }
 
-    Content.AppLauncherContent {
-        icons: icons
-        id: appLauncherContent
+    Loader {
+        id: appLauncherLoader
         anchors.fill: parent
         z: 2
-        visible: modeManager.isMode("launcher")
-        modeManager: modeManager
-        theme: theme
-        typo: typo
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var iconsRef: icons
+        property var typoRef: typo
+        property bool everLoaded: false
+        active: modeManagerRef.isMode("launcher") || everLoaded
+        onLoaded: everLoaded = true
+        sourceComponent: Content.AppLauncherContent {
+            anchors.fill: parent
+            visible: appLauncherLoader.modeManagerRef.isMode("launcher")
+            modeManager: appLauncherLoader.modeManagerRef
+            theme: appLauncherLoader.themeRef
+            icons: appLauncherLoader.iconsRef
+            typo: appLauncherLoader.typoRef
+        }
     }
 
-    Content.VolumeContent {
-        id: volumeContent
+    Loader {
+        id: volumeLoader
         anchors.fill: parent
         z: 2
-        visible: modeManager.isMode("volume")
-        modeManager: modeManager
-        audioManager: audioManager
-        cavaManager: cavaManager
-        musicPlayerManager: musicPlayerManager
-        theme: theme
-        typo: typo
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var typoRef: typo
+        property var audioManagerRef: audioManager
+        property var cavaManagerRef: cavaManager
+        property var musicPlayerManagerRef: musicPlayerManager
+        property bool everLoaded: false
+        active: modeManagerRef.isMode("volume") || everLoaded
+        onLoaded: everLoaded = true
+        sourceComponent: Content.VolumeContent {
+            anchors.fill: parent
+            visible: volumeLoader.modeManagerRef.isMode("volume")
+            modeManager: volumeLoader.modeManagerRef
+            audioManager: volumeLoader.audioManagerRef
+            cavaManager: volumeLoader.cavaManagerRef
+            musicPlayerManager: volumeLoader.musicPlayerManagerRef
+            theme: volumeLoader.themeRef
+            typo: volumeLoader.typoRef
+        }
     }
 
-    Content.NotificationContent {
-        id: notificationContent
+    Loader {
+        id: notificationLoader
         anchors.fill: parent
         z: 2
-        visible: modeManager.isMode("notification")
-        modeManager: modeManager
-        notificationManager: notificationManager
-        theme: theme
-        icons: icons
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var iconsRef: icons
+        property var notificationManagerRef: notificationManager
+        property bool everLoaded: false
+        active: modeManagerRef.isMode("notification") || everLoaded
+        onLoaded: everLoaded = true
+        sourceComponent: Content.NotificationContent {
+            anchors.fill: parent
+            visible: notificationLoader.modeManagerRef.isMode("notification")
+            modeManager: notificationLoader.modeManagerRef
+            notificationManager: notificationLoader.notificationManagerRef
+            theme: notificationLoader.themeRef
+            icons: notificationLoader.iconsRef
+        }
     }
 
-    Content.WiFiContent {
-        id: wifiContent
+    Loader {
+        id: wifiLoader
         anchors.fill: parent
         z: 2
-        visible: modeManager.isMode("wifi")
-        modeManager: modeManager
-        wifiManager: wifiManager
-        theme: theme
-        icons: icons
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var iconsRef: icons
+        property var wifiManagerRef: wifiManager
+        property bool everLoaded: false
+        active: modeManagerRef.isMode("wifi") || everLoaded
+        onLoaded: everLoaded = true
+        sourceComponent: Content.WiFiContent {
+            anchors.fill: parent
+            visible: wifiLoader.modeManagerRef.isMode("wifi")
+            modeManager: wifiLoader.modeManagerRef
+            wifiManager: wifiLoader.wifiManagerRef
+            theme: wifiLoader.themeRef
+            icons: wifiLoader.iconsRef
+        }
     }
 
-    Content.BluetoothContent {
-        id: bluetoothContent
+    Loader {
+        id: bluetoothLoader
         anchors.fill: parent
         z: 2
-        visible: modeManager.isMode("bluetooth")
-        modeManager: modeManager
-        bluetoothManager: bluetoothManager
-        theme: theme
-        icons: icons
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var iconsRef: icons
+        property var bluetoothManagerRef: bluetoothManager
+        property bool everLoaded: false
+        active: modeManagerRef.isMode("bluetooth") || everLoaded
+        onLoaded: everLoaded = true
+        sourceComponent: Content.BluetoothContent {
+            anchors.fill: parent
+            visible: bluetoothLoader.modeManagerRef.isMode("bluetooth")
+            modeManager: bluetoothLoader.modeManagerRef
+            bluetoothManager: bluetoothLoader.bluetoothManagerRef
+            theme: bluetoothLoader.themeRef
+            icons: bluetoothLoader.iconsRef
+        }
     }
 
-    Content.WallpaperContent {
-        id: wallpaperContent
+    Loader {
+        id: wallpaperLoader
         anchors.fill: parent
         z: 2
-        visible: modeManager.isMode("wallpaper")
-        modeManager: modeManager
-        wallpaperManager: wallpaperManager
-        theme: theme
-        icons: icons
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var iconsRef: icons
+        property var wallpaperManagerRef: wallpaperManager
+        property bool everLoaded: false
+        active: modeManagerRef.isMode("wallpaper") || everLoaded
+        onLoaded: everLoaded = true
+        sourceComponent: Content.WallpaperContent {
+            anchors.fill: parent
+            visible: wallpaperLoader.modeManagerRef.isMode("wallpaper")
+            modeManager: wallpaperLoader.modeManagerRef
+            wallpaperManager: wallpaperLoader.wallpaperManagerRef
+            theme: wallpaperLoader.themeRef
+            icons: wallpaperLoader.iconsRef
+        }
     }
 
-    Content.SettingsContent {
-        id: settingsContent
+    Loader {
+        id: settingsLoader
         anchors.fill: parent
         z: 2
-        visible: modeManager.isMode("settings")
-        modeManager: modeManager
-        theme: theme
-        icons: icons
-        settingsManager: settingsManager
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var iconsRef: icons
+        property var settingsManagerRef: settingsManager
+        property bool everLoaded: false
+        active: modeManagerRef.isMode("settings") || everLoaded
+        onLoaded: everLoaded = true
+        sourceComponent: Content.SettingsContent {
+            anchors.fill: parent
+            visible: settingsLoader.modeManagerRef.isMode("settings")
+            modeManager: settingsLoader.modeManagerRef
+            theme: settingsLoader.themeRef
+            icons: settingsLoader.iconsRef
+            settingsManager: settingsLoader.settingsManagerRef
+        }
     }
 
-    Content.ScreenshotGalleryContent {
-        id: screenshotGalleryContent
+    Loader {
+        id: screenshotGalleryLoader
         anchors.fill: parent
         z: 2
-        visible: modeManager.isMode("screenshot-gallery")
-        modeManager: modeManager
-        screenshotManager: screenshotManager
-        theme: theme
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var screenshotManagerRef: screenshotManager
+        property bool everLoaded: false
+        active: modeManagerRef.isMode("screenshot-gallery") || everLoaded
+        onLoaded: everLoaded = true
+        sourceComponent: Content.ScreenshotGalleryContent {
+            anchors.fill: parent
+            visible: screenshotGalleryLoader.modeManagerRef.isMode("screenshot-gallery")
+            modeManager: screenshotGalleryLoader.modeManagerRef
+            screenshotManager: screenshotGalleryLoader.screenshotManagerRef
+            theme: screenshotGalleryLoader.themeRef
+        }
     }
 
-    Content.ClipboardContent {
-        id: clipboardContent
+    Loader {
+        id: clipboardLoader
         anchors.fill: parent
         z: 2
-        visible: modeManager.isMode("clipboard")
-        modeManager: modeManager
-        clipboardManager: clipboardManager
-        theme: theme
-        icons: icons
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var iconsRef: icons
+        property var clipboardManagerRef: clipboardManager
+        property bool everLoaded: false
+        active: modeManagerRef.isMode("clipboard") || everLoaded
+        onLoaded: everLoaded = true
+        sourceComponent: Content.ClipboardContent {
+            anchors.fill: parent
+            visible: clipboardLoader.modeManagerRef.isMode("clipboard")
+            modeManager: clipboardLoader.modeManagerRef
+            clipboardManager: clipboardLoader.clipboardManagerRef
+            theme: clipboardLoader.themeRef
+            icons: clipboardLoader.iconsRef
+        }
     }
 
     Content.WindowSwitcherContent {
@@ -527,9 +657,6 @@ PanelWindow {
 
     Component.onCompleted: {
         modeManager.listModes()
-
-        appLauncherContent.preloadApps()
-
         initTimer.start()
     }
 }

@@ -536,6 +536,15 @@ FocusScope {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("launcher", root)
+            if (modeManager.isMode("launcher")) {
+                root.loadApps()
+                root.loadRunningApps()
+                root.searchText = ""
+                if (searchField) searchField.text = ""
+                if (appGrid) appGrid.currentIndex = -1
+                autoCloseTimer.restart()
+                focusTimer.restart()
+            }
         }
     }
 }

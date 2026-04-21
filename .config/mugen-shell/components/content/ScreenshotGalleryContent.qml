@@ -433,6 +433,11 @@ FocusScope {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("screenshot-gallery", root)
+            if (modeManager.isMode("screenshot-gallery")) {
+                if (screenshotManager) screenshotManager.refresh()
+                focusTimer.restart()
+                autoCloseTimer.restart()
+            }
         }
     }
 

@@ -542,6 +542,9 @@ Item {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("calendar", root)
+            if (modeManager.isMode("calendar")) {
+                autoCloseTimer.restart()
+            }
         }
     }
 }

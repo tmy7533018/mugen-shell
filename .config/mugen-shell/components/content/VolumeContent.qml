@@ -886,6 +886,10 @@ Item {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("volume", root)
+            if (modeManager.isMode("volume")) {
+                autoCloseTimer.restart()
+                volumeChangeTimer.stop()
+            }
         }
     }
 }

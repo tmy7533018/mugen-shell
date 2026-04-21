@@ -260,6 +260,9 @@ Item {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("music", root)
+            if (modeManager.isMode("music")) {
+                autoCloseTimer.restart()
+            }
         }
     }
 }

@@ -28,6 +28,11 @@ FocusScope {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("wallpaper", root)
+            if (modeManager.isMode("wallpaper")) {
+                wallpaperManager.loadWallpapers()
+                focusTimer.restart()
+                autoCloseTimer.restart()
+            }
         }
     }
 

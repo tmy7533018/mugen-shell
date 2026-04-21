@@ -827,6 +827,12 @@ Item {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("bluetooth", root)
+            if (modeManager.isMode("bluetooth")) {
+                autoCloseTimer.restart()
+                bluetoothManager.refreshStatus()
+                bluetoothManager.refreshPairedDevices()
+                root.showAvailableDevices = false
+            }
         }
     }
 }

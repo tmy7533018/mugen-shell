@@ -311,6 +311,12 @@ FocusScope {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("powermenu", root)
+            if (modeManager.isMode("powermenu")) {
+                autoCloseTimer.restart()
+                root.currentButtonIndex = -1
+                buttonsRow.updateButtonFocus()
+                focusTimer.restart()
+            }
         }
     }
 }

@@ -351,6 +351,12 @@ FocusScope {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("clipboard", root)
+            if (modeManager.isMode("clipboard")) {
+                clipboardManager.loadHistory()
+                currentIndex = -1
+                autoCloseTimer.restart()
+                focusTimer.restart()
+            }
         }
     }
 }

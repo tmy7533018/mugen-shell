@@ -594,6 +594,10 @@ Item {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("wifi", root)
+            if (modeManager.isMode("wifi")) {
+                autoCloseTimer.restart()
+                wifiManager.fullRefresh()
+            }
         }
     }
 }

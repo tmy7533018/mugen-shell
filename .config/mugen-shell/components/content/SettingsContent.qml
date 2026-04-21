@@ -51,6 +51,12 @@ Item {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("settings", root)
+            if (modeManager.isMode("settings")) {
+                if (settingsManager && settingsManager.autoCloseTimerEnabled) {
+                    autoCloseTimer.restart()
+                }
+                loadBlurPresets()
+            }
         }
     }
 

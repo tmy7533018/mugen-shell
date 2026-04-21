@@ -642,6 +642,10 @@ Item {
         syncNotificationsToModel()
         if (modeManager) {
             modeManager.registerMode("notification", root)
+            if (modeManager.isMode("notification")) {
+                notificationManager.markAllAsRead()
+                autoCloseTimer.restart()
+            }
         }
     }
 }
