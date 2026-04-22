@@ -50,15 +50,18 @@ QtObject {
     
     function switchMode(newMode, viaIpc) {
         let wasViaIpc = openedViaIpc
-        
+
+        // IMPORTANT: Set openedViaIpc BEFORE currentMode so listeners of
+        // currentModeChanged see the correct openedViaIpc value (Bar.qml's
+        // requestActivate path depends on this).
         if (newMode === currentMode) {
-            currentMode = "normal"
             openedViaIpc = false
+            currentMode = "normal"
         } else {
-            currentMode = newMode
             openedViaIpc = viaIpc === true
+            currentMode = newMode
         }
-        
+
         if (currentMode === "normal") {
             openedViaIpc = false
         }

@@ -60,6 +60,8 @@ PanelWindow {
 
     property alias notificationManager: notificationManager
 
+    // EXPERIMENT 2026-04-23: stripped PauseAnimation to test whether the binding
+    // was stalling mode-change on open. Revert if close-transition looks bad.
     Behavior on implicitHeight {
         NumberAnimation {
             duration: settingsManager.animationDurationMultiplier === 0 ? 0 : 1000 * settingsManager.animationDurationMultiplier
@@ -130,7 +132,7 @@ PanelWindow {
 
             if (audioManager.volume !== previousVolume) {
                 if (!modeManager.isMode("volume")) {
-                    modeManager.switchMode("volume")
+                    modeManager.switchMode("volume", true)
                 }
                 previousVolume = audioManager.volume
             }
@@ -145,7 +147,7 @@ PanelWindow {
 
             if (audioManager.isMuted !== previousMuted) {
                 if (!modeManager.isMode("volume")) {
-                    modeManager.switchMode("volume")
+                    modeManager.switchMode("volume", true)
                 }
                 previousMuted = audioManager.isMuted
             }
@@ -361,281 +363,474 @@ PanelWindow {
         visible: opacity > 0.01
     }
 
-    Loader {
-        id: powerMenuLoader
+    Item {
+        id: powerMenuWrapper
         anchors.fill: parent
         z: 2
-        property var modeManagerRef: modeManager
-        property var iconsRef: icons
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("powermenu") || everLoaded
-        onLoaded: everLoaded = true
-        sourceComponent: Content.PowerMenuContent {
+        property bool modeActive: modeManager.isMode("powermenu")
+        visible: modeActive
+        opacity: modeActive ? 1.0 : 0.0
+        Behavior on opacity {
+            SequentialAnimation {
+                PauseAnimation { duration: powerMenuWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                NumberAnimation {
+                    duration: powerMenuWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    easing.type: Easing.InOutCubic
+                }
+            }
+        }
+        Loader {
+            id: powerMenuLoader
             anchors.fill: parent
-            visible: powerMenuLoader.modeManagerRef.isMode("powermenu")
-            modeManager: powerMenuLoader.modeManagerRef
-            icons: powerMenuLoader.iconsRef
+            asynchronous: true
+            property var modeManagerRef: modeManager
+            property var iconsRef: icons
+            active: powerMenuWrapper.modeActive
+            sourceComponent: Content.PowerMenuContent {
+                anchors.fill: parent
+                modeManager: powerMenuLoader.modeManagerRef
+                icons: powerMenuLoader.iconsRef
+            }
         }
     }
 
-    Loader {
-        id: calendarLoader
+    Item {
+        id: calendarWrapper
         anchors.fill: parent
         z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("calendar") || everLoaded
-        onLoaded: everLoaded = true
-        sourceComponent: Content.CalendarContent {
+        property bool modeActive: modeManager.isMode("calendar")
+        visible: modeActive
+        opacity: modeActive ? 1.0 : 0.0
+        Behavior on opacity {
+            SequentialAnimation {
+                PauseAnimation { duration: calendarWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                NumberAnimation {
+                    duration: calendarWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    easing.type: Easing.InOutCubic
+                }
+            }
+        }
+        Loader {
+            id: calendarLoader
             anchors.fill: parent
-            visible: calendarLoader.modeManagerRef.isMode("calendar")
-            modeManager: calendarLoader.modeManagerRef
-            theme: calendarLoader.themeRef
+            asynchronous: true
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            active: calendarWrapper.modeActive
+            sourceComponent: Content.CalendarContent {
+                anchors.fill: parent
+                modeManager: calendarLoader.modeManagerRef
+                theme: calendarLoader.themeRef
+            }
         }
     }
 
-    Loader {
-        id: musicPlayerLoader
+    Item {
+        id: musicPlayerWrapper
         anchors.fill: parent
         z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var musicManagerRef: musicPlayerManager
-        property var cavaManagerRef: cavaManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("music") || everLoaded
-        onLoaded: everLoaded = true
-        sourceComponent: Content.MusicPlayerContent {
+        property bool modeActive: modeManager.isMode("music")
+        visible: modeActive
+        opacity: modeActive ? 1.0 : 0.0
+        Behavior on opacity {
+            SequentialAnimation {
+                PauseAnimation { duration: musicPlayerWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                NumberAnimation {
+                    duration: musicPlayerWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    easing.type: Easing.InOutCubic
+                }
+            }
+        }
+        Loader {
+            id: musicPlayerLoader
             anchors.fill: parent
-            visible: musicPlayerLoader.modeManagerRef.isMode("music")
-            modeManager: musicPlayerLoader.modeManagerRef
-            musicManager: musicPlayerLoader.musicManagerRef
-            cavaManager: musicPlayerLoader.cavaManagerRef
-            theme: musicPlayerLoader.themeRef
-            icons: musicPlayerLoader.iconsRef
+            asynchronous: true
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var musicManagerRef: musicPlayerManager
+            property var cavaManagerRef: cavaManager
+            active: musicPlayerWrapper.modeActive
+            sourceComponent: Content.MusicPlayerContent {
+                anchors.fill: parent
+                modeManager: musicPlayerLoader.modeManagerRef
+                musicManager: musicPlayerLoader.musicManagerRef
+                cavaManager: musicPlayerLoader.cavaManagerRef
+                theme: musicPlayerLoader.themeRef
+                icons: musicPlayerLoader.iconsRef
+            }
         }
     }
 
+    // Fixed-size Loader: decouples AI content layout from the bar's growing
+    // implicitHeight. With anchors.fill: parent, the content would resize every
+    // frame during the 1000ms bar-grow animation, triggering per-frame layout
+    // over a heavy ColumnLayout/ListView/TextEdit subtree and causing a visible
+    // freeze. Fixing the height makes layout a one-time cost.
     Loader {
         id: aiAssistantLoader
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        height: modeManager.scale(440)
         z: 2
+        asynchronous: true
 
         property var modeManagerRef: modeManager
         property var themeRef: theme
         property var iconsRef: icons
 
+        // Single source of truth so the Behavior's trigger (opacity) and its
+        // duration binding evaluate atomically — prevents the stale-binding
+        // issue that was stalling the bar on open.
+        property bool modeActive: modeManagerRef.isMode("ai")
+
         property bool everLoaded: false
-        active: modeManagerRef.isMode("ai") || everLoaded
+        active: modeActive || everLoaded
         onLoaded: everLoaded = true
 
         sourceComponent: Content.AiAssistantContent {
             anchors.fill: parent
-            visible: aiAssistantLoader.modeManagerRef.isMode("ai")
+            opacity: aiAssistantLoader.modeActive ? 1.0 : 0.0
+            enabled: aiAssistantLoader.modeActive
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: aiAssistantLoader.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0
+                    easing.type: Easing.InOutCubic
+                }
+            }
             modeManager: aiAssistantLoader.modeManagerRef
             theme: aiAssistantLoader.themeRef
             icons: aiAssistantLoader.iconsRef
         }
     }
 
-    Loader {
-        id: appLauncherLoader
+    Item {
+        id: appLauncherWrapper
         anchors.fill: parent
         z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var typoRef: typo
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("launcher") || everLoaded
-        onLoaded: everLoaded = true
-        sourceComponent: Content.AppLauncherContent {
+        property bool modeActive: modeManager.isMode("launcher")
+        visible: modeActive
+        opacity: modeActive ? 1.0 : 0.0
+        Behavior on opacity {
+            SequentialAnimation {
+                PauseAnimation { duration: appLauncherWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                NumberAnimation {
+                    duration: appLauncherWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    easing.type: Easing.InOutCubic
+                }
+            }
+        }
+        Loader {
+            id: appLauncherLoader
             anchors.fill: parent
-            visible: appLauncherLoader.modeManagerRef.isMode("launcher")
-            modeManager: appLauncherLoader.modeManagerRef
-            theme: appLauncherLoader.themeRef
-            icons: appLauncherLoader.iconsRef
-            typo: appLauncherLoader.typoRef
+            asynchronous: true
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var typoRef: typo
+            active: appLauncherWrapper.modeActive
+            sourceComponent: Content.AppLauncherContent {
+                anchors.fill: parent
+                modeManager: appLauncherLoader.modeManagerRef
+                theme: appLauncherLoader.themeRef
+                icons: appLauncherLoader.iconsRef
+                typo: appLauncherLoader.typoRef
+            }
         }
     }
 
-    Loader {
-        id: volumeLoader
+    Item {
+        id: volumeWrapper
         anchors.fill: parent
         z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var typoRef: typo
-        property var audioManagerRef: audioManager
-        property var cavaManagerRef: cavaManager
-        property var musicPlayerManagerRef: musicPlayerManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("volume") || everLoaded
-        onLoaded: everLoaded = true
-        sourceComponent: Content.VolumeContent {
+        property bool modeActive: modeManager.isMode("volume")
+        visible: modeActive
+        opacity: modeActive ? 1.0 : 0.0
+        Behavior on opacity {
+            SequentialAnimation {
+                PauseAnimation { duration: volumeWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                NumberAnimation {
+                    duration: volumeWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    easing.type: Easing.InOutCubic
+                }
+            }
+        }
+        Loader {
+            id: volumeLoader
             anchors.fill: parent
-            visible: volumeLoader.modeManagerRef.isMode("volume")
-            modeManager: volumeLoader.modeManagerRef
-            audioManager: volumeLoader.audioManagerRef
-            cavaManager: volumeLoader.cavaManagerRef
-            musicPlayerManager: volumeLoader.musicPlayerManagerRef
-            theme: volumeLoader.themeRef
-            typo: volumeLoader.typoRef
+            asynchronous: true
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var typoRef: typo
+            property var audioManagerRef: audioManager
+            property var cavaManagerRef: cavaManager
+            property var musicPlayerManagerRef: musicPlayerManager
+            active: volumeWrapper.modeActive
+            sourceComponent: Content.VolumeContent {
+                anchors.fill: parent
+                modeManager: volumeLoader.modeManagerRef
+                audioManager: volumeLoader.audioManagerRef
+                cavaManager: volumeLoader.cavaManagerRef
+                musicPlayerManager: volumeLoader.musicPlayerManagerRef
+                theme: volumeLoader.themeRef
+                typo: volumeLoader.typoRef
+            }
         }
     }
 
-    Loader {
-        id: notificationLoader
+    Item {
+        id: notificationWrapper
         anchors.fill: parent
         z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var notificationManagerRef: notificationManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("notification") || everLoaded
-        onLoaded: everLoaded = true
-        sourceComponent: Content.NotificationContent {
+        property bool modeActive: modeManager.isMode("notification")
+        visible: modeActive
+        opacity: modeActive ? 1.0 : 0.0
+        Behavior on opacity {
+            SequentialAnimation {
+                PauseAnimation { duration: notificationWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                NumberAnimation {
+                    duration: notificationWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    easing.type: Easing.InOutCubic
+                }
+            }
+        }
+        Loader {
+            id: notificationLoader
             anchors.fill: parent
-            visible: notificationLoader.modeManagerRef.isMode("notification")
-            modeManager: notificationLoader.modeManagerRef
-            notificationManager: notificationLoader.notificationManagerRef
-            theme: notificationLoader.themeRef
-            icons: notificationLoader.iconsRef
+            asynchronous: true
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var notificationManagerRef: notificationManager
+            active: notificationWrapper.modeActive
+            sourceComponent: Content.NotificationContent {
+                anchors.fill: parent
+                modeManager: notificationLoader.modeManagerRef
+                notificationManager: notificationLoader.notificationManagerRef
+                theme: notificationLoader.themeRef
+                icons: notificationLoader.iconsRef
+            }
         }
     }
 
-    Loader {
-        id: wifiLoader
+    Item {
+        id: wifiWrapper
         anchors.fill: parent
         z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var wifiManagerRef: wifiManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("wifi") || everLoaded
-        onLoaded: everLoaded = true
-        sourceComponent: Content.WiFiContent {
+        property bool modeActive: modeManager.isMode("wifi")
+        visible: modeActive
+        opacity: modeActive ? 1.0 : 0.0
+        Behavior on opacity {
+            SequentialAnimation {
+                PauseAnimation { duration: wifiWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                NumberAnimation {
+                    duration: wifiWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    easing.type: Easing.InOutCubic
+                }
+            }
+        }
+        Loader {
+            id: wifiLoader
             anchors.fill: parent
-            visible: wifiLoader.modeManagerRef.isMode("wifi")
-            modeManager: wifiLoader.modeManagerRef
-            wifiManager: wifiLoader.wifiManagerRef
-            theme: wifiLoader.themeRef
-            icons: wifiLoader.iconsRef
+            asynchronous: true
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var wifiManagerRef: wifiManager
+            active: wifiWrapper.modeActive
+            sourceComponent: Content.WiFiContent {
+                anchors.fill: parent
+                modeManager: wifiLoader.modeManagerRef
+                wifiManager: wifiLoader.wifiManagerRef
+                theme: wifiLoader.themeRef
+                icons: wifiLoader.iconsRef
+            }
         }
     }
 
-    Loader {
-        id: bluetoothLoader
+    Item {
+        id: bluetoothWrapper
         anchors.fill: parent
         z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var bluetoothManagerRef: bluetoothManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("bluetooth") || everLoaded
-        onLoaded: everLoaded = true
-        sourceComponent: Content.BluetoothContent {
+        property bool modeActive: modeManager.isMode("bluetooth")
+        visible: modeActive
+        opacity: modeActive ? 1.0 : 0.0
+        Behavior on opacity {
+            SequentialAnimation {
+                PauseAnimation { duration: bluetoothWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                NumberAnimation {
+                    duration: bluetoothWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    easing.type: Easing.InOutCubic
+                }
+            }
+        }
+        Loader {
+            id: bluetoothLoader
             anchors.fill: parent
-            visible: bluetoothLoader.modeManagerRef.isMode("bluetooth")
-            modeManager: bluetoothLoader.modeManagerRef
-            bluetoothManager: bluetoothLoader.bluetoothManagerRef
-            theme: bluetoothLoader.themeRef
-            icons: bluetoothLoader.iconsRef
+            asynchronous: true
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var bluetoothManagerRef: bluetoothManager
+            active: bluetoothWrapper.modeActive
+            sourceComponent: Content.BluetoothContent {
+                anchors.fill: parent
+                modeManager: bluetoothLoader.modeManagerRef
+                bluetoothManager: bluetoothLoader.bluetoothManagerRef
+                theme: bluetoothLoader.themeRef
+                icons: bluetoothLoader.iconsRef
+            }
         }
     }
 
-    Loader {
-        id: wallpaperLoader
+    Item {
+        id: wallpaperWrapper
         anchors.fill: parent
         z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var wallpaperManagerRef: wallpaperManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("wallpaper") || everLoaded
-        onLoaded: everLoaded = true
-        sourceComponent: Content.WallpaperContent {
+        property bool modeActive: modeManager.isMode("wallpaper")
+        visible: modeActive
+        opacity: modeActive ? 1.0 : 0.0
+        Behavior on opacity {
+            SequentialAnimation {
+                PauseAnimation { duration: wallpaperWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                NumberAnimation {
+                    duration: wallpaperWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    easing.type: Easing.InOutCubic
+                }
+            }
+        }
+        Loader {
+            id: wallpaperLoader
             anchors.fill: parent
-            visible: wallpaperLoader.modeManagerRef.isMode("wallpaper")
-            modeManager: wallpaperLoader.modeManagerRef
-            wallpaperManager: wallpaperLoader.wallpaperManagerRef
-            theme: wallpaperLoader.themeRef
-            icons: wallpaperLoader.iconsRef
+            asynchronous: true
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var wallpaperManagerRef: wallpaperManager
+            active: wallpaperWrapper.modeActive
+            sourceComponent: Content.WallpaperContent {
+                anchors.fill: parent
+                modeManager: wallpaperLoader.modeManagerRef
+                wallpaperManager: wallpaperLoader.wallpaperManagerRef
+                theme: wallpaperLoader.themeRef
+                icons: wallpaperLoader.iconsRef
+            }
         }
     }
 
-    Loader {
-        id: settingsLoader
+    Item {
+        id: settingsWrapper
         anchors.fill: parent
         z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var settingsManagerRef: settingsManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("settings") || everLoaded
-        onLoaded: everLoaded = true
-        sourceComponent: Content.SettingsContent {
+        property bool modeActive: modeManager.isMode("settings")
+        visible: modeActive
+        opacity: modeActive ? 1.0 : 0.0
+        Behavior on opacity {
+            SequentialAnimation {
+                PauseAnimation { duration: settingsWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                NumberAnimation {
+                    duration: settingsWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    easing.type: Easing.InOutCubic
+                }
+            }
+        }
+        Loader {
+            id: settingsLoader
             anchors.fill: parent
-            visible: settingsLoader.modeManagerRef.isMode("settings")
-            modeManager: settingsLoader.modeManagerRef
-            theme: settingsLoader.themeRef
-            icons: settingsLoader.iconsRef
-            settingsManager: settingsLoader.settingsManagerRef
+            asynchronous: true
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var settingsManagerRef: settingsManager
+            active: settingsWrapper.modeActive
+            sourceComponent: Content.SettingsContent {
+                anchors.fill: parent
+                modeManager: settingsLoader.modeManagerRef
+                theme: settingsLoader.themeRef
+                icons: settingsLoader.iconsRef
+                settingsManager: settingsLoader.settingsManagerRef
+            }
         }
     }
 
-    Loader {
-        id: screenshotGalleryLoader
+    Item {
+        id: screenshotGalleryWrapper
         anchors.fill: parent
         z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var screenshotManagerRef: screenshotManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("screenshot-gallery") || everLoaded
-        onLoaded: everLoaded = true
-        sourceComponent: Content.ScreenshotGalleryContent {
+        property bool modeActive: modeManager.isMode("screenshot-gallery")
+        visible: modeActive
+        opacity: modeActive ? 1.0 : 0.0
+        Behavior on opacity {
+            SequentialAnimation {
+                PauseAnimation { duration: screenshotGalleryWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                NumberAnimation {
+                    duration: screenshotGalleryWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    easing.type: Easing.InOutCubic
+                }
+            }
+        }
+        Loader {
+            id: screenshotGalleryLoader
             anchors.fill: parent
-            visible: screenshotGalleryLoader.modeManagerRef.isMode("screenshot-gallery")
-            modeManager: screenshotGalleryLoader.modeManagerRef
-            screenshotManager: screenshotGalleryLoader.screenshotManagerRef
-            theme: screenshotGalleryLoader.themeRef
+            asynchronous: true
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var screenshotManagerRef: screenshotManager
+            active: screenshotGalleryWrapper.modeActive
+            sourceComponent: Content.ScreenshotGalleryContent {
+                anchors.fill: parent
+                modeManager: screenshotGalleryLoader.modeManagerRef
+                screenshotManager: screenshotGalleryLoader.screenshotManagerRef
+                theme: screenshotGalleryLoader.themeRef
+            }
         }
     }
 
-    Loader {
-        id: clipboardLoader
+    Item {
+        id: clipboardWrapper
         anchors.fill: parent
         z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var clipboardManagerRef: clipboardManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("clipboard") || everLoaded
-        onLoaded: everLoaded = true
-        sourceComponent: Content.ClipboardContent {
+        property bool modeActive: modeManager.isMode("clipboard")
+        visible: modeActive
+        opacity: modeActive ? 1.0 : 0.0
+        Behavior on opacity {
+            SequentialAnimation {
+                PauseAnimation { duration: clipboardWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                NumberAnimation {
+                    duration: clipboardWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    easing.type: Easing.InOutCubic
+                }
+            }
+        }
+        Loader {
+            id: clipboardLoader
             anchors.fill: parent
-            visible: clipboardLoader.modeManagerRef.isMode("clipboard")
-            modeManager: clipboardLoader.modeManagerRef
-            clipboardManager: clipboardLoader.clipboardManagerRef
-            theme: clipboardLoader.themeRef
-            icons: clipboardLoader.iconsRef
+            asynchronous: true
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var clipboardManagerRef: clipboardManager
+            active: clipboardWrapper.modeActive
+            sourceComponent: Content.ClipboardContent {
+                anchors.fill: parent
+                modeManager: clipboardLoader.modeManagerRef
+                clipboardManager: clipboardLoader.clipboardManagerRef
+                theme: clipboardLoader.themeRef
+                icons: clipboardLoader.iconsRef
+            }
         }
     }
 
+    // Fixed-size placement (same rationale as aiAssistantLoader above):
+    // decouple content layout from the bar's growing implicitHeight.
     Content.WindowSwitcherContent {
         id: windowSwitcherContent
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        height: modeManager.scale(120)
         z: 2
-        visible: modeManager.isMode("window-switcher")
         modeManager: modeManager
         windowManager: windowManager
         theme: theme

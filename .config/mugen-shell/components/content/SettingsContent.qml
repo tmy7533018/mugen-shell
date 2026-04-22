@@ -7,7 +7,7 @@ import Quickshell.Io
 import "../common" as Common
 import "../ui" as UI
 
-Item {
+FocusScope {
     id: root
 
     required property var modeManager
@@ -56,6 +56,7 @@ Item {
                     autoCloseTimer.restart()
                 }
                 loadBlurPresets()
+                focusTimer.restart()
             }
         }
     }
@@ -68,9 +69,20 @@ Item {
                     autoCloseTimer.restart()
                 }
                 loadBlurPresets()
+                focusTimer.restart()
             } else {
                 autoCloseTimer.stop()
             }
+        }
+    }
+
+    Timer {
+        id: focusTimer
+        interval: 100
+        running: false
+        repeat: false
+        onTriggered: {
+            if (settingsLayer) settingsLayer.forceActiveFocus()
         }
     }
 
@@ -136,41 +148,6 @@ Item {
                 event.accepted = true
             }
         }
-
-        opacity: 0
-        visible: opacity > 0.01
-
-        states: [
-            State {
-                name: "visible"
-                when: modeManager.isMode("settings")
-                PropertyChanges { target: settingsLayer; opacity: 1.0 }
-            }
-        ]
-
-        transitions: [
-            Transition {
-                from: "visible"
-                to: ""
-                NumberAnimation {
-                    property: "opacity"
-                    duration: 300
-                    easing.type: Easing.OutCubic
-                }
-            },
-            Transition {
-                from: ""
-                to: "visible"
-                SequentialAnimation {
-                    PauseAnimation { duration: 300 }
-                    NumberAnimation {
-                        property: "opacity"
-                        duration: 400
-                        easing.type: Easing.InOutCubic
-                    }
-                }
-            }
-        ]
 
         Item {
             anchors.centerIn: parent

@@ -7,9 +7,9 @@ import "../notification" as NotificationComponents
 import "../ui" as UI
 import "../common" as Common
 
-Item {
+FocusScope {
     id: root
-    
+
     required property var modeManager
     required property var notificationManager
     property var theme
@@ -187,6 +187,9 @@ Item {
         function onCurrentModeChanged() {
             if (modeManager.isMode("notification")) {
                 notificationManager.markAllAsRead()
+                Qt.callLater(() => {
+                    if (notificationLayer) notificationLayer.forceActiveFocus()
+                })
             }
         }
     }
@@ -257,41 +260,6 @@ Item {
                 event.accepted = true
             }
         }
-        
-        opacity: 0
-        visible: opacity > 0.01
-        
-        states: [
-            State {
-                name: "visible"
-                when: modeManager.isMode("notification")
-                PropertyChanges { target: notificationLayer; opacity: 1.0 }
-            }
-        ]
-        
-        transitions: [
-            Transition {
-                from: "visible"
-                to: ""
-                NumberAnimation {
-                    property: "opacity"
-                    duration: 300
-                    easing.type: Easing.OutCubic
-                }
-            },
-            Transition {
-                from: ""
-                to: "visible"
-                SequentialAnimation {
-                    PauseAnimation { duration: 300 }
-                    NumberAnimation {
-                        property: "opacity"
-                        duration: 400
-                        easing.type: Easing.InOutCubic
-                    }
-                }
-            }
-        ]
         
         ColumnLayout {
             anchors.centerIn: parent
@@ -645,6 +613,9 @@ Item {
             if (modeManager.isMode("notification")) {
                 notificationManager.markAllAsRead()
                 autoCloseTimer.restart()
+                Qt.callLater(() => {
+                    if (notificationLayer) notificationLayer.forceActiveFocus()
+                })
             }
         }
     }

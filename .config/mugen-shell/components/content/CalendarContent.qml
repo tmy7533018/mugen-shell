@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 
-Item {
+FocusScope {
     id: root
 
     required property var modeManager
@@ -33,9 +33,20 @@ Item {
         function onCurrentModeChanged() {
             if (modeManager.isMode("calendar")) {
                 autoCloseTimer.restart()
+                focusTimer.restart()
             } else {
                 autoCloseTimer.stop()
             }
+        }
+    }
+
+    Timer {
+        id: focusTimer
+        interval: 100
+        running: false
+        repeat: false
+        onTriggered: {
+            if (calendarLayer) calendarLayer.forceActiveFocus()
         }
     }
 
@@ -74,41 +85,6 @@ Item {
                 event.accepted = true
             }
         }
-
-        opacity: 0
-        visible: opacity > 0.01
-
-        states: [
-            State {
-                name: "visible"
-                when: modeManager.isMode("calendar")
-                PropertyChanges { target: calendarLayer; opacity: 1.0 }
-            }
-        ]
-
-        transitions: [
-            Transition {
-                from: "visible"
-                to: ""
-                NumberAnimation {
-                    property: "opacity"
-                    duration: 300
-                    easing.type: Easing.InOutQuad
-                }
-            },
-            Transition {
-                from: ""
-                to: "visible"
-                SequentialAnimation {
-                    PauseAnimation { duration: 300 }
-                    NumberAnimation {
-                        property: "opacity"
-                        duration: 400
-                        easing.type: Easing.InOutCubic
-                    }
-                }
-            }
-        ]
 
         ColumnLayout {
             anchors.centerIn: parent
@@ -544,6 +520,7 @@ Item {
             modeManager.registerMode("calendar", root)
             if (modeManager.isMode("calendar")) {
                 autoCloseTimer.restart()
+                focusTimer.restart()
             }
         }
     }

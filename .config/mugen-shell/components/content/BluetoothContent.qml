@@ -6,7 +6,7 @@ import Quickshell.Io
 import "../common" as Common
 import "../ui" as UI
 
-Item {
+FocusScope {
     id: root
 
     required property var modeManager
@@ -65,6 +65,9 @@ Item {
                 bluetoothManager.refreshStatus()
                 bluetoothManager.refreshPairedDevices()
                 root.showAvailableDevices = false
+                Qt.callLater(() => {
+                    if (bluetoothLayer) bluetoothLayer.forceActiveFocus()
+                })
             } else {
                 autoCloseTimer.stop()
             }
@@ -106,41 +109,6 @@ Item {
                 event.accepted = true
             }
         }
-
-        opacity: 0
-        visible: opacity > 0.01
-
-        states: [
-            State {
-                name: "visible"
-                when: modeManager.isMode("bluetooth")
-                PropertyChanges { target: bluetoothLayer; opacity: 1.0 }
-            }
-        ]
-
-        transitions: [
-            Transition {
-                from: "visible"
-                to: ""
-                NumberAnimation {
-                    property: "opacity"
-                    duration: 300
-                    easing.type: Easing.OutCubic
-                }
-            },
-            Transition {
-                from: ""
-                to: "visible"
-                SequentialAnimation {
-                    PauseAnimation { duration: 300 }
-                    NumberAnimation {
-                        property: "opacity"
-                        duration: 400
-                        easing.type: Easing.InOutCubic
-                    }
-                }
-            }
-        ]
 
         ColumnLayout {
             anchors.centerIn: parent
@@ -832,6 +800,9 @@ Item {
                 bluetoothManager.refreshStatus()
                 bluetoothManager.refreshPairedDevices()
                 root.showAvailableDevices = false
+                Qt.callLater(() => {
+                    if (bluetoothLayer) bluetoothLayer.forceActiveFocus()
+                })
             }
         }
     }

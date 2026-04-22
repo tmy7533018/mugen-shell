@@ -30,40 +30,6 @@ FocusScope {
 
         focus: modeManager.isMode("screenshot-gallery")
 
-        opacity: 0
-        visible: opacity > 0.01
-
-        states: [
-            State {
-                name: "visible"
-                when: modeManager.isMode("screenshot-gallery")
-                PropertyChanges { target: galleryLayer; opacity: 1.0 }
-            }
-        ]
-
-        transitions: [
-            Transition {
-                from: "visible"
-                to: ""
-                NumberAnimation {
-                    property: "opacity"
-                    duration: 300
-                    easing.type: Easing.InOutQuad
-                }
-            },
-            Transition {
-                from: ""
-                to: "visible"
-                SequentialAnimation {
-                    PauseAnimation { duration: 300 }
-                    NumberAnimation {
-                        property: "opacity"
-                        duration: 400
-                        easing.type: Easing.InOutCubic
-                    }
-                }
-            }
-        ]
         Keys.forwardTo: [screenshotGrid]
         Keys.onPressed: (event) => {
             if (modeManager.isMode("screenshot-gallery")) {

@@ -5,7 +5,7 @@ import Quickshell.Io
 import "../common" as Common
 import "../ui" as UI
 
-Item {
+FocusScope {
     id: root
 
     required property var modeManager
@@ -69,6 +69,7 @@ Item {
             if (modeManager.isMode("volume")) {
                 autoCloseTimer.restart()
                 volumeChangeTimer.stop()
+                focusTimer.restart()
             } else {
                 autoCloseTimer.stop()
                 volumeChangeTimer.stop()
@@ -76,6 +77,18 @@ Item {
                     contentLayer.deviceDropdownVisible = false
                 }
             }
+        }
+    }
+
+    // Delay needed because PanelWindow focus must settle after keybind open;
+    // Qt.callLater fires too early and forceActiveFocus is a no-op at that point.
+    Timer {
+        id: focusTimer
+        interval: 100
+        running: false
+        repeat: false
+        onTriggered: {
+            if (contentLayer) contentLayer.forceActiveFocus()
         }
     }
 
@@ -126,41 +139,6 @@ Item {
                 event.accepted = true
             }
         }
-
-        opacity: 0
-        visible: opacity > 0.01
-
-        states: [
-            State {
-                name: "visible"
-                when: modeManager.isMode("volume")
-                PropertyChanges { target: contentLayer; opacity: 1.0 }
-            }
-        ]
-
-        transitions: [
-            Transition {
-                from: "visible"
-                to: ""
-                NumberAnimation {
-                    property: "opacity"
-                    duration: 300
-                    easing.type: Easing.InOutQuad
-                }
-            },
-            Transition {
-                from: ""
-                to: "visible"
-                SequentialAnimation {
-                    PauseAnimation { duration: 300 }
-                    NumberAnimation {
-                        property: "opacity"
-                        duration: 400
-                        easing.type: Easing.InOutCubic
-                    }
-                }
-            }
-        ]
 
         // Blob size represents volume: 0% -> 75px, 100% -> 235px
         property real blobSize: (audioManager.isMuted || audioManager.volume === 0)
@@ -889,6 +867,7 @@ Item {
             if (modeManager.isMode("volume")) {
                 autoCloseTimer.restart()
                 volumeChangeTimer.stop()
+                focusTimer.restart()
             }
         }
     }

@@ -93,41 +93,7 @@ FocusScope {
         anchors.bottomMargin: 0
         spacing: modeManager.scale(12)
         z: 2
-        opacity: 0
-        visible: opacity > 0.01
-        
-        states: [
-            State {
-                name: "visible"
-                when: modeManager.isMode("powermenu")
-                PropertyChanges { target: powerMenuLayer; opacity: 1.0 }
-            }
-        ]
-        
-        transitions: [
-            Transition {
-                from: "visible"
-                to: ""
-                NumberAnimation {
-                    property: "opacity"
-                    duration: 300
-                    easing.type: Easing.OutCubic
-                }
-            },
-            Transition {
-                from: ""
-                to: "visible"
-                SequentialAnimation {
-                    PauseAnimation { duration: 300 }
-                    NumberAnimation {
-                        property: "opacity"
-                        duration: 400
-                        easing.type: Easing.InOutCubic
-                    }
-                }
-            }
-        ]
-        
+
         Item { Layout.fillWidth: true }
         
         RowLayout {

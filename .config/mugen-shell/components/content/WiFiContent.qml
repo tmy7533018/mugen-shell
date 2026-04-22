@@ -6,9 +6,9 @@ import Quickshell.Io
 import "../common" as Common
 import "../ui" as UI
 
-Item {
+FocusScope {
     id: root
-    
+
     required property var modeManager
     required property var wifiManager
     property var theme
@@ -54,6 +54,9 @@ Item {
             if (modeManager.isMode("wifi")) {
                 autoCloseTimer.restart()
                 wifiManager.fullRefresh()
+                Qt.callLater(() => {
+                    if (wifiLayer) wifiLayer.forceActiveFocus()
+                })
             } else {
                 autoCloseTimer.stop()
             }
@@ -95,41 +98,6 @@ Item {
                 event.accepted = true
             }
         }
-        
-        opacity: 0
-        visible: true
-        
-        states: [
-            State {
-                name: "visible"
-                when: modeManager.isMode("wifi")
-                PropertyChanges { target: wifiLayer; opacity: 1.0 }
-            }
-        ]
-        
-        transitions: [
-            Transition {
-                from: "visible"
-                to: ""
-                NumberAnimation {
-                    property: "opacity"
-                    duration: 300
-                    easing.type: Easing.OutCubic
-                }
-            },
-            Transition {
-                from: ""
-                to: "visible"
-                SequentialAnimation {
-                    PauseAnimation { duration: 300 }
-                    NumberAnimation {
-                        property: "opacity"
-                        duration: 400
-                        easing.type: Easing.InOutCubic
-                    }
-                }
-            }
-        ]
         
         ColumnLayout {
             anchors.centerIn: parent
@@ -597,6 +565,9 @@ Item {
             if (modeManager.isMode("wifi")) {
                 autoCloseTimer.restart()
                 wifiManager.fullRefresh()
+                Qt.callLater(() => {
+                    if (wifiLayer) wifiLayer.forceActiveFocus()
+                })
             }
         }
     }
