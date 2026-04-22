@@ -368,13 +368,14 @@ PanelWindow {
         anchors.fill: parent
         z: 2
         property bool modeActive: modeManager.isMode("powermenu")
-        visible: modeActive
+        visible: opacity > 0.01
         opacity: modeActive ? 1.0 : 0.0
         Behavior on opacity {
+            enabled: powerMenuWrapper.opacity < 0.5
             SequentialAnimation {
-                PauseAnimation { duration: powerMenuWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                PauseAnimation { duration: 300 * settingsManager.animationDurationMultiplier }
                 NumberAnimation {
-                    duration: powerMenuWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    duration: 400 * settingsManager.animationDurationMultiplier
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -399,13 +400,14 @@ PanelWindow {
         anchors.fill: parent
         z: 2
         property bool modeActive: modeManager.isMode("calendar")
-        visible: modeActive
+        visible: opacity > 0.01
         opacity: modeActive ? 1.0 : 0.0
         Behavior on opacity {
+            enabled: calendarWrapper.opacity < 0.5
             SequentialAnimation {
-                PauseAnimation { duration: calendarWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                PauseAnimation { duration: 300 * settingsManager.animationDurationMultiplier }
                 NumberAnimation {
-                    duration: calendarWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    duration: 400 * settingsManager.animationDurationMultiplier
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -430,13 +432,14 @@ PanelWindow {
         anchors.fill: parent
         z: 2
         property bool modeActive: modeManager.isMode("music")
-        visible: modeActive
+        visible: opacity > 0.01
         opacity: modeActive ? 1.0 : 0.0
         Behavior on opacity {
+            enabled: musicPlayerWrapper.opacity < 0.5
             SequentialAnimation {
-                PauseAnimation { duration: musicPlayerWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                PauseAnimation { duration: 300 * settingsManager.animationDurationMultiplier }
                 NumberAnimation {
-                    duration: musicPlayerWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    duration: 400 * settingsManager.animationDurationMultiplier
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -495,7 +498,7 @@ PanelWindow {
             enabled: aiAssistantLoader.modeActive
             Behavior on opacity {
                 NumberAnimation {
-                    duration: aiAssistantLoader.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0
+                    duration: 300 * settingsManager.animationDurationMultiplier
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -510,13 +513,14 @@ PanelWindow {
         anchors.fill: parent
         z: 2
         property bool modeActive: modeManager.isMode("launcher")
-        visible: modeActive
+        visible: opacity > 0.01
         opacity: modeActive ? 1.0 : 0.0
         Behavior on opacity {
+            enabled: appLauncherWrapper.opacity < 0.5
             SequentialAnimation {
-                PauseAnimation { duration: appLauncherWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                PauseAnimation { duration: 300 * settingsManager.animationDurationMultiplier }
                 NumberAnimation {
-                    duration: appLauncherWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    duration: 400 * settingsManager.animationDurationMultiplier
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -545,13 +549,14 @@ PanelWindow {
         anchors.fill: parent
         z: 2
         property bool modeActive: modeManager.isMode("volume")
-        visible: modeActive
+        visible: opacity > 0.01
         opacity: modeActive ? 1.0 : 0.0
         Behavior on opacity {
+            enabled: volumeWrapper.opacity < 0.5
             SequentialAnimation {
-                PauseAnimation { duration: volumeWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                PauseAnimation { duration: 300 * settingsManager.animationDurationMultiplier }
                 NumberAnimation {
-                    duration: volumeWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    duration: 400 * settingsManager.animationDurationMultiplier
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -584,13 +589,14 @@ PanelWindow {
         anchors.fill: parent
         z: 2
         property bool modeActive: modeManager.isMode("notification")
-        visible: modeActive
+        visible: opacity > 0.01
         opacity: modeActive ? 1.0 : 0.0
         Behavior on opacity {
+            enabled: notificationWrapper.opacity < 0.5
             SequentialAnimation {
-                PauseAnimation { duration: notificationWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                PauseAnimation { duration: 300 * settingsManager.animationDurationMultiplier }
                 NumberAnimation {
-                    duration: notificationWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    duration: 400 * settingsManager.animationDurationMultiplier
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -619,13 +625,14 @@ PanelWindow {
         anchors.fill: parent
         z: 2
         property bool modeActive: modeManager.isMode("wifi")
-        visible: modeActive
+        visible: opacity > 0.01
         opacity: modeActive ? 1.0 : 0.0
         Behavior on opacity {
+            enabled: wifiWrapper.opacity < 0.5
             SequentialAnimation {
-                PauseAnimation { duration: wifiWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                PauseAnimation { duration: 300 * settingsManager.animationDurationMultiplier }
                 NumberAnimation {
-                    duration: wifiWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    duration: 400 * settingsManager.animationDurationMultiplier
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -654,13 +661,14 @@ PanelWindow {
         anchors.fill: parent
         z: 2
         property bool modeActive: modeManager.isMode("bluetooth")
-        visible: modeActive
+        visible: opacity > 0.01
         opacity: modeActive ? 1.0 : 0.0
         Behavior on opacity {
+            enabled: bluetoothWrapper.opacity < 0.5
             SequentialAnimation {
-                PauseAnimation { duration: bluetoothWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                PauseAnimation { duration: 300 * settingsManager.animationDurationMultiplier }
                 NumberAnimation {
-                    duration: bluetoothWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    duration: 400 * settingsManager.animationDurationMultiplier
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -689,13 +697,14 @@ PanelWindow {
         anchors.fill: parent
         z: 2
         property bool modeActive: modeManager.isMode("wallpaper")
-        visible: modeActive
+        visible: opacity > 0.01
         opacity: modeActive ? 1.0 : 0.0
         Behavior on opacity {
+            enabled: wallpaperWrapper.opacity < 0.5
             SequentialAnimation {
-                PauseAnimation { duration: wallpaperWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                PauseAnimation { duration: 300 * settingsManager.animationDurationMultiplier }
                 NumberAnimation {
-                    duration: wallpaperWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    duration: 400 * settingsManager.animationDurationMultiplier
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -724,13 +733,14 @@ PanelWindow {
         anchors.fill: parent
         z: 2
         property bool modeActive: modeManager.isMode("settings")
-        visible: modeActive
+        visible: opacity > 0.01
         opacity: modeActive ? 1.0 : 0.0
         Behavior on opacity {
+            enabled: settingsWrapper.opacity < 0.5
             SequentialAnimation {
-                PauseAnimation { duration: settingsWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                PauseAnimation { duration: 300 * settingsManager.animationDurationMultiplier }
                 NumberAnimation {
-                    duration: settingsWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    duration: 400 * settingsManager.animationDurationMultiplier
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -759,13 +769,14 @@ PanelWindow {
         anchors.fill: parent
         z: 2
         property bool modeActive: modeManager.isMode("screenshot-gallery")
-        visible: modeActive
+        visible: opacity > 0.01
         opacity: modeActive ? 1.0 : 0.0
         Behavior on opacity {
+            enabled: screenshotGalleryWrapper.opacity < 0.5
             SequentialAnimation {
-                PauseAnimation { duration: screenshotGalleryWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                PauseAnimation { duration: 300 * settingsManager.animationDurationMultiplier }
                 NumberAnimation {
-                    duration: screenshotGalleryWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    duration: 400 * settingsManager.animationDurationMultiplier
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -792,13 +803,14 @@ PanelWindow {
         anchors.fill: parent
         z: 2
         property bool modeActive: modeManager.isMode("clipboard")
-        visible: modeActive
+        visible: opacity > 0.01
         opacity: modeActive ? 1.0 : 0.0
         Behavior on opacity {
+            enabled: clipboardWrapper.opacity < 0.5
             SequentialAnimation {
-                PauseAnimation { duration: clipboardWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 300 * settingsManager.animationDurationMultiplier : 0 }
+                PauseAnimation { duration: 300 * settingsManager.animationDurationMultiplier }
                 NumberAnimation {
-                    duration: clipboardWrapper.modeActive && settingsManager.animationDurationMultiplier > 0 ? 400 * settingsManager.animationDurationMultiplier : 0
+                    duration: 400 * settingsManager.animationDurationMultiplier
                     easing.type: Easing.InOutCubic
                 }
             }
