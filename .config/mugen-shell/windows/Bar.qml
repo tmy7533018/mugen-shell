@@ -428,9 +428,7 @@ PanelWindow {
         z: 2
         property var modeManagerRef: modeManager
         property var iconsRef: icons
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("powermenu") || everLoaded
-        onLoaded: everLoaded = true
+        active: modeManagerRef.isMode("powermenu")
         sourceComponent: Content.PowerMenuContent {
             anchors.fill: parent
             visible: powerMenuLoader.modeManagerRef.isMode("powermenu")
@@ -445,9 +443,7 @@ PanelWindow {
         z: 2
         property var modeManagerRef: modeManager
         property var themeRef: theme
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("calendar") || everLoaded
-        onLoaded: everLoaded = true
+        active: modeManagerRef.isMode("calendar")
         sourceComponent: Content.CalendarContent {
             anchors.fill: parent
             visible: calendarLoader.modeManagerRef.isMode("calendar")
@@ -465,9 +461,7 @@ PanelWindow {
         property var iconsRef: icons
         property var musicManagerRef: musicPlayerManager
         property var cavaManagerRef: cavaManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("music") || everLoaded
-        onLoaded: everLoaded = true
+        active: modeManagerRef.isMode("music")
         sourceComponent: Content.MusicPlayerContent {
             anchors.fill: parent
             visible: musicPlayerLoader.modeManagerRef.isMode("music")
@@ -488,6 +482,9 @@ PanelWindow {
         property var themeRef: theme
         property var iconsRef: icons
 
+        // Keep AI loaded after first open so chat history, streaming state,
+        // and model selection survive panel close/reopen. Other modules
+        // unload on close to keep memory flat.
         property bool everLoaded: false
         active: modeManagerRef.isMode("ai") || everLoaded
         onLoaded: everLoaded = true
@@ -509,9 +506,7 @@ PanelWindow {
         property var themeRef: theme
         property var iconsRef: icons
         property var typoRef: typo
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("launcher") || everLoaded
-        onLoaded: everLoaded = true
+        active: modeManagerRef.isMode("launcher")
         sourceComponent: Content.AppLauncherContent {
             anchors.fill: parent
             visible: appLauncherLoader.modeManagerRef.isMode("launcher")
@@ -532,9 +527,7 @@ PanelWindow {
         property var audioManagerRef: audioManager
         property var cavaManagerRef: cavaManager
         property var musicPlayerManagerRef: musicPlayerManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("volume") || everLoaded
-        onLoaded: everLoaded = true
+        active: modeManagerRef.isMode("volume")
         sourceComponent: Content.VolumeContent {
             anchors.fill: parent
             visible: volumeLoader.modeManagerRef.isMode("volume")
@@ -555,9 +548,7 @@ PanelWindow {
         property var themeRef: theme
         property var iconsRef: icons
         property var notificationManagerRef: notificationManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("notification") || everLoaded
-        onLoaded: everLoaded = true
+        active: modeManagerRef.isMode("notification")
         sourceComponent: Content.NotificationContent {
             anchors.fill: parent
             visible: notificationLoader.modeManagerRef.isMode("notification")
@@ -576,9 +567,7 @@ PanelWindow {
         property var themeRef: theme
         property var iconsRef: icons
         property var wifiManagerRef: wifiManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("wifi") || everLoaded
-        onLoaded: everLoaded = true
+        active: modeManagerRef.isMode("wifi")
         sourceComponent: Content.WiFiContent {
             anchors.fill: parent
             visible: wifiLoader.modeManagerRef.isMode("wifi")
@@ -597,9 +586,7 @@ PanelWindow {
         property var themeRef: theme
         property var iconsRef: icons
         property var bluetoothManagerRef: bluetoothManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("bluetooth") || everLoaded
-        onLoaded: everLoaded = true
+        active: modeManagerRef.isMode("bluetooth")
         sourceComponent: Content.BluetoothContent {
             anchors.fill: parent
             visible: bluetoothLoader.modeManagerRef.isMode("bluetooth")
@@ -618,9 +605,7 @@ PanelWindow {
         property var themeRef: theme
         property var iconsRef: icons
         property var wallpaperManagerRef: wallpaperManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("wallpaper") || everLoaded
-        onLoaded: everLoaded = true
+        active: modeManagerRef.isMode("wallpaper")
         sourceComponent: Content.WallpaperContent {
             anchors.fill: parent
             visible: wallpaperLoader.modeManagerRef.isMode("wallpaper")
@@ -639,9 +624,7 @@ PanelWindow {
         property var themeRef: theme
         property var iconsRef: icons
         property var settingsManagerRef: settingsManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("settings") || everLoaded
-        onLoaded: everLoaded = true
+        active: modeManagerRef.isMode("settings")
         sourceComponent: Content.SettingsContent {
             anchors.fill: parent
             visible: settingsLoader.modeManagerRef.isMode("settings")
@@ -659,9 +642,7 @@ PanelWindow {
         property var modeManagerRef: modeManager
         property var themeRef: theme
         property var screenshotManagerRef: screenshotManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("screenshot-gallery") || everLoaded
-        onLoaded: everLoaded = true
+        active: modeManagerRef.isMode("screenshot-gallery")
         sourceComponent: Content.ScreenshotGalleryContent {
             anchors.fill: parent
             visible: screenshotGalleryLoader.modeManagerRef.isMode("screenshot-gallery")
@@ -679,9 +660,7 @@ PanelWindow {
         property var themeRef: theme
         property var iconsRef: icons
         property var clipboardManagerRef: clipboardManager
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("clipboard") || everLoaded
-        onLoaded: everLoaded = true
+        active: modeManagerRef.isMode("clipboard")
         sourceComponent: Content.ClipboardContent {
             anchors.fill: parent
             visible: clipboardLoader.modeManagerRef.isMode("clipboard")
