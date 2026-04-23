@@ -50,15 +50,21 @@ QtObject {
     
     function switchMode(newMode, viaIpc) {
         let wasViaIpc = openedViaIpc
-        
+
+        // IMPORTANT: Set openedViaIpc BEFORE currentMode so listeners of
+        // currentModeChanged (e.g. Bar.qml's requestActivate + focus grab)
+        // see the correct openedViaIpc value. Otherwise the keybind-open
+        // focus grab never fires and ESC only works once the mouse has
+        // entered the panel (Wayland gives focus via pointer entry as a
+        // fallback).
         if (newMode === currentMode) {
-            currentMode = "normal"
             openedViaIpc = false
+            currentMode = "normal"
         } else {
-            currentMode = newMode
             openedViaIpc = viaIpc === true
+            currentMode = newMode
         }
-        
+
         if (currentMode === "normal") {
             openedViaIpc = false
         }

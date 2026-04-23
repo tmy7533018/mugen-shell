@@ -130,7 +130,9 @@ PanelWindow {
 
             if (audioManager.volume !== previousVolume) {
                 if (!modeManager.isMode("volume")) {
-                    modeManager.switchMode("volume")
+                    // viaIpc=true so the bar's requestActivate path fires and
+                    // the panel receives keyboard focus (ESC works on open).
+                    modeManager.switchMode("volume", true)
                 }
                 previousVolume = audioManager.volume
             }
@@ -145,7 +147,9 @@ PanelWindow {
 
             if (audioManager.isMuted !== previousMuted) {
                 if (!modeManager.isMode("volume")) {
-                    modeManager.switchMode("volume")
+                    // viaIpc=true so the bar's requestActivate path fires and
+                    // the panel receives keyboard focus (ESC works on open).
+                    modeManager.switchMode("volume", true)
                 }
                 previousMuted = audioManager.isMuted
             }
