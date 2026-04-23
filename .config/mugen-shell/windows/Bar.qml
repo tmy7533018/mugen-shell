@@ -35,12 +35,68 @@ PanelWindow {
         focus: false
 
         Keys.onPressed: (event) => {
-            if (event.key === Qt.Key_Escape && !modeManager.isMode("normal")) {
+            if (modeManager.isMode("normal")) {
+                event.accepted = false
+                return
+            }
+
+            if (event.key === Qt.Key_Escape) {
                 modeManager.closeAllModes()
                 event.accepted = true
-            } else {
-                event.accepted = false
+                return
             }
+
+            // Music panel shortcuts — handled here because escKeyHandler owns
+            // active focus while any panel is open, so per-panel Keys handlers
+            // never fire.
+            if (modeManager.isMode("music") && musicPlayerManager) {
+                if (event.key === Qt.Key_Space) {
+                    musicPlayerManager.playPause()
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_Left) {
+                    musicPlayerManager.previous()
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_Right) {
+                    musicPlayerManager.next()
+                    event.accepted = true
+                    return
+                }
+            }
+
+            // Window switcher shortcuts (Alt+Tab cycling, Enter to focus).
+            if (modeManager.isMode("window-switcher") && windowManager) {
+                if (event.key === Qt.Key_Tab) {
+                    if (event.modifiers & Qt.ShiftModifier) {
+                        windowManager.selectPrevious()
+                    } else {
+                        windowManager.selectNext()
+                    }
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_Left) {
+                    windowManager.selectPrevious()
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_Right) {
+                    windowManager.selectNext()
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    windowManager.focusSelected()
+                    modeManager.closeAllModes()
+                    event.accepted = true
+                    return
+                }
+            }
+
+            event.accepted = false
         }
     }
 
@@ -48,10 +104,11 @@ PanelWindow {
         target: modeManager
         function onCurrentModeChanged() {
             if (!modeManager.isMode("normal") && modeManager.openedViaIpc) {
+                // PanelWindow has no requestActivate(); the focusable:true
+                // + HyprlandFocusGrab combo is enough to give the surface
+                // keyboard focus. Forward that focus into the internal
+                // escKeyHandler so Keys.onPressed fires.
                 Qt.callLater(() => {
-                    // PanelWindow lacks forceActiveFocus(), so activate the window
-                    // then move focus to the internal Item
-                    barWindow.requestActivate()
                     escKeyHandler.forceActiveFocus()
                 })
             }
