@@ -271,6 +271,41 @@ FocusScope {
         anchors.bottomMargin: modeManager.scale(30)
         z: 10
 
+        opacity: 0
+        visible: opacity > 0.01
+
+        states: [
+            State {
+                name: "visible"
+                when: modeManager.isMode("launcher")
+                PropertyChanges { target: launcherLayer; opacity: 1.0 }
+            }
+        ]
+
+        transitions: [
+            Transition {
+                from: "visible"
+                to: ""
+                NumberAnimation {
+                    property: "opacity"
+                    duration: 300
+                    easing.type: Easing.OutCubic
+                }
+            },
+            Transition {
+                from: ""
+                to: "visible"
+                SequentialAnimation {
+                    PauseAnimation { duration: 300 }
+                    NumberAnimation {
+                        property: "opacity"
+                        duration: 400
+                        easing.type: Easing.InOutCubic
+                    }
+                }
+            }
+        ]
+
         focus: modeManager.isMode("launcher")
 
         Keys.forwardTo: [searchField ? searchField.searchFieldItem : null, appGrid]

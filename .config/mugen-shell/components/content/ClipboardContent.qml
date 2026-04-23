@@ -140,6 +140,41 @@ FocusScope {
             }
         }
         
+        opacity: 0
+        visible: opacity > 0.01
+        
+        states: [
+            State {
+                name: "visible"
+                when: modeManager.isMode("clipboard")
+                PropertyChanges { target: clipboardLayer; opacity: 1.0 }
+            }
+        ]
+        
+        transitions: [
+            Transition {
+                from: "visible"
+                to: ""
+                NumberAnimation {
+                    property: "opacity"
+                    duration: 300
+                    easing.type: Easing.OutCubic
+                }
+            },
+            Transition {
+                from: ""
+                to: "visible"
+                SequentialAnimation {
+                    PauseAnimation { duration: 300 }
+                    NumberAnimation {
+                        property: "opacity"
+                        duration: 400
+                        easing.type: Easing.InOutCubic
+                    }
+                }
+            }
+        ]
+        
         ColumnLayout {
             anchors.centerIn: parent
             spacing: 16

@@ -108,6 +108,30 @@ FocusScope {
         anchors.leftMargin: modeManager.scale(32)
         anchors.rightMargin: modeManager.scale(32)
         z: 3
+        opacity: 0
+        visible: true
+
+        states: State {
+            name: "visible"
+            when: modeManager.isMode("ai")
+            PropertyChanges { target: panel; opacity: 1.0 }
+        }
+
+        transitions: [
+            Transition {
+                from: ""
+                to: "visible"
+                SequentialAnimation {
+                    PauseAnimation { duration: 300 }
+                    NumberAnimation { property: "opacity"; duration: 400; easing.type: Easing.InOutCubic }
+                }
+            },
+            Transition {
+                from: "visible"
+                to: ""
+                NumberAnimation { property: "opacity"; duration: 300; easing.type: Easing.OutCubic }
+            }
+        ]
 
         ColumnLayout {
             anchors.centerIn: parent

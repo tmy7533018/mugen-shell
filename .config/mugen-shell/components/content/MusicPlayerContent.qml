@@ -4,9 +4,9 @@ import Quickshell
 import "." as MusicUI
 import "../common" as Common
 
-FocusScope {
+Item {
     id: root
-
+    
     required property var modeManager
     property var musicManager
     property var cavaManager
@@ -42,9 +42,6 @@ FocusScope {
         function onCurrentModeChanged() {
             if (modeManager.isMode("music")) {
                 autoCloseTimer.restart()
-                Qt.callLater(() => {
-                    if (musicLayer) musicLayer.forceActiveFocus()
-                })
             } else {
                 autoCloseTimer.stop()
             }
@@ -102,6 +99,41 @@ FocusScope {
             }
         }
         
+        opacity: 0
+        visible: true
+        
+        states: [
+            State {
+                name: "visible"
+                when: modeManager.isMode("music")
+                PropertyChanges { target: musicLayer; opacity: 1.0 }
+            }
+        ]
+        
+        transitions: [
+            Transition {
+                from: "visible"
+                to: ""
+                NumberAnimation {
+                    property: "opacity"
+                    duration: 300
+                    easing.type: Easing.OutCubic
+                }
+            },
+            Transition {
+                from: ""
+                to: "visible"
+                SequentialAnimation {
+                    PauseAnimation { duration: 300 }  // wait for bar expand animation
+                    NumberAnimation {
+                        property: "opacity"
+                        duration: 400
+                        easing.type: Easing.InOutCubic
+                    }
+                }
+            }
+        ]
+
         RowLayout {
             anchors.centerIn: parent
             spacing: modeManager.scale(12)
@@ -230,9 +262,6 @@ FocusScope {
             modeManager.registerMode("music", root)
             if (modeManager.isMode("music")) {
                 autoCloseTimer.restart()
-                Qt.callLater(() => {
-                    if (musicLayer) musicLayer.forceActiveFocus()
-                })
             }
         }
     }

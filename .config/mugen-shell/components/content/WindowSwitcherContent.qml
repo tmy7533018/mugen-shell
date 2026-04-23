@@ -625,31 +625,45 @@ FocusScope {
         anchors.bottomMargin: modeManager.currentBarSize.bottomMargin
         z: 2
 
-        // Read currentMode directly so QML's binding tracker reliably subscribes
-        // (function calls like isMode() can miss dependency tracking in some
-        // evaluation paths).
-        property bool modeActive: modeManager && modeManager.currentMode === "window-switcher"
+        opacity: 0
+        visible: opacity > 0.01
+
         property bool iconsReady: false
 
-        // Keep visible true permanently so scene graph stays stable; gate with opacity.
-        visible: true
-        opacity: (modeActive && iconsReady) ? 1.0 : 0.0
-        // Disable children (icon delegate MouseAreas etc.) when not active so
-        // clicks don't leak through to the wrong module sharing the same z-plane.
-        enabled: modeActive
-
-        // Only animate on open (current opacity 0 → new 1). On close the current
-        // opacity is 1 so Behavior is disabled and the change is instant — no
-        // dependency on binding evaluation order.
-        Behavior on opacity {
-            enabled: switcherLayer.opacity < 0.5
-            NumberAnimation {
-                duration: 300
-                easing.type: Easing.InOutCubic
+        states: [
+            State {
+                name: "visible"
+                when: modeManager && modeManager.isMode("window-switcher") && switcherLayer.iconsReady
+                PropertyChanges { target: switcherLayer; opacity: 1.0 }
             }
-        }
+        ]
 
-        focus: switcherLayer.modeActive
+        transitions: [
+            Transition {
+                from: "visible"
+                to: ""
+                NumberAnimation {
+                    property: "opacity"
+                    duration: 300
+                    easing.type: Easing.OutCubic
+                }
+            },
+            Transition {
+                from: ""
+                to: "visible"
+                SequentialAnimation {
+                    // Wait for bar expand animation before fading in
+                    PauseAnimation { duration: 300 }
+                    NumberAnimation {
+                        property: "opacity"
+                        duration: 400
+                        easing.type: Easing.InOutCubic
+                    }
+                }
+            }
+        ]
+
+        focus: modeManager && modeManager.isMode("window-switcher")
 
         Keys.onPressed: (event) => {
             if (!modeManager || !modeManager.isMode("window-switcher")) {
