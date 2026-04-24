@@ -45,28 +45,13 @@ Item {
         }
     }
 
-    Timer {
-        id: autoCloseTimer
-        interval: 5000
-        running: false
-        repeat: false
-        onTriggered: {
-            if (modeManager.isMode("bluetooth")) {
-                modeManager.closeAllModes()
-            }
-        }
-    }
-
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
             if (modeManager.isMode("bluetooth")) {
-                autoCloseTimer.restart()
                 bluetoothManager.refreshStatus()
                 bluetoothManager.refreshPairedDevices()
                 root.showAvailableDevices = false
-            } else {
-                autoCloseTimer.stop()
             }
         }
     }
@@ -84,7 +69,7 @@ Item {
 
         onPositionChanged: {
             if (modeManager.isMode("bluetooth")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
             }
         }
     }
@@ -99,7 +84,7 @@ Item {
         focus: modeManager.isMode("bluetooth")
         Keys.onPressed: (event) => {
             if (modeManager.isMode("bluetooth")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
             }
             if (event.key === Qt.Key_Escape) {
                 modeManager.closeAllModes()
@@ -232,7 +217,7 @@ Item {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 bluetoothManager.togglePower()
-                                autoCloseTimer.restart()
+                                modeManager.bump()
                             }
                         }
                     }
@@ -322,7 +307,7 @@ Item {
                             onClicked: {
                                 bluetoothManager.startScan()
                                 root.showAvailableDevices = true
-                                autoCloseTimer.restart()
+                                modeManager.bump()
                             }
                         }
                     }
@@ -368,7 +353,7 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             root.showAvailableDevices = false
-                            autoCloseTimer.restart()
+                            modeManager.bump()
                         }
                     }
                 }
@@ -404,7 +389,7 @@ Item {
                             if (bluetoothManager.availableDevices.length === 0 && !bluetoothManager.isScanning) {
                                 bluetoothManager.startScan()
                             }
-                            autoCloseTimer.restart()
+                            modeManager.bump()
                         }
                     }
                 }
@@ -600,7 +585,7 @@ Item {
                                             modelData.name,
                                             modelData.connected
                                         )
-                                        autoCloseTimer.restart()
+                                        modeManager.bump()
                                     }
                                 }
                             }
@@ -767,7 +752,7 @@ Item {
                                             modelData.address,
                                             modelData.name || modelData.address
                                         )
-                                        autoCloseTimer.restart()
+                                        modeManager.bump()
                                     }
                                 }
                             }
@@ -828,7 +813,7 @@ Item {
         if (modeManager) {
             modeManager.registerMode("bluetooth", root)
             if (modeManager.isMode("bluetooth")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
                 bluetoothManager.refreshStatus()
                 bluetoothManager.refreshPairedDevices()
                 root.showAvailableDevices = false

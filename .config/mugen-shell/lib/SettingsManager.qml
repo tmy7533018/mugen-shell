@@ -8,8 +8,8 @@ QtObject {
     property string defaultSettingsFile: Quickshell.shellDir + "/settings.default.json"
     property string userSettingsFile: Quickshell.shellDir + "/.cache/settings.json"
     
+    // 0 = disabled, otherwise the idle timeout (ms) before a mode auto-closes.
     property int autoCloseTimerInterval: 5000
-    property bool autoCloseTimerEnabled: true
     property bool barGradientEnabled: true
     property string animationSpeed: "normal"  // "slow", "normal", "fast", "instant"
     property real animationDurationMultiplier: 1.0
@@ -28,8 +28,7 @@ QtObject {
     function saveSettings() {
         let settings = {
             "autoCloseTimer": {
-                "interval": autoCloseTimerInterval,
-                "enabled": autoCloseTimerEnabled
+                "interval": autoCloseTimerInterval
             },
             "barBackground": {
                 "gradientEnabled": barGradientEnabled
@@ -65,8 +64,9 @@ QtObject {
                 if (settings.autoCloseTimer.interval !== undefined) {
                     autoCloseTimerInterval = settings.autoCloseTimer.interval
                 }
-                if (settings.autoCloseTimer.enabled !== undefined) {
-                    autoCloseTimerEnabled = settings.autoCloseTimer.enabled
+                // Migrate legacy "enabled: false" to interval = 0
+                if (settings.autoCloseTimer.enabled === false) {
+                    autoCloseTimerInterval = 0
                 }
             }
             

@@ -24,33 +24,20 @@ FocusScope {
     property var history: clipboardManager ? clipboardManager.history : []
     property int currentIndex: -1
 
-    Timer {
-        id: autoCloseTimer
-        interval: 5000
-        running: false
-        repeat: false
-        onTriggered: {
-            if (modeManager.isMode("clipboard")) {
-                modeManager.closeAllModes()
-            }
-        }
-    }
-    
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
             if (modeManager.isMode("clipboard")) {
                 clipboardManager.loadHistory()
                 currentIndex = -1
-                autoCloseTimer.restart()
                 focusTimer.restart()
             } else {
-                autoCloseTimer.stop()
                 currentIndex = -1
             }
         }
     }
-    
+
+
     Timer {
         id: focusTimer
         interval: 500
@@ -76,7 +63,7 @@ FocusScope {
         
         onPositionChanged: {
             if (modeManager.isMode("clipboard")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
             }
         }
     }
@@ -111,7 +98,7 @@ FocusScope {
                 }
                 clipboardList.positionViewAtIndex(currentIndex, ListView.Contain)
                 event.accepted = true
-                autoCloseTimer.restart()
+                modeManager.bump()
             } else if (event.key === Qt.Key_Up || (event.key === Qt.Key_Backtab && event.modifiers & Qt.ShiftModifier)) {
                 if (currentIndex < 0 && history.length > 0) {
                     currentIndex = history.length - 1
@@ -122,21 +109,21 @@ FocusScope {
                 }
                 clipboardList.positionViewAtIndex(currentIndex, ListView.Contain)
                 event.accepted = true
-                autoCloseTimer.restart()
+                modeManager.bump()
             } else if (event.key === Qt.Key_Home) {
                 if (history.length > 0) {
                     currentIndex = 0
                     clipboardList.positionViewAtIndex(0, ListView.Contain)
                 }
                 event.accepted = true
-                autoCloseTimer.restart()
+                modeManager.bump()
             } else if (event.key === Qt.Key_End) {
                 if (history.length > 0) {
                     currentIndex = history.length - 1
                     clipboardList.positionViewAtIndex(currentIndex, ListView.Contain)
                 }
                 event.accepted = true
-                autoCloseTimer.restart()
+                modeManager.bump()
             }
         }
         
@@ -339,7 +326,7 @@ FocusScope {
                             
                             onPositionChanged: {
                                 root.currentIndex = index
-                                autoCloseTimer.restart()
+                                modeManager.bump()
                             }
                         }
                     }
@@ -354,7 +341,7 @@ FocusScope {
             if (modeManager.isMode("clipboard")) {
                 clipboardManager.loadHistory()
                 currentIndex = -1
-                autoCloseTimer.restart()
+                modeManager.bump()
                 focusTimer.restart()
             }
         }

@@ -16,29 +16,6 @@ Item {
         "bottomMargin": modeManager.scale(6)
     })
 
-    Timer {
-        id: autoCloseTimer
-        interval: 5000
-        running: false
-        repeat: false
-        onTriggered: {
-            if (modeManager.isMode("calendar")) {
-                modeManager.closeAllModes()
-            }
-        }
-    }
-
-    Connections {
-        target: modeManager
-        function onCurrentModeChanged() {
-            if (modeManager.isMode("calendar")) {
-                autoCloseTimer.restart()
-            } else {
-                autoCloseTimer.stop()
-            }
-        }
-    }
-
     MouseArea {
         anchors.fill: parent
         z: 1.5
@@ -51,9 +28,7 @@ Item {
         }
 
         onPositionChanged: {
-            if (modeManager.isMode("calendar")) {
-                autoCloseTimer.restart()
-            }
+            if (modeManager.isMode("calendar")) modeManager.bump()
         }
     }
 
@@ -66,9 +41,7 @@ Item {
 
         focus: modeManager.isMode("calendar")
         Keys.onPressed: (event) => {
-            if (modeManager.isMode("calendar")) {
-                autoCloseTimer.restart()
-            }
+            if (modeManager.isMode("calendar")) modeManager.bump()
             if (event.key === Qt.Key_Escape) {
                 modeManager.closeAllModes()
                 event.accepted = true
@@ -542,9 +515,6 @@ Item {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("calendar", root)
-            if (modeManager.isMode("calendar")) {
-                autoCloseTimer.restart()
-            }
         }
     }
 }

@@ -22,32 +22,10 @@ Item {
     })
     
     function resetAutoCloseTimer() {
-        autoCloseTimer.restart()
+        modeManager.bump()
     }
-    
-    Timer {
-        id: autoCloseTimer
-        interval: 5000
-        running: false
-        repeat: false
-        onTriggered: {
-            if (modeManager.isMode("music")) {
-                modeManager.closeAllModes()
-            }
-        }
-    }
-    
-    Connections {
-        target: modeManager
-        function onCurrentModeChanged() {
-            if (modeManager.isMode("music")) {
-                autoCloseTimer.restart()
-            } else {
-                autoCloseTimer.stop()
-            }
-        }
-    }
-    
+
+
     MouseArea {
         anchors.fill: parent
         z: 1.5
@@ -260,9 +238,6 @@ Item {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("music", root)
-            if (modeManager.isMode("music")) {
-                autoCloseTimer.restart()
-            }
         }
     }
 }

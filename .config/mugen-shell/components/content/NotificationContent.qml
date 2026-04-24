@@ -193,35 +193,11 @@ Item {
     
 
     
-    Timer {
-        id: autoCloseTimer
-        interval: 5000
-        running: false
-        repeat: false
-        onTriggered: {
-            if (modeManager.isMode("notification")) {
-                modeManager.closeAllModes()
-            }
-        }
-    }
-    
     function resetAutoCloseTimer() {
-        if (modeManager.isMode("notification")) {
-            autoCloseTimer.restart()
-        }
+        if (modeManager.isMode("notification")) modeManager.bump()
     }
-    
-    Connections {
-        target: modeManager
-        function onCurrentModeChanged() {
-            if (modeManager.isMode("notification")) {
-                autoCloseTimer.restart()
-            } else {
-                autoCloseTimer.stop()
-            }
-        }
-    }
-    
+
+
     MouseArea {
         anchors.fill: parent
         z: 1.5
@@ -234,9 +210,7 @@ Item {
         }
 
         onPositionChanged: {
-            if (modeManager.isMode("notification")) {
-                autoCloseTimer.restart()
-            }
+            if (modeManager.isMode("notification")) modeManager.bump()
         }
     }
     
@@ -249,9 +223,7 @@ Item {
         
         focus: modeManager.isMode("notification")
         Keys.onPressed: (event) => {
-            if (modeManager.isMode("notification")) {
-                autoCloseTimer.restart()
-            }
+            if (modeManager.isMode("notification")) modeManager.bump()
             if (event.key === Qt.Key_Escape) {
                 modeManager.closeAllModes()
                 event.accepted = true
@@ -644,7 +616,6 @@ Item {
             modeManager.registerMode("notification", root)
             if (modeManager.isMode("notification")) {
                 notificationManager.markAllAsRead()
-                autoCloseTimer.restart()
             }
         }
     }

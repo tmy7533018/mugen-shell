@@ -67,7 +67,7 @@ FocusScope {
         Keys.forwardTo: [screenshotGrid]
         Keys.onPressed: (event) => {
             if (modeManager.isMode("screenshot-gallery")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
             }
             if (event.key === Qt.Key_Escape) {
                 modeManager.closeAllModes()
@@ -127,7 +127,7 @@ FocusScope {
 
                     Keys.onPressed: (event) => {
                         if (modeManager.isMode("screenshot-gallery")) {
-                            autoCloseTimer.restart()
+                            modeManager.bump()
                         }
                         if (event.key === Qt.Key_Escape) {
                             modeManager.closeAllModes()
@@ -397,22 +397,8 @@ FocusScope {
         }
     }
 
-    Timer {
-        id: autoCloseTimer
-        interval: 5000
-        running: false
-        repeat: false
-        onTriggered: {
-            if (modeManager.isMode("screenshot-gallery")) {
-                modeManager.closeAllModes()
-            }
-        }
-    }
-    
     function resetAutoCloseTimer() {
-        if (modeManager.isMode("screenshot-gallery")) {
-            autoCloseTimer.restart()
-        }
+        if (modeManager.isMode("screenshot-gallery")) modeManager.bump()
     }
 
     MouseArea {
@@ -436,7 +422,7 @@ FocusScope {
             if (modeManager.isMode("screenshot-gallery")) {
                 if (screenshotManager) screenshotManager.refresh()
                 focusTimer.restart()
-                autoCloseTimer.restart()
+                modeManager.bump()
             }
         }
     }
@@ -449,9 +435,6 @@ FocusScope {
                     screenshotManager.refresh()
                 }
                 focusTimer.restart()
-                autoCloseTimer.restart()
-            } else {
-                autoCloseTimer.stop()
             }
         }
     }

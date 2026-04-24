@@ -234,46 +234,11 @@ FocusScope {
         windowManager.updateWindows()
     }
 
-    Timer {
-        id: autoCloseTimer
-        interval: settingsManager ? settingsManager.autoCloseTimerInterval : 5000
-        running: false
-        repeat: false
-        onTriggered: {
-            if (modeManager && modeManager.isMode("window-switcher")) {
-                modeManager.closeAllModes()
-            }
-        }
-    }
-
     function bumpAutoClose() {
-        if (!modeManager || !modeManager.isMode("window-switcher")) return
-        if (settingsManager && (!settingsManager.autoCloseTimerEnabled || settingsManager.autoCloseTimerInterval === 0)) return
-        if (settingsManager) autoCloseTimer.interval = settingsManager.autoCloseTimerInterval
-        if (autoCloseTimer.interval === 0) return
-            autoCloseTimer.restart()
+        if (modeManager) modeManager.bump()
     }
 
-    Connections {
-        target: settingsManager
-        function onAutoCloseTimerIntervalChanged() {
-            if (!settingsManager) return
-            autoCloseTimer.interval = settingsManager.autoCloseTimerInterval
-            if (!settingsManager.autoCloseTimerEnabled || settingsManager.autoCloseTimerInterval === 0) {
-                autoCloseTimer.stop()
-            }
-        }
-        function onAutoCloseTimerEnabledChanged() {
-            if (!settingsManager) return
-            if (!settingsManager.autoCloseTimerEnabled || settingsManager.autoCloseTimerInterval === 0) {
-                autoCloseTimer.stop()
-            } else if (modeManager && modeManager.isMode("window-switcher")) {
-                autoCloseTimer.restart()
-            }
-        }
-    }
-
-    // Periodically sync window list while visible as insurance against missed IPC events
+// Periodically sync window list while visible as insurance against missed IPC events
     Timer {
         id: liveRefreshTimer
         interval: 700
@@ -528,10 +493,6 @@ FocusScope {
                 getFollowMouseProc.output = ""
                 getFollowMouseProc.running = true
                 followMouseProcTimeout.restart()
-                if (!settingsManager || (settingsManager.autoCloseTimerEnabled && settingsManager.autoCloseTimerInterval !== 0)) {
-                    autoCloseTimer.interval = settingsManager ? settingsManager.autoCloseTimerInterval : autoCloseTimer.interval
-                    if (autoCloseTimer.interval !== 0) autoCloseTimer.restart()
-                }
 
                 if (windowManager.dataReady) {
                     windowManager.resetToActiveWindow()
@@ -550,7 +511,6 @@ FocusScope {
                 windowManager.selectionLocked = false
                 // Delay restore to avoid immediate refocus race
                 restoreFollowMouseTimer.restart()
-                autoCloseTimer.stop()
                 switcherLayer.iconsReady = false
                 followMouseProcTimeout.stop()
             }

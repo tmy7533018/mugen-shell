@@ -20,39 +20,24 @@ FocusScope {
         "bottomMargin": modeManager.scale(6)
     })
     
-    Timer {
-        id: autoCloseTimer
-        interval: 5000
-        running: false
-        repeat: false
-        onTriggered: {
-            if (modeManager.isMode("powermenu")) {
-                modeManager.closeAllModes()
-            }
-        }
-    }
-    
     function resetAutoCloseTimer() {
-        if (modeManager.isMode("powermenu")) {
-            autoCloseTimer.restart()
-        }
+        if (modeManager.isMode("powermenu")) modeManager.bump()
     }
-    
+
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
             if (modeManager.isMode("powermenu")) {
-                autoCloseTimer.restart()
                 root.currentButtonIndex = -1
                 buttonsRow.updateButtonFocus()
                 focusTimer.restart()
             } else {
-                autoCloseTimer.stop()
                 root.currentButtonIndex = -1
             }
         }
     }
-    
+
+
     Timer {
         id: focusTimer
         interval: 500
@@ -80,7 +65,7 @@ FocusScope {
         
         onPositionChanged: {
             if (modeManager.isMode("powermenu")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
             }
         }
     }
@@ -139,7 +124,7 @@ FocusScope {
             
             Keys.onPressed: (event) => {
                 if (modeManager.isMode("powermenu")) {
-                    autoCloseTimer.restart()
+                    modeManager.bump()
                 }
                 if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                     if (root.currentButtonIndex >= 0) {
@@ -302,7 +287,7 @@ FocusScope {
         if (modeManager) {
             modeManager.registerMode("powermenu", root)
             if (modeManager.isMode("powermenu")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
                 root.currentButtonIndex = -1
                 buttonsRow.updateButtonFocus()
                 focusTimer.restart()

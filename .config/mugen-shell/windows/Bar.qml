@@ -117,6 +117,27 @@ PanelWindow {
 
     property alias notificationManager: notificationManager
 
+    // Centralized auto-close: any open mode closes after the configured idle
+    // timeout unless interaction bumps the timer. Interval 0 disables entirely.
+    Timer {
+        id: autoCloseTimer
+        interval: settingsManager.autoCloseTimerInterval > 0 ? settingsManager.autoCloseTimerInterval : 60000
+        repeat: false
+        running: !modeManager.isMode("normal") && settingsManager.autoCloseTimerInterval > 0
+        onTriggered: {
+            if (!modeManager.isMode("normal")) modeManager.closeAllModes()
+        }
+    }
+
+    Connections {
+        target: modeManager
+        function onInteraction() {
+            if (settingsManager.autoCloseTimerInterval > 0 && !modeManager.isMode("normal")) {
+                autoCloseTimer.restart()
+            }
+        }
+    }
+
     Behavior on implicitHeight {
         NumberAnimation {
             duration: settingsManager.animationDurationMultiplier === 0 ? 0 : 1000 * settingsManager.animationDurationMultiplier

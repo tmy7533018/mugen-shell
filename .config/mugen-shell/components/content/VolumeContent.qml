@@ -26,40 +26,27 @@ Item {
 
     property real audioLevel: cavaManager ? cavaManager.audioLevel : 0.0
 
-    Timer {
-        id: autoCloseTimer
-        interval: 5000
-        running: false
-        repeat: false
-        onTriggered: {
-            if (modeManager.isMode("volume")) {
-                modeManager.closeAllModes()
-            }
-        }
-    }
-
+    // Closes the panel quickly (faster than the central auto-close) right
+    // after a hardware volume change — the panel is transient in that flow.
     Timer {
         id: volumeChangeTimer
         interval: 2000
         running: false
         repeat: false
         onTriggered: {
-            if (modeManager.isMode("volume")) {
-                modeManager.closeAllModes()
-            }
+            if (modeManager.isMode("volume")) modeManager.closeAllModes()
         }
     }
 
     function resetAutoCloseTimer() {
         if (modeManager.isMode("volume")) {
-            autoCloseTimer.restart()
+            modeManager.bump()
             volumeChangeTimer.stop()
         }
     }
 
     function startVolumeChangeTimer() {
         if (modeManager.isMode("volume")) {
-            autoCloseTimer.stop()
             volumeChangeTimer.restart()
         }
     }
@@ -67,15 +54,9 @@ Item {
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
-            if (modeManager.isMode("volume")) {
-                autoCloseTimer.restart()
+            if (!modeManager.isMode("volume")) {
                 volumeChangeTimer.stop()
-            } else {
-                autoCloseTimer.stop()
-                volumeChangeTimer.stop()
-                if (contentLayer) {
-                    contentLayer.deviceDropdownVisible = false
-                }
+                if (contentLayer) contentLayer.deviceDropdownVisible = false
             }
         }
     }
@@ -884,10 +865,6 @@ Item {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("volume", root)
-            if (modeManager.isMode("volume")) {
-                autoCloseTimer.restart()
-                volumeChangeTimer.stop()
-            }
         }
     }
 }

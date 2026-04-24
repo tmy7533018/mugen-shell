@@ -1,7 +1,6 @@
 {
   "autoCloseTimer": {
-    "interval": 5000,
-    "enabled": true
+    "interval": 5000
   },
   "barBackground": {
     "gradientEnabled": true
@@ -11,4 +10,3 @@
     "durationMultiplier": 1.0
   }
 }
-

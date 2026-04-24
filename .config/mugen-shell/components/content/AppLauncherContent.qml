@@ -205,18 +205,6 @@ FocusScope {
         }
     }
 
-    Timer {
-        id: autoCloseTimer
-        interval: 5000
-        running: false
-        repeat: false
-        onTriggered: {
-            if (modeManager.isMode("launcher")) {
-                modeManager.closeAllModes()
-            }
-        }
-    }
-
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
@@ -230,11 +218,8 @@ FocusScope {
                 if (appGrid) {
                     appGrid.currentIndex = -1
                 }
-                autoCloseTimer.restart()
                 // Delay focus to ensure PanelWindow has activated via IPC
                 focusTimer.restart()
-            } else {
-                autoCloseTimer.stop()
             }
         }
     }
@@ -312,7 +297,7 @@ FocusScope {
 
         Keys.onPressed: (event) => {
             if (modeManager.isMode("launcher")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
             }
             if (event.key === Qt.Key_Escape) {
                 modeManager.closeAllModes()
@@ -336,7 +321,7 @@ FocusScope {
                 onSearchTextChanged: (text) => {
                     root.searchText = text
                     filterDebounceTimer.restart()
-                    autoCloseTimer.restart()
+                    modeManager.bump()
                     appGrid.currentIndex = -1
                 }
 
@@ -380,7 +365,7 @@ FocusScope {
 
                 Keys.onPressed: (event) => {
                     if (modeManager.isMode("launcher")) {
-                        autoCloseTimer.restart()
+                        modeManager.bump()
                     }
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         if (currentIndex >= 0 && root.filteredApps[currentIndex]) {
@@ -499,7 +484,7 @@ FocusScope {
                         }
 
                         onResetAutoCloseTimer: () => {
-                            autoCloseTimer.restart()
+                            modeManager.bump()
                         }
                     }
                 }
@@ -528,7 +513,7 @@ FocusScope {
 
         onPositionChanged: {
             if (modeManager.isMode("launcher")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
             }
         }
     }
@@ -542,7 +527,7 @@ FocusScope {
                 root.searchText = ""
                 if (searchField) searchField.text = ""
                 if (appGrid) appGrid.currentIndex = -1
-                autoCloseTimer.restart()
+                modeManager.bump()
                 focusTimer.restart()
             }
         }

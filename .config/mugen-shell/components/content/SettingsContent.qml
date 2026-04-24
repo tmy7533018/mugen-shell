@@ -51,54 +51,19 @@ Item {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("settings", root)
-            if (modeManager.isMode("settings")) {
-                if (settingsManager && settingsManager.autoCloseTimerEnabled) {
-                    autoCloseTimer.restart()
-                }
-                loadBlurPresets()
-            }
+            if (modeManager.isMode("settings")) loadBlurPresets()
         }
     }
 
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
-            if (modeManager.isMode("settings")) {
-                if (settingsManager && settingsManager.autoCloseTimerEnabled) {
-                    autoCloseTimer.restart()
-                }
-                loadBlurPresets()
-            } else {
-                autoCloseTimer.stop()
-            }
-        }
-    }
-
-    Timer {
-        id: autoCloseTimer
-        interval: settingsManager ? settingsManager.autoCloseTimerInterval : 5000
-        running: false
-        repeat: false
-        onTriggered: {
-            if (modeManager.isMode("settings")) {
-                modeManager.closeAllModes()
-            }
-        }
-    }
-
-    Connections {
-        target: settingsManager
-        function onAutoCloseTimerIntervalChanged() {
-            if (settingsManager) {
-                autoCloseTimer.interval = settingsManager.autoCloseTimerInterval
-            }
+            if (modeManager.isMode("settings")) loadBlurPresets()
         }
     }
 
     function resetAutoCloseTimer() {
-        if (modeManager.isMode("settings") && settingsManager && settingsManager.autoCloseTimerEnabled) {
-            autoCloseTimer.restart()
-        }
+        if (modeManager.isMode("settings")) modeManager.bump()
     }
 
     MouseArea {
@@ -114,7 +79,7 @@ Item {
 
         onPositionChanged: {
             if (modeManager.isMode("settings")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
             }
         }
     }
@@ -129,7 +94,7 @@ Item {
         focus: modeManager.isMode("settings")
         Keys.onPressed: (event) => {
             if (modeManager.isMode("settings")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
             }
             if (event.key === Qt.Key_Escape) {
                 modeManager.closeAllModes()
@@ -588,11 +553,8 @@ Item {
                         Text {
                             text: {
                                 if (!settingsManager) return "..."
-                                if (!settingsManager.autoCloseTimerEnabled || settingsManager.autoCloseTimerInterval === 0) {
-                                    return "Disabled"
-                                }
-                                let interval = settingsManager.autoCloseTimerInterval
-                                return (interval / 1000) + " seconds"
+                                if (settingsManager.autoCloseTimerInterval === 0) return "Disabled"
+                                return (settingsManager.autoCloseTimerInterval / 1000) + " seconds"
                             }
                             color: theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
                             font.pixelSize: 12
@@ -632,7 +594,7 @@ Item {
 
                         onVisibleChanged: {
                             if (visible && settingsManager) {
-                                let currentValue = settingsManager.autoCloseTimerEnabled ? settingsManager.autoCloseTimerInterval : 0
+                                let currentValue = settingsManager.autoCloseTimerInterval
                                 let index = -1
                                 for (let i = 0; i < timerSectionRect.timerOptions.length; i++) {
                                     if (timerSectionRect.timerOptions[i].value === currentValue) {
@@ -653,13 +615,7 @@ Item {
                             width: Math.max(timerText.implicitWidth + 24, 80)
                             height: 36
                             radius: 8
-                            property bool isCurrent: {
-                                if (!settingsManager) return false
-                                if (modelData.value === 0) {
-                                    return !settingsManager.autoCloseTimerEnabled || settingsManager.autoCloseTimerInterval === 0
-                                }
-                                return settingsManager.autoCloseTimerEnabled && settingsManager.autoCloseTimerInterval === modelData.value
-                            }
+                            property bool isCurrent: settingsManager && settingsManager.autoCloseTimerInterval === modelData.value
 
                             color: timerMouseArea.containsMouse
                                 ? (theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : Qt.rgba(0.65, 0.55, 0.85, 0.25))
@@ -693,12 +649,7 @@ Item {
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
                                     if (settingsManager) {
-                                        if (modelData.value === 0) {
-                                            settingsManager.autoCloseTimerEnabled = false
-                                        } else {
-                                            settingsManager.autoCloseTimerEnabled = true
-                                            settingsManager.autoCloseTimerInterval = modelData.value
-                                        }
+                                        settingsManager.autoCloseTimerInterval = modelData.value
                                         settingsManager.saveSettings()
                                     }
                                     timerSectionRect.isExpanded = false

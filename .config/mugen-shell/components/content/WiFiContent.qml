@@ -36,30 +36,14 @@ Item {
         }
     }
     
-    Timer {
-        id: autoCloseTimer
-        interval: 5000
-        running: false
-        repeat: false
-        onTriggered: {
-            if (modeManager.isMode("wifi")) {
-                modeManager.closeAllModes()
-            }
-        }
-    }
-    
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
-            if (modeManager.isMode("wifi")) {
-                autoCloseTimer.restart()
-                wifiManager.fullRefresh()
-            } else {
-                autoCloseTimer.stop()
-            }
+            if (modeManager.isMode("wifi")) wifiManager.fullRefresh()
         }
     }
-    
+
+
     MouseArea {
         anchors.fill: parent
         z: 1.5
@@ -73,7 +57,7 @@ Item {
 
         onPositionChanged: {
             if (modeManager.isMode("wifi")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
             }
         }
     }
@@ -88,7 +72,7 @@ Item {
         focus: modeManager.isMode("wifi")
         Keys.onPressed: (event) => {
             if (modeManager.isMode("wifi")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
             }
             if (event.key === Qt.Key_Escape) {
                 modeManager.closeAllModes()
@@ -221,7 +205,7 @@ Item {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 wifiManager.togglePower()
-                                autoCloseTimer.restart()
+                                modeManager.bump()
                             }
                         }
                     }
@@ -329,7 +313,7 @@ Item {
                             enabled: !wifiManager.isRefreshing && wifiManager.isPowered
                             onClicked: {
                                 wifiManager.fullRefresh()
-                                autoCloseTimer.restart()
+                                modeManager.bump()
                             }
                         }
                     }
@@ -505,7 +489,7 @@ Item {
                             }
                             
                             onResetAutoCloseTimer: () => {
-                                autoCloseTimer.restart()
+                                modeManager.bump()
                             }
                             
                             onConnectToNetwork: (ssid, password) => {
@@ -595,7 +579,7 @@ Item {
         if (modeManager) {
             modeManager.registerMode("wifi", root)
             if (modeManager.isMode("wifi")) {
-                autoCloseTimer.restart()
+                modeManager.bump()
                 wifiManager.fullRefresh()
             }
         }

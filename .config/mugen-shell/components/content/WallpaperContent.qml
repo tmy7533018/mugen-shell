@@ -31,7 +31,6 @@ FocusScope {
             if (modeManager.isMode("wallpaper")) {
                 wallpaperManager.loadWallpapers()
                 focusTimer.restart()
-                autoCloseTimer.restart()
             }
         }
     }
@@ -41,31 +40,13 @@ FocusScope {
         function onCurrentModeChanged() {
             if (modeManager.isMode("wallpaper")) {
                 wallpaperManager.loadWallpapers()
-                // Increase delay to ensure IPC triggers work reliably
                 focusTimer.restart()
-                autoCloseTimer.restart()
-            } else {
-                autoCloseTimer.stop()
-            }
-        }
-    }
-
-    Timer {
-        id: autoCloseTimer
-        interval: 5000
-        running: false
-        repeat: false
-        onTriggered: {
-            if (modeManager.isMode("wallpaper")) {
-                modeManager.closeAllModes()
             }
         }
     }
 
     function resetAutoCloseTimer() {
-        if (modeManager.isMode("wallpaper")) {
-            autoCloseTimer.restart()
-        }
+        if (modeManager.isMode("wallpaper")) modeManager.bump()
     }
 
     // Longer interval to wait for PanelWindow.forceActiveFocus()

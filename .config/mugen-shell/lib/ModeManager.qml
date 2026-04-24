@@ -78,6 +78,15 @@ QtObject {
     function isMode(modeName) {
         return currentMode === modeName
     }
+
+    // Emitted when the user interacts with any open panel. Bar.qml listens
+    // and restarts the central autoCloseTimer. Panels call bump() from their
+    // MouseArea onPositionChanged / onClicked / Keys.onPressed handlers.
+    signal interaction()
+
+    function bump() {
+        interaction()
+    }
     
     function listModes() {
     }
