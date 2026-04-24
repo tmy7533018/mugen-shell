@@ -4,6 +4,8 @@ https://github.com/user-attachments/assets/c82fab1d-ac78-4d50-b770-a7dbd00ec94f
 
 Built with **Quickshell + Hyprland**.
 
+> Personal dotfiles — not intended for general use.
+
 ---
 
 ## Environment
