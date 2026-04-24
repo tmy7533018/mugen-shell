@@ -26,7 +26,11 @@ Built with **Quickshell + Hyprland**.
 
 https://github.com/user-attachments/assets/6c9af2a4-cdf1-4941-b417-14837393db36
 
-AI chat panel (`Super + A`) powered by **[mugen-ai](https://github.com/tmy7533018/mugen-ai)** — an optional Go server supporting local [Ollama](https://ollama.com) models and Google Gemini.
+AI chat panel (`Super + A`) powered by **mugen-ai** — a Go server bundled in this repo under [`mugen-ai/`](mugen-ai/), supporting local [Ollama](https://ollama.com) models and Google Gemini.
+
+```bash
+make install-ai
+```
 
 - Streaming SSE responses with stop button
 - Runtime model switching from the UI

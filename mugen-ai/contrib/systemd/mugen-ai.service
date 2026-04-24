@@ -1,0 +1,13 @@
+[Unit]
+Description=mugen-ai local AI assistant
+After=graphical-session.target
+
+[Service]
+Type=simple
+EnvironmentFile=-%h/.config/mugen-ai/.env
+ExecStart=%h/go/bin/mugen-ai serve
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

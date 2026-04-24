@@ -339,7 +339,7 @@ FocusScope {
                     Text {
                         Layout.alignment: Qt.AlignHCenter
                         horizontalAlignment: Text.AlignHCenter
-                        text: "Install mugen-ai and start the service:\ngithub.com/tmy7533018/mugen-ai"
+                        text: "Install mugen-ai from this repo:"
                         color: root.theme ? root.theme.textFaint : Qt.rgba(0.72, 0.72, 0.82, 0.70)
                         font.pixelSize: modeManager.scale(12)
                         font.family: "M PLUS 2"
@@ -349,7 +349,7 @@ FocusScope {
                     Text {
                         Layout.alignment: Qt.AlignHCenter
                         horizontalAlignment: Text.AlignHCenter
-                        text: "systemctl --user enable --now mugen-ai.service"
+                        text: "cd dotfiles-mugen && make install-ai"
                         color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
                         font.pixelSize: modeManager.scale(11)
                         font.family: "monospace"

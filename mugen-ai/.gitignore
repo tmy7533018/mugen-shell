@@ -1,0 +1,13 @@
+# Build output
+mugen-ai
+*.exe
+
+# Go toolchain
+vendor/
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# Claude Code
+.claude/
