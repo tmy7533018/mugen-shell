@@ -119,11 +119,17 @@ PanelWindow {
 
     // Centralized auto-close: any open mode closes after the configured idle
     // timeout unless interaction bumps the timer. Interval 0 disables entirely.
+    // The "ai" mode is exempted — users read streamed responses without
+    // moving the cursor, so we rely on ESC / click-outside to close it.
+    readonly property bool autoCloseEligible: !modeManager.isMode("normal")
+        && !modeManager.isMode("ai")
+        && settingsManager.autoCloseTimerInterval > 0
+
     Timer {
         id: autoCloseTimer
         interval: settingsManager.autoCloseTimerInterval > 0 ? settingsManager.autoCloseTimerInterval : 60000
         repeat: false
-        running: !modeManager.isMode("normal") && settingsManager.autoCloseTimerInterval > 0
+        running: barWindow.autoCloseEligible
         onTriggered: {
             if (!modeManager.isMode("normal")) modeManager.closeAllModes()
         }
@@ -132,9 +138,7 @@ PanelWindow {
     Connections {
         target: modeManager
         function onInteraction() {
-            if (settingsManager.autoCloseTimerInterval > 0 && !modeManager.isMode("normal")) {
-                autoCloseTimer.restart()
-            }
+            if (barWindow.autoCloseEligible) autoCloseTimer.restart()
         }
     }
 
