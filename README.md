@@ -22,12 +22,6 @@ Built with **Quickshell + Hyprland**.
 
 ---
 
-## CLI
-
-Hyprland keybinds and shell control are managed via **[mugen-ctl](https://github.com/tmy7533018/mugen-ctl)**, a companion Go CLI tool.
-
----
-
 ## AI Assistant
 
 https://github.com/user-attachments/assets/6c9af2a4-cdf1-4941-b417-14837393db36
