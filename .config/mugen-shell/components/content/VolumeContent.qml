@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import "../common" as Common
 import "../ui" as UI
@@ -623,7 +624,10 @@ Item {
                 cursorShape: Qt.PointingHandCursor
 
                 onClicked: {
-                    pavucontrolProcess.running = true
+                    // Hyprland.dispatch decouples the spawn from this QML
+                    // object's lifecycle; a Process child here would be
+                    // killed by closeAllModes unloading the panel below.
+                    Hyprland.dispatch("exec pavucontrol")
                     modeManager.closeAllModes()
                 }
             }
@@ -875,12 +879,6 @@ Item {
                 }
             }
         }
-    }
-
-    Process {
-        id: pavucontrolProcess
-        command: ["pavucontrol"]
-        running: false
     }
 
     Component.onCompleted: {

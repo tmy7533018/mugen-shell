@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 import "../ui" as UI
 
@@ -216,7 +217,7 @@ FocusScope {
                 color: Qt.rgba(0.45, 0.65, 0.90, 1.0)
                 onClicked: {
                     root.resetAutoCloseTimer()
-                    lockProcess.running = true
+                    Hyprland.dispatch("exec hyprlock")
                     modeManager.closeAllModes()
                 }
             }
@@ -243,7 +244,7 @@ FocusScope {
                 color: Qt.rgba(0.55, 0.75, 0.85, 1.0)
                 onClicked: {
                     root.resetAutoCloseTimer()
-                    suspendProcess.running = true
+                    Hyprland.dispatch("exec systemctl suspend")
                     modeManager.closeAllModes()
                 }
             }
@@ -279,23 +280,12 @@ FocusScope {
     }
     
     Process {
-        id: lockProcess
-        command: ["hyprlock"]
-        running: false
-    }
-    
-    Process {
         id: logoutProcess
         command: ["bash", "-c", "hyprctl dispatch exit"]
         running: false
     }
-    
-    Process {
-        id: suspendProcess
-        command: ["bash", "-c", "systemctl suspend"]
-        running: false
-    }
-    
+
+
     Process {
         id: rebootProcess
         command: ["bash", "-c", "systemctl reboot"]
