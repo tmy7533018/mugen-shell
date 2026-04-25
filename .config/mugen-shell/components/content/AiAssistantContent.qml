@@ -144,6 +144,7 @@ FocusScope {
                 Layout.alignment: Qt.AlignHCenter
                 Layout.preferredWidth: modeManager.scale(600)
                 spacing: modeManager.scale(12)
+                z: 100
 
                 Common.GlowText {
                     text: "Assistant"
@@ -165,6 +166,7 @@ FocusScope {
                     visible: root.aiAvailable && root.currentModel !== ""
                     Layout.preferredWidth: modelLabel.width + modeManager.scale(20)
                     Layout.preferredHeight: modeManager.scale(26)
+                    z: 100
 
                     Rectangle {
                         anchors.fill: parent
@@ -214,7 +216,9 @@ FocusScope {
                             width: modelDropdownCol.width + modeManager.scale(12)
                             height: modelDropdownCol.height + modeManager.scale(12)
                             radius: modeManager.scale(10)
-                            color: root.theme ? root.theme.surfaceGlass : Qt.rgba(0.08, 0.05, 0.15, 0.85)
+                            color: root.theme
+                                ? Qt.rgba(root.theme.surfaceGlass.r, root.theme.surfaceGlass.g, root.theme.surfaceGlass.b, 0.9)
+                                : Qt.rgba(0.08, 0.05, 0.15, 0.9)
                             border.color: root.theme ? root.theme.surfaceBorder : Qt.rgba(0.55, 0.55, 0.68, 0.2)
                             border.width: 1
 
@@ -259,6 +263,7 @@ FocusScope {
                                             cursorShape: Qt.PointingHandCursor
                                             onClicked: {
                                                 if (modelData !== root.currentModel) {
+                                                    if (root.streaming) root.stopStreaming()
                                                     root.currentModel = modelData
                                                     switchModelProcess.payload = JSON.stringify({ model: modelData })
                                                     switchModelProcess.running = true

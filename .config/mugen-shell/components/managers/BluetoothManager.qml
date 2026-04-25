@@ -164,7 +164,9 @@ QtObject {
     }
 
     property Process bluetoothToggleProcess: Process {
-        command: ["bash", "-c", bluetoothManager.isPowered ? "bluetoothctl power off" : "bluetoothctl power on"]
+        command: ["bash", "-c", bluetoothManager.isPowered
+            ? "bluetoothctl power off"
+            : "rfkill unblock bluetooth && bluetoothctl power on"]
         running: false
 
         onExited: (code, status) => {

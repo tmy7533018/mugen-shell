@@ -25,6 +25,7 @@ QtObject {
         if (toggleProcess.running) {
             return
         }
+        pendingRestoreState = null
         isBusy = true
         lastError = ""
         toggleProcess.command = ["bash", toggleScript]
@@ -70,11 +71,8 @@ QtObject {
             idleInhibitorManager.isInhibited = currentInhibited
             idleInhibitorManager.isBusy = false
 
-            if (pendingRestoreState !== null && pendingRestoreState !== currentInhibited) {
-                if (pendingRestoreState && !currentInhibited) {
-                    restoreToggleProcess.command = ["bash", toggleScript]
-                    restoreToggleProcess.running = true
-                } else if (!pendingRestoreState && currentInhibited) {
+            if (pendingRestoreState !== null) {
+                if (pendingRestoreState !== currentInhibited) {
                     restoreToggleProcess.command = ["bash", toggleScript]
                     restoreToggleProcess.running = true
                 }
