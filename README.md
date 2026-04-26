@@ -15,6 +15,7 @@ For an outline of the directory layout, dependencies, install steps, and keybind
 | | |
 |---|---|
 | OS | Garuda Linux (Arch-based) |
+| GPU | AMD Radeon RX 9070 XT |
 | WM | Hyprland |
 | Shell | Zsh + Starship |
 | Terminal | Kitty |
@@ -68,6 +69,17 @@ make install-ai
 - Screenshot gallery
 - Power menu
 - In-shell settings panel
+
+---
+
+## Roadmap
+
+- [ ] System Tray
+- [ ] Battery indicator
+- [ ] Brightness control
+- [ ] Mic volume control
+- [ ] Keyboard layout indicator
+- [ ] NixOS flake distribution (`mugen-os`)
 
 ---
 
