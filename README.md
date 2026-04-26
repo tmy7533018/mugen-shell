@@ -6,6 +6,8 @@ Built with **Quickshell + Hyprland**.
 
 > Personal dotfiles — not intended for general use.
 
+For an outline of the directory layout, dependencies, install steps, and keybindings, see [SETUP.md](SETUP.md). It reflects this exact setup; nothing about it is portable beyond Hyprland on an Arch-based distro.
+
 ---
 
 ## Environment
@@ -17,7 +19,7 @@ Built with **Quickshell + Hyprland**.
 | Shell | Zsh + Starship |
 | Terminal | Kitty |
 | Desktop Shell | Quickshell |
-| Wallpaper | swww / mpvpaper |
+| Wallpaper | awww / mpvpaper |
 | Colors | Matugen (Material You) |
 
 ---
@@ -52,7 +54,7 @@ make install-ai
 ## Features
 
 - Wallpaper-driven Material You color scheme via Matugen
-- Video and image wallpaper switching (mpvpaper + swww)
+- Video and image wallpaper switching (mpvpaper + awww)
 - Wallpaper picker UI
 - Music player integration (playerctl / MPRIS) with YouTube thumbnail fallback
 - Cava audio visualizer

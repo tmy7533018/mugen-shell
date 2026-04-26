@@ -37,8 +37,5 @@ __pycache__/
 *.bak
 *~
 
-# Personal notes
-SETUP.md
-
 # Claude Code local settings
 .claude/
