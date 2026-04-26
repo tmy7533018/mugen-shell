@@ -215,7 +215,7 @@ Item {
 
                         property int pointCount: 16
                         property var offsets: []
-                        property real waveAmplitude: scaled(3) + index * scaled(3.0)
+                        property real waveAmplitude: scaled(2) + index * scaled(2.0)
 
                         Component.onCompleted: {
                             offsets = [];
@@ -438,7 +438,7 @@ Item {
 
                     property int pointCount: 16
                     property var offsets: []
-                    property real waveAmplitude: scaled(3) + index * scaled(3.0)
+                    property real waveAmplitude: scaled(2) + index * scaled(2.0)
 
                     property color _cachedBlobColor: Qt.rgba(0, 0, 0, 0)
                     property color _lastActiveColor: Qt.rgba(0, 0, 0, 0)
@@ -551,7 +551,7 @@ Item {
                             blobColor.r,
                             blobColor.g,
                             blobColor.b,
-                            0.9 - index * 0.12
+                            0.7 - index * 0.12
                         ));
                         gradient.addColorStop(1, Qt.rgba(
                             blobColor.r,
@@ -654,7 +654,7 @@ Item {
 
                         property int pointCount: 12
                         property var offsets: []
-                        property real waveAmplitude: scaled(3) + index * scaled(2.5)
+                        property real waveAmplitude: scaled(2) + index * scaled(2.0)
 
                         Component.onCompleted: {
                             offsets = [];
@@ -703,7 +703,7 @@ Item {
                                 inactiveSmokeContainer.smokeColor.r,
                                 inactiveSmokeContainer.smokeColor.g,
                                 inactiveSmokeContainer.smokeColor.b,
-                                inactiveSmokeContainer.hasWindows ? 0.85 - index * 0.1 : 0.7 - index * 0.1
+                                inactiveSmokeContainer.hasWindows ? 0.5 - index * 0.12 : 0.4 - index * 0.12
                             ));
                             gradient.addColorStop(1, Qt.rgba(
                                 inactiveSmokeContainer.smokeColor.r,
