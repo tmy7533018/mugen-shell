@@ -30,8 +30,8 @@ Row {
     }
     
     // AGC: tracks peak level to normalize output and maintain consistent visual amplitude
-    property real signalPeak: 0.2
-    
+    property real signalPeak: 0.15
+
     Connections {
         target: cavaManager
         function onAudioLevelChanged() {
@@ -40,7 +40,7 @@ Row {
                 signalPeak = current
             } else {
                 // Slow decay (~3s half-life) so sensitivity gradually increases during quiet passages
-                signalPeak = Math.max(0.2, signalPeak * 0.995)
+                signalPeak = Math.max(0.15, signalPeak * 0.995)
             }
         }
     }

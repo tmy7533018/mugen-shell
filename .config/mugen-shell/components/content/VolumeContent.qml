@@ -390,91 +390,15 @@ Item {
                 yScale: volumeBlob.pulseScale * volumeBlob.cavaScale
             }
 
-            Repeater {
-                model: 3
-
-                Item {
-                    id: blobLayer
-                    anchors.fill: parent
-                    opacity: 0.75 - index * 0.15
-
-                    Canvas {
-                        id: blobCanvas
-                        anchors.fill: parent
-
-                        property int pointCount: 16
-                        property var offsets: []
-                        property real waveAmplitude: modeManager.scale(8 + index * 4.0)
-
-                        Component.onCompleted: {
-                            offsets = [];
-                            for (let i = 0; i < pointCount; i++) {
-                                offsets.push(Math.random() * Math.PI * 2);
-                            }
-                            requestPaint();
-                        }
-
-                        onPaint: {
-                            let ctx = getContext("2d");
-                            ctx.reset();
-
-                            let centerX = width / 2;
-                            let centerY = height / 2;
-                            let baseRadius = Math.max(15, Math.min(width, height) / 2 - waveAmplitude * 2);
-
-                            ctx.beginPath();
-
-                            for (let i = 0; i <= pointCount; i++) {
-                                let angle = (i / pointCount) * Math.PI * 2;
-                                let waveOffset = Math.sin(offsets[i % pointCount]) * waveAmplitude;
-                                let radius = baseRadius + waveOffset;
-                                let x = centerX + Math.cos(angle) * radius;
-                                let y = centerY + Math.sin(angle) * radius;
-
-                                if (i === 0) {
-                                    ctx.moveTo(x, y);
-                                } else {
-                                    ctx.lineTo(x, y);
-                                }
-                            }
-
-                            ctx.closePath();
-
-                            let gradient = ctx.createRadialGradient(
-                                centerX, centerY, 0,
-                                centerX, centerY, baseRadius
-                            );
-
-                            gradient.addColorStop(0, Qt.rgba(
-                                contentLayer.blobColor.r,
-                                contentLayer.blobColor.g,
-                                contentLayer.blobColor.b,
-                                0.85 - index * 0.12
-                            ));
-                            gradient.addColorStop(1, Qt.rgba(
-                                contentLayer.blobColor.r,
-                                contentLayer.blobColor.g,
-                                contentLayer.blobColor.b,
-                                0
-                            ));
-
-                            ctx.fillStyle = gradient;
-                            ctx.fill();
-                        }
-
-                        Timer {
-                            interval: 150
-                            running: modeManager.isMode("volume")
-                            repeat: true
-                            onTriggered: {
-                                for (let i = 0; i < blobCanvas.pointCount; i++) {
-                                    blobCanvas.offsets[i] += (0.08 + index * 0.12) * 2;
-                                }
-                                blobCanvas.requestPaint();
-                            }
-                        }
-                    }
-                }
+            Common.BlobEffect {
+                anchors.fill: parent
+                blobColor: contentLayer.blobColor
+                layers: 3
+                waveAmplitude: 4.0
+                baseOpacity: 0.6
+                animationSpeed: 0.05
+                pointCount: 16
+                running: modeManager.isMode("volume")
             }
 
             MouseArea {
