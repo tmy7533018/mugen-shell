@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import "../common" as Common
 
 Item {
     id: root

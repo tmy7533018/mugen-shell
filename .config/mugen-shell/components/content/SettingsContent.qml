@@ -5,7 +5,6 @@ import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Io
 import "../common" as Common
-import "../ui" as UI
 
 Item {
     id: root

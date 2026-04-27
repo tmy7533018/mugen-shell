@@ -4,7 +4,6 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
 import "../common" as Common
-import "../ui" as UI
 
 Item {
     id: root

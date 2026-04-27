@@ -4,7 +4,6 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import "../ui" as UI
-import "../common" as Common
 import "../lib" as Theme
 
 FocusScope {

@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import "../common" as Common
 import "../ui" as UI
 
 Item {

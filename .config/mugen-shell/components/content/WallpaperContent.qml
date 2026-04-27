@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import "../ui" as UI
 import "../common" as Common
 
 FocusScope {
