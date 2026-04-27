@@ -24,38 +24,6 @@ Item {
     property real hoverScale: 1.0
     property real pulseScale: 1.0
     
-    function generateRandomColor() {
-        let hue = (Date.now() % 360) + Math.random() * 360
-        if (hue > 360) hue = hue % 360
-        let saturation = 0.3 + Math.random() * 0.4
-        let value = 0.8 + Math.random() * 0.2
-        return Qt.hsva(hue / 360, saturation, value, 0.3)
-    }
-    
-    property color blobColor: generateRandomColor()
-    
-    Common.BlobEffect {
-        anchors.fill: parent
-        anchors.leftMargin: scaled(-20)
-        anchors.rightMargin: scaled(-20)
-        anchors.topMargin: scaled(-14)
-        anchors.bottomMargin: scaled(-14)
-        blobColor: root.blobColor
-        layers: 3
-        waveAmplitude: 2.0
-        baseOpacity: 0.4
-        animationSpeed: 0.08
-        pointCount: 12
-        z: -1
-        opacity: root.hovered ? 1.0 : 0.0
-        visible: opacity > 0.01
-        running: root.hovered
-        
-        Behavior on opacity {
-            NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
-        }
-    }
-
     Behavior on hoverScale {
         NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
     }
@@ -137,7 +105,6 @@ Item {
         onEntered: {
             root.hovered = true
             root.hoverScale = 1.2
-            root.blobColor = root.generateRandomColor()
         }
         onExited: {
             root.hovered = false

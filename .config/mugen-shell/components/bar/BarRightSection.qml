@@ -69,38 +69,6 @@ RowLayout {
             return Qt.hsva(themedH, s, finalV, a)
         }
         
-        function generateRandomColor() {
-            let hue = (Date.now() % 360) + Math.random() * 360
-            if (hue > 360) hue = hue % 360
-            let saturation = 0.3 + Math.random() * 0.4
-            let value = 0.8 + Math.random() * 0.2
-            return Qt.hsva(hue / 360, saturation, value, 0.3)
-        }
-        
-        property color blobColor: generateRandomColor()
-        
-        Common.BlobEffect {
-            anchors.fill: parent
-            anchors.leftMargin: scaled(-20)
-            anchors.rightMargin: scaled(-20)
-            anchors.topMargin: scaled(-14)
-            anchors.bottomMargin: scaled(-14)
-            blobColor: notificationIconContainer.blobColor
-            layers: 3
-            waveAmplitude: 2.0
-            baseOpacity: 0.4
-            animationSpeed: 0.08
-            pointCount: 12
-            z: -1
-            opacity: notificationMouseArea.containsMouse ? 1.0 : 0.0
-            visible: opacity > 0.01
-            running: notificationMouseArea.containsMouse
-            
-            Behavior on opacity {
-                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
-            }
-        }
-        
         Item {
             id: notificationRippleContainer
             anchors.centerIn: parent
@@ -236,16 +204,11 @@ RowLayout {
                     root.modeManager.switchMode("notification")
                 }
             }
-            onContainsMouseChanged: {
-                if (containsMouse) {
-                    notificationIconContainer.blobColor = notificationIconContainer.generateRandomColor()
-                }
-            }
         }
     }
-    
+
     Separator {}
-    
+
     UI.ImeIndicator {
         Layout.alignment: Qt.AlignVCenter
         visible: root.imeStatus
@@ -406,38 +369,6 @@ RowLayout {
         
         property bool isConnected: root.wifiManager ? root.wifiManager.isConnected : false
         
-        function generateRandomColor() {
-            let hue = (Date.now() % 360) + Math.random() * 360
-            if (hue > 360) hue = hue % 360
-            let saturation = 0.3 + Math.random() * 0.4
-            let value = 0.8 + Math.random() * 0.2
-            return Qt.hsva(hue / 360, saturation, value, 0.3)
-        }
-
-        property color blobColor: generateRandomColor()
-
-        Common.BlobEffect {
-            anchors.fill: parent
-            anchors.leftMargin: scaled(-20)
-            anchors.rightMargin: scaled(-20)
-            anchors.topMargin: scaled(-14)
-            anchors.bottomMargin: scaled(-14)
-            blobColor: wifiContainer.blobColor
-            layers: 3
-            waveAmplitude: 2.0
-            baseOpacity: 0.4
-            animationSpeed: 0.08
-            pointCount: 12
-            z: -1
-            opacity: wifiMouseArea.containsMouse ? 1.0 : 0.0
-            visible: opacity > 0.01
-            running: wifiMouseArea.containsMouse
-            
-            Behavior on opacity {
-                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
-            }
-        }
-        
         UI.SvgIcon {
             id: wifiIconSvg
             anchors.centerIn: parent
@@ -473,11 +404,6 @@ RowLayout {
                     root.modeManager.switchMode("wifi")
                 }
             }
-            onContainsMouseChanged: {
-                if (containsMouse) {
-                    wifiContainer.blobColor = wifiContainer.generateRandomColor()
-                }
-            }
         }
     }
     
@@ -491,38 +417,6 @@ RowLayout {
         property bool isPowered: root.bluetoothManager ? root.bluetoothManager.isPowered : false
         property bool isScanning: root.bluetoothManager ? root.bluetoothManager.isScanning : false
         property bool hasConnectedDevices: root.bluetoothManager ? root.bluetoothManager.hasConnectedDevices : false
-        
-        function generateRandomColor() {
-            let hue = (Date.now() % 360) + Math.random() * 360
-            if (hue > 360) hue = hue % 360
-            let saturation = 0.3 + Math.random() * 0.4
-            let value = 0.8 + Math.random() * 0.2
-            return Qt.hsva(hue / 360, saturation, value, 0.3)
-        }
-
-        property color blobColor: generateRandomColor()
-
-        Common.BlobEffect {
-            anchors.fill: parent
-            anchors.leftMargin: scaled(-20)
-            anchors.rightMargin: scaled(-20)
-            anchors.topMargin: scaled(-14)
-            anchors.bottomMargin: scaled(-14)
-            blobColor: bluetoothContainer.blobColor
-            layers: 3
-            waveAmplitude: 2.0
-            baseOpacity: 0.4
-            animationSpeed: 0.08
-            pointCount: 12
-            z: -1
-            opacity: bluetoothMouseArea.containsMouse ? 1.0 : 0.0
-            visible: opacity > 0.01
-            running: bluetoothMouseArea.containsMouse
-            
-            Behavior on opacity {
-                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
-            }
-        }
         
         UI.SvgIcon {
             id: bluetoothIconSvg
@@ -561,11 +455,6 @@ RowLayout {
             onClicked: {
                 if (root.modeManager) {
                     root.modeManager.switchMode("bluetooth")
-                }
-            }
-            onContainsMouseChanged: {
-                if (containsMouse) {
-                    bluetoothContainer.blobColor = bluetoothContainer.generateRandomColor()
                 }
             }
         }
