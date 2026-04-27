@@ -67,35 +67,6 @@ PanelWindow {
                 }
             }
 
-            // Window switcher shortcuts (Alt+Tab cycling, Enter to focus).
-            if (modeManager.isMode("window-switcher") && windowManager) {
-                if (event.key === Qt.Key_Tab) {
-                    if (event.modifiers & Qt.ShiftModifier) {
-                        windowManager.selectPrevious()
-                    } else {
-                        windowManager.selectNext()
-                    }
-                    event.accepted = true
-                    return
-                }
-                if (event.key === Qt.Key_Left) {
-                    windowManager.selectPrevious()
-                    event.accepted = true
-                    return
-                }
-                if (event.key === Qt.Key_Right) {
-                    windowManager.selectNext()
-                    event.accepted = true
-                    return
-                }
-                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                    windowManager.focusSelected()
-                    modeManager.closeAllModes()
-                    event.accepted = true
-                    return
-                }
-            }
-
             event.accepted = false
         }
     }
@@ -245,10 +216,6 @@ PanelWindow {
 
     Managers.NotificationManager {
         id: notificationManager
-    }
-
-    Managers.WindowManager {
-        id: windowManager
     }
 
     UI.MugenSurface {
@@ -694,19 +661,6 @@ PanelWindow {
             theme: clipboardLoader.themeRef
             icons: clipboardLoader.iconsRef
         }
-    }
-
-    Content.WindowSwitcherContent {
-        id: windowSwitcherContent
-        anchors.fill: parent
-        z: 2
-        visible: modeManager.isMode("window-switcher")
-        modeManager: modeManager
-        windowManager: windowManager
-        theme: theme
-        typo: typo
-        barWidth: barWindow.width
-        settingsManager: settingsManager
     }
 
     Content.NotificationPopupContent {

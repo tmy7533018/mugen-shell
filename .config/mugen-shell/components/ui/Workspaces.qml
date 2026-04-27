@@ -744,17 +744,7 @@ Item {
             height: parent.height
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
-
-            onClicked: (mouse) => {
-                if (mouse.button === Qt.RightButton) {
-                    // Open window-switcher with viaIpc=true for reliable keyboard focus
-                    if (workspacesRoot.modeManager) {
-                        workspacesRoot.modeManager.switchMode("window-switcher", true)
-                    }
-                    return
-                }
-
+            onClicked: {
                 Hyprland.dispatch("workspace " + workspaceId);
                 workspacesRoot.updateWorkspaces();
             }

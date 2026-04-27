@@ -296,7 +296,6 @@ The wallpaper picker UI (`Super + W`) regenerates the color scheme each time you
 | `Super + Shift + M` | Music player |
 | `Super + T` | Notification center |
 | `Super + A` | AI assistant (requires mugen-ai) |
-| `Alt + Tab` | Window switcher (Tab/Shift+Tab to move, Esc to close) |
 | `Super + Shift + I` | Toggle idle inhibitor |
 | `Super + Shift + B` | Pick blur preset (rofi) |
 
@@ -339,7 +338,6 @@ Panel keybinds dispatch through `scripts/mugen-shell-ipc.sh` which talks to the 
 
 ### Content panels
 - **AppLauncherContent** - App search and launch
-- **WindowSwitcherContent** - Window switcher UI
 - **MusicPlayerContent** - Music player UI
 - **NotificationContent** - Notification center
 - **ClipboardContent** - Clipboard history
@@ -354,7 +352,6 @@ Panel keybinds dispatch through `scripts/mugen-shell-ipc.sh` which talks to the 
 - **AiAssistantContent** - AI chat panel (requires mugen-ai)
 
 ### Managers
-- **WindowManager** - Hyprland window management
 - **MusicPlayerManager** - Media control via playerctl
 - **NotificationManager** - Notification management
 - **ClipboardManager** - Clipboard management

@@ -64,7 +64,7 @@ make install-ai
 - Clipboard history (`Super + V`) with item limit
 - WiFi / Bluetooth / IME management
 - Idle inhibitor toggle
-- App Launcher / Window Switcher (`Alt + Tab`)
+- App Launcher (`Super + R`)
 - Screenshot capture with clipboard copy (`Super + F12`)
 - Screenshot gallery
 - Power menu

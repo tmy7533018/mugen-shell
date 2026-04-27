@@ -14,9 +14,6 @@ Available modes:
   notification  Open notifications
   powermenu     Open power menu
   volume        Open volume control
-  window-switcher  Open Alt+Tab window switcher
-  window-switcher-next  Open window switcher + select next
-  window-switcher-prev  Open window switcher + select previous
   close         Close all modules
 
 Examples:

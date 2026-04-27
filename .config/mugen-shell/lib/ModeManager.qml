@@ -209,7 +209,6 @@ QtObject {
             "settings": true,
             "screenshot-gallery": true,
             "clipboard": true,
-            "window-switcher": true,
             "ai": true
         }
 
@@ -228,18 +227,6 @@ QtObject {
         }
         
         switch(cmd) {
-            case "window-switcher-next":
-                safeSwitch("window-switcher")
-                if (modes["window-switcher"] && typeof modes["window-switcher"].ipcAction === "function") {
-                    modes["window-switcher"].ipcAction("next")
-                }
-                break
-            case "window-switcher-prev":
-                safeSwitch("window-switcher")
-                if (modes["window-switcher"] && typeof modes["window-switcher"].ipcAction === "function") {
-                    modes["window-switcher"].ipcAction("prev")
-                }
-                break
             case "open":
             case "switch":
                 if (parts.length > 1) {
