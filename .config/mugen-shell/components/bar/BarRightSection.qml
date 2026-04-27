@@ -35,7 +35,12 @@ RowLayout {
     property var bluetoothManager
     property var imeStatus
     property var idleInhibitorManager
-    
+
+    UI.Tray {
+        modeManager: root.modeManager
+        theme: root.theme
+    }
+
     Item {
         id: notificationIconContainer
         implicitWidth: scaled(24)
@@ -565,7 +570,7 @@ RowLayout {
     }
     
     Separator {}
-    
+
     UI.PowerMenu {
         modeManager: root.modeManager
         accentColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)

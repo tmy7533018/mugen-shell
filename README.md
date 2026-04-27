@@ -63,6 +63,7 @@ make install-ai
 - Calendar widget
 - Clipboard history (`Super + V`) with item limit
 - WiFi / Bluetooth / IME management
+- System Tray (collapsible)
 - Idle inhibitor toggle
 - App Launcher (`Super + R`)
 - Screenshot capture with clipboard copy (`Super + F12`)
@@ -74,7 +75,7 @@ make install-ai
 
 ## Roadmap
 
-- [ ] System Tray
+- [x] System Tray
 - [ ] Battery indicator
 - [ ] Brightness control
 - [ ] Mic volume control
