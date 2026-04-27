@@ -41,6 +41,8 @@ RowLayout {
         theme: root.theme
     }
 
+    Separator {}
+
     Item {
         id: notificationIconContainer
         implicitWidth: scaled(24)

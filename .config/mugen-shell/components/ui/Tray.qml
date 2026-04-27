@@ -108,8 +108,8 @@ RowLayout {
             width: root.scaled(20)
             height: root.scaled(20)
             source: Quickshell.shellDir + (root.expanded
-                ? "/assets/icons/chevron-right.svg"
-                : "/assets/icons/chevron-left.svg")
+                ? "/assets/icons/chevron-double-right.svg"
+                : "/assets/icons/chevron-double-left.svg")
             color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
             opacity: chevronMouse.containsMouse ? 1.0 : 0.6
 
