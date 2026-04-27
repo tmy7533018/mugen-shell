@@ -48,10 +48,10 @@ RowLayout {
             visible: opacity > 0.01
 
             Behavior on Layout.preferredWidth {
-                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
             }
             Behavior on opacity {
-                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
             }
 
             Image {
@@ -62,10 +62,10 @@ RowLayout {
                 sourceSize.height: height * 2
                 smooth: true
                 opacity: trayMouse.containsMouse ? 1.0 : 0.75
-                scale: trayMouse.containsMouse ? 1.15 : 1.0
+                scale: trayMouse.containsMouse ? 1.3 : 1.0
 
-                Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-                Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+                Behavior on scale { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
             }
 
             MouseArea {
@@ -112,9 +112,13 @@ RowLayout {
                 : "/assets/icons/chevron-double-left.svg")
             color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
             opacity: chevronMouse.containsMouse ? 1.0 : 0.6
+            scale: chevronMouse.containsMouse ? 1.3 : 1.0
 
             Behavior on opacity {
-                NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+            }
+            Behavior on scale {
+                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
             }
         }
 
