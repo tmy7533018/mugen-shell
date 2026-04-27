@@ -7,14 +7,20 @@ if [ $# -eq 0 ]; then
 Usage: $0 <mode-name>
 
 Available modes:
-  launcher      Open app launcher
-  calendar      Open calendar
-  wallpaper     Open wallpaper selector
-  music         Open music player
-  notification  Open notifications
-  powermenu     Open power menu
-  volume        Open volume control
-  close         Close all modules
+  launcher            Open app launcher
+  calendar            Open calendar
+  wallpaper           Open wallpaper selector
+  music               Open music player
+  notification        Open notifications
+  powermenu           Open power menu
+  volume              Open volume control
+  ai                  Open AI assistant
+  clipboard           Open clipboard history
+  wifi                Open WiFi panel
+  bluetooth           Open Bluetooth panel
+  settings            Open settings panel
+  screenshot-gallery  Open screenshot gallery
+  close               Close all modules
 
 Examples:
   $0 launcher

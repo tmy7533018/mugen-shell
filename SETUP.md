@@ -293,9 +293,15 @@ The wallpaper picker UI (`Super + W`) regenerates the color scheme each time you
 | `Super + W` | Wallpaper manager |
 | `Super + L` | Power menu |
 | `Super + V` | Clipboard history |
-| `Super + Shift + M` | Music player |
+| `Super + M` | Music player |
 | `Super + T` | Notification center |
 | `Super + A` | AI assistant (requires mugen-ai) |
+| `Super + C` | Calendar |
+| `Super + S` | Screenshot gallery |
+| `Super + U` | Volume control |
+| `Super + H` | WiFi panel |
+| `Super + J` | Bluetooth panel |
+| `Super + ,` | Settings |
 | `Super + Shift + I` | Toggle idle inhibitor |
 | `Super + Shift + B` | Pick blur preset (rofi) |
 
@@ -308,7 +314,7 @@ Panel keybinds dispatch through `scripts/mugen-shell-ipc.sh` which talks to the 
 | `Super + Enter` | Terminal (Kitty) |
 | `Super + N` | File manager (Thunar) |
 | `Super + B` | Browser (Zen Browser) |
-| `Super + M` | YouTube Music (Zen Browser, new window) |
+| `Super + Shift + M` | YouTube Music (Zen Browser, new window) |
 | `Super + Backspace` | Close active window |
 | `Super + 1-5` | Switch workspace |
 | `Super + Shift + 1-5` | Move window to workspace (silent) |
