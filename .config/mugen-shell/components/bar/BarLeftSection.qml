@@ -76,15 +76,9 @@ RowLayout {
         implicitHeight: clockComponent.implicitHeight
         Layout.alignment: Qt.AlignVCenter
         
-        function generateRandomGlowColor() {
-            let hue = (Date.now() % 360) + Math.random() * 360
-            if (hue > 360) hue = hue % 360
-            let saturation = 0.3 + Math.random() * 0.4
-            let value = 0.8 + Math.random() * 0.2
-            return Qt.hsva(hue / 360, saturation, value, 0.6)
-        }
-
-        property color glowColor: generateRandomGlowColor()
+        property color glowColor: root.theme
+            ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.6)
+            : Qt.rgba(0.65, 0.55, 0.85, 0.6)
 
         UI.Clock {
             id: clockComponent
@@ -116,11 +110,6 @@ RowLayout {
             onClicked: {
                 if (root.modeManager) {
                     root.modeManager.switchMode("calendar")
-                }
-            }
-            onContainsMouseChanged: {
-                if (containsMouse) {
-                    clockContainer.glowColor = clockContainer.generateRandomGlowColor()
                 }
             }
         }

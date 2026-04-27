@@ -46,7 +46,7 @@ Text {
         samples: 20
         radius: 8
         spread: 0.4
-        color: (isHovered || isMinuteExpanding) ? glowColor : Qt.rgba(glowColor.r, glowColor.g, glowColor.b, 0)
+        color: isMinuteExpanding ? glowColor : Qt.rgba(glowColor.r, glowColor.g, glowColor.b, 0)
         transparentBorder: true
         
         Behavior on color {
