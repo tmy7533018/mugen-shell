@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 COLOR_CONFIG="${HOME}/.config/cava/colors.conf"

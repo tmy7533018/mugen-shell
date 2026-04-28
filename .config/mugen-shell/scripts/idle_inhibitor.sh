@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if systemctl --user is-active --quiet hypridle.service; then
     systemctl --user stop hypridle.service
