@@ -64,12 +64,33 @@ make install-ai
 - Clipboard history (`Super + V`) with item limit
 - WiFi / Bluetooth / IME management
 - System Tray (collapsible)
+- Battery indicator (water-level fill inside the power menu icon, opt-in)
 - Idle inhibitor toggle
 - App Launcher (`Super + R`)
 - Screenshot capture with clipboard copy (`Super + F12`)
 - Screenshot gallery
 - Power menu
 - In-shell settings panel
+
+---
+
+## Usage
+
+Once installed (see [SETUP.md](SETUP.md)), the bar starts via Hyprland's `exec-once`.
+
+Most-used panels:
+
+| Key | Action |
+|---|---|
+| `Super + R` | App launcher |
+| `Super + W` | Wallpaper picker |
+| `Super + V` | Clipboard history |
+| `Super + L` | Power menu |
+| `Super + A` | AI assistant |
+| `Super + T` | Notification center |
+| `Super + ,` | Settings |
+
+Right-click the power menu icon to jump straight into settings. Click the chevron next to the notification icon to expand the system tray. Full keybind list lives in [SETUP.md](SETUP.md).
 
 ---
 

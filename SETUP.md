@@ -366,6 +366,7 @@ Panel keybinds dispatch through `scripts/mugen-shell-ipc.sh` which talks to the 
 - **AudioManager** - Audio sink/source state and volume
 - **AudioLevel** - Per-application audio levels
 - **CavaManager** - Cava visualizer management
+- **BatteryManager** - Battery state via /sys/class/power_supply
 - **WallpaperManager** - Wallpaper switching
 - **ScreenshotManager** - Screenshot management
 - **IdleInhibitorManager** - Idle inhibition management
