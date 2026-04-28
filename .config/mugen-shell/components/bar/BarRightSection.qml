@@ -33,8 +33,10 @@ RowLayout {
     property var modeManager
     property var wifiManager
     property var bluetoothManager
+    property var batteryManager
     property var imeStatus
     property var idleInhibitorManager
+    property var settingsManager
 
     UI.Tray {
         modeManager: root.modeManager
@@ -467,6 +469,9 @@ RowLayout {
         accentColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
         textColor: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
         icons: root.icons
+        theme: root.theme
+        batteryManager: root.batteryManager
+        settingsManager: root.settingsManager
         onClicked: {
             if (root.modeManager) {
                 root.modeManager.switchMode("powermenu")

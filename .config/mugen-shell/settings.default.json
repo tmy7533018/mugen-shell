@@ -5,6 +5,9 @@
   "barBackground": {
     "gradientEnabled": true
   },
+  "batteryIndicator": {
+    "enabled": false
+  },
   "animations": {
     "speed": "normal",
     "durationMultiplier": 1.0

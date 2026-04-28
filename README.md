@@ -76,7 +76,7 @@ make install-ai
 ## Roadmap
 
 - [x] System Tray
-- [ ] Battery indicator
+- [x] Battery indicator
 - [ ] Brightness control
 - [ ] Mic volume control
 - [ ] Keyboard layout indicator

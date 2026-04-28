@@ -142,6 +142,8 @@ PanelWindow {
 
     Managers.BluetoothManager { id: bluetoothManager }
 
+    Managers.BatteryManager { id: batteryManager }
+
     Managers.ClipboardManager { id: clipboardManager }
 
     Managers.ScreenshotManager { id: screenshotManager }
@@ -395,8 +397,10 @@ PanelWindow {
             notificationManager: notificationManager
             wifiManager: wifiManager
             bluetoothManager: bluetoothManager
+            batteryManager: batteryManager
             imeStatus: imeStatus
             idleInhibitorManager: idleInhibitorManager
+            settingsManager: settingsManager
         }
         }
     }

@@ -256,6 +256,7 @@ Item {
                             case "blur": return blurSection
                             case "timer": return timerSection
                             case "gradient": return gradientSection
+                            case "battery": return batterySection
                             case "animation": return animationSection
                             default: return null
                         }
@@ -267,6 +268,7 @@ Item {
                     settingsModel.append({ "type": "blur" })
                     settingsModel.append({ "type": "timer" })
                     settingsModel.append({ "type": "gradient" })
+                    settingsModel.append({ "type": "battery" })
                     settingsModel.append({ "type": "animation" })
                 }
             }
@@ -716,6 +718,58 @@ Item {
                     onToggled: {
                         if (settingsManager) {
                             settingsManager.barGradientEnabled = checked
+                            settingsManager.saveSettings()
+                            root.resetAutoCloseTimer()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Component {
+        id: batterySection
+
+        Rectangle {
+            width: parent ? parent.width : 420
+            height: 64
+            color: theme ? theme.surfaceGlass : Qt.rgba(0.15, 0.15, 0.20, 0.5)
+            radius: 20
+            border.width: 1
+            border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 12
+
+                Text {
+                    Layout.fillWidth: true
+                    text: "Battery Indicator (PowerMenu)"
+                    color: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                    font.pixelSize: 12
+                    font.family: "M PLUS 2"
+                    font.weight: Font.Normal
+                    font.letterSpacing: 0.5
+                }
+
+                Common.Switch {
+                    id: batterySwitch
+                    checked: settingsManager ? settingsManager.batteryIndicatorEnabled : false
+                    theme: root.theme
+
+                    Connections {
+                        target: settingsManager
+                        function onBatteryIndicatorEnabledChanged() {
+                            if (settingsManager) {
+                                batterySwitch.checked = settingsManager.batteryIndicatorEnabled
+                            }
+                        }
+                    }
+
+                    onToggled: {
+                        if (settingsManager) {
+                            settingsManager.batteryIndicatorEnabled = checked
                             settingsManager.saveSettings()
                             root.resetAutoCloseTimer()
                         }

@@ -11,6 +11,7 @@ QtObject {
     // 0 = disabled, otherwise the idle timeout (ms) before a mode auto-closes.
     property int autoCloseTimerInterval: 5000
     property bool barGradientEnabled: true
+    property bool batteryIndicatorEnabled: false
     property string animationSpeed: "normal"  // "slow", "normal", "fast", "instant"
     property real animationDurationMultiplier: 1.0
     
@@ -32,6 +33,9 @@ QtObject {
             },
             "barBackground": {
                 "gradientEnabled": barGradientEnabled
+            },
+            "batteryIndicator": {
+                "enabled": batteryIndicatorEnabled
             },
             "animations": {
                 "speed": animationSpeed,
@@ -73,6 +77,12 @@ QtObject {
             if (settings.barBackground) {
                 if (settings.barBackground.gradientEnabled !== undefined) {
                     barGradientEnabled = settings.barBackground.gradientEnabled
+                }
+            }
+
+            if (settings.batteryIndicator) {
+                if (settings.batteryIndicator.enabled !== undefined) {
+                    batteryIndicatorEnabled = settings.batteryIndicator.enabled
                 }
             }
             
