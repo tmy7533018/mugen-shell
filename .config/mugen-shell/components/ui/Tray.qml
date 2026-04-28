@@ -83,6 +83,7 @@ RowLayout {
                         trayDelegate.modelData.secondaryActivate()
                     } else if (mouse.button === Qt.RightButton) {
                         if (trayDelegate.modelData.hasMenu) {
+                            trayMenuAnchor.anchor.item = trayDelegate
                             trayMenuAnchor.menu = trayDelegate.modelData.menu
                             trayMenuAnchor.open()
                         }
