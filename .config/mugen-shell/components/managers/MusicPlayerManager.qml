@@ -35,7 +35,13 @@ QtObject {
     property bool isPlaying: status === "Playing"
     property bool isAvailable: availablePlayers.length > 0
     property color accentColor: Qt.rgba(0.65, 0.55, 0.85, 0.9)
-    
+
+    // Track position in seconds (current and total). 0 when unavailable.
+    property real position: 0
+    property real duration: 0
+    // Suspend automatic position polling while the user is dragging the slider.
+    property bool seekingSuspended: false
+
     property var barLevels: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     property Process listPlayersProcess: Process {
@@ -315,10 +321,73 @@ QtObject {
     Component.onCompleted: {
         refreshPlayerList()
     }
-    
+
     Component.onDestruction: {
         if (dbusMonitor.running) {
             dbusMonitor.running = false
+        }
+    }
+
+    // Position / duration polling and seek
+
+    function updatePosition() {
+        if (activePlayer === "" || seekingSuspended) return
+        if (!positionProcess.running) {
+            positionProcess.running = true
+        }
+    }
+
+    function seek(seconds) {
+        if (activePlayer === "") return
+        const clamped = Math.max(0, Math.min(duration > 0 ? duration : seconds, seconds))
+        seekProcess.command = ["playerctl", "-p", activePlayer, "position", clamped.toString()]
+        seekProcess.running = true
+        // Optimistic local update so the slider follows the cursor instantly.
+        position = clamped
+    }
+
+    property Process positionProcess: Process {
+        command: []
+        running: false
+        property string outputData: ""
+
+        stdout: SplitParser {
+            onRead: data => positionProcess.outputData += data
+        }
+
+        onExited: () => {
+            const trimmed = positionProcess.outputData.trim()
+            positionProcess.outputData = ""
+            if (musicManager.seekingSuspended) return
+            const parts = trimmed.split(/\s+/)
+            if (parts.length >= 2) {
+                const pos = parseFloat(parts[0])
+                // mpris:length is microseconds
+                const lenUs = parseFloat(parts[1])
+                if (!isNaN(pos)) musicManager.position = pos
+                if (!isNaN(lenUs)) musicManager.duration = lenUs / 1e6
+            }
+        }
+    }
+
+    property Process seekProcess: Process {
+        command: []
+        running: false
+    }
+
+    property Timer positionTimer: Timer {
+        interval: 1000
+        repeat: true
+        running: musicManager.isPlaying && musicManager.activePlayer !== ""
+        triggeredOnStart: true
+        onTriggered: {
+            if (musicManager.activePlayer === "" || musicManager.seekingSuspended) return
+            positionProcess.command = [
+                "bash", "-c",
+                "echo \"$(playerctl -p '" + musicManager.activePlayer + "' position 2>/dev/null || echo 0) "
+                + "$(playerctl -p '" + musicManager.activePlayer + "' metadata mpris:length 2>/dev/null || echo 0)\""
+            ]
+            musicManager.updatePosition()
         }
     }
 }

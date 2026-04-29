@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
 import Quickshell
 import "." as MusicUI
 import "../common" as Common
@@ -136,74 +137,158 @@ Item {
                 extractedColor: albumArtDisplay.extractedColor
             }
             
-            RowLayout {
-                spacing: modeManager.scale(12)
+            ColumnLayout {
                 Layout.alignment: Qt.AlignVCenter
-                
-                MusicUI.MusicControlButton {
-                    modeManager: root.modeManager
-                    Layout.alignment: Qt.AlignVCenter
-                    implicitWidth: 56
-                    implicitHeight: 56
-                    Layout.preferredWidth: implicitWidth
-                    Layout.preferredHeight: implicitHeight
-                    backgroundColor: Qt.rgba(albumArtDisplay.extractedColor.r, albumArtDisplay.extractedColor.g, albumArtDisplay.extractedColor.b, 1.0)
-                    hoverScale: 1.12
-                    iconSource: root.icons && root.icons.getPreviousIcon().type === "svg" ? root.icons.getPreviousIcon().value : ""
-                    icon: root.icons && root.icons.getPreviousIcon().type === "text" ? root.icons.getPreviousIcon().value : ""
-                    iconBaseColor: theme ? Qt.rgba(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b, 0.65) : Qt.rgba(1, 1, 1, 0.6)
-                    iconHoverColor: theme ? Qt.rgba(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b, 0.95) : Qt.rgba(1, 1, 1, 0.95)
-                    onClicked: {
-                        root.resetAutoCloseTimer()
-                        if (root.musicManager) {
-                            root.musicManager.previous()
+                spacing: modeManager.scale(10)
+
+                RowLayout {
+                    spacing: modeManager.scale(12)
+                    Layout.alignment: Qt.AlignHCenter
+
+                    MusicUI.MusicControlButton {
+                        modeManager: root.modeManager
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: 56
+                        implicitHeight: 56
+                        Layout.preferredWidth: implicitWidth
+                        Layout.preferredHeight: implicitHeight
+                        backgroundColor: Qt.rgba(albumArtDisplay.extractedColor.r, albumArtDisplay.extractedColor.g, albumArtDisplay.extractedColor.b, 1.0)
+                        hoverScale: 1.12
+                        iconSource: root.icons && root.icons.getPreviousIcon().type === "svg" ? root.icons.getPreviousIcon().value : ""
+                        icon: root.icons && root.icons.getPreviousIcon().type === "text" ? root.icons.getPreviousIcon().value : ""
+                        iconBaseColor: theme ? Qt.rgba(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b, 0.65) : Qt.rgba(1, 1, 1, 0.6)
+                        iconHoverColor: theme ? Qt.rgba(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b, 0.95) : Qt.rgba(1, 1, 1, 0.95)
+                        onClicked: {
+                            root.resetAutoCloseTimer()
+                            if (root.musicManager) {
+                                root.musicManager.previous()
+                            }
+                        }
+                    }
+
+                    MusicUI.MusicControlButton {
+                        modeManager: root.modeManager
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: 68
+                        implicitHeight: 68
+                        Layout.preferredWidth: implicitWidth
+                        Layout.preferredHeight: implicitHeight
+                        backgroundColor: Qt.rgba(albumArtDisplay.extractedColor.r, albumArtDisplay.extractedColor.g, albumArtDisplay.extractedColor.b, 1.0)
+                        hoverScale: 1.18
+                        iconRatio: 0.48
+                        iconSource: (root.icons && root.musicManager && root.icons.getPlayPauseIcon(root.musicManager.isPlaying).type === "svg")
+                                    ? root.icons.getPlayPauseIcon(root.musicManager.isPlaying).value
+                                    : ""
+                        icon: (root.icons && root.musicManager && root.icons.getPlayPauseIcon(root.musicManager.isPlaying).type === "text")
+                              ? root.icons.getPlayPauseIcon(root.musicManager.isPlaying).value
+                              : (!root.icons && root.musicManager ? (root.musicManager.isPlaying ? "⏸" : "▶") : "")
+                        iconBaseColor: theme ? Qt.rgba(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b, 0.7) : Qt.rgba(1, 1, 1, 0.7)
+                        iconHoverColor: theme ? Qt.rgba(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b, 0.98) : Qt.rgba(1, 1, 1, 0.95)
+                        onClicked: {
+                            root.resetAutoCloseTimer()
+                            if (root.musicManager) {
+                                root.musicManager.playPause()
+                            }
+                        }
+                    }
+
+                    MusicUI.MusicControlButton {
+                        modeManager: root.modeManager
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: 56
+                        implicitHeight: 56
+                        Layout.preferredWidth: implicitWidth
+                        Layout.preferredHeight: implicitHeight
+                        backgroundColor: Qt.rgba(albumArtDisplay.extractedColor.r, albumArtDisplay.extractedColor.g, albumArtDisplay.extractedColor.b, 1.0)
+                        hoverScale: 1.12
+                        iconSource: root.icons && root.icons.getNextIcon().type === "svg" ? root.icons.getNextIcon().value : ""
+                        icon: root.icons && root.icons.getNextIcon().type === "text" ? root.icons.getNextIcon().value : ""
+                        iconBaseColor: theme ? Qt.rgba(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b, 0.65) : Qt.rgba(1, 1, 1, 0.6)
+                        iconHoverColor: theme ? Qt.rgba(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b, 0.95) : Qt.rgba(1, 1, 1, 0.95)
+                        onClicked: {
+                            root.resetAutoCloseTimer()
+                            if (root.musicManager) {
+                                root.musicManager.next()
+                            }
                         }
                     }
                 }
-                
-                MusicUI.MusicControlButton {
-                    modeManager: root.modeManager
-                    Layout.alignment: Qt.AlignVCenter
-                    implicitWidth: 68
-                    implicitHeight: 68
-                    Layout.preferredWidth: implicitWidth
-                    Layout.preferredHeight: implicitHeight
-                    backgroundColor: Qt.rgba(albumArtDisplay.extractedColor.r, albumArtDisplay.extractedColor.g, albumArtDisplay.extractedColor.b, 1.0)
-                    hoverScale: 1.18
-                    iconRatio: 0.48
-                    iconSource: (root.icons && root.musicManager && root.icons.getPlayPauseIcon(root.musicManager.isPlaying).type === "svg")
-                                ? root.icons.getPlayPauseIcon(root.musicManager.isPlaying).value
-                                : ""
-                    icon: (root.icons && root.musicManager && root.icons.getPlayPauseIcon(root.musicManager.isPlaying).type === "text")
-                          ? root.icons.getPlayPauseIcon(root.musicManager.isPlaying).value
-                          : (!root.icons && root.musicManager ? (root.musicManager.isPlaying ? "⏸" : "▶") : "")
-                    iconBaseColor: theme ? Qt.rgba(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b, 0.7) : Qt.rgba(1, 1, 1, 0.7)
-                    iconHoverColor: theme ? Qt.rgba(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b, 0.98) : Qt.rgba(1, 1, 1, 0.95)
-                    onClicked: {
-                        root.resetAutoCloseTimer()
-                        if (root.musicManager) {
-                            root.musicManager.playPause()
+
+                // Seekable progress slider
+                Item {
+                    id: progressSlider
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.preferredWidth: modeManager.scale(130)
+                    Layout.preferredHeight: modeManager.scale(14)
+                    visible: root.musicManager && root.musicManager.isAvailable
+
+                    readonly property real ratio: (root.musicManager && root.musicManager.duration > 0)
+                        ? Math.max(0, Math.min(1, root.musicManager.position / root.musicManager.duration))
+                        : 0
+
+                    Rectangle {
+                        id: track
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: modeManager.scale(3)
+                        radius: height / 2
+                        color: Qt.rgba(1, 1, 1, sliderArea.containsMouse || sliderArea.pressed ? 0.22 : 0.15)
+                        Behavior on color { ColorAnimation { duration: 200 } }
+
+                        Rectangle {
+                            id: filled
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: parent.width * progressSlider.ratio
+                            radius: parent.radius
+                            color: Qt.rgba(albumArtDisplay.extractedColor.r, albumArtDisplay.extractedColor.g, albumArtDisplay.extractedColor.b, 0.55)
+
+                            layer.enabled: true
+                            layer.effect: Glow {
+                                samples: 32
+                                radius: 14
+                                spread: 0.5
+                                color: Qt.rgba(albumArtDisplay.extractedColor.r, albumArtDisplay.extractedColor.g, albumArtDisplay.extractedColor.b, 0.55)
+                                transparentBorder: true
+                            }
+
+                            Behavior on width {
+                                enabled: !sliderArea.pressed
+                                NumberAnimation { duration: 800; easing.type: Easing.OutCubic }
+                            }
                         }
                     }
-                }
-                
-                MusicUI.MusicControlButton {
-                    modeManager: root.modeManager
-                    Layout.alignment: Qt.AlignVCenter
-                    implicitWidth: 56
-                    implicitHeight: 56
-                    Layout.preferredWidth: implicitWidth
-                    Layout.preferredHeight: implicitHeight
-                    backgroundColor: Qt.rgba(albumArtDisplay.extractedColor.r, albumArtDisplay.extractedColor.g, albumArtDisplay.extractedColor.b, 1.0)
-                    hoverScale: 1.12
-                    iconSource: root.icons && root.icons.getNextIcon().type === "svg" ? root.icons.getNextIcon().value : ""
-                    icon: root.icons && root.icons.getNextIcon().type === "text" ? root.icons.getNextIcon().value : ""
-                    iconBaseColor: theme ? Qt.rgba(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b, 0.65) : Qt.rgba(1, 1, 1, 0.6)
-                    iconHoverColor: theme ? Qt.rgba(theme.textPrimary.r, theme.textPrimary.g, theme.textPrimary.b, 0.95) : Qt.rgba(1, 1, 1, 0.95)
-                    onClicked: {
-                        root.resetAutoCloseTimer()
-                        if (root.musicManager) {
-                            root.musicManager.next()
+
+                    MouseArea {
+                        id: sliderArea
+                        anchors.fill: parent
+                        anchors.margins: -modeManager.scale(6)
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+
+                        function seekFromX(x) {
+                            if (!root.musicManager || root.musicManager.duration <= 0) return
+                            const clamped = Math.max(0, Math.min(progressSlider.width, x - (progressSlider.x - parent.x)))
+                            const r = clamped / progressSlider.width
+                            root.musicManager.seek(root.musicManager.duration * r)
+                        }
+
+                        onPressed: (mouse) => {
+                            if (!root.musicManager) return
+                            root.musicManager.seekingSuspended = true
+                            seekFromX(mouse.x + sliderArea.x)
+                            root.resetAutoCloseTimer()
+                        }
+                        onPositionChanged: (mouse) => {
+                            if (pressed) seekFromX(mouse.x + sliderArea.x)
+                        }
+                        onReleased: {
+                            if (root.musicManager) root.musicManager.seekingSuspended = false
+                        }
+                        onCanceled: {
+                            if (root.musicManager) root.musicManager.seekingSuspended = false
                         }
                     }
                 }
