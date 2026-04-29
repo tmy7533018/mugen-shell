@@ -71,7 +71,7 @@ FocusScope {
             filteredApps = apps
         } else {
             let search = searchText.toLowerCase()
-            // Short queries use prefix match for speed; longer queries use substring match
+            // short = prefix (fast), long = substring
             if (search.length <= 2) {
                 filteredApps = apps.filter(app =>
                     app.name.toLowerCase().startsWith(search)
@@ -215,15 +215,16 @@ FocusScope {
                     searchField.text = ""
                 }
                 if (appGrid) {
+                    appGrid.userInteracted = false
                     appGrid.currentIndex = -1
                 }
-                // Delay focus to ensure PanelWindow has activated via IPC
+                // wait for PanelWindow IPC activation
                 focusTimer.restart()
             }
         }
     }
 
-    // Delay needed because PanelWindow.forceActiveFocus() must complete first
+    // wait for PanelWindow.forceActiveFocus()
     Timer {
         id: focusTimer
         interval: 500
@@ -321,12 +322,14 @@ FocusScope {
                     root.searchText = text
                     filterDebounceTimer.restart()
                     modeManager.bump()
+                    appGrid.userInteracted = false
                     appGrid.currentIndex = -1
                 }
 
                 onRequestFocusGrid: () => {
                     if (appGrid.count > 0) {
                         appGrid.forceActiveFocus()
+                        appGrid.userInteracted = true
                         appGrid.currentIndex = 0
                     }
                 }
@@ -358,6 +361,15 @@ FocusScope {
                 model: root.filteredApps
 
                 currentIndex: -1
+
+                // blocks GridView auto-select 0 until first hover/key
+                property bool userInteracted: false
+
+                onCountChanged: {
+                    if (!userInteracted && currentIndex !== -1) {
+                        currentIndex = -1
+                    }
+                }
 
                 highlight: null
                 highlightFollowsCurrentItem: false
@@ -449,8 +461,7 @@ FocusScope {
 
                     property bool isCurrentItem: GridView.isCurrentItem
 
-                    // GridView provides modelData automatically, but custom components
-                    // need explicit access; fall back to index-based lookup if unavailable
+                    // modelData passthrough for custom components
                     property var wrapperModelData: {
                         if (typeof modelData !== 'undefined') {
                             return modelData
@@ -484,6 +495,14 @@ FocusScope {
 
                         onResetAutoCloseTimer: () => {
                             modeManager.bump()
+                        }
+
+                        onEntered: {
+                            // mouse takes selection; avoids kb + hover both highlighting
+                            if (delegateWrapper.GridView.view) {
+                                delegateWrapper.GridView.view.userInteracted = true
+                                delegateWrapper.GridView.view.currentIndex = index
+                            }
                         }
                     }
                 }
@@ -525,7 +544,10 @@ FocusScope {
                 root.loadRunningApps()
                 root.searchText = ""
                 if (searchField) searchField.text = ""
-                if (appGrid) appGrid.currentIndex = -1
+                if (appGrid) {
+                    appGrid.userInteracted = false
+                    appGrid.currentIndex = -1
+                }
                 modeManager.bump()
                 focusTimer.restart()
             }

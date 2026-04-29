@@ -16,6 +16,7 @@ Item {
 
     signal launchApp(var app)
     signal resetAutoCloseTimer()
+    signal entered()
 
     width: GridView.view ? GridView.view.cellWidth : 100
     height: GridView.view ? GridView.view.cellHeight : 100
@@ -91,7 +92,7 @@ Item {
             height: parent.height + 24
             z: -1
 
-            visible: delegateRoot.isCurrent || appMouseArea.containsMouse
+            visible: delegateRoot.isCurrent
 
             opacity: 0.6
 
@@ -126,81 +127,6 @@ Item {
             }
         }
 
-        property real floatX: 0
-        property real floatY: 0
-
-        property real randomOffsetX: (Math.random() - 0.5) * 2
-        property real randomOffsetY: (Math.random() - 0.5) * 2
-        property real randomDuration: 1500 + Math.random() * 1000
-        property real randomDelay: Math.random() * 2000
-
-
-        SequentialAnimation on floatX {
-            id: floatXAnimation
-            loops: Animation.Infinite
-            running: (delegateRoot.isCurrent || appMouseArea.containsMouse) && delegateRoot.visible && parent.visible
-
-            PauseAnimation {
-                duration: appItem.randomDelay
-            }
-
-            NumberAnimation {
-                to: appItem.randomOffsetX * 10
-                duration: appItem.randomDuration
-                easing.type: Easing.InOutSine
-            }
-            NumberAnimation {
-                to: 0
-                duration: appItem.randomDuration
-                easing.type: Easing.InOutSine
-            }
-            NumberAnimation {
-                to: -appItem.randomOffsetX * 10
-                duration: appItem.randomDuration
-                easing.type: Easing.InOutSine
-            }
-            NumberAnimation {
-                to: 0
-                duration: appItem.randomDuration
-                easing.type: Easing.InOutSine
-            }
-        }
-
-        SequentialAnimation on floatY {
-            id: floatYAnimation
-            loops: Animation.Infinite
-            running: (delegateRoot.isCurrent || appMouseArea.containsMouse) && delegateRoot.visible && parent.visible
-
-            PauseAnimation {
-                duration: appItem.randomDelay
-            }
-
-            NumberAnimation {
-                to: appItem.randomOffsetY * 10
-                duration: appItem.randomDuration
-                easing.type: Easing.InOutSine
-            }
-            NumberAnimation {
-                to: 0
-                duration: appItem.randomDuration
-                easing.type: Easing.InOutSine
-            }
-            NumberAnimation {
-                to: -appItem.randomOffsetY * 10
-                duration: appItem.randomDuration
-                easing.type: Easing.InOutSine
-            }
-            NumberAnimation {
-                to: 0
-                duration: appItem.randomDuration
-                easing.type: Easing.InOutSine
-            }
-        }
-
-        transform: Translate {
-            x: appItem.floatX
-            y: appItem.floatY
-        }
 
         ColumnLayout {
             anchors.fill: parent
@@ -218,7 +144,7 @@ Item {
                     width: 40
                     height: 40
 
-                    scale: (delegateRoot.isCurrent || appMouseArea.containsMouse) ? 1.15 : 1.0
+                    scale: delegateRoot.isCurrent ? 1.15 : 1.0
                     z: 1
 
                     Behavior on scale {
@@ -262,7 +188,7 @@ Item {
                     font.pixelSize: 40
                     visible: false
 
-                    scale: (delegateRoot.isCurrent || appMouseArea.containsMouse) ? 1.15 : 1.0
+                    scale: delegateRoot.isCurrent ? 1.15 : 1.0
                     z: 1
 
                     Behavior on scale {
@@ -310,6 +236,8 @@ Item {
                 if (!delegateRoot.currentData) return
                 delegateRoot.launchApp(delegateRoot.currentData)
             }
+
+            onEntered: delegateRoot.entered()
 
             onPositionChanged: {
                 delegateRoot.resetAutoCloseTimer()
