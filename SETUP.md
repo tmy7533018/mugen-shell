@@ -14,7 +14,7 @@ mugen-shell/
 │   │   │   ├── bar/          # Bar components (left/right sections)
 │   │   │   ├── common/       # Shared UI components
 │   │   │   ├── content/      # Per-mode content panels
-│   │   │   ├── managers/     # Managers (Window, WiFi, Bluetooth, etc.)
+│   │   │   ├── managers/     # Managers (Audio, WiFi, Bluetooth, etc.)
 │   │   │   ├── notification/ # Notification components
 │   │   │   └── ui/           # UI elements (clock, workspaces, etc.)
 │   │   ├── lib/              # Libraries (ModeManager, Colors, Typography, etc.)
@@ -298,7 +298,7 @@ The wallpaper picker UI (`Super + W`) regenerates the color scheme each time you
 | `Super + A` | AI assistant (requires mugen-ai) |
 | `Super + C` | Calendar |
 | `Super + S` | Screenshot gallery |
-| `Super + U` | Volume control |
+| `Super + U` | Volume / microphone control |
 | `Super + H` | WiFi panel |
 | `Super + J` | Bluetooth panel |
 | `Super + ,` | Settings |
@@ -344,12 +344,12 @@ Panel keybinds dispatch through `scripts/mugen-shell-ipc.sh` which talks to the 
 
 ### Content panels
 - **AppLauncherContent** - App search and launch
-- **MusicPlayerContent** - Music player UI
+- **MusicPlayerContent** - Music player UI with seekable progress slider
 - **NotificationContent** - Notification center
 - **ClipboardContent** - Clipboard history
 - **WiFiContent** - WiFi management UI
 - **BluetoothContent** - Bluetooth management UI
-- **VolumeContent** - Volume control UI
+- **VolumeContent** - Volume / microphone control UI (speaker / mic toggle)
 - **WallpaperContent** - Wallpaper management UI
 - **PowerMenuContent** - Power menu
 - **ScreenshotGalleryContent** - Screenshot gallery
