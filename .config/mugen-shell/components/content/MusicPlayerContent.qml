@@ -214,7 +214,6 @@ Item {
                     }
                 }
 
-                // Seekable progress slider
                 Item {
                     id: progressSlider
                     Layout.alignment: Qt.AlignHCenter

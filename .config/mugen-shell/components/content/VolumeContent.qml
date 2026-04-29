@@ -24,7 +24,7 @@ Item {
         "bottomMargin": modeManager.scale(6)
     })
 
-    // 0 = speaker (sink), 1 = mic (source)
+    // 0 = speaker, 1 = mic
     property int tabIndex: 0
     readonly property bool isMicMode: tabIndex === 1
 
@@ -45,13 +45,12 @@ Item {
         else audioManager.toggleMute()
     }
 
-    // Mic blob color uses the same hue-shift trick as the active idle inhibitor
+    // mic = same hue-shift as active idle inhibitor
     function micShift(c) {
         return Qt.hsva((c.hsvHue + 0.2) % 1.0, c.hsvSaturation, Math.min(1.0, c.hsvValue + 0.25), c.a)
     }
 
-    // Closes the panel quickly (faster than the central auto-close) right
-    // after a hardware volume change — the panel is transient in that flow.
+    // fast close after hw volume change; panel is transient
     Timer {
         id: volumeChangeTimer
         interval: 2000
@@ -88,7 +87,7 @@ Item {
         }
     }
 
-    // Run cava on the mic source only while the volume panel is open in mic mode.
+    // mic cava only runs while volume panel open + mic tab
     function updateMicCavaState() {
         if (!micCavaManager) return
         if (modeManager.isMode("volume") && root.isMicMode) {
@@ -183,7 +182,7 @@ Item {
             }
         ]
 
-        // Blob size represents volume: 0% -> 75px, 100% -> 235px
+        // 0% → 75px, 100% → 235px
         property real blobSize: (root.currentMuted || root.currentVolume === 0)
             ? modeManager.scale(75)
             : modeManager.scale(75 + Math.min(100, root.currentVolume) * 1.60)
@@ -483,7 +482,7 @@ Item {
                         contentLayer.startInteraction()
                         root.resetAutoCloseTimer()
                     }
-                    // Delay reset so onClicked is fully processed first
+                    // reset after onClicked finishes
                     Qt.callLater(() => {
                         isDragging = false
                         wasDragging = false
@@ -612,9 +611,7 @@ Item {
                 cursorShape: Qt.PointingHandCursor
 
                 onClicked: {
-                    // Hyprland.dispatch decouples the spawn from this QML
-                    // object's lifecycle; a Process child here would be
-                    // killed by closeAllModes unloading the panel below.
+                    // Hyprland.dispatch survives panel unload (Process child wouldn't)
                     Hyprland.dispatch("exec pavucontrol")
                     modeManager.closeAllModes()
                 }

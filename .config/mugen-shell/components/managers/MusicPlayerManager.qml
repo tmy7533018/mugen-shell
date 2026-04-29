@@ -36,10 +36,8 @@ QtObject {
     property bool isAvailable: availablePlayers.length > 0
     property color accentColor: Qt.rgba(0.65, 0.55, 0.85, 0.9)
 
-    // Track position in seconds (current and total). 0 when unavailable.
     property real position: 0
     property real duration: 0
-    // Suspend automatic position polling while the user is dragging the slider.
     property bool seekingSuspended: false
 
     property var barLevels: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -140,7 +138,7 @@ QtObject {
                         newArtUrl = musicManager.extractYoutubeThumbnail(newUrl)
                     }
 
-                    // Fallback: some players only expose xesam:title
+                    // some players only expose xesam:title
                     if (newTitle === "" || newTitle === "Unknown") {
                         if (!altMetadataProcess.running) {
                             Qt.callLater(() => {
@@ -210,7 +208,7 @@ QtObject {
 
     function updateMetadata() {
         if (activePlayer !== "" && !metadataProcess.running) {
-            // Qt.callLater: brief wait in case the player is still initializing
+            // brief wait for player init
             Qt.callLater(() => {
                 if (activePlayer !== "" && !metadataProcess.running) {
                     metadataProcess.running = true
@@ -263,7 +261,7 @@ QtObject {
         }
     }
 
-    // Replaced by D-Bus monitoring; kept as disabled fallback
+    // disabled fallback (D-Bus does the work now)
     property Timer updateTimer: Timer {
         interval: 500
         running: false
@@ -328,8 +326,6 @@ QtObject {
         }
     }
 
-    // Position / duration polling and seek
-
     function updatePosition() {
         if (activePlayer === "" || seekingSuspended) return
         if (!positionProcess.running) {
@@ -342,7 +338,7 @@ QtObject {
         const clamped = Math.max(0, Math.min(duration > 0 ? duration : seconds, seconds))
         seekProcess.command = ["playerctl", "-p", activePlayer, "position", clamped.toString()]
         seekProcess.running = true
-        // Optimistic local update so the slider follows the cursor instantly.
+        // optimistic local: slider follows cursor instantly
         position = clamped
     }
 
@@ -362,7 +358,7 @@ QtObject {
             const parts = trimmed.split(/\s+/)
             if (parts.length >= 2) {
                 const pos = parseFloat(parts[0])
-                // mpris:length is microseconds
+                // mpris:length = µs
                 const lenUs = parseFloat(parts[1])
                 if (!isNaN(pos)) musicManager.position = pos
                 if (!isNaN(lenUs)) musicManager.duration = lenUs / 1e6
