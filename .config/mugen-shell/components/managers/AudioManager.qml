@@ -10,6 +10,11 @@ QtObject {
     property bool isHeadphone: false
     property bool headphoneReady: false
 
+    // Microphone (input source) state
+    property int micVolume: 0
+    property bool micMuted: false
+    property bool micAvailable: false
+
     property var sinks: []
     property var sources: []
     property string defaultSinkName: ""
@@ -116,6 +121,95 @@ QtObject {
     function updateMuteStatus() {
         if (!muteProcess.running) {
             muteProcess.running = true
+        }
+    }
+
+    // Microphone (source) processes & helpers
+
+    property Process micVolumeProcess: Process {
+        running: false
+        command: ["bash", "-c", "pactl get-source-volume @DEFAULT_SOURCE@ | grep -oP '\\d+%' | head -1 | tr -d '%'"]
+
+        property string outputData: ""
+
+        stdout: SplitParser {
+            onRead: data => micVolumeProcess.outputData += data
+        }
+
+        onExited: (exitCode) => {
+            if (exitCode === 0) {
+                let output = micVolumeProcess.outputData.trim()
+                if (output !== "") {
+                    audioManager.micVolume = parseInt(output)
+                    audioManager.micAvailable = true
+                }
+            } else {
+                audioManager.micAvailable = false
+            }
+            micVolumeProcess.outputData = ""
+        }
+    }
+
+    property Process micMuteProcess: Process {
+        running: false
+        command: ["bash", "-c", "pactl get-source-mute @DEFAULT_SOURCE@ | grep -oP '(yes|no)'"]
+
+        property string outputData: ""
+
+        stdout: SplitParser {
+            onRead: data => micMuteProcess.outputData += data
+        }
+
+        onExited: (exitCode) => {
+            if (exitCode === 0) {
+                let output = micMuteProcess.outputData.trim()
+                audioManager.micMuted = (output === "yes")
+            }
+            micMuteProcess.outputData = ""
+        }
+    }
+
+    property Process setMicVolumeProcess: Process {
+        running: false
+        command: []
+
+        onExited: (exitCode) => {
+            if (exitCode === 0) {
+                Qt.callLater(() => audioManager.updateMicVolume())
+            }
+        }
+    }
+
+    property Process toggleMicMuteProcess: Process {
+        running: false
+        command: ["pactl", "set-source-mute", "@DEFAULT_SOURCE@", "toggle"]
+
+        onExited: (exitCode) => {
+            if (exitCode === 0) {
+                Qt.callLater(() => audioManager.updateMicMuteStatus())
+            }
+        }
+    }
+
+    function setMicVolume(newVolume) {
+        let clampedVolume = Math.max(0, Math.min(100, Math.round(newVolume)))
+        setMicVolumeProcess.command = ["pactl", "set-source-volume", "@DEFAULT_SOURCE@", clampedVolume + "%"]
+        setMicVolumeProcess.running = true
+    }
+
+    function toggleMicMute() {
+        toggleMicMuteProcess.running = true
+    }
+
+    function updateMicVolume() {
+        if (!micVolumeProcess.running) {
+            micVolumeProcess.running = true
+        }
+    }
+
+    function updateMicMuteStatus() {
+        if (!micMuteProcess.running) {
+            micMuteProcess.running = true
         }
     }
 
@@ -300,6 +394,7 @@ QtObject {
             onRead: data => {
                 if (data.includes("Event") && (
                     data.includes("sink") ||
+                    data.includes("source") ||
                     data.includes("server") ||
                     data.includes("card"))) {
                     audioDebounceTimer.restart()
@@ -323,6 +418,12 @@ QtObject {
             if (!muteProcess.running) {
                 updateMuteStatus()
             }
+            if (!micVolumeProcess.running) {
+                updateMicVolume()
+            }
+            if (!micMuteProcess.running) {
+                updateMicMuteStatus()
+            }
             if (!headphoneProcess.running) {
                 updateHeadphoneStatus()
             }
@@ -335,6 +436,8 @@ QtObject {
     Component.onCompleted: {
         updateVolume()
         updateMuteStatus()
+        updateMicVolume()
+        updateMicMuteStatus()
         updateHeadphoneStatus()
         updateDevices()
     }

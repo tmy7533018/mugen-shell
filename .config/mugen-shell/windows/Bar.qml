@@ -157,6 +157,8 @@ PanelWindow {
         }
     }
 
+    Managers.MicCavaManager { id: micCavaManager }
+
     property int previousVolume: audioManager.volume
     property bool previousMuted: audioManager.isMuted
     property bool isInitialized: false
@@ -522,6 +524,7 @@ PanelWindow {
         property var typoRef: typo
         property var audioManagerRef: audioManager
         property var cavaManagerRef: cavaManager
+        property var micCavaManagerRef: micCavaManager
         property var musicPlayerManagerRef: musicPlayerManager
         active: modeManagerRef.isMode("volume")
         sourceComponent: Content.VolumeContent {
@@ -530,6 +533,7 @@ PanelWindow {
             modeManager: volumeLoader.modeManagerRef
             audioManager: volumeLoader.audioManagerRef
             cavaManager: volumeLoader.cavaManagerRef
+            micCavaManager: volumeLoader.micCavaManagerRef
             musicPlayerManager: volumeLoader.musicPlayerManagerRef
             theme: volumeLoader.themeRef
             typo: volumeLoader.typoRef

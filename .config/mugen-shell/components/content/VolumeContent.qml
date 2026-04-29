@@ -11,6 +11,7 @@ Item {
     required property var modeManager
     required property var audioManager
     property var cavaManager
+    property var micCavaManager
     property var musicPlayerManager
     required property var theme
     required property var typo
@@ -23,7 +24,31 @@ Item {
         "bottomMargin": modeManager.scale(6)
     })
 
-    property real audioLevel: cavaManager ? cavaManager.audioLevel : 0.0
+    // 0 = speaker (sink), 1 = mic (source)
+    property int tabIndex: 0
+    readonly property bool isMicMode: tabIndex === 1
+
+    property real audioLevel: isMicMode
+        ? (micCavaManager ? micCavaManager.audioLevel : 0.0)
+        : (cavaManager ? cavaManager.audioLevel : 0.0)
+    readonly property int currentVolume: isMicMode ? audioManager.micVolume : audioManager.volume
+    readonly property bool currentMuted: isMicMode ? audioManager.micMuted : audioManager.isMuted
+    readonly property string currentLabel: isMicMode ? "mic" : "speaker"
+
+    function setCurrentVolume(v) {
+        if (isMicMode) audioManager.setMicVolume(v)
+        else audioManager.setVolume(v)
+    }
+
+    function toggleCurrentMute() {
+        if (isMicMode) audioManager.toggleMicMute()
+        else audioManager.toggleMute()
+    }
+
+    // Mic blob color uses the same hue-shift trick as the active idle inhibitor
+    function micShift(c) {
+        return Qt.hsva((c.hsvHue + 0.2) % 1.0, c.hsvSaturation, Math.min(1.0, c.hsvValue + 0.25), c.a)
+    }
 
     // Closes the panel quickly (faster than the central auto-close) right
     // after a hardware volume change — the panel is transient in that flow.
@@ -56,9 +81,24 @@ Item {
             if (!modeManager.isMode("volume")) {
                 volumeChangeTimer.stop()
                 if (contentLayer) contentLayer.deviceDropdownVisible = false
+                if (micCavaManager) micCavaManager.stop()
+            } else {
+                root.updateMicCavaState()
             }
         }
     }
+
+    // Run cava on the mic source only while the volume panel is open in mic mode.
+    function updateMicCavaState() {
+        if (!micCavaManager) return
+        if (modeManager.isMode("volume") && root.isMicMode) {
+            micCavaManager.start()
+        } else {
+            micCavaManager.stop()
+        }
+    }
+
+    onIsMicModeChanged: updateMicCavaState()
 
     MouseArea {
         anchors.fill: parent
@@ -144,9 +184,9 @@ Item {
         ]
 
         // Blob size represents volume: 0% -> 75px, 100% -> 235px
-        property real blobSize: (audioManager.isMuted || audioManager.volume === 0)
+        property real blobSize: (root.currentMuted || root.currentVolume === 0)
             ? modeManager.scale(75)
-            : modeManager.scale(75 + Math.min(100, audioManager.volume) * 1.60)
+            : modeManager.scale(75 + Math.min(100, root.currentVolume) * 1.60)
 
         Behavior on blobSize {
             NumberAnimation {
@@ -164,14 +204,14 @@ Item {
             if (!theme) {
                 return Qt.rgba(0.65, 0.55, 0.85, 0.8)
             }
-            if (audioManager.isMuted || audioManager.volume <= 0) {
+            if (root.currentMuted || root.currentVolume <= 0) {
                 return theme.textFaint
             }
             let effectiveAudioLevel = Math.max(0.1, root.audioLevel)
             let rawMix = 1.0 - Math.pow(effectiveAudioLevel, 1.5)
             let lightMix = Math.min(0.4, Math.max(0.0, rawMix))
-            let accent = theme.accent
-            let lightColor = theme.glowPrimary
+            let accent = root.isMicMode ? root.micShift(theme.accent) : theme.accent
+            let lightColor = root.isMicMode ? root.micShift(theme.glowPrimary) : theme.glowPrimary
             return Qt.rgba(
                 accent.r * (1.0 - lightMix) + lightColor.r * lightMix,
                 accent.g * (1.0 - lightMix) + lightColor.g * lightMix,
@@ -183,12 +223,12 @@ Item {
         function updateBlobColor(forceUpdate) {
             if (forceUpdate ||
                 Math.abs(root.audioLevel - _lastAudioLevel) > 0.01 ||
-                audioManager.isMuted !== _lastMuted ||
-                Math.abs(audioManager.volume - _lastVolume) > 0.1) {
+                root.currentMuted !== _lastMuted ||
+                Math.abs(root.currentVolume - _lastVolume) > 0.1) {
                 _cachedBlobColor = calculateBlobColor()
                 _lastAudioLevel = root.audioLevel
-                _lastMuted = audioManager.isMuted
-                _lastVolume = audioManager.volume
+                _lastMuted = root.currentMuted
+                _lastVolume = root.currentVolume
             }
         }
 
@@ -197,15 +237,14 @@ Item {
             function onAudioLevelChanged() {
                 contentLayer.updateBlobColor()
             }
-        }
-
-        Connections {
-            target: audioManager
-            function onIsMutedChanged() {
+            function onCurrentMutedChanged() {
                 contentLayer.updateBlobColor()
             }
-            function onVolumeChanged() {
+            function onCurrentVolumeChanged() {
                 contentLayer.updateBlobColor()
+            }
+            function onIsMicModeChanged() {
+                contentLayer.updateBlobColor(true)
             }
         }
 
@@ -231,8 +270,8 @@ Item {
 
         Component.onCompleted: {
             _lastAudioLevel = root.audioLevel
-            _lastMuted = audioManager.isMuted
-            _lastVolume = audioManager.volume
+            _lastMuted = root.currentMuted
+            _lastVolume = root.currentVolume
             _cachedBlobColor = calculateBlobColor()
         }
 
@@ -270,14 +309,24 @@ Item {
         Connections {
             target: audioManager
             function onVolumeChanged() {
-                // Auto-unmute when volume changes (handles hardware volume knobs too)
-                if (audioManager.isMuted) {
-                    audioManager.toggleMute()
-                }
+                if (root.isMicMode) return
+                if (audioManager.isMuted) audioManager.toggleMute()
+                contentLayer.startInteraction()
+                root.startVolumeChangeTimer()
+            }
+            function onMicVolumeChanged() {
+                if (!root.isMicMode) return
+                if (audioManager.micMuted) audioManager.toggleMicMute()
                 contentLayer.startInteraction()
                 root.startVolumeChangeTimer()
             }
             function onIsMutedChanged() {
+                if (root.isMicMode) return
+                contentLayer.startInteraction()
+                root.startVolumeChangeTimer()
+            }
+            function onMicMutedChanged() {
+                if (!root.isMicMode) return
                 contentLayer.startInteraction()
                 root.startVolumeChangeTimer()
             }
@@ -291,8 +340,8 @@ Item {
             width: Math.max(muteIcon.width, volumePercentText.implicitWidth)
             height: Math.max(muteIcon.height, volumePercentText.implicitHeight)
 
-            opacity: (contentLayer.isInteracting || contentLayer.isHovering) ? 0.6 : 0.0
-            visible: opacity > 0.01
+            opacity: (contentLayer.isInteracting || contentLayer.isHovering) ? 1.0 : 0.6
+            visible: true
 
             Behavior on opacity {
                 NumberAnimation {
@@ -308,8 +357,8 @@ Item {
                 height: modeManager.scale(18)
                 source: Quickshell.shellDir + "/assets/icons/volume-mute.svg"
                 color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
-                visible: audioManager.isMuted && parent.opacity > 0.01
-                opacity: audioManager.isMuted ? 1.0 : 0.0
+                visible: root.currentMuted && parent.opacity > 0.01
+                opacity: root.currentMuted ? 1.0 : 0.0
 
                 enableGlow: true
                 glowColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.6) : Qt.rgba(0.65, 0.55, 0.85, 0.6)
@@ -328,13 +377,13 @@ Item {
             Common.GlowText {
                 id: volumePercentText
                 anchors.centerIn: parent
-                text: audioManager.volume + "%"
+                text: root.currentVolume + "%"
                 color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
                 font.family: typo.fontFamily
                 font.pixelSize: modeManager.scale(16)
                 font.weight: typo.weightLight
                 font.letterSpacing: 1.5
-                visible: !audioManager.isMuted
+                visible: !root.currentMuted
                 enableGlow: true
                 glowColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.6) : Qt.rgba(0.65, 0.55, 0.85, 0.6)
                 glowSamples: 20
@@ -430,7 +479,7 @@ Item {
 
                 onClicked: {
                     if (!wasDragging && !isDragging) {
-                        audioManager.toggleMute()
+                        root.toggleCurrentMute()
                         contentLayer.startInteraction()
                         root.resetAutoCloseTimer()
                     }
@@ -443,7 +492,7 @@ Item {
 
                 onPressed: (mouse) => {
                     startY = mouse.y
-                    startVolume = audioManager.volume
+                    startVolume = root.currentVolume
                     isDragging = false
                     wasDragging = false
                     contentLayer.startInteraction()
@@ -461,7 +510,7 @@ Item {
                         if (isDragging) {
                             let volumeChange = Math.round((startY - mouse.y) * 0.5)
                             let newVolume = Math.max(0, Math.min(100, startVolume + volumeChange))
-                            audioManager.setVolume(newVolume)
+                            root.setCurrentVolume(newVolume)
                             contentLayer.startInteraction()
                             root.startVolumeChangeTimer()
                         }
@@ -473,8 +522,8 @@ Item {
 
                 onWheel: (wheel) => {
                     let delta = wheel.angleDelta.y > 0 ? 2 : -2
-                    let newVolume = Math.max(0, Math.min(100, audioManager.volume + delta))
-                    audioManager.setVolume(newVolume)
+                    let newVolume = Math.max(0, Math.min(100, root.currentVolume + delta))
+                    root.setCurrentVolume(newVolume)
                     contentLayer.startInteraction()
                     root.startVolumeChangeTimer()
                 }
@@ -496,7 +545,7 @@ Item {
                 id: volumeLabel
                 anchors.centerIn: parent
 
-                text: "volume"
+                text: root.currentLabel
                 color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
                 font.family: typo.fontFamily
                 font.pixelSize: modeManager.scale(20)
@@ -517,6 +566,41 @@ Item {
                 }
                 Behavior on scale {
                     NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+                }
+            }
+
+            Common.GlowSvgIcon {
+                id: swapIcon
+                width: modeManager.scale(16)
+                height: modeManager.scale(16)
+                anchors.right: volumeLabel.left
+                anchors.rightMargin: modeManager.scale(18)
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenterOffset: modeManager.scale(2)
+                source: Quickshell.shellDir + "/assets/icons/arrows-right-left.svg"
+                color: Qt.rgba(0.95, 0.93, 0.98, swapMouseArea.containsMouse ? 1.0 : 0.5)
+                opacity: swapMouseArea.containsMouse ? 1.0 : 0.4
+
+                enableGlow: opacity > 0.5
+                glowColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.5) : Qt.rgba(0.65, 0.55, 0.85, 0.5)
+                glowSamples: 16
+                glowRadius: modeManager.scale(8)
+                glowSpread: 0.4
+
+                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+
+                MouseArea {
+                    id: swapMouseArea
+                    anchors.fill: parent
+                    anchors.margins: -8
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+
+                    onClicked: {
+                        root.tabIndex = root.tabIndex === 0 ? 1 : 0
+                        root.resetAutoCloseTimer()
+                    }
                 }
             }
 
@@ -541,14 +625,14 @@ Item {
                 width: modeManager.scale(16)
                 height: modeManager.scale(16)
                 anchors.left: volumeLabel.right
-                anchors.leftMargin: modeManager.scale(6)
+                anchors.leftMargin: modeManager.scale(18)
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.verticalCenterOffset: modeManager.scale(2)
                 source: Quickshell.shellDir + "/assets/icons/chevron-down.svg"
-                color: Qt.rgba(0.95, 0.93, 0.98, dropdownMouseArea.containsMouse ? 1.0 : 0.7)
+                color: Qt.rgba(0.95, 0.93, 0.98, dropdownMouseArea.containsMouse ? 1.0 : 0.5)
                 rotation: contentLayer.deviceDropdownVisible ? 180 : 0
 
-                opacity: (volumeLabelMouseArea.containsMouse || dropdownMouseArea.containsMouse || contentLayer.deviceDropdownVisible) ? 1.0 : 0.0
+                opacity: dropdownMouseArea.containsMouse || contentLayer.deviceDropdownVisible ? 1.0 : 0.4
 
                 enableGlow: opacity > 0.5
                 glowColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.5) : Qt.rgba(0.65, 0.55, 0.85, 0.5)
@@ -643,6 +727,7 @@ Item {
                     spacing: modeManager.scale(8)
 
                     Common.GlowText {
+                        visible: !root.isMicMode
                         text: "出力"
                         color: Qt.rgba(0.7, 0.7, 0.8, 0.8)
                         font.pixelSize: modeManager.scale(12)
@@ -652,6 +737,7 @@ Item {
                     }
 
                     Column {
+                        visible: !root.isMicMode
                         width: parent.width
                         spacing: modeManager.scale(4)
 
@@ -699,12 +785,14 @@ Item {
                     }
 
                     Rectangle {
+                        visible: false
                         width: parent.width
                         height: 1
                         color: Qt.rgba(0.4, 0.4, 0.5, 0.3)
                     }
 
                     Common.GlowText {
+                        visible: root.isMicMode
                         text: "入力"
                         color: Qt.rgba(0.7, 0.7, 0.8, 0.8)
                         font.pixelSize: modeManager.scale(12)
@@ -714,6 +802,7 @@ Item {
                     }
 
                     Column {
+                        visible: root.isMicMode
                         width: parent.width
                         spacing: modeManager.scale(4)
 
@@ -789,5 +878,6 @@ Item {
         if (modeManager) {
             modeManager.registerMode("volume", root)
         }
+        updateMicCavaState()
     }
 }

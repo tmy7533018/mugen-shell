@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Usage: cava.sh [mode]
+#   mode = "speaker" (default) — monitor the default sink output
+#   mode = "mic"               — monitor the default source (microphone) input
+MODE="${1:-speaker}"
+
 COLOR_CONFIG="${HOME}/.config/cava/colors.conf"
 TMP_CONFIG="$(mktemp)"
 
@@ -9,14 +14,21 @@ cleanup() {
 }
 trap cleanup EXIT
 
-cat <<'EOF' > "$TMP_CONFIG"
+if [[ "$MODE" == "mic" ]]; then
+    SOURCE_NAME="$(pactl info | awk -F': ' '/Default Source/ {print $2; exit}')"
+    SOURCE_LINE="source = ${SOURCE_NAME}"
+else
+    SOURCE_LINE="source = auto"
+fi
+
+cat <<EOF > "$TMP_CONFIG"
 [general]
 bars = 16
 framerate = 20
 
 [input]
 method = pipewire
-source = auto
+${SOURCE_LINE}
 
 [output]
 method = raw

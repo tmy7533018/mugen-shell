@@ -99,7 +99,7 @@ Right-click the power menu icon to jump straight into settings. Click the chevro
 - [x] System Tray
 - [x] Battery indicator
 - [ ] Brightness control
-- [ ] Mic volume control
+- [x] Mic volume control
 - [ ] Keyboard layout indicator
 - [ ] NixOS flake distribution (`mugen-os`)
 
