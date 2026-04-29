@@ -365,7 +365,8 @@ Panel keybinds dispatch through `scripts/mugen-shell-ipc.sh` which talks to the 
 - **BluetoothManager** - Bluetooth management
 - **AudioManager** - Audio sink/source state and volume
 - **AudioLevel** - Per-application audio levels
-- **CavaManager** - Cava visualizer management
+- **CavaManager** - Cava visualizer management (default sink monitor)
+- **MicCavaManager** - Cava visualizer management for the default microphone source
 - **BatteryManager** - Battery state via /sys/class/power_supply
 - **WallpaperManager** - Wallpaper switching
 - **ScreenshotManager** - Screenshot management

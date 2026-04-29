@@ -57,12 +57,13 @@ make install-ai
 - Wallpaper-driven Material You color scheme via Matugen
 - Video and image wallpaper switching (mpvpaper + awww)
 - Wallpaper picker UI
-- Music player integration (playerctl / MPRIS) with YouTube thumbnail fallback
+- Music player integration (playerctl / MPRIS) with YouTube thumbnail fallback and a seekable glowing progress slider
 - Cava audio visualizer
 - Notification center
 - Calendar widget
 - Clipboard history (`Super + V`) with item limit
 - WiFi / Bluetooth / IME management
+- Speaker / microphone control sharing the volume panel (`Super + U`) with a swap toggle
 - System Tray (collapsible)
 - Battery indicator (water-level fill inside the power menu icon, opt-in)
 - Idle inhibitor toggle
@@ -91,17 +92,6 @@ Most-used panels:
 | `Super + ,` | Settings |
 
 Right-click the power menu icon to jump straight into settings. Click the chevron next to the notification icon to expand the system tray. Full keybind list lives in [SETUP.md](SETUP.md).
-
----
-
-## Roadmap
-
-- [x] System Tray
-- [x] Battery indicator
-- [ ] Brightness control
-- [x] Mic volume control
-- [ ] Keyboard layout indicator
-- [ ] NixOS flake distribution (`mugen-os`)
 
 ---
 
