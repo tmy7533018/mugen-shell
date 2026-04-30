@@ -5,8 +5,16 @@ import Quickshell.Io
 QtObject {
     id: settingsManager
     
+    readonly property string configDir: {
+        let xdg = Quickshell.env("XDG_CONFIG_HOME")
+        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.config"
+        return xdg + "/mugen-shell"
+    }
+
+    // defaultSettingsFile stays in shellDir — it's a read-only template
+    // shipped with the project (will become a /nix/store path under flake).
     property string defaultSettingsFile: Quickshell.shellDir + "/settings.default.json"
-    property string userSettingsFile: Quickshell.shellDir + "/.cache/settings.json"
+    property string userSettingsFile: configDir + "/settings.json"
     
     // 0 = disabled, otherwise the idle timeout (ms) before a mode auto-closes.
     property int autoCloseTimerInterval: 5000
@@ -55,7 +63,7 @@ QtObject {
         
         saveSettingsProcess.command = [
             "bash", "-c",
-            "mkdir -p \"" + Quickshell.shellDir + "/.cache\" && echo '" + jsonString + "' > \"" + userSettingsFile + "\""
+            "mkdir -p \"" + configDir + "\" && echo '" + jsonString + "' > \"" + userSettingsFile + "\""
         ]
         saveSettingsProcess.running = true
     }
@@ -63,7 +71,7 @@ QtObject {
     function resetToDefault() {
         resetProcess.command = [
             "bash", "-c",
-            "cp \"" + defaultSettingsFile + "\" \"" + userSettingsFile + "\""
+            "mkdir -p \"" + configDir + "\" && cp \"" + defaultSettingsFile + "\" \"" + userSettingsFile + "\""
         ]
         resetProcess.running = true
     }
