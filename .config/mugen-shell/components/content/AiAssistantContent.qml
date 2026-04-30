@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import "../ui" as UI
 import "../common" as Common
+import "./ai" as Ai
 
 FocusScope {
     id: root
@@ -161,120 +162,23 @@ FocusScope {
                     glowSpread: 0.5
                 }
 
-                // Model selector
-                Item {
+                Ai.ModelSelector {
                     visible: root.aiAvailable && root.currentModel !== ""
-                    Layout.preferredWidth: modelLabel.width + modeManager.scale(20)
-                    Layout.preferredHeight: modeManager.scale(26)
-                    z: 100
+                    theme: root.theme
+                    modeManager: root.modeManager
+                    currentModel: root.currentModel
+                    availableModels: root.availableModels
+                    isOpen: root.modelDropdownOpen
 
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: height / 2
-                        color: modelSelectorMouse.containsMouse
-                            ? (root.theme ? root.theme.chipActiveBg : Qt.rgba(0.45, 0.45, 0.60, 0.25))
-                            : (root.theme ? root.theme.chipInactiveBg : Qt.rgba(0.45, 0.45, 0.60, 0.12))
-                        border.color: root.theme ? root.theme.chipInactiveBorder : Qt.rgba(0.55, 0.55, 0.68, 0.15)
-                        border.width: 1
-
-                        Behavior on color {
-                            ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
+                    onToggled: root.modelDropdownOpen = !root.modelDropdownOpen
+                    onModelChosen: name => {
+                        if (name !== root.currentModel) {
+                            if (root.streaming) root.stopStreaming()
+                            root.currentModel = name
+                            switchModelProcess.payload = JSON.stringify({ model: name })
+                            switchModelProcess.running = true
                         }
-
-                        Text {
-                            id: modelLabel
-                            anchors.centerIn: parent
-                            text: root.currentModel + (root.modelDropdownOpen ? "  ▴" : "  ▾")
-                            color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                            font.pixelSize: modeManager.scale(11)
-                            font.family: "M PLUS 2"
-                            opacity: modelSelectorMouse.containsMouse ? 1.0 : 0.7
-
-                            Behavior on opacity {
-                                NumberAnimation { duration: 200 }
-                            }
-                        }
-
-                        MouseArea {
-                            id: modelSelectorMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.modelDropdownOpen = !root.modelDropdownOpen
-                        }
-                    }
-
-                    // Dropdown
-                    Column {
-                        visible: root.modelDropdownOpen
-                        anchors.top: parent.bottom
-                        anchors.topMargin: modeManager.scale(4)
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        z: 10
-
-                        Rectangle {
-                            width: modelDropdownCol.width + modeManager.scale(12)
-                            height: modelDropdownCol.height + modeManager.scale(12)
-                            radius: modeManager.scale(10)
-                            color: root.theme
-                                ? Qt.rgba(root.theme.surfaceGlass.r, root.theme.surfaceGlass.g, root.theme.surfaceGlass.b, 0.9)
-                                : Qt.rgba(0.08, 0.05, 0.15, 0.9)
-                            border.color: root.theme ? root.theme.surfaceBorder : Qt.rgba(0.55, 0.55, 0.68, 0.2)
-                            border.width: 1
-
-                            Column {
-                                id: modelDropdownCol
-                                anchors.centerIn: parent
-                                spacing: modeManager.scale(2)
-
-                                Repeater {
-                                    model: root.availableModels
-
-                                    Rectangle {
-                                        required property string modelData
-                                        required property int index
-                                        width: dropdownItemText.implicitWidth + modeManager.scale(24)
-                                        height: dropdownItemText.implicitHeight + modeManager.scale(10)
-                                        radius: modeManager.scale(6)
-                                        color: dropdownItemMouse.containsMouse
-                                            ? (root.theme ? root.theme.chipActiveBg : Qt.rgba(0.45, 0.45, 0.60, 0.3))
-                                            : "transparent"
-
-                                        Behavior on color {
-                                            ColorAnimation { duration: 150 }
-                                        }
-
-                                        Text {
-                                            id: dropdownItemText
-                                            anchors.centerIn: parent
-                                            text: modelData
-                                            color: modelData === root.currentModel
-                                                ? (root.theme ? root.theme.accent : Qt.rgba(0.65, 0.85, 1.0, 1.0))
-                                                : (root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
-                                            font.pixelSize: modeManager.scale(11)
-                                            font.family: "M PLUS 2"
-                                            font.weight: modelData === root.currentModel ? Font.Medium : Font.Normal
-                                        }
-
-                                        MouseArea {
-                                            id: dropdownItemMouse
-                                            anchors.fill: parent
-                                            hoverEnabled: true
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: {
-                                                if (modelData !== root.currentModel) {
-                                                    if (root.streaming) root.stopStreaming()
-                                                    root.currentModel = modelData
-                                                    switchModelProcess.payload = JSON.stringify({ model: modelData })
-                                                    switchModelProcess.running = true
-                                                }
-                                                root.modelDropdownOpen = false
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        root.modelDropdownOpen = false
                     }
                 }
 
@@ -509,169 +413,17 @@ FocusScope {
                     }
                 }
 
-                delegate: Item {
-                    readonly property bool isAssistant: modelData.role === "assistant"
-                    readonly property bool isLastAssistant: isAssistant && index === root.messages.length - 1
-                    readonly property bool isThinking: root.streaming && isLastAssistant && modelData.content === ""
-                    readonly property bool hasContent: modelData.content !== ""
-
+                delegate: Ai.MessageBubble {
                     width: messageList.width
-                    height: delegateCol.height + modeManager.scale(4)
+                    theme: root.theme
+                    modeManager: root.modeManager
+                    messagesLength: root.messages.length
+                    streaming: root.streaming
 
-                    Column {
-                        id: delegateCol
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        spacing: modeManager.scale(4)
-
-                        // Message bubble + copy button row
-                        Item {
-                            visible: hasContent
-                            anchors.right: !isAssistant ? parent.right : undefined
-                            anchors.left: !isAssistant ? undefined : parent.left
-                            width: bubble.width + (isAssistant ? copyBtn.width + modeManager.scale(6) : 0)
-                            height: bubble.height
-
-                            Rectangle {
-                                id: bubble
-                                anchors.left: !isAssistant ? undefined : parent.left
-                                anchors.right: !isAssistant ? parent.right : undefined
-
-                                readonly property real hPad: modeManager.scale(10)
-                                readonly property real vPad: modeManager.scale(7)
-                                readonly property real maxWidth: messageList.width * 0.85
-
-                                width: Math.min(bubbleText.implicitWidth + hPad * 2, maxWidth)
-                                height: bubbleText.height + vPad * 2
-                                radius: modeManager.scale(12)
-                                color: !isAssistant
-                                    ? (root.theme ? root.theme.chipActiveBg : Qt.rgba(0.45, 0.45, 0.60, 0.20))
-                                    : (root.theme ? root.theme.chipInactiveBg : Qt.rgba(0.45, 0.45, 0.60, 0.10))
-                                border.color: root.theme ? root.theme.chipInactiveBorder : Qt.rgba(0.55, 0.55, 0.68, 0.15)
-                                border.width: 1
-
-                                Text {
-                                    id: bubbleText
-                                    anchors.centerIn: parent
-                                    width: bubble.width - bubble.hPad * 2
-                                    text: modelData.content
-                                    wrapMode: Text.WordWrap
-                                    color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                                    font.pixelSize: modeManager.scale(13)
-                                    font.family: "M PLUS 2"
-                                    font.letterSpacing: 0.3
-                                }
-                            }
-
-                            // Copy button — right of bubble
-                            Rectangle {
-                                id: copyBtn
-                                visible: isAssistant && bubbleHover.containsMouse
-                                anchors.left: bubble.right
-                                anchors.leftMargin: modeManager.scale(6)
-                                anchors.verticalCenter: bubble.verticalCenter
-                                width: modeManager.scale(24)
-                                height: modeManager.scale(24)
-                                radius: modeManager.scale(6)
-                                color: copyMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.68, 0.4) : Qt.rgba(0.55, 0.55, 0.68, 0.25)
-                                opacity: bubbleHover.containsMouse ? 1.0 : 0.0
-
-                                Behavior on opacity {
-                                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-                                }
-
-                                Behavior on color {
-                                    ColorAnimation { duration: 150 }
-                                }
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "⧉"
-                                    color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                                    font.pixelSize: modeManager.scale(12)
-                                }
-
-                                MouseArea {
-                                    id: copyMouse
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        copyProcess.text = modelData.content
-                                        copyProcess.running = true
-                                    }
-                                }
-                            }
-
-                            MouseArea {
-                                id: bubbleHover
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                acceptedButtons: Qt.NoButton
-                                propagateComposedEvents: true
-                            }
-                        }
-
-                        // Blob — only on last assistant message, breathes while thinking
-                        Item {
-                            id: assistantBlob
-                            visible: isLastAssistant
-                            width: modeManager.scale(36)
-                            height: modeManager.scale(36)
-
-                            property real pulseScale: 1.0
-
-                            SequentialAnimation {
-                                id: idlePulse
-                                loops: Animation.Infinite
-                                NumberAnimation { target: assistantBlob; property: "pulseScale"; to: 1.15; duration: 1200; easing.type: Easing.InOutSine }
-                                NumberAnimation { target: assistantBlob; property: "pulseScale"; to: 1.0; duration: 1200; easing.type: Easing.InOutSine }
-                            }
-
-                            SequentialAnimation {
-                                id: thinkingPulse
-                                loops: Animation.Infinite
-                                NumberAnimation { target: assistantBlob; property: "pulseScale"; to: 1.6; duration: 600; easing.type: Easing.InOutSine }
-                                NumberAnimation { target: assistantBlob; property: "pulseScale"; to: 1.0; duration: 600; easing.type: Easing.InOutSine }
-                            }
-
-                            function switchPulse(thinking) {
-                                idlePulse.stop()
-                                thinkingPulse.stop()
-                                if (thinking) thinkingPulse.start()
-                                else idlePulse.start()
-                            }
-
-                            Connections {
-                                target: root
-                                function onStreamingChanged() {
-                                    if (isLastAssistant) assistantBlob.switchPulse(root.streaming)
-                                }
-                            }
-
-                            Component.onCompleted: {
-                                switchPulse(isThinking)
-                            }
-
-                            transform: Scale {
-                                origin.x: assistantBlob.width / 2
-                                origin.y: assistantBlob.height / 2
-                                xScale: assistantBlob.pulseScale
-                                yScale: assistantBlob.pulseScale
-                            }
-
-                            Common.BlobEffect {
-                                anchors.fill: parent
-                                blobColor: root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
-                                layers: 3
-                                waveAmplitude: 3.0
-                                baseOpacity: 0.7
-                                animationSpeed: isThinking ? 0.1 : 0.03
-                                pointCount: 12
-                                running: isLastAssistant
-                            }
-                        }
-                    } // Column
+                    onCopyRequested: content => {
+                        copyProcess.text = content
+                        copyProcess.running = true
+                    }
                 }
             }
 
