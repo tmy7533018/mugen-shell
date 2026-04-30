@@ -11,9 +11,10 @@ QtObject {
     property bool isLoadingState: false
 
     readonly property string toggleScript: Quickshell.shellDir + "/scripts/idle_inhibitor.sh"
-    // Qt.env is unavailable; use shell $HOME expansion at runtime via bash
-    readonly property string cacheDir: "$HOME/.cache/mugen-shell"
-    readonly property string stateFile: cacheDir + "/idle_inhibitor_state.json"
+    // Paths kept as bash-style strings because every read/write is funneled
+    // through Process bash -c invocations that expand env vars at runtime.
+    readonly property string stateDir: "${XDG_STATE_HOME:-$HOME/.local/state}/mugen-shell"
+    readonly property string stateFile: stateDir + "/idle-inhibitor.json"
 
     function refreshStatus() {
         if (!statusProcess.running) {
@@ -40,7 +41,7 @@ QtObject {
 
         saveStateProcess.command = [
             "bash", "-c",
-            "mkdir -p \"" + cacheDir + "\" && echo '" + jsonString + "' > \"" + stateFile + "\""
+            "mkdir -p \"" + stateDir + "\" && echo '" + jsonString + "' > \"" + stateFile + "\""
         ]
         saveStateProcess.running = true
     }

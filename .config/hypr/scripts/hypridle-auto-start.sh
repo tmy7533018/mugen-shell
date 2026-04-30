@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-STATE_FILE="$HOME/.config/quickshell/mugen-shell/.cache/idle_inhibitor_state.json"
+STATE_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/mugen-shell/idle-inhibitor.json"
 
 if [ ! -f "$STATE_FILE" ]; then
     systemctl --user start hypridle.service
