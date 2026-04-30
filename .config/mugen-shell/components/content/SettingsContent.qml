@@ -500,176 +500,107 @@ Item {
         id: timerSection
 
         Rectangle {
-            id: timerSectionRect
             width: parent ? parent.width : 420
-            height: timerSectionRect.isExpanded ? 120 : 64
+            height: 64
             color: theme ? theme.surfaceGlass : Qt.rgba(0.15, 0.15, 0.20, 0.5)
             radius: 20
             border.width: 1
             border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
-            clip: false
 
-            property bool isExpanded: false
-            property var timerOptions: [
-                { "label": "3 seconds", "value": 3000 },
-                { "label": "5 seconds", "value": 5000 },
-                { "label": "10 seconds", "value": 10000 },
-                { "label": "15 seconds", "value": 15000 },
-                { "label": "30 seconds", "value": 30000 },
-                { "label": "Disabled", "value": 0 }
-            ]
-
-            Behavior on height {
-                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
-            }
-
-            ColumnLayout {
+            RowLayout {
                 anchors.fill: parent
                 anchors.margins: 12
-                spacing: 8
+                spacing: 12
 
-                MouseArea {
+                Text {
+                    Layout.preferredWidth: 130
+                    text: "Auto Close Timer"
+                    color: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                    font.pixelSize: 12
+                    font.family: "M PLUS 2"
+                    font.weight: Font.Normal
+                    font.letterSpacing: 0.5
+                }
+
+                Item {
+                    id: timerSlider
                     Layout.fillWidth: true
-                    Layout.preferredHeight: modeManager.scale(40)
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        timerSectionRect.isExpanded = !timerSectionRect.isExpanded
-                        root.resetAutoCloseTimer()
+                    Layout.preferredHeight: 24
+
+                    property real from: 0
+                    property real to: 30
+                    property real stepSize: 1
+                    property real value: settingsManager ? Math.round(settingsManager.autoCloseTimerInterval / 1000) : 5
+
+                    function valueAt(x) {
+                        const w = Math.max(1, width)
+                        const ratio = Math.max(0, Math.min(1, x / w))
+                        const raw = from + ratio * (to - from)
+                        return Math.round(raw / stepSize) * stepSize
                     }
 
-                    RowLayout {
-                        anchors.fill: parent
-                        spacing: 12
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: 4
+                        radius: 2
+                        color: Qt.rgba(1, 1, 1, 0.15)
 
-                        Text {
-                            Layout.fillWidth: true
-                            text: "Auto Close Timer"
-                            color: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-                            font.pixelSize: 12
-                            font.family: "M PLUS 2"
-                            font.weight: Font.Normal
-                            font.letterSpacing: 0.5
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: parent.width * (timerSlider.value - timerSlider.from) / (timerSlider.to - timerSlider.from)
+                            radius: parent.radius
+                            color: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
                         }
+                    }
 
-                        Text {
-                            text: {
-                                if (!settingsManager) return "..."
-                                if (settingsManager.autoCloseTimerInterval === 0) return "Disabled"
-                                return (settingsManager.autoCloseTimerInterval / 1000) + " seconds"
+                    Rectangle {
+                        x: ((timerSlider.value - timerSlider.from) / (timerSlider.to - timerSlider.from)) * (timerSlider.width - width)
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 16
+                        height: 16
+                        radius: 8
+                        color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, timerMouseArea.pressed ? 1.0 : 0.95) : Qt.rgba(0.65, 0.55, 0.85, 0.95)
+                        border.width: 1
+                        border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.5) : Qt.rgba(0.65, 0.55, 0.85, 0.5)
+                    }
+
+                    MouseArea {
+                        id: timerMouseArea
+                        anchors.fill: parent
+                        anchors.topMargin: -12
+                        anchors.bottomMargin: -12
+                        cursorShape: Qt.PointingHandCursor
+                        preventStealing: true
+
+                        onPressed: (mouse) => {
+                            timerSlider.value = timerSlider.valueAt(mouse.x)
+                            root.resetAutoCloseTimer()
+                        }
+                        onPositionChanged: (mouse) => {
+                            if (pressed) timerSlider.value = timerSlider.valueAt(mouse.x)
+                        }
+                        onReleased: {
+                            if (settingsManager) {
+                                settingsManager.autoCloseTimerInterval = Math.round(timerSlider.value) * 1000
+                                settingsManager.saveSettings()
                             }
-                            color: theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                            font.pixelSize: 12
-                            font.family: "M PLUS 2"
-                            font.weight: Font.Medium
+                            root.resetAutoCloseTimer()
                         }
                     }
                 }
 
-                Item {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: timerSectionRect.isExpanded ? 44 : 0
-                    visible: timerSectionRect.isExpanded
-                    opacity: timerSectionRect.isExpanded ? 1.0 : 0.0
-
-                    Behavior on Layout.preferredHeight {
-                        NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
-                    }
-
-                    Behavior on opacity {
-                        NumberAnimation { duration: 200 }
-                    }
-
-                    ListView {
-                        id: timerList
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(contentWidth, parent.width)
-                        height: parent.height
-                        orientation: ListView.Horizontal
-                        spacing: 8
-                        clip: true
-                        model: timerSectionRect.timerOptions
-                        flickableDirection: Flickable.HorizontalFlick
-                        boundsBehavior: Flickable.StopAtBounds
-                        interactive: timerSectionRect.isExpanded && contentWidth > width
-
-                        onVisibleChanged: {
-                            if (visible && settingsManager) {
-                                let currentValue = settingsManager.autoCloseTimerInterval
-                                let index = -1
-                                for (let i = 0; i < timerSectionRect.timerOptions.length; i++) {
-                                    if (timerSectionRect.timerOptions[i].value === currentValue) {
-                                        index = i
-                                        break
-                                    }
-                                }
-                                if (index >= 0) {
-                                    Qt.callLater(() => {
-                                        timerList.currentIndex = index
-                                        timerList.positionViewAtIndex(index, ListView.Center)
-                                    })
-                                }
-                            }
-                        }
-
-                        delegate: Rectangle {
-                            width: Math.max(timerText.implicitWidth + 24, 80)
-                            height: 36
-                            radius: 8
-                            property bool isCurrent: settingsManager && settingsManager.autoCloseTimerInterval === modelData.value
-
-                            color: timerMouseArea.containsMouse
-                                ? (theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : Qt.rgba(0.65, 0.55, 0.85, 0.25))
-                                : (isCurrent
-                                    ? (theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.95) : Qt.rgba(0.65, 0.55, 0.85, 0.95))
-                                    : (theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.15) : Qt.rgba(0.65, 0.55, 0.85, 0.15)))
-
-                            border.width: isCurrent ? 1 : 0
-                            border.color: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
-
-                            Behavior on color {
-                                ColorAnimation { duration: 150 }
-                            }
-
-                            Text {
-                                id: timerText
-                                anchors.centerIn: parent
-                                text: modelData.label
-                                color: isCurrent
-                                    ? (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
-                                    : (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.70))
-                                font.pixelSize: 12
-                                font.family: "M PLUS 2"
-                                font.weight: isCurrent ? Font.Medium : Font.Normal
-                            }
-
-                            MouseArea {
-                                id: timerMouseArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (settingsManager) {
-                                        settingsManager.autoCloseTimerInterval = modelData.value
-                                        settingsManager.saveSettings()
-                                    }
-                                    timerSectionRect.isExpanded = false
-                                    root.resetAutoCloseTimer()
-                                }
-                            }
-                        }
-
-                        ScrollBar.horizontal: ScrollBar {
-                            policy: ScrollBar.AsNeeded
-                            height: 4
-
-                            contentItem: Rectangle {
-                                implicitWidth: 4
-                                radius: 2
-                                color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4)
-                            }
-                        }
-                    }
+                Text {
+                    Layout.preferredWidth: 40
+                    horizontalAlignment: Text.AlignRight
+                    text: timerSlider.value === 0 ? "Off" : Math.round(timerSlider.value) + "s"
+                    color: theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                    font.pixelSize: 12
+                    font.family: "M PLUS 2"
+                    font.weight: Font.Medium
                 }
             }
         }
@@ -745,7 +676,7 @@ Item {
 
                 Text {
                     Layout.fillWidth: true
-                    text: "Battery Indicator (PowerMenu)"
+                    text: "Battery Indicator"
                     color: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                     font.pixelSize: 12
                     font.family: "M PLUS 2"
