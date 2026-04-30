@@ -548,7 +548,7 @@ Item {
                             width: 40
                             height: 40
                             radius: 20
-                            color: Qt.rgba(0, 0, 0, 0.7)
+                            color: theme ? theme.surfaceInsetCardHover : Qt.rgba(0, 0, 0, 0.7)
                         }
                         
                         SequentialAnimation on yOffset {

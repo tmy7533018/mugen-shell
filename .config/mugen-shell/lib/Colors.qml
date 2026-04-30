@@ -311,16 +311,23 @@ QtObject {
     readonly property color darkTextFaint: Qt.rgba(0.62, 0.62, 0.72, 0.90)
     readonly property color darkChipInactiveBg: Qt.rgba(0.45, 0.45, 0.60, 0.10)
     readonly property color darkChipInactiveBorder: Qt.rgba(0.55, 0.55, 0.68, 0.15)
-    
-    // Light mode intentionally uses muted grays with white text to stay visually consistent with dark mode
-    readonly property color lightSurfaceBorder: Qt.rgba(0.50, 0.45, 0.65, 0.3)
-    readonly property color lightSurfaceGlass: Qt.rgba(0.50, 0.48, 0.58, 0.32)
+    readonly property color darkSurfaceInsetSubtle: Qt.rgba(0, 0, 0, 0.25)
+    readonly property color darkSurfaceInsetCard: Qt.rgba(0, 0, 0, 0.65)
+    readonly property color darkSurfaceInsetCardHover: Qt.rgba(0, 0, 0, 0.75)
+
+    // Light mode leans into a clear "frosted glass" feel: white-tinted surfaces at low opacity,
+    // wallpaper bleeds through. White text stays readable on the soft veil.
+    readonly property color lightSurfaceBorder: Qt.rgba(1.0, 1.0, 1.0, 0.35)
+    readonly property color lightSurfaceGlass: Qt.rgba(1.0, 1.0, 1.0, 0.15)
     readonly property color lightTextPrimary: Qt.rgba(0.92, 0.92, 0.96, 0.90)
     readonly property color lightTextSecondary: Qt.rgba(0.72, 0.72, 0.82, 0.90)
     readonly property color lightTextFaint: Qt.rgba(0.62, 0.62, 0.72, 0.90)
-    readonly property color lightChipInactiveBg: Qt.rgba(0.45, 0.45, 0.60, 0.10)
-    readonly property color lightChipInactiveBorder: Qt.rgba(0.55, 0.55, 0.68, 0.15)
-    
+    readonly property color lightChipInactiveBg: Qt.rgba(1.0, 1.0, 1.0, 0.12)
+    readonly property color lightChipInactiveBorder: Qt.rgba(1.0, 1.0, 1.0, 0.20)
+    readonly property color lightSurfaceInsetSubtle: Qt.rgba(0, 0, 0, 0.18)
+    readonly property color lightSurfaceInsetCard: Qt.rgba(0, 0, 0, 0.40)
+    readonly property color lightSurfaceInsetCardHover: Qt.rgba(0, 0, 0, 0.55)
+
     property color surfaceBorder: themeMode === "light" ? lightSurfaceBorder : darkSurfaceBorder
     property color surfaceGlass: themeMode === "light" ? lightSurfaceGlass : darkSurfaceGlass
     property color textPrimary: themeMode === "light" ? lightTextPrimary : darkTextPrimary
@@ -328,6 +335,9 @@ QtObject {
     property color textFaint: themeMode === "light" ? lightTextFaint : darkTextFaint
     property color chipInactiveBg: themeMode === "light" ? lightChipInactiveBg : darkChipInactiveBg
     property color chipInactiveBorder: themeMode === "light" ? lightChipInactiveBorder : darkChipInactiveBorder
+    property color surfaceInsetSubtle: themeMode === "light" ? lightSurfaceInsetSubtle : darkSurfaceInsetSubtle
+    property color surfaceInsetCard: themeMode === "light" ? lightSurfaceInsetCard : darkSurfaceInsetCard
+    property color surfaceInsetCardHover: themeMode === "light" ? lightSurfaceInsetCardHover : darkSurfaceInsetCardHover
 
     property color chipActiveBg: colorAnimator.animatedChipActiveBg
     property color chipActiveBorder: colorAnimator.animatedChipActiveBorder
@@ -340,4 +350,7 @@ QtObject {
     Behavior on textFaint { ColorAnimation { duration: 400; easing.type: Easing.InOutCubic } }
     Behavior on chipInactiveBg { ColorAnimation { duration: 400; easing.type: Easing.InOutCubic } }
     Behavior on chipInactiveBorder { ColorAnimation { duration: 400; easing.type: Easing.InOutCubic } }
+    Behavior on surfaceInsetSubtle { ColorAnimation { duration: 400; easing.type: Easing.InOutCubic } }
+    Behavior on surfaceInsetCard { ColorAnimation { duration: 400; easing.type: Easing.InOutCubic } }
+    Behavior on surfaceInsetCardHover { ColorAnimation { duration: 400; easing.type: Easing.InOutCubic } }
 }

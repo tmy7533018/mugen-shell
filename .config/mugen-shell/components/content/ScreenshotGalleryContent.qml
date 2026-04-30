@@ -216,7 +216,7 @@ FocusScope {
                         anchors.fill: parent
                         anchors.margins: 8
                         radius: 16
-                        color: Qt.rgba(0, 0, 0, 0.35)
+                        color: root.theme ? root.theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.35)
                         border.width: isCurrent ? 2 : 0
                         border.color: isCurrent 
                             ? (root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))

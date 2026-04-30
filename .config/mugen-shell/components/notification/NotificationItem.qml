@@ -18,7 +18,7 @@ Rectangle {
     width: parent ? parent.width : 0
     // Ignore expansion height changes while removal animation is running
     height: shouldCollapseHeight ? 0 : (isExpanded && !notificationItem.isRemoving ? contentColumn.implicitHeight + 24 : 65)
-    color: Qt.rgba(0, 0, 0, 0.65)
+    color: theme ? theme.surfaceInsetCard : Qt.rgba(0, 0, 0, 0.65)
     radius: isExpanded ? 20 : 32.5
     border.width: 0
     clip: true
@@ -164,7 +164,7 @@ Rectangle {
         State {
             name: "hovered"
             when: notifMouseArea.containsMouse && !notificationItem.isRemoving
-            PropertyChanges { target: notificationItem; color: Qt.rgba(0, 0, 0, 0.75) }
+            PropertyChanges { target: notificationItem; color: theme ? theme.surfaceInsetCardHover : Qt.rgba(0, 0, 0, 0.75) }
         }
     ]
     

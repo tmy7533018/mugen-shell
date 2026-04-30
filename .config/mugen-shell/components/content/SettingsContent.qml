@@ -281,7 +281,7 @@ Item {
         Rectangle {
             width: parent ? parent.width : 420
             height: 64
-            color: theme ? theme.surfaceGlass : Qt.rgba(0.15, 0.15, 0.20, 0.5)
+            color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
             radius: 20
             border.width: 1
             border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
@@ -338,7 +338,7 @@ Item {
             id: blurSectionRect
             width: parent ? parent.width : 420
             height: blurSectionRect.isExpanded ? 64 + Math.min(root.blurPresets.length, 6) * 36 + 12 : 64
-            color: theme ? theme.surfaceGlass : Qt.rgba(0.15, 0.15, 0.20, 0.5)
+            color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
             radius: 20
             border.width: 1
             border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
@@ -470,7 +470,7 @@ Item {
         Rectangle {
             width: parent ? parent.width : 420
             height: 64
-            color: theme ? theme.surfaceGlass : Qt.rgba(0.15, 0.15, 0.20, 0.5)
+            color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
             radius: 20
             border.width: 1
             border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
@@ -580,7 +580,7 @@ Item {
         Rectangle {
             width: parent ? parent.width : 420
             height: 64
-            color: theme ? theme.surfaceGlass : Qt.rgba(0.15, 0.15, 0.20, 0.5)
+            color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
             radius: 20
             border.width: 1
             border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
@@ -632,7 +632,7 @@ Item {
         Rectangle {
             width: parent ? parent.width : 420
             height: 64
-            color: theme ? theme.surfaceGlass : Qt.rgba(0.15, 0.15, 0.20, 0.5)
+            color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
             radius: 20
             border.width: 1
             border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
@@ -685,7 +685,7 @@ Item {
             id: animationSectionRect
             width: parent ? parent.width : 420
             height: animationSectionRect.isExpanded ? 120 : 64
-            color: theme ? theme.surfaceGlass : Qt.rgba(0.15, 0.15, 0.20, 0.5)
+            color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
             radius: 20
             border.width: 1
             border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)

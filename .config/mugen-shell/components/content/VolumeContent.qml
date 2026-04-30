@@ -673,10 +673,10 @@ Item {
             property real maxHeight: modeManager.scale(250)
             height: Math.min(dropdownFlickable.contentHeight + modeManager.scale(16), maxHeight)
 
-            color: Qt.rgba(0.08, 0.08, 0.12, 0.75)
+            color: theme ? theme.surfaceInsetCardHover : Qt.rgba(0.08, 0.08, 0.12, 0.75)
             radius: modeManager.scale(12)
             border.width: 1
-            border.color: Qt.rgba(0.3, 0.3, 0.4, 0.3)
+            border.color: theme ? theme.surfaceBorder : Qt.rgba(0.3, 0.3, 0.4, 0.3)
 
             visible: contentLayer.deviceDropdownVisible
             opacity: contentLayer.deviceDropdownVisible ? 1.0 : 0.0

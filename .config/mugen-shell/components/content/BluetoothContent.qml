@@ -331,7 +331,7 @@ Item {
                     radius: height / 2
                     color: !root.showAvailableDevices
                         ? Qt.rgba(0.45, 0.65, 0.90, myDevicesTabArea.containsMouse ? 0.4 : 0.3)
-                        : Qt.rgba(0, 0, 0, 0.3)
+                        : (theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.3))
 
                     Behavior on color {
                         ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
@@ -364,7 +364,7 @@ Item {
                     radius: height / 2
                     color: root.showAvailableDevices
                         ? Qt.rgba(0.45, 0.65, 0.90, nearbyTabArea.containsMouse ? 0.4 : 0.3)
-                        : Qt.rgba(0, 0, 0, 0.3)
+                        : (theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.3))
 
                     Behavior on color {
                         ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
@@ -462,7 +462,9 @@ Item {
                     delegate: Rectangle {
                         width: pairedDeviceList.width
                         height: 60
-                        color: deviceMouseArea.containsMouse ? Qt.rgba(0, 0, 0, 0.75) : Qt.rgba(0, 0, 0, 0.65)
+                        color: deviceMouseArea.containsMouse
+                            ? (theme ? theme.surfaceInsetCardHover : Qt.rgba(0, 0, 0, 0.75))
+                            : (theme ? theme.surfaceInsetCard : Qt.rgba(0, 0, 0, 0.65))
                         radius: height / 2
                         border.width: 0
 
@@ -648,7 +650,9 @@ Item {
                     delegate: Rectangle {
                         width: availableDeviceList.width
                         height: 60
-                        color: deviceMouseArea2.containsMouse ? Qt.rgba(0, 0, 0, 0.75) : Qt.rgba(0, 0, 0, 0.65)
+                        color: deviceMouseArea2.containsMouse
+                            ? (theme ? theme.surfaceInsetCardHover : Qt.rgba(0, 0, 0, 0.75))
+                            : (theme ? theme.surfaceInsetCard : Qt.rgba(0, 0, 0, 0.65))
                         radius: height / 2
                         border.width: 0
 

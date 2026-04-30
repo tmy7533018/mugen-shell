@@ -324,7 +324,7 @@ Item {
                 Layout.preferredWidth: modeManager.scale(420)
                 // Fixed height to keep layout stable when content changes
                 Layout.preferredHeight: modeManager.scale(60)
-                color: Qt.rgba(0, 0, 0, 0.25)
+                color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
                 radius: 16
                 
                 opacity: wifiManager.isPowered ? 1.0 : 0.0

@@ -252,7 +252,9 @@ FocusScope {
                         readonly property bool isCurrent: root.currentIndex === index
                         readonly property bool isActive: isCurrent || itemMouseArea.containsMouse
                         
-                        color: isActive ? Qt.rgba(0, 0, 0, 0.75) : Qt.rgba(0, 0, 0, 0.65)
+                        color: isActive
+                            ? (theme ? theme.surfaceInsetCardHover : Qt.rgba(0, 0, 0, 0.75))
+                            : (theme ? theme.surfaceInsetCard : Qt.rgba(0, 0, 0, 0.65))
                         radius: isActive ? 20 : height / 2
                         border.width: 0
                         

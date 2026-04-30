@@ -26,7 +26,9 @@ Rectangle {
     implicitHeight: targetHeight
     height: targetHeight
 
-    color: networkMouseArea.containsMouse ? Qt.rgba(0, 0, 0, 0.75) : Qt.rgba(0, 0, 0, 0.65)
+    color: networkMouseArea.containsMouse
+        ? (theme ? theme.surfaceInsetCardHover : Qt.rgba(0, 0, 0, 0.75))
+        : (theme ? theme.surfaceInsetCard : Qt.rgba(0, 0, 0, 0.65))
     radius: root.isExpanded ? 20 : (height / 2)
     border.width: 0
 

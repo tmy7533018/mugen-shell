@@ -137,7 +137,7 @@ Item {
                 Rectangle {
                     id: calendarBackground
                     anchors.fill: parent
-                    color: Qt.rgba(0, 0, 0, 0.25)
+                    color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
                     border.width: 0
                     radius: modeManager.scale(26)
 
