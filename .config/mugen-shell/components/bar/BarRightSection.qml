@@ -137,7 +137,7 @@ RowLayout {
             // Pulse color between base and themed accent when unread notifications exist
             color: {
                 if (!root.theme) {
-                    return Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                    return (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
                 }
                 
                 if (notificationIconContainer.hasUnreadNotifications) {
@@ -254,7 +254,7 @@ RowLayout {
             ? accentLightColor
             : (root.theme
                 ? root.theme.textPrimary
-                : Qt.rgba(0.92, 0.92, 0.96, 0.90))
+                : (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)))
         
         property bool blinkTwice: false
         

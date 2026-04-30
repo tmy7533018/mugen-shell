@@ -148,7 +148,7 @@ Item {
                 
                 Text {
                     text: root.currentNotification ? root.currentNotification.title : ""
-                    color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                    color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                     font.pixelSize: modeManager.scale(13)
                     font.weight: Font.Medium
                     font.family: "M PLUS 2"
@@ -159,7 +159,7 @@ Item {
                 
                 Text {
                     text: "·"
-                    color: Qt.rgba(0.72, 0.72, 0.82, 0.50)
+                    color: (theme ? theme.textFaint : Qt.rgba(0.72, 0.72, 0.82, 0.50))
                     font.pixelSize: modeManager.scale(13)
                     font.family: "M PLUS 2"
                     visible: root.currentNotification && root.currentNotification.message.length > 0

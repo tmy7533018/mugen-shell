@@ -142,7 +142,7 @@ Item {
                     font.weight: Font.Light
                     font.family: "M PLUS 2"
                     font.letterSpacing: 1.5
-                    color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                    color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
 
                     enableGlow: true
                     glowColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.6) : Qt.rgba(0.65, 0.55, 0.85, 0.6)
@@ -340,7 +340,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: "My Devices (" + bluetoothManager.pairedDevices.length + ")"
-                        color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                        color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                         font.pixelSize: 12
                         font.weight: Font.Medium
                         font.family: "M PLUS 2"
@@ -373,7 +373,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: "Nearby (" + bluetoothManager.availableDevices.length + ")"
-                        color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                        color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                         font.pixelSize: 12
                         font.weight: Font.Medium
                         font.family: "M PLUS 2"
@@ -403,7 +403,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: "Bluetooth is turned off"
-                    color: Qt.rgba(0.72, 0.72, 0.82, 0.70)
+                    color: (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70))
                     font.pixelSize: 14
                     font.family: "M PLUS 2"
                     opacity: bluetoothManager.isPowered ? 0.0 : 1.0
@@ -519,7 +519,7 @@ Item {
 
                                 Text {
                                     text: modelData.name
-                                    color: Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                                    color: (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
                                     font.pixelSize: 14
                                     font.family: "M PLUS 2"
                                     elide: Text.ElideRight
@@ -529,7 +529,7 @@ Item {
                                     text: modelData.connected ? "Connected" : "Saved"
                                     color: modelData.connected
                                         ? (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))
-                                        : Qt.rgba(0.72, 0.72, 0.82, 0.70)
+                                        : (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70))
                                     font.pixelSize: 11
                                     font.family: "M PLUS 2"
                                 }
@@ -564,7 +564,7 @@ Item {
                                             return "Connect"
                                         }
                                     }
-                                    color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                                    color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                                     font.pixelSize: 11
                                     font.weight: Font.Medium
                                     font.family: "M PLUS 2"
@@ -691,7 +691,7 @@ Item {
 
                                 Text {
                                     text: modelData.name || modelData.address
-                                    color: Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                                    color: (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
                                     font.pixelSize: 14
                                     font.family: "M PLUS 2"
                                     elide: Text.ElideRight
@@ -700,7 +700,7 @@ Item {
                                 Text {
                                     text: modelData.paired ? "Saved" : "New device"
                                     color: modelData.paired
-                                        ? Qt.rgba(0.72, 0.72, 0.82, 0.70)
+                                        ? (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70))
                                         : (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))
                                     font.pixelSize: 11
                                     font.family: "M PLUS 2"
@@ -736,7 +736,7 @@ Item {
                                             return "Pair"
                                         }
                                     }
-                                    color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                                    color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                                     font.pixelSize: 11
                                     font.weight: Font.Medium
                                     font.family: "M PLUS 2"
@@ -777,7 +777,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: bluetoothManager.isScanning ? "Scanning..." : "No devices"
-                    color: Qt.rgba(0.72, 0.72, 0.82, 0.50)
+                    color: (theme ? theme.textFaint : Qt.rgba(0.72, 0.72, 0.82, 0.50))
                     font.pixelSize: 14
                     font.weight: Font.Light
                     font.family: "M PLUS 2"
@@ -795,7 +795,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: bluetoothManager.isScanning ? "Scanning..." : "No devices found"
-                    color: Qt.rgba(0.72, 0.72, 0.82, 0.50)
+                    color: (theme ? theme.textFaint : Qt.rgba(0.72, 0.72, 0.82, 0.50))
                     font.pixelSize: 14
                     font.weight: Font.Light
                     font.family: "M PLUS 2"

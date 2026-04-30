@@ -92,7 +92,7 @@ Item {
                 property string timeString: "--:--:--"
 
                 text: timeString
-                color: Qt.rgba(0.91, 0.91, 0.94, 0.85)
+                color: (theme ? theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.85))
                 font.pixelSize: modeManager.scale(60)
                 font.weight: Font.Light
                 font.family: "M PLUS 2"
@@ -161,7 +161,7 @@ Item {
 
                         Text {
                             text: "‹"
-                            color: Qt.rgba(0.91, 0.91, 0.94, 0.70)
+                            color: (theme ? theme.textSecondary : Qt.rgba(0.91, 0.91, 0.94, 0.70))
                             font.pixelSize: modeManager.scale(20)
                             font.weight: Font.Normal
                             font.family: "M PLUS 2"
@@ -198,7 +198,7 @@ Item {
                             property int currentMonth: 1
 
                             text: currentYear + "年 " + currentMonth + "月"
-                            color: Qt.rgba(0.91, 0.91, 0.94, 0.85)
+                            color: (theme ? theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.85))
                             font.pixelSize: modeManager.scale(18)
                             font.weight: Font.Medium
                             font.family: "M PLUS 2"
@@ -212,7 +212,7 @@ Item {
 
                         Text {
                             text: "›"
-                            color: Qt.rgba(0.91, 0.91, 0.94, 0.70)
+                            color: (theme ? theme.textSecondary : Qt.rgba(0.91, 0.91, 0.94, 0.70))
                             font.pixelSize: modeManager.scale(20)
                             font.weight: Font.Normal
                             font.family: "M PLUS 2"
@@ -460,7 +460,7 @@ Item {
                                         if (isToday || isSelected) {
                                             return Qt.rgba(0.98, 0.98, 1.0, 1.0)
                                         }
-                                        return Qt.rgba(0.91, 0.91, 0.94, 0.85)
+                                        return (theme ? theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.85))
                                     }
                                     opacity: isCurrentMonth ? 1.0 : 0.30
                                     font.pixelSize: modeManager.scale(15)

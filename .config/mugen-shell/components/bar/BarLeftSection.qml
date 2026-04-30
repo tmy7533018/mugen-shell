@@ -25,7 +25,7 @@ RowLayout {
     
     function blendColors(baseColor, accentColor, factor) {
         const safeFactor = Math.max(0, Math.min(1, factor || 0))
-        const base = baseColor || Qt.rgba(0.72, 0.72, 0.82, 0.90)
+        const base = baseColor || (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90))
         const accent = accentColor || Qt.rgba(0.65, 0.55, 0.85, 0.9)
         return Qt.rgba(
             base.r + (accent.r - base.r) * safeFactor,

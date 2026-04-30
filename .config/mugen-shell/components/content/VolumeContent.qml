@@ -355,7 +355,7 @@ Item {
                 width: modeManager.scale(18)
                 height: modeManager.scale(18)
                 source: Quickshell.shellDir + "/assets/icons/volume-mute.svg"
-                color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                 visible: root.currentMuted && parent.opacity > 0.01
                 opacity: root.currentMuted ? 1.0 : 0.0
 
@@ -377,7 +377,7 @@ Item {
                 id: volumePercentText
                 anchors.centerIn: parent
                 text: root.currentVolume + "%"
-                color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                 font.family: typo.fontFamily
                 font.pixelSize: modeManager.scale(16)
                 font.weight: typo.weightLight
@@ -545,7 +545,7 @@ Item {
                 anchors.centerIn: parent
 
                 text: root.currentLabel
-                color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                 font.family: typo.fontFamily
                 font.pixelSize: modeManager.scale(20)
                 font.weight: typo.weightLight

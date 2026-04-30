@@ -130,7 +130,7 @@ Item {
                     font.weight: Font.Light
                     font.family: "M PLUS 2"
                     font.letterSpacing: 1.5
-                    color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                    color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                     
                     enableGlow: true
                     glowColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.6) : Qt.rgba(0.65, 0.55, 0.85, 0.6)
@@ -365,7 +365,7 @@ Item {
                         
                         Text {
                             text: wifiManager.isConnected ? wifiManager.currentSsid : "未接続"
-                            color: Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                            color: (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
                             font.pixelSize: 16
                             font.weight: Font.Medium
                             font.family: "M PLUS 2"
@@ -373,7 +373,7 @@ Item {
                         
                         Text {
                             text: wifiManager.isConnected ? ("Signal: " + wifiManager.signalStrength + "%") : "Not connected to any network"
-                            color: Qt.rgba(0.72, 0.72, 0.82, 0.70)
+                            color: (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70))
                             font.pixelSize: 12
                             font.family: "M PLUS 2"
                         }
@@ -389,7 +389,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: "WiFi is turned off"
-                    color: Qt.rgba(0.72, 0.72, 0.82, 0.70)
+                    color: (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70))
                     font.pixelSize: 14
                     font.family: "M PLUS 2"
                     opacity: wifiManager.isPowered ? 0.0 : 1.0
@@ -557,7 +557,7 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: "No networks found"
-                    color: Qt.rgba(0.72, 0.72, 0.82, 0.50)
+                    color: (theme ? theme.textFaint : Qt.rgba(0.72, 0.72, 0.82, 0.50))
                     font.pixelSize: 14
                     font.weight: Font.Light
                     font.family: "M PLUS 2"

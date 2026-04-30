@@ -24,7 +24,7 @@ Item {
     signal rightClicked()
 
     property color accentColor: Qt.rgba(0.65, 0.55, 0.85, 0.9)
-    property color textColor: Qt.rgba(0.92, 0.92, 0.96, 0.90)
+    property color textColor: (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
 
     required property var icons
 

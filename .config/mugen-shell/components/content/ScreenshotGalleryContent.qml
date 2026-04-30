@@ -83,7 +83,7 @@ FocusScope {
             Common.GlowText {
                 Layout.alignment: Qt.AlignHCenter
                 text: "screenshots"
-                color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                 font.pixelSize: 20
                 font.family: "M PLUS 2"
                 font.weight: Font.Light

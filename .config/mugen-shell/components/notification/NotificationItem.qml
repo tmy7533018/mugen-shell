@@ -128,7 +128,7 @@ Rectangle {
             
             Text {
                 text: modelData.title
-                color: Qt.rgba(0.91, 0.91, 0.94, 0.90)
+                color: (theme ? theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.90))
                 font.pixelSize: 14
                 font.weight: Font.Medium
                 font.family: "M PLUS 2"

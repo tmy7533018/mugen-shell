@@ -104,7 +104,7 @@ Rectangle {
                 Text {
                     Layout.fillWidth: true
                     text: root.modelData && root.modelData.ssid ? root.modelData.ssid : ""
-                    color: Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                    color: (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
                     font.pixelSize: 14
                     font.family: "M PLUS 2"
                     elide: Text.ElideRight
@@ -112,7 +112,7 @@ Rectangle {
 
                 Text {
                     text: root.modelData && root.modelData.signal !== undefined ? (root.modelData.signal + "%") : ""
-                    color: Qt.rgba(0.72, 0.72, 0.82, 0.70)
+                    color: (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70))
                     font.pixelSize: 12
                     font.family: "M PLUS 2"
                 }
@@ -273,7 +273,7 @@ Rectangle {
                     Text {
                         anchors.centerIn: parent
                         text: (root.wifiManager.isConnecting && root.connectingNetworkIndex === root.index) ? "Connecting..." : "Connect"
-                        color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                        color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                         font.pixelSize: 13
                         font.weight: Font.Medium
                         font.family: "M PLUS 2"

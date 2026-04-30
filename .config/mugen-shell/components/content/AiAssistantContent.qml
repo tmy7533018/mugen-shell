@@ -152,7 +152,7 @@ FocusScope {
                     font.weight: Font.Light
                     font.family: "M PLUS 2"
                     font.letterSpacing: 1.5
-                    color: Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                    color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
 
                     enableGlow: true
                     glowColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.6) : Qt.rgba(0.65, 0.55, 0.85, 0.6)
