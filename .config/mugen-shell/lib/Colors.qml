@@ -10,8 +10,13 @@ QtObject {
         if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/state"
         return xdg + "/mugen-shell"
     }
+    readonly property string cacheDir: {
+        let xdg = Quickshell.env("XDG_CACHE_HOME")
+        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.cache"
+        return xdg + "/mugen-shell"
+    }
 
-    property string colorsJsonFile: Quickshell.shellDir + "/.cache/colors/Colors.json"
+    property string colorsJsonFile: cacheDir + "/colors.json"
     property string themeModeFile: stateDir + "/theme-mode"
     property string lastModified: ""
 

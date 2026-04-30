@@ -28,4 +28,4 @@ post_hook   = "pkill -USR1 cava"
 
 [templates.quickshell-json]
 input_path = '~/.config/matugen/templates/quickshell-colors.json'
-output_path = '~/.config/quickshell/mugen-shell/.cache/colors/Colors.json'
+output_path = '~/.cache/mugen-shell/colors.json'
