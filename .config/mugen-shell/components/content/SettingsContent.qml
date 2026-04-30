@@ -337,12 +337,12 @@ Item {
         Rectangle {
             id: blurSectionRect
             width: parent ? parent.width : 420
-            height: blurSectionRect.isExpanded ? 120 : 64
+            height: blurSectionRect.isExpanded ? 64 + Math.min(root.blurPresets.length, 6) * 36 + 12 : 64
             color: theme ? theme.surfaceGlass : Qt.rgba(0.15, 0.15, 0.20, 0.5)
             radius: 20
             border.width: 1
             border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
-            clip: false
+            clip: true
 
             property bool isExpanded: false
 
@@ -350,145 +350,113 @@ Item {
                 NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
             }
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 12
-                spacing: 8
-
-                MouseArea {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: modeManager.scale(40)
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        blurSectionRect.isExpanded = !blurSectionRect.isExpanded
-                        root.resetAutoCloseTimer()
-                    }
-
-                    RowLayout {
-                        anchors.fill: parent
-                        spacing: 12
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: "Blur Preset"
-                            color: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-                            font.pixelSize: 12
-                            font.family: "M PLUS 2"
-                            font.weight: Font.Normal
-                            font.letterSpacing: 0.5
-                        }
-
-                        Text {
-                            text: {
-                                if (root.isLoadingPresets) {
-                                    return "Loading..."
-                                } else if (root.currentPreset && root.blurPresets.indexOf(root.currentPreset) >= 0) {
-                                    return root.currentPreset
-                                } else {
-                                    return "Select preset"
-                                }
-                            }
-                            color: theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                            font.pixelSize: 12
-                            font.family: "M PLUS 2"
-                            font.weight: Font.Medium
-                        }
-                    }
+            MouseArea {
+                id: blurHeader
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: 64
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    blurSectionRect.isExpanded = !blurSectionRect.isExpanded
+                    root.resetAutoCloseTimer()
                 }
 
-                Item {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: blurSectionRect.isExpanded ? 44 : 0
-                    visible: blurSectionRect.isExpanded
-                    opacity: blurSectionRect.isExpanded ? 1.0 : 0.0
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 12
 
-                    Behavior on Layout.preferredHeight {
-                        NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Blur Preset"
+                        color: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                        font.pixelSize: 12
+                        font.family: "M PLUS 2"
+                        font.weight: Font.Normal
+                        font.letterSpacing: 0.5
                     }
 
-                    Behavior on opacity {
-                        NumberAnimation { duration: 200 }
+                    Text {
+                        text: root.isLoadingPresets ? "Loading…"
+                            : (root.currentPreset || "Select preset")
+                        color: theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                        font.pixelSize: 12
+                        font.family: "M PLUS 2"
+                        font.weight: Font.Medium
                     }
 
-                    ListView {
-                        id: presetList
-                        anchors.horizontalCenter: parent.horizontalCenter
+                    Text {
+                        text: blurSectionRect.isExpanded ? "▴" : "▾"
+                        color: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                        font.pixelSize: 12
+                        font.family: "M PLUS 2"
+                    }
+                }
+            }
+
+            ListView {
+                id: presetList
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: blurHeader.bottom
+                anchors.bottom: parent.bottom
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                anchors.bottomMargin: 12
+                clip: true
+                model: root.blurPresets
+                visible: blurSectionRect.isExpanded
+                interactive: contentHeight > height
+                boundsBehavior: Flickable.StopAtBounds
+
+                delegate: Rectangle {
+                    width: presetList.width
+                    height: 36
+                    radius: 8
+                    property bool isCurrent: modelData === root.currentPreset
+
+                    color: presetMouseArea.containsMouse
+                        ? (theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : Qt.rgba(0.65, 0.55, 0.85, 0.25))
+                        : (isCurrent
+                            ? (theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4))
+                            : "transparent")
+
+                    Behavior on color {
+                        ColorAnimation { duration: 150 }
+                    }
+
+                    Text {
+                        anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(contentWidth, parent.width)
-                        height: parent.height
-                        orientation: ListView.Horizontal
-                        spacing: 8
-                        clip: true
-                        model: root.blurPresets
-                        flickableDirection: Flickable.HorizontalFlick
-                        boundsBehavior: Flickable.StopAtBounds
-                        interactive: blurSectionRect.isExpanded && contentWidth > width
+                        anchors.leftMargin: 12
+                        text: modelData
+                        color: theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                        font.pixelSize: 12
+                        font.family: "M PLUS 2"
+                        font.weight: isCurrent ? Font.Medium : Font.Normal
+                    }
 
-                        onVisibleChanged: {
-                            if (visible && root.currentPreset) {
-                                let index = root.blurPresets.indexOf(root.currentPreset)
-                                if (index >= 0) {
-                                    Qt.callLater(() => {
-                                        presetList.currentIndex = index
-                                        presetList.positionViewAtIndex(index, ListView.Center)
-                                    })
-                                }
-                            }
-                        }
+                    Text {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.rightMargin: 12
+                        text: "✓"
+                        visible: isCurrent
+                        color: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+                        font.pixelSize: 12
+                        font.family: "M PLUS 2"
+                    }
 
-                        delegate: Rectangle {
-                            width: Math.max(presetText.implicitWidth + 24, 80)
-                            height: 36
-                            radius: 8
-                            property bool isCurrent: modelData === root.currentPreset
-
-                            color: presetMouseArea.containsMouse
-                                ? (theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : Qt.rgba(0.65, 0.55, 0.85, 0.25))
-                                : (isCurrent
-                                    ? (theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.95) : Qt.rgba(0.65, 0.55, 0.85, 0.95))
-                                    : (theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.15) : Qt.rgba(0.65, 0.55, 0.85, 0.15)))
-
-                            border.width: isCurrent ? 1 : 0
-                            border.color: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
-
-                            Behavior on color {
-                                ColorAnimation { duration: 150 }
-                            }
-
-                            Text {
-                                id: presetText
-                                anchors.centerIn: parent
-                                text: modelData
-                                color: isCurrent
-                                    ? (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
-                                    : (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.70))
-                                font.pixelSize: 12
-                                font.family: "M PLUS 2"
-                                font.weight: isCurrent ? Font.Medium : Font.Normal
-                            }
-
-                            MouseArea {
-                                id: presetMouseArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    root.applyBlurPreset(modelData)
-                                    blurSectionRect.isExpanded = false
-                                    root.resetAutoCloseTimer()
-                                }
-                            }
-                        }
-
-                        ScrollBar.horizontal: ScrollBar {
-                            policy: ScrollBar.AsNeeded
-                            height: 4
-
-                            contentItem: Rectangle {
-                                implicitWidth: 4
-                                radius: 2
-                                color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4)
-                            }
+                    MouseArea {
+                        id: presetMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.applyBlurPreset(modelData)
+                            blurSectionRect.isExpanded = false
+                            root.resetAutoCloseTimer()
                         }
                     }
                 }
@@ -513,7 +481,7 @@ Item {
                 spacing: 12
 
                 Text {
-                    Layout.preferredWidth: 130
+                    Layout.fillWidth: true
                     text: "Auto Close Timer"
                     color: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                     font.pixelSize: 12
@@ -524,7 +492,7 @@ Item {
 
                 Item {
                     id: timerSlider
-                    Layout.fillWidth: true
+                    Layout.preferredWidth: 180
                     Layout.preferredHeight: 24
 
                     property real from: 0
