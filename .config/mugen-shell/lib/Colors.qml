@@ -5,21 +5,27 @@ import Quickshell.Io
 QtObject {
     id: palette
 
+    readonly property string stateDir: {
+        let xdg = Quickshell.env("XDG_STATE_HOME")
+        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/state"
+        return xdg + "/mugen-shell"
+    }
+
     property string colorsJsonFile: Quickshell.shellDir + "/.cache/colors/Colors.json"
-    property string themeModeFile: Quickshell.shellDir + "/.cache/theme-mode.txt"
+    property string themeModeFile: stateDir + "/theme-mode"
     property string lastModified: ""
-    
+
     property string themeMode: "dark"
 
     function toggleThemeMode() {
         themeMode = (themeMode === "dark") ? "light" : "dark"
         saveThemeMode()
     }
-    
+
     function saveThemeMode() {
         saveThemeModeProcess.command = [
             "bash", "-c",
-            "mkdir -p \"" + Quickshell.shellDir + "/.cache\" && echo \"" + themeMode + "\" > \"" + themeModeFile + "\""
+            "mkdir -p \"" + stateDir + "\" && echo \"" + themeMode + "\" > \"" + themeModeFile + "\""
         ]
         saveThemeModeProcess.running = true
     }
