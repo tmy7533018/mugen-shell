@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import "../common" as Common
 import "../ui" as UI
+import "./bluetooth" as Bluetooth
 
 Item {
     id: root
@@ -459,148 +460,23 @@ Item {
                         }
                     }
 
-                    delegate: Rectangle {
+                    delegate: Bluetooth.PairedDeviceItem {
                         width: pairedDeviceList.width
-                        height: 60
-                        color: deviceMouseArea.containsMouse
-                            ? (theme ? theme.surfaceInsetCardHover : Qt.rgba(0, 0, 0, 0.75))
-                            : (theme ? theme.surfaceInsetCard : Qt.rgba(0, 0, 0, 0.65))
-                        radius: height / 2
-                        border.width: 0
-
-                        layer.enabled: true
-                        layer.effect: Glow {
-                            samples: 12
-                            radius: 6
-                            spread: 0.3
-                            color: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.15) : Qt.rgba(0.65, 0.55, 0.85, 0.15)
-                            transparentBorder: true
-                        }
-
-                        Behavior on color {
-                            ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
-                        }
-
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: modeManager.scale(20)
-                            anchors.rightMargin: modeManager.scale(20)
-                            spacing: 12
-
-                            UI.SvgIcon {
-                                width: 20
-                                height: 20
-                                source: icons ? (modelData.connected ? icons.bluetoothConnectedSvg : icons.bluetoothSvg) : ""
-                                color: modelData.connected
-                                    ? (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))
-                                    : (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90))
-                                opacity: 0.8
-
-                                Behavior on source {
-                                    SequentialAnimation {
-                                        NumberAnimation {
-                                            property: "opacity"
-                                            to: 0
-                                            duration: 150
-                                        }
-                                        PropertyAction { property: "source" }
-                                        NumberAnimation {
-                                            property: "opacity"
-                                            to: 0.8
-                                            duration: 150
-                                        }
-                                    }
-                                }
+                        theme: root.theme
+                        icons: root.icons
+                        modeManager: root.modeManager
+                        bluetoothManager: root.bluetoothManager
+                        connectingDeviceIndex: root.connectingDeviceIndex
+                        onConnectRequested: {
+                            if (!modelData.connected) {
+                                root.connectingDeviceIndex = index
                             }
-
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 2
-
-                                Text {
-                                    text: modelData.name
-                                    color: (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
-                                    font.pixelSize: 14
-                                    font.family: "M PLUS 2"
-                                    elide: Text.ElideRight
-                                }
-
-                                Text {
-                                    text: modelData.connected ? "Connected" : "Saved"
-                                    color: modelData.connected
-                                        ? (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))
-                                        : (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70))
-                                    font.pixelSize: 11
-                                    font.family: "M PLUS 2"
-                                }
-                            }
-
-                            Rectangle {
-                                width: 80
-                                height: 28
-                                radius: height / 2
-                                color: {
-                                    if (!connectButtonArea.enabled) {
-                                        return Qt.rgba(0.5, 0.5, 0.5, 0.2)
-                                    } else if (modelData.connected) {
-                                        return Qt.rgba(0.90, 0.45, 0.55, connectButtonArea.containsMouse ? 0.4 : 0.3)
-                                    } else {
-                                        return (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, connectButtonArea.containsMouse ? 0.4 : 0.3))
-                                    }
-                                }
-
-                                Behavior on color {
-                                    ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
-                                }
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: {
-                                        if (bluetoothManager.isConnecting && root.connectingDeviceIndex === index) {
-                                            return "Connecting..."
-                                        } else if (modelData.connected) {
-                                            return "Disconnect"
-                                        } else {
-                                            return "Connect"
-                                        }
-                                    }
-                                    color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
-                                    font.pixelSize: 11
-                                    font.weight: Font.Medium
-                                    font.family: "M PLUS 2"
-                                    opacity: connectButtonArea.enabled ? 1.0 : 0.5
-                                }
-
-                                MouseArea {
-                                    id: connectButtonArea
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    z: 1
-                                    enabled: !bluetoothManager.isConnecting || (root.connectingDeviceIndex === index) || modelData.connected
-                                    onClicked: {
-                                        if (!modelData.connected) {
-                                            root.connectingDeviceIndex = index
-                                        }
-                                        bluetoothManager.toggleDeviceConnection(
-                                            modelData.address,
-                                            modelData.name,
-                                            modelData.connected
-                                        )
-                                        modeManager.bump()
-                                    }
-                                }
-                            }
-                        }
-
-                        MouseArea {
-                            id: deviceMouseArea
-                            anchors.fill: parent
-                            anchors.rightMargin: 90
-                            hoverEnabled: true
-                            cursorShape: Qt.ArrowCursor
-                            z: -1
-                            propagateComposedEvents: false
+                            bluetoothManager.toggleDeviceConnection(
+                                modelData.address,
+                                modelData.name,
+                                modelData.connected
+                            )
+                            modeManager.bump()
                         }
                     }
                 }
@@ -647,129 +523,20 @@ Item {
                         }
                     }
 
-                    delegate: Rectangle {
+                    delegate: Bluetooth.AvailableDeviceItem {
                         width: availableDeviceList.width
-                        height: 60
-                        color: deviceMouseArea2.containsMouse
-                            ? (theme ? theme.surfaceInsetCardHover : Qt.rgba(0, 0, 0, 0.75))
-                            : (theme ? theme.surfaceInsetCard : Qt.rgba(0, 0, 0, 0.65))
-                        radius: height / 2
-                        border.width: 0
-
-                        layer.enabled: true
-                        layer.effect: Glow {
-                            samples: 12
-                            radius: 6
-                            spread: 0.3
-                            color: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.15) : Qt.rgba(0.65, 0.55, 0.85, 0.15)
-                            transparentBorder: true
-                        }
-
-                        Behavior on color {
-                            ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
-                        }
-
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: modeManager.scale(20)
-                            anchors.rightMargin: modeManager.scale(20)
-                            spacing: 12
-
-                            UI.SvgIcon {
-                                width: 20
-                                height: 20
-                                source: icons ? icons.bluetoothSvg : ""
-                                color: modelData.paired
-                                    ? (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90))
-                                    : (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))
-                                opacity: 0.8
-                            }
-
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 2
-
-                                Text {
-                                    text: modelData.name || modelData.address
-                                    color: (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
-                                    font.pixelSize: 14
-                                    font.family: "M PLUS 2"
-                                    elide: Text.ElideRight
-                                }
-
-                                Text {
-                                    text: modelData.paired ? "Saved" : "New device"
-                                    color: modelData.paired
-                                        ? (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70))
-                                        : (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))
-                                    font.pixelSize: 11
-                                    font.family: "M PLUS 2"
-                                }
-                            }
-
-                            Rectangle {
-                                width: 80
-                                height: 28
-                                radius: height / 2
-                                color: {
-                                    if (!pairButtonArea.enabled) {
-                                        return Qt.rgba(0.5, 0.5, 0.5, 0.2)
-                                    } else if (modelData.paired) {
-                                        return Qt.rgba(0.5, 0.5, 0.5, 0.2)
-                                    } else {
-                                        return (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, pairButtonArea.containsMouse ? 0.4 : 0.3))
-                                    }
-                                }
-
-                                Behavior on color {
-                                    ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
-                                }
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: {
-                                        if (bluetoothManager.isPairing && root.pairingDeviceIndex === index) {
-                                            return "Pairing..."
-                                        } else if (modelData.paired) {
-                                            return "Saved"
-                                        } else {
-                                            return "Pair"
-                                        }
-                                    }
-                                    color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
-                                    font.pixelSize: 11
-                                    font.weight: Font.Medium
-                                    font.family: "M PLUS 2"
-                                    opacity: pairButtonArea.enabled && !modelData.paired ? 1.0 : 0.5
-                                }
-
-                                MouseArea {
-                                    id: pairButtonArea
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    z: 1
-                                    enabled: !modelData.paired && !bluetoothManager.isPairing
-                                    onClicked: {
-                                        root.pairingDeviceIndex = index
-                                        bluetoothManager.pairDevice(
-                                            modelData.address,
-                                            modelData.name || modelData.address
-                                        )
-                                        modeManager.bump()
-                                    }
-                                }
-                            }
-                        }
-
-                        MouseArea {
-                            id: deviceMouseArea2
-                            anchors.fill: parent
-                            anchors.rightMargin: 90
-                            hoverEnabled: true
-                            cursorShape: Qt.ArrowCursor
-                            z: -1
-                            propagateComposedEvents: false
+                        theme: root.theme
+                        icons: root.icons
+                        modeManager: root.modeManager
+                        bluetoothManager: root.bluetoothManager
+                        pairingDeviceIndex: root.pairingDeviceIndex
+                        onPairRequested: {
+                            root.pairingDeviceIndex = index
+                            bluetoothManager.pairDevice(
+                                modelData.address,
+                                modelData.name || modelData.address
+                            )
+                            modeManager.bump()
                         }
                     }
                 }
