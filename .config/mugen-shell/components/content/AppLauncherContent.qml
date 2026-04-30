@@ -4,7 +4,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import "../ui" as UI
-import "../lib" as Theme
+import "../../lib" as Theme
 
 FocusScope {
     id: root
