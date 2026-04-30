@@ -15,6 +15,7 @@ QtObject {
     property string animationSpeed: "normal"  // "slow", "normal", "fast", "instant"
     property real animationDurationMultiplier: 1.0
     property string notificationSound: "None"  // filename in assets/sounds/, or "None"
+    property int lockTimerMinutes: 10  // hypridle screen-lock idle timeout in minutes
     
     signal settingsChanged()
     
@@ -44,6 +45,9 @@ QtObject {
             },
             "notification": {
                 "sound": notificationSound
+            },
+            "lockTimer": {
+                "minutes": lockTimerMinutes
             }
         }
         
@@ -102,6 +106,12 @@ QtObject {
             if (settings.notification) {
                 if (settings.notification.sound !== undefined) {
                     notificationSound = settings.notification.sound
+                }
+            }
+
+            if (settings.lockTimer) {
+                if (settings.lockTimer.minutes !== undefined) {
+                    lockTimerMinutes = settings.lockTimer.minutes
                 }
             }
 

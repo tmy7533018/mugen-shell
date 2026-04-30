@@ -68,6 +68,15 @@ Item {
         root.resetAutoCloseTimer()
     }
 
+    function applyLockTimer(minutes) {
+        applyLockTimerProcess.command = [
+            "bash",
+            Quickshell.shellDir + "/scripts/lock-timer.sh",
+            String(minutes)
+        ]
+        applyLockTimerProcess.running = true
+    }
+
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("settings", root)
@@ -85,6 +94,15 @@ Item {
                 loadBlurPresets()
                 loadNotificationSounds()
             }
+        }
+    }
+
+    Connections {
+        target: settingsManager
+        function onLockTimerMinutesChanged() {
+            // Fires on slider release and on Reset to Default. Keeps
+            // hypridle.conf in sync with the persisted value either way.
+            root.applyLockTimer(settingsManager.lockTimerMinutes)
         }
     }
 
@@ -286,6 +304,7 @@ Item {
                             case "battery": return batterySection
                             case "animation": return animationSection
                             case "notificationSound": return notificationSoundSection
+                            case "lockTimer": return lockTimerSection
                             default: return null
                         }
                     }
@@ -299,6 +318,7 @@ Item {
                     settingsModel.append({ "type": "battery" })
                     settingsModel.append({ "type": "animation" })
                     settingsModel.append({ "type": "notificationSound" })
+                    settingsModel.append({ "type": "lockTimer" })
                 }
             }
         }
@@ -1020,6 +1040,116 @@ Item {
         }
     }
 
+    Component {
+        id: lockTimerSection
+
+        Rectangle {
+            width: parent ? parent.width : 420
+            height: 64
+            color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
+            radius: 20
+            border.width: 1
+            border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 12
+                spacing: 12
+
+                Text {
+                    Layout.fillWidth: true
+                    text: "Screen Lock Timer"
+                    color: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                    font.pixelSize: 12
+                    font.family: "M PLUS 2"
+                    font.weight: Font.Normal
+                    font.letterSpacing: 0.5
+                }
+
+                Item {
+                    id: lockSlider
+                    Layout.preferredWidth: 180
+                    Layout.preferredHeight: 24
+
+                    property real from: 1
+                    property real to: 30
+                    property real stepSize: 1
+                    property real value: settingsManager ? settingsManager.lockTimerMinutes : 10
+
+                    function valueAt(x) {
+                        const w = Math.max(1, width)
+                        const ratio = Math.max(0, Math.min(1, x / w))
+                        const raw = from + ratio * (to - from)
+                        return Math.round(raw / stepSize) * stepSize
+                    }
+
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: 4
+                        radius: 2
+                        color: Qt.rgba(1, 1, 1, 0.15)
+
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: parent.width * (lockSlider.value - lockSlider.from) / (lockSlider.to - lockSlider.from)
+                            radius: parent.radius
+                            color: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+                        }
+                    }
+
+                    Rectangle {
+                        x: ((lockSlider.value - lockSlider.from) / (lockSlider.to - lockSlider.from)) * (lockSlider.width - width)
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 16
+                        height: 16
+                        radius: 8
+                        color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, lockMouseArea.pressed ? 1.0 : 0.95) : Qt.rgba(0.65, 0.55, 0.85, 0.95)
+                        border.width: 1
+                        border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.5) : Qt.rgba(0.65, 0.55, 0.85, 0.5)
+                    }
+
+                    MouseArea {
+                        id: lockMouseArea
+                        anchors.fill: parent
+                        anchors.topMargin: -12
+                        anchors.bottomMargin: -12
+                        cursorShape: Qt.PointingHandCursor
+                        preventStealing: true
+
+                        onPressed: (mouse) => {
+                            lockSlider.value = lockSlider.valueAt(mouse.x)
+                            root.resetAutoCloseTimer()
+                        }
+                        onPositionChanged: (mouse) => {
+                            if (pressed) lockSlider.value = lockSlider.valueAt(mouse.x)
+                        }
+                        onReleased: {
+                            if (settingsManager) {
+                                settingsManager.lockTimerMinutes = Math.round(lockSlider.value)
+                                settingsManager.saveSettings()
+                            }
+                            root.resetAutoCloseTimer()
+                        }
+                    }
+                }
+
+                Text {
+                    Layout.preferredWidth: 40
+                    horizontalAlignment: Text.AlignRight
+                    text: Math.round(lockSlider.value) + "m"
+                    color: theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                    font.pixelSize: 12
+                    font.family: "M PLUS 2"
+                    font.weight: Font.Medium
+                }
+            }
+        }
+    }
+
     Process {
         id: listPresetsProcess
         command: [
@@ -1135,6 +1265,12 @@ Item {
 
     Process {
         id: previewSoundProcess
+        command: []
+        running: false
+    }
+
+    Process {
+        id: applyLockTimerProcess
         command: []
         running: false
     }

@@ -14,5 +14,8 @@
   },
   "notification": {
     "sound": "None"
+  },
+  "lockTimer": {
+    "minutes": 10
   }
 }
