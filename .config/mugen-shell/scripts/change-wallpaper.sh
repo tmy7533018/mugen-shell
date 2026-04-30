@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SHELL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-THUMB_DIR="$SHELL_DIR/.cache/wallp"
+THUMB_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/mugen-shell/wallp"
 mkdir -p "$THUMB_DIR"
 
 DEBUG_LOG="$THUMB_DIR/debug.log"

@@ -5,9 +5,15 @@ import Quickshell.Io
 QtObject {
     id: wallpaperManager
 
+    readonly property string cacheDir: {
+        let xdg = Quickshell.env("XDG_CACHE_HOME")
+        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.cache"
+        return xdg + "/mugen-shell"
+    }
+
     property string wallpaperDir: Quickshell.shellDir + "/wallpapers"
-    property string thumbDir: Quickshell.shellDir + "/.cache/wallpaper-thumbs"
-    property string currentWallpaperFile: Quickshell.shellDir + "/.cache/wallp/current_wallpaper_path.txt"
+    property string thumbDir: cacheDir + "/wallpaper-thumbs"
+    property string currentWallpaperFile: cacheDir + "/wallp/current_wallpaper_path.txt"
     
     property var wallpapers: []
     property string currentWallpaperPath: ""

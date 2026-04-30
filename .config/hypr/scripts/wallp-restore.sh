@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CURRENT_WALLPAPER_FILE="$HOME/.config/quickshell/mugen-shell/.cache/wallp/current_wallpaper_path.txt"
+CURRENT_WALLPAPER_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/mugen-shell/wallp/current_wallpaper_path.txt"
 TRANS_OPTS=(--transition-type any --transition-fps 60)
 MPV_OPTS='no-config no-audio loop cache=yes profile=low-latency'
 
