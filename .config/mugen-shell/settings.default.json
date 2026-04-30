@@ -11,5 +11,8 @@
   "animations": {
     "speed": "normal",
     "durationMultiplier": 1.0
+  },
+  "notification": {
+    "sound": "None"
   }
 }

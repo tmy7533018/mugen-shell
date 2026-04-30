@@ -220,6 +220,7 @@ PanelWindow {
 
     Managers.NotificationManager {
         id: notificationManager
+        settingsManager: settingsManager
     }
 
     UI.MugenSurface {

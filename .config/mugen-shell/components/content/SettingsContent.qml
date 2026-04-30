@@ -26,6 +26,8 @@ Item {
     property bool isLoadingPresets: false
     property string currentPreset: ""
 
+    property var notificationSounds: ["None"]
+
     function loadBlurPresets() {
         if (isLoadingPresets) return
         isLoadingPresets = true
@@ -47,17 +49,42 @@ Item {
         root.resetAutoCloseTimer()
     }
 
+    function loadNotificationSounds() {
+        listSoundsProcess.running = true
+    }
+
+    function applyNotificationSound(name) {
+        if (settingsManager) {
+            settingsManager.notificationSound = name
+            settingsManager.saveSettings()
+        }
+        if (name !== "None") {
+            previewSoundProcess.command = [
+                "paplay",
+                Quickshell.shellDir + "/assets/sounds/" + name
+            ]
+            previewSoundProcess.running = true
+        }
+        root.resetAutoCloseTimer()
+    }
+
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("settings", root)
-            if (modeManager.isMode("settings")) loadBlurPresets()
+            if (modeManager.isMode("settings")) {
+                loadBlurPresets()
+                loadNotificationSounds()
+            }
         }
     }
 
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
-            if (modeManager.isMode("settings")) loadBlurPresets()
+            if (modeManager.isMode("settings")) {
+                loadBlurPresets()
+                loadNotificationSounds()
+            }
         }
     }
 
@@ -68,7 +95,7 @@ Item {
     MouseArea {
         anchors.fill: parent
         z: 1.5
-        enabled: modeManager.isMode("settings")
+        enabled: modeManager.isMode("settings") && settingsLayer.visible
         visible: enabled
         hoverEnabled: true
 
@@ -258,6 +285,7 @@ Item {
                             case "gradient": return gradientSection
                             case "battery": return batterySection
                             case "animation": return animationSection
+                            case "notificationSound": return notificationSoundSection
                             default: return null
                         }
                     }
@@ -270,6 +298,7 @@ Item {
                     settingsModel.append({ "type": "gradient" })
                     settingsModel.append({ "type": "battery" })
                     settingsModel.append({ "type": "animation" })
+                    settingsModel.append({ "type": "notificationSound" })
                 }
             }
         }
@@ -357,9 +386,13 @@ Item {
                 anchors.top: parent.top
                 height: 64
                 cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    blurSectionRect.isExpanded = !blurSectionRect.isExpanded
-                    root.resetAutoCloseTimer()
+                preventStealing: true
+
+                TapHandler {
+                    onTapped: {
+                        blurSectionRect.isExpanded = !blurSectionRect.isExpanded
+                        root.resetAutoCloseTimer()
+                    }
                 }
 
                 RowLayout {
@@ -453,6 +486,7 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
+                        preventStealing: true
                         onClicked: {
                             root.applyBlurPreset(modelData)
                             blurSectionRect.isExpanded = false
@@ -707,9 +741,13 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: modeManager.scale(40)
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        animationSectionRect.isExpanded = !animationSectionRect.isExpanded
-                        root.resetAutoCloseTimer()
+                    preventStealing: true
+
+                    TapHandler {
+                        onTapped: {
+                            animationSectionRect.isExpanded = !animationSectionRect.isExpanded
+                            root.resetAutoCloseTimer()
+                        }
                     }
 
                     RowLayout {
@@ -816,6 +854,7 @@ Item {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
+                                preventStealing: true
                                 onClicked: {
                                     if (settingsManager) {
                                         settingsManager.animationSpeed = modelData
@@ -837,6 +876,143 @@ Item {
                                 radius: 2
                                 color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4)
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Component {
+        id: notificationSoundSection
+
+        Rectangle {
+            id: soundSectionRect
+            width: parent ? parent.width : 420
+            height: soundSectionRect.isExpanded ? 64 + Math.min(root.notificationSounds.length, 6) * 36 + 12 : 64
+            color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
+            radius: 20
+            border.width: 1
+            border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
+            clip: true
+
+            property bool isExpanded: false
+
+            Behavior on height {
+                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+            }
+
+            MouseArea {
+                id: soundHeader
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                height: 64
+                cursorShape: Qt.PointingHandCursor
+                preventStealing: true
+
+                TapHandler {
+                    onTapped: {
+                        soundSectionRect.isExpanded = !soundSectionRect.isExpanded
+                        root.resetAutoCloseTimer()
+                    }
+                }
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 12
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: "Notification Sound"
+                        color: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                        font.pixelSize: 12
+                        font.family: "M PLUS 2"
+                        font.weight: Font.Normal
+                        font.letterSpacing: 0.5
+                    }
+
+                    Text {
+                        text: settingsManager ? settingsManager.notificationSound : "None"
+                        color: theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                        font.pixelSize: 12
+                        font.family: "M PLUS 2"
+                        font.weight: Font.Medium
+                    }
+
+                    Text {
+                        text: soundSectionRect.isExpanded ? "▴" : "▾"
+                        color: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                        font.pixelSize: 12
+                        font.family: "M PLUS 2"
+                    }
+                }
+            }
+
+            ListView {
+                id: soundList
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: soundHeader.bottom
+                anchors.bottom: parent.bottom
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                anchors.bottomMargin: 12
+                clip: true
+                model: root.notificationSounds
+                visible: soundSectionRect.isExpanded
+                interactive: contentHeight > height
+                boundsBehavior: Flickable.StopAtBounds
+
+                delegate: Rectangle {
+                    width: soundList.width
+                    height: 36
+                    radius: 8
+                    property bool isCurrent: settingsManager && modelData === settingsManager.notificationSound
+
+                    color: soundMouseArea.containsMouse
+                        ? (theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.25) : Qt.rgba(0.65, 0.55, 0.85, 0.25))
+                        : (isCurrent
+                            ? (theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4))
+                            : "transparent")
+
+                    Behavior on color {
+                        ColorAnimation { duration: 150 }
+                    }
+
+                    Text {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.leftMargin: 12
+                        text: modelData
+                        color: theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                        font.pixelSize: 12
+                        font.family: "M PLUS 2"
+                        font.weight: isCurrent ? Font.Medium : Font.Normal
+                    }
+
+                    Text {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.rightMargin: 12
+                        text: "✓"
+                        visible: isCurrent
+                        color: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+                        font.pixelSize: 12
+                        font.family: "M PLUS 2"
+                    }
+
+                    MouseArea {
+                        id: soundMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        preventStealing: true
+                        onClicked: {
+                            root.applyNotificationSound(modelData)
+                            soundSectionRect.isExpanded = false
+                            root.resetAutoCloseTimer()
                         }
                     }
                 }
@@ -926,5 +1102,40 @@ Item {
             }
             getCurrentPresetProcess.output = ""
         }
+    }
+
+    Process {
+        id: listSoundsProcess
+        command: [
+            "bash", "-c",
+            "find '" + Quickshell.shellDir + "/assets/sounds' -maxdepth 1 -type f \\( -iname '*.wav' -o -iname '*.ogg' -o -iname '*.oga' -o -iname '*.mp3' -o -iname '*.flac' \\) -printf '%f\\n' | sort"
+        ]
+        running: false
+        property string output: ""
+
+        stdout: SplitParser {
+            onRead: data => {
+                let trimmed = data.trim()
+                if (trimmed.length > 0) {
+                    listSoundsProcess.output += trimmed + "\n"
+                }
+            }
+        }
+
+        onExited: (exitCode) => {
+            let files = ["None"]
+            if (exitCode === 0) {
+                let lines = listSoundsProcess.output.trim().split("\n").filter(l => l.length > 0)
+                files = files.concat(lines)
+            }
+            root.notificationSounds = files
+            listSoundsProcess.output = ""
+        }
+    }
+
+    Process {
+        id: previewSoundProcess
+        command: []
+        running: false
     }
 }

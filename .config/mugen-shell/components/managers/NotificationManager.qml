@@ -1,19 +1,21 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 
 QtObject {
     id: root
-    
+
     property var notifications: []
     property int unreadCount: 0
     property bool notificationsEnabled: true
+    property var settingsManager
     signal notificationReceived(var notification)
-    
+
     function addNotification(n) {
         if (!n.summary && !n.body) {
             return
         }
-        
+
         let newNotif = {
             id: n.id || Date.now(),
             title: n.summary || n.appName || "Notification",
@@ -22,7 +24,7 @@ QtObject {
             timestamp: Date.now(),
             desktopEntry: n.desktopEntry || ""
         }
-        
+
         let newNotifications = [newNotif]
         for (let i = 0; i < root.notifications.length && i < 49; i++) {
             newNotifications.push(root.notifications[i])
@@ -30,6 +32,21 @@ QtObject {
         root.notifications = newNotifications
         root.unreadCount++
         root.notificationReceived(newNotif)
+        playSound()
+    }
+
+    function playSound() {
+        if (!notificationsEnabled) return
+        if (!settingsManager) return
+        let sound = settingsManager.notificationSound
+        if (!sound || sound === "None") return
+        soundPlayProcess.command = ["paplay", Quickshell.shellDir + "/assets/sounds/" + sound]
+        soundPlayProcess.running = true
+    }
+
+    property Process soundPlayProcess: Process {
+        command: []
+        running: false
     }
     
     property Timer timeUpdateTimer: Timer {

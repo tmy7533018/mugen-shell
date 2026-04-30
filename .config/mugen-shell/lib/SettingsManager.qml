@@ -14,6 +14,7 @@ QtObject {
     property bool batteryIndicatorEnabled: false
     property string animationSpeed: "normal"  // "slow", "normal", "fast", "instant"
     property real animationDurationMultiplier: 1.0
+    property string notificationSound: "None"  // filename in assets/sounds/, or "None"
     
     signal settingsChanged()
     
@@ -40,6 +41,9 @@ QtObject {
             "animations": {
                 "speed": animationSpeed,
                 "durationMultiplier": animationDurationMultiplier
+            },
+            "notification": {
+                "sound": notificationSound
             }
         }
         
@@ -94,7 +98,13 @@ QtObject {
                     animationDurationMultiplier = settings.animations.durationMultiplier
                 }
             }
-            
+
+            if (settings.notification) {
+                if (settings.notification.sound !== undefined) {
+                    notificationSound = settings.notification.sound
+                }
+            }
+
             updateAnimationMultiplier()
             
             settingsChanged()
