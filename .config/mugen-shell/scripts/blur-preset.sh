@@ -4,6 +4,7 @@ set -euo pipefail
 CFG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/hypr/configs"
 PRESETS="$CFG_DIR/blur-presets.json"
 STATE="$CFG_DIR/.blur-current"
+BLUR_CONF="$CFG_DIR/blur.conf"
 DEFAULT_PRESET="glow blur"
 
 list_presets() {
@@ -19,8 +20,32 @@ get_current() {
     [[ -f "$STATE" ]] && cat "$STATE" || echo ""
 }
 
+write_blur_conf() {
+    local name="$1"
+    python3 -c '
+import json, sys
+name = sys.argv[2]
+with open(sys.argv[1]) as f:
+    presets = json.load(f)
+for p in presets:
+    if p["name"] == name:
+        for k, v in p["params"].items():
+            if isinstance(v, bool):
+                v = "true" if v else "false"
+            print(f"decoration:blur:{k} = {v}")
+        sys.exit(0)
+sys.stderr.write(f"preset not found: {name}\n")
+sys.exit(1)
+' "$PRESETS" "$name" > "$BLUR_CONF"
+}
+
 apply_live() {
     local name="$1"
+    # Persist for survival across Hyprland reloads (matugen / wallpaper change
+    # triggers autoreload that would otherwise drop the runtime keyword values).
+    write_blur_conf "$name"
+    # Apply immediately via IPC for instant feedback. The autoreload that
+    # follows the file write applies the same values, so it's a visual no-op.
     while IFS=$'\t' read -r key val; do
         hyprctl keyword "$key" "$val" >/dev/null 2>&1 || true
     done < <(python3 -c '
@@ -35,8 +60,6 @@ for p in presets:
                 v = "true" if v else "false"
             print(f"decoration:blur:{k}\t{v}")
         sys.exit(0)
-sys.stderr.write(f"preset not found: {name}\n")
-sys.exit(1)
 ' "$PRESETS" "$name")
     echo "$name" > "$STATE"
 }
