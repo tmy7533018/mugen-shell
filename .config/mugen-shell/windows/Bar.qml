@@ -382,7 +382,6 @@ PanelWindow {
             typo: typo
             icons: icons
             modeManager: modeManager
-            imeStatus: imeStatus
             screenshotManager: screenshotManager
             audioManager: audioManager
             musicPlayerManager: musicPlayerManager
