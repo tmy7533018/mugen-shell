@@ -1,10 +1,14 @@
-# mugen-shell
+<p align="center">
+  <img src="shell/assets/branding/mugen-shell_logo.png" width="120" alt="mugen-shell logo" />
+</p>
 
-https://github.com/user-attachments/assets/c82fab1d-ac78-4d50-b770-a7dbd00ec94f
+<h1 align="center">mugen-shell</h1>
 
-Built with **Quickshell + Hyprland**.
+<p align="center"><i>A Quickshell + Hyprland desktop with a 夢幻 aesthetic.</i></p>
 
-> Personal dotfiles — not intended for general use, but installable via Nix flake or a plain Makefile if you want to.
+https://github.com/user-attachments/assets/c91027d3-c49d-43a3-86a9-6554ac110a6c
+
+> Personal dotfiles, packaged so others can try them via Nix flake or a plain Makefile.
 
 For directory layout, install paths (Nix flake home-manager module or manual `make install`), dependencies, and keybindings see [SETUP.md](SETUP.md).
 
@@ -27,7 +31,7 @@ For directory layout, install paths (Nix flake home-manager module or manual `ma
 
 ## AI Assistant
 
-https://github.com/user-attachments/assets/6c9af2a4-cdf1-4941-b417-14837393db36
+https://github.com/user-attachments/assets/a2b8a7a9-0899-45e3-9dce-c896f49f35f7
 
 AI chat panel (`Super + A`) powered by **mugen-ai** — a Go server bundled in this repo under [`ai/`](ai/), supporting local [Ollama](https://ollama.com) models and Google Gemini.
 
