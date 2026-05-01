@@ -9,6 +9,11 @@ if [ -d "$HOME/go/bin" ]; then
     export PATH=$HOME/go/bin:$PATH
 fi
 
+# Nix profile (multi-user install via pacman; sets up PATH and env vars)
+if [ -e /etc/profile.d/nix-daemon.sh ]; then
+    . /etc/profile.d/nix-daemon.sh
+fi
+
 eval "$(starship init zsh)"
 
 # Show only current directory in window title
