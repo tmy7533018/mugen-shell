@@ -42,6 +42,49 @@ Built and enabled automatically on either install path (Nix flake or `make insta
 - BlobEffect breathing indicator
 - Configurable personality and real-time context injection (date/time, weather)
 
+### Configuration
+
+`~/.config/mugen-ai/config.toml`:
+
+```toml
+[personality]
+system_prompt = "You are a helpful desktop assistant. Be concise."
+
+[context]
+locale = "en"
+city = ""
+
+[provider.google]
+model = "gemini-2.5-flash"
+```
+
+- **`city`** — enables live weather via [wttr.in](https://wttr.in). Leave empty to disable.
+- **`[provider.google].model`** — enables Gemini (requires `GEMINI_API_KEY`). Omit to disable.
+
+Settings → AI Assistant exposes "Edit Config" / "Restart AI" buttons that open this file and bounce the systemd unit so you don't have to drop to a terminal for tweaks.
+
+#### Gemini API key
+
+```sh
+echo 'GEMINI_API_KEY=...' > ~/.config/mugen-ai/.env
+chmod 600 ~/.config/mugen-ai/.env
+systemctl --user restart mugen-ai.service
+```
+
+### HTTP API
+
+`mugen-ai serve` runs on `:11435`. The shell talks to it over plain HTTP:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/chat` | Send a message, receive SSE stream |
+| DELETE | `/history` | Clear conversation history |
+| GET | `/health` | Server status and active model |
+| GET | `/models` | List available models |
+| PUT | `/model` | Switch the active model (`{"model": "name"}`) |
+
+For terminal use: `mugen-ai chat`.
+
 ---
 
 ## Preview
