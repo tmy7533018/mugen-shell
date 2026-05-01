@@ -19,6 +19,22 @@ in
       description = "The mugen-shell QML package (UI tree, scripts, assets).";
     };
 
+    includeSystemDeps = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Whether to install mugen-shell's runtime dependencies (Hyprland,
+        Quickshell, hypridle, hyprlock, mpvpaper, awww, matugen,
+        playerctl, ...) via Nix.
+
+        Set to <literal>false</literal> if those packages are already
+        installed by your OS (e.g. via pacman on Garuda / Arch). The
+        only thing the module then installs is mugen-ai and the QML
+        symlink, which avoids duplicating ~1-3 GiB of binaries that
+        already live in /usr.
+      '';
+    };
+
     ai = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -41,34 +57,36 @@ in
     # home-manager activation so flake updates propagate automatically.
     xdg.configFile."quickshell/mugen-shell".source = cfg.package;
 
-    # Runtime dependencies. Anything mugen-shell launches via Process or
-    # references from a script lives here. Compositor / shell framework
-    # are included so a fresh install is functional even if the user
-    # hasn't installed them via the OS package manager.
+    # Runtime dependencies. Everything mugen-shell launches via Process or
+    # references from a script. Gated by includeSystemDeps so users whose
+    # OS already provides this stack (pacman, dpkg, NixOS module, ...)
+    # can opt out instead of double-installing 1-3 GiB into Nix.
     home.packages =
-      with pkgs;
-      [
-        hyprland
-        quickshell
-        hypridle
-        hyprlock
-        mpvpaper
-        awww
-        matugen
-        playerctl
-        wl-clipboard
-        cliphist
-        libnotify
-        grim
-        slurp
-        cava
-        ffmpeg
-        imv
-        pavucontrol
-        pulseaudio # paplay
-        socat # mpvpaper IPC in change-wallpaper.sh
-        python3
-      ]
+      lib.optionals cfg.includeSystemDeps (
+        with pkgs;
+        [
+          hyprland
+          quickshell
+          hypridle
+          hyprlock
+          mpvpaper
+          awww
+          matugen
+          playerctl
+          wl-clipboard
+          cliphist
+          libnotify
+          grim
+          slurp
+          cava
+          ffmpeg
+          imv
+          pavucontrol
+          pulseaudio # paplay
+          socat # mpvpaper IPC in change-wallpaper.sh
+          python3
+        ]
+      )
       ++ lib.optionals cfg.ai.enable [ cfg.ai.package ];
 
     systemd.user.services.mugen-ai = lib.mkIf cfg.ai.enable {
