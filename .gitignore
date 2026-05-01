@@ -14,6 +14,9 @@ system/hypr/configs/.blur-current
 # Editor settings
 shell/.vscode/
 
+# Stale shell cache dir (real state lives under XDG dirs now)
+shell/.cache/
+
 # Python cache
 __pycache__/
 *.pyc
