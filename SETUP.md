@@ -145,9 +145,46 @@ yay -S hyprland quickshell hypridle hyprlock zsh kitty starship libnotify \
 
 ## Configuring mugen-ai
 
-The AI panel (`Super + A`) talks to a local Go server. Settings → AI Assistant exposes "Edit Config" / "Restart AI" buttons that open `~/.config/mugen-ai/config.toml` and bounce the systemd unit. The TOML controls personality, locale, Ollama host, and the Gemini model choice. API keys go in there too — the file is created on first run with sane defaults.
+The AI panel (`Super + A`) talks to a local Go server. Settings → AI Assistant has "Edit Config" / "Restart AI" buttons that open `~/.config/mugen-ai/config.toml` in your default editor and bounce the systemd unit, so you don't have to drop to a terminal for tweaks. When `mugen-ai.service` isn't running, the panel shows an install hint instead of the chat UI — safe to leave the bar icon if you skip this feature.
 
-When `mugen-ai.service` isn't running, the AI panel shows an install hint instead of the chat UI, so the bar icon stays harmless if you skip this feature.
+`~/.config/mugen-ai/config.toml`:
+
+```toml
+[personality]
+system_prompt = "You are a helpful desktop assistant. Be concise."
+
+[context]
+locale = "en"
+city = ""
+
+[provider.google]
+model = "gemini-2.5-flash"
+```
+
+- **`city`** — enables live weather via [wttr.in](https://wttr.in). Leave empty to disable.
+- **`[provider.google].model`** — enables Gemini (requires `GEMINI_API_KEY`). Omit to disable.
+
+### Gemini API key
+
+```sh
+echo 'GEMINI_API_KEY=...' > ~/.config/mugen-ai/.env
+chmod 600 ~/.config/mugen-ai/.env
+systemctl --user restart mugen-ai.service
+```
+
+### HTTP API
+
+`mugen-ai serve` runs on `:11435`. The shell talks to it over plain HTTP:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/chat` | Send a message, receive SSE stream |
+| DELETE | `/history` | Clear conversation history |
+| GET | `/health` | Server status and active model |
+| GET | `/models` | List available models |
+| PUT | `/model` | Switch the active model (`{"model": "name"}`) |
+
+For terminal use: `mugen-ai chat`.
 
 ---
 
