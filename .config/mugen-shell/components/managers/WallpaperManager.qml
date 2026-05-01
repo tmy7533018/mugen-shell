@@ -10,8 +10,13 @@ QtObject {
         if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.cache"
         return xdg + "/mugen-shell"
     }
+    readonly property string dataDir: {
+        let xdg = Quickshell.env("XDG_DATA_HOME")
+        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/share"
+        return xdg + "/mugen-shell"
+    }
 
-    property string wallpaperDir: Quickshell.shellDir + "/wallpapers"
+    property string wallpaperDir: dataDir + "/wallpapers"
     property string thumbDir: cacheDir + "/wallpaper-thumbs"
     property string currentWallpaperFile: cacheDir + "/wallp/current_wallpaper_path.txt"
     

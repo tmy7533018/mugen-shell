@@ -9,7 +9,7 @@ if [ "${EUID:-$(id -u)}" -ne 0 ]; then
 fi
 
 USER_HOME="$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)"
-SRC_DIR="$USER_HOME/.config/quickshell/mugen-shell/wallpapers/videos"
+SRC_DIR="$USER_HOME/.local/share/mugen-shell/wallpapers/videos"
 DEST_DIR="/usr/share/sddm/themes/sddm-astronaut-theme/Backgrounds"
 TARGET_NAME="login.mp4"
 

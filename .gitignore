@@ -14,9 +14,7 @@
 .config/mugen-shell/assets/sounds/*
 !.config/mugen-shell/assets/sounds/.gitkeep
 
-# Wallpaper/media files (large size)
-.config/mugen-shell/wallpapers/images/
-.config/mugen-shell/wallpapers/videos/
+# Wallpaper/media files (large size, now under XDG_DATA_HOME)
 *.mp4
 *.webm
 *.mkv
