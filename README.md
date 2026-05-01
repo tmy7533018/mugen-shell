@@ -4,7 +4,7 @@
 
 <h1 align="center">mugen-shell</h1>
 
-<p align="center"><i>A Quickshell + Hyprland desktop with a 夢幻 aesthetic.</i></p>
+<p align="center"><i>A 夢幻 desktop, built on Quickshell + Hyprland.</i></p>
 
 https://github.com/user-attachments/assets/c91027d3-c49d-43a3-86a9-6554ac110a6c
 
