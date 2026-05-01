@@ -27,7 +27,23 @@
               mainProgram = "mugen-ai";
             };
           };
-          default = mugen-ai;
+
+          # The Quickshell QML tree (UI code, scripts, assets, default
+          # settings). No build step — just gets copied into the Nix
+          # store so home-manager can symlink the result into
+          # ~/.config/quickshell/mugen-shell.
+          mugen-shell = pkgs.runCommand "mugen-shell-0.1.0" {
+            meta = {
+              description = "Quickshell desktop UI for mugen-shell";
+              homepage = "https://github.com/tmy7533018/mugen-shell";
+              license = pkgs.lib.licenses.mit;
+            };
+          } ''
+            mkdir -p $out
+            cp -r ${./shell}/. $out/
+          '';
+
+          default = mugen-shell;
         };
       }
     );
