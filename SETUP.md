@@ -90,7 +90,16 @@ If you have Nix with flakes enabled (any Linux distro, including non-NixOS), you
         { home.username = "YOUR_USER"; home.homeDirectory = "/home/YOUR_USER"; }
         ({ ... }: {
           programs.mugen-shell.enable = true;
-          # programs.mugen-shell.ai.enable = false;  # opt out of mugen-ai
+
+          # Skip the runtime-dep block if your OS already provides
+          # Hyprland / Quickshell / hypridle / hyprlock / mpvpaper / awww
+          # / matugen / etc. (e.g. Garuda or Arch with pacman) — saves
+          # ~16 GiB of /nix/store duplication.
+          # programs.mugen-shell.includeSystemDeps = false;
+
+          # Opt out of the mugen-ai backend if you don't want the AI panel.
+          # programs.mugen-shell.ai.enable = false;
+
           home.stateVersion = "26.05";
         })
       ];
@@ -105,7 +114,9 @@ Then:
 home-manager switch --flake .#YOUR_USER
 ```
 
-The module symlinks the Quickshell tree (readonly) into `~/.config/quickshell/mugen-shell`, copies the system/ dotfiles into `~/.config/{hypr,kitty,cava,matugen,fastfetch}` and `~/.config/starship.toml` on first activation (subsequent activations leave your edits alone), pulls in every runtime dep (Hyprland / hypridle / mpvpaper / awww / matugen / playerctl / grim / slurp / cava / cliphist / wl-clipboard / libnotify / pulseaudio / python3 / ...), and runs `mugen-ai` as a systemd user service unless you opt out.
+The module symlinks the Quickshell tree (readonly) into `~/.config/quickshell/mugen-shell`, copies the system/ dotfiles into `~/.config/{hypr,kitty,cava,matugen,fastfetch}` and `~/.config/starship.toml` on first activation (subsequent activations leave your edits alone), pulls in every runtime dep (Hyprland / hypridle / mpvpaper / awww / matugen / playerctl / grim / slurp / cava / cliphist / wl-clipboard / libnotify / pulseaudio / python3 / ...), and runs `mugen-ai` as a systemd user service.
+
+The runtime-deps block is gated behind `includeSystemDeps`. Set it to `false` if your OS already ships those packages — on Garuda / Arch that one toggle drops the Nix install footprint from ~19 GiB to ~2.5 GiB.
 
 You still need to wire Hyprland into your display manager / login session yourself (NixOS module, or `Hyprland` from a TTY).
 
