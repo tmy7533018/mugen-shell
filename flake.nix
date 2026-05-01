@@ -8,7 +8,21 @@
 
   outputs =
     { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (
+    let
+      # Overlay that exposes mugen-ai and mugen-shell as pkgs.<name>, so the
+      # home-manager module can refer to them as defaults via `pkgs.mugen-shell`.
+      overlay = final: prev: {
+        mugen-ai = self.packages.${prev.system}.mugen-ai;
+        mugen-shell = self.packages.${prev.system}.mugen-shell;
+      };
+    in
+    {
+      overlays.default = overlay;
+
+      homeManagerModules.default = ./nix/home-manager.nix;
+      homeManagerModules.mugen-shell = ./nix/home-manager.nix;
+    }
+    // flake-utils.lib.eachDefaultSystem (
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
