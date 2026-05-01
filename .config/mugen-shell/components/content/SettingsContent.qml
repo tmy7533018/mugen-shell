@@ -23,6 +23,12 @@ Item {
         "bottomMargin": modeManager.scale(6)
     })
 
+    readonly property string soundsDir: {
+        let xdg = Quickshell.env("XDG_DATA_HOME")
+        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/share"
+        return xdg + "/mugen-shell/sounds"
+    }
+
     property var blurPresets: []
     property bool isLoadingPresets: false
     property string currentPreset: ""
@@ -62,7 +68,7 @@ Item {
         if (name !== "None") {
             previewSoundProcess.command = [
                 "paplay",
-                Quickshell.shellDir + "/assets/sounds/" + name
+                soundsDir + "/" + name
             ]
             previewSoundProcess.running = true
         }
@@ -516,7 +522,7 @@ Item {
         id: listSoundsProcess
         command: [
             "bash", "-c",
-            "find '" + Quickshell.shellDir + "/assets/sounds' -maxdepth 1 -type f \\( -iname '*.wav' -o -iname '*.ogg' -o -iname '*.oga' -o -iname '*.mp3' -o -iname '*.flac' \\) -printf '%f\\n' | sort"
+            "mkdir -p '" + soundsDir + "' && find '" + soundsDir + "' -maxdepth 1 -type f \\( -iname '*.wav' -o -iname '*.ogg' -o -iname '*.oga' -o -iname '*.mp3' -o -iname '*.flac' \\) -printf '%f\\n' | sort"
         ]
         running: false
         property string output: ""

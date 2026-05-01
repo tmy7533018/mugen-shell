@@ -11,6 +11,12 @@ QtObject {
     property var settingsManager
     signal notificationReceived(var notification)
 
+    readonly property string soundsDir: {
+        let xdg = Quickshell.env("XDG_DATA_HOME")
+        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/share"
+        return xdg + "/mugen-shell/sounds"
+    }
+
     function addNotification(n) {
         if (!n.summary && !n.body) {
             return
@@ -40,7 +46,7 @@ QtObject {
         if (!settingsManager) return
         let sound = settingsManager.notificationSound
         if (!sound || sound === "None") return
-        soundPlayProcess.command = ["paplay", Quickshell.shellDir + "/assets/sounds/" + sound]
+        soundPlayProcess.command = ["paplay", soundsDir + "/" + sound]
         soundPlayProcess.running = true
     }
 

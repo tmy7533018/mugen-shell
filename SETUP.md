@@ -45,7 +45,7 @@ mugen-shell/
 **Notes:**
 - mugen-shell must be symlinked to `~/.config/quickshell/mugen-shell`.
 - The `wallpapers/images/` and `wallpapers/videos/` directories are excluded from git (large files); place your own wallpapers there.
-- The `assets/sounds/` directory is excluded from git; drop your own `.wav` / `.ogg` / `.oga` / `.mp3` / `.flac` files there to make them selectable from Settings → Notification Sound. Quickest start: `cp /usr/share/sounds/freedesktop/stereo/{bell,message,message-new-instant}.oga ~/.config/quickshell/mugen-shell/assets/sounds/`.
+- Notification sounds live at `${XDG_DATA_HOME:-~/.local/share}/mugen-shell/sounds/`. Drop your own `.wav` / `.ogg` / `.oga` / `.mp3` / `.flac` files there to make them selectable from Settings → Notification Sound. Quickest start: `mkdir -p ~/.local/share/mugen-shell/sounds && cp /usr/share/sounds/freedesktop/stereo/{bell,message,message-new-instant}.oga ~/.local/share/mugen-shell/sounds/`.
 
 ---
 
