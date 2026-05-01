@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/tmy7533018/mugen-ai/internal/history"
-	"github.com/tmy7533018/mugen-ai/internal/provider"
-	"github.com/tmy7533018/mugen-ai/internal/state"
+	"github.com/tmy7533018/mugen-shell/ai/internal/history"
+	"github.com/tmy7533018/mugen-shell/ai/internal/provider"
+	"github.com/tmy7533018/mugen-shell/ai/internal/state"
 )
 
 const maxRequestBody = 64 * 1024 // 64KB

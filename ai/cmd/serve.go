@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/tmy7533018/mugen-ai/internal/config"
-	ctxinfo "github.com/tmy7533018/mugen-ai/internal/context"
-	"github.com/tmy7533018/mugen-ai/internal/history"
-	"github.com/tmy7533018/mugen-ai/internal/provider"
-	"github.com/tmy7533018/mugen-ai/internal/server"
-	"github.com/tmy7533018/mugen-ai/internal/state"
+	"github.com/tmy7533018/mugen-shell/ai/internal/config"
+	ctxinfo "github.com/tmy7533018/mugen-shell/ai/internal/context"
+	"github.com/tmy7533018/mugen-shell/ai/internal/history"
+	"github.com/tmy7533018/mugen-shell/ai/internal/provider"
+	"github.com/tmy7533018/mugen-shell/ai/internal/server"
+	"github.com/tmy7533018/mugen-shell/ai/internal/state"
 )
 
 var serveCmd = &cobra.Command{

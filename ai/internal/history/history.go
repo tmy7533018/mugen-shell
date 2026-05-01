@@ -3,7 +3,7 @@ package history
 import (
 	"sync"
 
-	"github.com/tmy7533018/mugen-ai/internal/provider"
+	"github.com/tmy7533018/mugen-shell/ai/internal/provider"
 )
 
 const defaultMaxMessages = 100

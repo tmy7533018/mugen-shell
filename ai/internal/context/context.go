@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tmy7533018/mugen-ai/internal/config"
+	"github.com/tmy7533018/mugen-shell/ai/internal/config"
 )
 
 // Build returns a context string to prepend to the system prompt.
