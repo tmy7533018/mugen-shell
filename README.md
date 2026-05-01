@@ -85,10 +85,13 @@ Most-used panels:
 |---|---|
 | `Super + R` | App launcher |
 | `Super + W` | Wallpaper picker |
+| `Super + M` | Music player |
+| `Super + U` | Volume / mic control |
 | `Super + V` | Clipboard history |
-| `Super + L` | Power menu |
-| `Super + A` | AI assistant |
 | `Super + T` | Notification center |
+| `Super + A` | AI assistant |
+| `Super + S` | Screenshot gallery |
+| `Super + L` | Power menu |
 | `Super + ,` | Settings |
 
 Right-click the power menu icon to jump straight into settings. Click the chevron next to the notification icon to expand the system tray. Full keybind list lives in [SETUP.md](SETUP.md).
