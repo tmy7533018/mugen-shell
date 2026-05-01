@@ -6,7 +6,7 @@
 
 <p align="center"><i>A 夢幻 desktop, built on Quickshell + Hyprland.</i></p>
 
-https://github.com/user-attachments/assets/c91027d3-c49d-43a3-86a9-6554ac110a6c
+https://github.com/user-attachments/assets/618c182d-ecc1-4f84-a228-bddcf990beb1
 
 > Personal dotfiles, packaged so others can try them via Nix flake or a plain Makefile.
 
@@ -31,7 +31,7 @@ For directory layout, install paths (Nix flake home-manager module or manual `ma
 
 ## AI Assistant
 
-https://github.com/user-attachments/assets/a2b8a7a9-0899-45e3-9dce-c896f49f35f7
+https://github.com/user-attachments/assets/6fb5bf14-65cd-43af-b2a2-e6d54dd4c409
 
 AI chat panel (`Super + A`) powered by **mugen-ai** — a Go server bundled in this repo under [`ai/`](ai/), supporting local [Ollama](https://ollama.com) models and Google Gemini.
 
