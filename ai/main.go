@@ -1,6 +1,6 @@
 package main
 
-import "github.com/tmy7533018/mugen-shell/ai/cmd"
+import "github.com/tmy7533018/mugen-ai/cmd"
 
 func main() {
 	cmd.Execute()

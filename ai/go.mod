@@ -1,4 +1,4 @@
-module github.com/tmy7533018/mugen-shell/ai
+module github.com/tmy7533018/mugen-ai
 
 go 1.26.2
 
