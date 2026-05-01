@@ -33,9 +33,6 @@ __pycache__/
 # Claude Code local settings
 .claude/
 
-# Local design notes (never push)
-/NIX-PLAN.md
-
 # nix build output symlink
 /result
 /result-*
