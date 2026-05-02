@@ -89,6 +89,11 @@ in
           fastfetch  # terminal welcome; system/fastfetch/config.jsonc references it
           fcitx5     # IME framework; users add engines (fcitx5-mozc, etc.) as needed
           python3
+          # Default user apps referenced by hyprland.conf $terminal/$fileManager/$browser.
+          # Override via your own home.packages if you prefer alacritty/nautilus/chromium etc.
+          kitty
+          thunar
+          firefox
         ]
       )
       ++ lib.optionals cfg.ai.enable [ cfg.ai.package ];
