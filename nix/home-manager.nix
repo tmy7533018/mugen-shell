@@ -83,7 +83,11 @@ in
           imv
           pavucontrol
           pulseaudio # paplay
-          socat # mpvpaper IPC in change-wallpaper.sh
+          pamixer    # volume mute keybind in keybinds.conf
+          socat      # mpvpaper IPC in change-wallpaper.sh
+          curl       # AI assistant HTTP / SSE in AiAssistantContent.qml
+          fastfetch  # terminal welcome; system/fastfetch/config.jsonc references it
+          fcitx5     # IME framework; users add engines (fcitx5-mozc, etc.) as needed
           python3
         ]
       )
