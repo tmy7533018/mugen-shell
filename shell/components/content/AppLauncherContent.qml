@@ -66,22 +66,52 @@ FocusScope {
         }
     }
 
+    function scoreApp(app, search) {
+        if (!app || !app.name) return 0
+
+        let nameLower = app.name.toLowerCase()
+        if (nameLower === search) return 1000
+        if (nameLower.startsWith(search)) return 500
+
+        let nameIdx = nameLower.indexOf(search)
+        if (nameIdx >= 0) return 300 - Math.min(nameIdx, 100)
+
+        let execLower = (app.exec || "").toLowerCase()
+        if (execLower.includes(search)) return 150
+
+        let wmClassLower = (app.wmClass || "").toLowerCase()
+        if (wmClassLower.includes(search)) return 120
+
+        if (app.wmClassAliases) {
+            for (let i = 0; i < app.wmClassAliases.length; i++) {
+                if (app.wmClassAliases[i].toLowerCase().includes(search)) return 100
+            }
+        }
+
+        let categoriesLower = (app.categories || "").toLowerCase()
+        if (categoriesLower.includes(search)) return 50
+
+        return 0
+    }
+
     function filterApps() {
         if (searchText === "") {
             filteredApps = apps
-        } else {
-            let search = searchText.toLowerCase()
-            // short = prefix (fast), long = substring
-            if (search.length <= 2) {
-                filteredApps = apps.filter(app =>
-                    app.name.toLowerCase().startsWith(search)
-                )
-            } else {
-                filteredApps = apps.filter(app =>
-                    app.name.toLowerCase().includes(search)
-                )
-            }
+            return
         }
+        let search = searchText.toLowerCase()
+        let scored = []
+        for (let i = 0; i < apps.length; i++) {
+            let s = scoreApp(apps[i], search)
+            if (s > 0) scored.push({ app: apps[i], score: s })
+        }
+        scored.sort((a, b) => {
+            if (a.score !== b.score) return b.score - a.score
+            return a.app.name.toLowerCase().localeCompare(b.app.name.toLowerCase())
+        })
+        let result = []
+        for (let i = 0; i < scored.length; i++) result.push(scored[i].app)
+        filteredApps = result
     }
 
     Timer {
