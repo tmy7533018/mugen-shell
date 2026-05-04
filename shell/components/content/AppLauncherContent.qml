@@ -126,7 +126,16 @@ FocusScope {
 
     function filterApps() {
         if (searchText === "") {
-            filteredApps = apps
+            let favs = []
+            let rest = []
+            for (let i = 0; i < apps.length; i++) {
+                if (isFavorite(apps[i].exec)) {
+                    favs.push(apps[i])
+                } else {
+                    rest.push(apps[i])
+                }
+            }
+            filteredApps = favs.concat(rest)
             return
         }
         let search = searchText.toLowerCase()
@@ -608,7 +617,13 @@ FocusScope {
 
             Text {
                 Layout.alignment: Qt.AlignHCenter
-                text: root.isLoading ? "読み込み中..." : (root.filteredApps.length + " 個のアプリ")
+                text: {
+                    if (root.isLoading) return "Loading..."
+                    if (root.searchText === "" && Object.keys(root.favoritesSet).length === 0) {
+                        return "Right-click to favorite"
+                    }
+                    return root.filteredApps.length + " apps"
+                }
                 color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
                 font.pixelSize: root.typo ? root.typo.sizeSmall : 11
                 opacity: 0.7
