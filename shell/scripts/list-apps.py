@@ -30,8 +30,8 @@ CACHE_DIR = os.path.join(
     os.environ.get("XDG_CACHE_HOME", os.path.join(os.path.expanduser("~"), ".cache")),
     "mugen-shell"
 )
-CACHE_JSON = os.path.join(CACHE_DIR, "apps.json")
-CACHE_SIG = os.path.join(CACHE_DIR, "apps.sha256")
+CACHE_JSON = os.path.join(CACHE_DIR, "apps_v2.json")
+CACHE_SIG = os.path.join(CACHE_DIR, "apps_v2.sha256")
 
 
 def ensure_cache_dir() -> None:
@@ -117,6 +117,18 @@ def read_desktop_file_wm_class(desktop_file_path: str) -> str:
                 line = line.strip()
                 if line.startswith("StartupWMClass="):
                     return line[15:].strip()
+    except Exception:
+        pass
+    return ""
+
+
+def read_desktop_file_keywords(desktop_file_path: str) -> str:
+    try:
+        with open(desktop_file_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("Keywords="):
+                    return line[9:].strip()
     except Exception:
         pass
     return ""
@@ -471,11 +483,16 @@ def collect_apps() -> list[dict]:
                 first_cmd = exec_parts[0]
                 wm_class = os.path.basename(first_cmd).lower()
 
+        keywords = ""
+        if desktop_file_path:
+            keywords = read_desktop_file_keywords(desktop_file_path)
+
         apps.append({
             "name": name,
             "exec": exec_cmd,
             "icon": icon_path,
             "categories": app.get_categories() or "",
+            "keywords": keywords,
             "wmClass": wm_class,
             "wmClassAliases": wm_class_aliases,
         })

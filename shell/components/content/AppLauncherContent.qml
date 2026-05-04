@@ -149,6 +149,8 @@ FocusScope {
                 base = 120
             } else if (app.wmClassAliases && app.wmClassAliases.some(a => a.toLowerCase().includes(search))) {
                 base = 100
+            } else if ((app.keywords || "").toLowerCase().includes(search)) {
+                base = 80
             } else if ((app.categories || "").toLowerCase().includes(search)) {
                 base = 50
             } else {
