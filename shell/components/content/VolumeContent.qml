@@ -84,6 +84,19 @@ Item {
                 if (micCavaManager) micCavaManager.stop()
             } else {
                 root.updateMicCavaState()
+                focusTimer.restart()
+            }
+        }
+    }
+
+    Timer {
+        id: focusTimer
+        interval: 100
+        running: false
+        repeat: false
+        onTriggered: {
+            if (contentLayer && modeManager.isMode("volume")) {
+                contentLayer.forceActiveFocus()
             }
         }
     }
@@ -144,6 +157,25 @@ Item {
             }
             if (event.key === Qt.Key_Escape) {
                 modeManager.closeAllModes()
+                event.accepted = true
+                return
+            }
+
+            let step = (event.modifiers & Qt.ShiftModifier) ? 10 : 2
+
+            if (event.key === Qt.Key_Up) {
+                let v = Math.max(0, Math.min(100, root.currentVolume + step))
+                root.setCurrentVolume(v)
+                event.accepted = true
+            } else if (event.key === Qt.Key_Down) {
+                let v = Math.max(0, Math.min(100, root.currentVolume - step))
+                root.setCurrentVolume(v)
+                event.accepted = true
+            } else if (event.key === Qt.Key_M) {
+                root.toggleCurrentMute()
+                event.accepted = true
+            } else if (event.key === Qt.Key_Tab) {
+                root.tabIndex = root.tabIndex === 0 ? 1 : 0
                 event.accepted = true
             }
         }
@@ -684,6 +716,9 @@ Item {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("volume", root)
+            if (modeManager.isMode("volume")) {
+                focusTimer.restart()
+            }
         }
         updateMicCavaState()
     }
