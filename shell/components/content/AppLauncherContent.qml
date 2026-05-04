@@ -96,6 +96,10 @@ FocusScope {
         }
     }
 
+    function stripDiacritics(s) {
+        return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    }
+
     function appAcronym(name) {
         let words = name.split(/[\s\-_./]+/).filter(w => w.length > 0)
         if (words.length < 2) return ""
@@ -139,30 +143,32 @@ FocusScope {
     function scoreApp(app, search) {
         if (!app || !app.name) return 0
 
+        let q = stripDiacritics(search)
+        let nameLower = stripDiacritics(app.name.toLowerCase())
+
         let base = 0
-        let nameLower = app.name.toLowerCase()
-        if (nameLower === search) {
+        if (nameLower === q) {
             base = 1000
-        } else if (nameLower.startsWith(search)) {
+        } else if (nameLower.startsWith(q)) {
             base = 500
         } else {
-            let nameIdx = nameLower.indexOf(search)
+            let nameIdx = nameLower.indexOf(q)
             if (nameIdx >= 0) {
                 base = 300 - Math.min(nameIdx, 100)
-            } else if (appAcronym(nameLower) === search) {
+            } else if (appAcronym(nameLower) === q) {
                 base = 250
-            } else if ((app.exec || "").toLowerCase().includes(search)) {
+            } else if (stripDiacritics((app.exec || "").toLowerCase()).includes(q)) {
                 base = 150
-            } else if ((app.wmClass || "").toLowerCase().includes(search)) {
+            } else if (stripDiacritics((app.wmClass || "").toLowerCase()).includes(q)) {
                 base = 120
-            } else if (app.wmClassAliases && app.wmClassAliases.some(a => a.toLowerCase().includes(search))) {
+            } else if (app.wmClassAliases && app.wmClassAliases.some(a => stripDiacritics(a.toLowerCase()).includes(q))) {
                 base = 100
-            } else if ((app.keywords || "").toLowerCase().includes(search)) {
+            } else if (stripDiacritics((app.keywords || "").toLowerCase()).includes(q)) {
                 base = 80
-            } else if ((app.categories || "").toLowerCase().includes(search)) {
+            } else if (stripDiacritics((app.categories || "").toLowerCase()).includes(q)) {
                 base = 50
             } else {
-                let fz = fuzzyScore(nameLower, search)
+                let fz = fuzzyScore(nameLower, q)
                 if (fz > 0) base = Math.min(40, fz)
             }
         }
