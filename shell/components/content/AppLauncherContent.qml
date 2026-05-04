@@ -30,6 +30,36 @@ FocusScope {
 
     property string searchText: ""
 
+    property var favoritesSet: ({})
+
+    function isFavorite(execKey) {
+        return execKey && favoritesSet[execKey] === true
+    }
+
+    function toggleFavorite(execKey) {
+        if (!execKey) return
+        let next = Object.assign({}, favoritesSet)
+        if (next[execKey]) {
+            delete next[execKey]
+        } else {
+            next[execKey] = true
+        }
+        favoritesSet = next
+        saveFavorites()
+        filterApps()
+    }
+
+    function saveFavorites() {
+        let list = Object.keys(favoritesSet)
+        let json = JSON.stringify({ favorites: list })
+        let escaped = json.replace(/'/g, "'\\''")
+        saveFavoritesProcess.command = [
+            "sh", "-c",
+            "d=\"${XDG_STATE_HOME:-$HOME/.local/state}/mugen-shell\"; mkdir -p \"$d\" && printf '%s' '" + escaped + "' > \"$d/launcher.json\""
+        ]
+        saveFavoritesProcess.running = true
+    }
+
     function preloadApps() {
         if (!appsLoaded && !isLoading) {
             isLoading = true
@@ -69,29 +99,29 @@ FocusScope {
     function scoreApp(app, search) {
         if (!app || !app.name) return 0
 
+        let base = 0
         let nameLower = app.name.toLowerCase()
-        if (nameLower === search) return 1000
-        if (nameLower.startsWith(search)) return 500
-
-        let nameIdx = nameLower.indexOf(search)
-        if (nameIdx >= 0) return 300 - Math.min(nameIdx, 100)
-
-        let execLower = (app.exec || "").toLowerCase()
-        if (execLower.includes(search)) return 150
-
-        let wmClassLower = (app.wmClass || "").toLowerCase()
-        if (wmClassLower.includes(search)) return 120
-
-        if (app.wmClassAliases) {
-            for (let i = 0; i < app.wmClassAliases.length; i++) {
-                if (app.wmClassAliases[i].toLowerCase().includes(search)) return 100
+        if (nameLower === search) {
+            base = 1000
+        } else if (nameLower.startsWith(search)) {
+            base = 500
+        } else {
+            let nameIdx = nameLower.indexOf(search)
+            if (nameIdx >= 0) {
+                base = 300 - Math.min(nameIdx, 100)
+            } else if ((app.exec || "").toLowerCase().includes(search)) {
+                base = 150
+            } else if ((app.wmClass || "").toLowerCase().includes(search)) {
+                base = 120
+            } else if (app.wmClassAliases && app.wmClassAliases.some(a => a.toLowerCase().includes(search))) {
+                base = 100
+            } else if ((app.categories || "").toLowerCase().includes(search)) {
+                base = 50
             }
         }
 
-        let categoriesLower = (app.categories || "").toLowerCase()
-        if (categoriesLower.includes(search)) return 50
-
-        return 0
+        if (base > 0 && isFavorite(app.exec)) base += 200
+        return base
     }
 
     function filterApps() {
@@ -195,6 +225,39 @@ FocusScope {
 
         stderr: SplitParser {
         }
+    }
+
+    Process {
+        id: loadFavoritesProcess
+        command: ["sh", "-c", "f=\"${XDG_STATE_HOME:-$HOME/.local/state}/mugen-shell/launcher.json\"; [ -f \"$f\" ] && cat \"$f\" || printf '{}'"]
+        running: false
+
+        property string output: ""
+
+        stdout: SplitParser {
+            onRead: data => {
+                loadFavoritesProcess.output += data
+            }
+        }
+
+        onExited: () => {
+            try {
+                let parsed = JSON.parse(loadFavoritesProcess.output || "{}")
+                let favs = Array.isArray(parsed.favorites) ? parsed.favorites : []
+                let set = {}
+                for (let i = 0; i < favs.length; i++) set[favs[i]] = true
+                root.favoritesSet = set
+                if (root.appsLoaded) root.filterApps()
+            } catch (e) {
+            }
+            loadFavoritesProcess.output = ""
+        }
+    }
+
+    Process {
+        id: saveFavoritesProcess
+        command: ["true"]
+        running: false
     }
 
     Process {
@@ -567,6 +630,7 @@ FocusScope {
     }
 
     Component.onCompleted: {
+        loadFavoritesProcess.running = true
         if (modeManager) {
             modeManager.registerMode("launcher", root)
             if (modeManager.isMode("launcher")) {
