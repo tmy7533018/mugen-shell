@@ -500,6 +500,26 @@ FocusScope {
                                     } else if (event.key === Qt.Key_L && (event.modifiers & Qt.ControlModifier)) {
                                         root.clearHistory()
                                         event.accepted = true
+                                    } else if (event.key === Qt.Key_PageUp) {
+                                        let maxY = Math.max(0, messageList.contentHeight - messageList.height)
+                                        messageList.contentY = Math.max(0, messageList.contentY - messageList.height * 0.8)
+                                        root.userScrolled = messageList.contentY < maxY - 4
+                                        event.accepted = true
+                                    } else if (event.key === Qt.Key_PageDown) {
+                                        let maxY = Math.max(0, messageList.contentHeight - messageList.height)
+                                        messageList.contentY = Math.min(maxY, messageList.contentY + messageList.height * 0.8)
+                                        root.userScrolled = messageList.contentY < maxY - 4
+                                        event.accepted = true
+                                    } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_Down) && (event.modifiers & Qt.ControlModifier)) {
+                                        let maxY = Math.max(0, messageList.contentHeight - messageList.height)
+                                        let dir = event.key === Qt.Key_Up ? -1 : 1
+                                        messageList.contentY = Math.max(0, Math.min(maxY, messageList.contentY + dir * 120))
+                                        root.userScrolled = messageList.contentY < maxY - 4
+                                        event.accepted = true
+                                    } else if (event.key === Qt.Key_End && (event.modifiers & Qt.ControlModifier)) {
+                                        root.userScrolled = false
+                                        messageList.positionViewAtEnd()
+                                        event.accepted = true
                                     }
                                 }
                             }
