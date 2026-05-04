@@ -1,0 +1,6 @@
+[Unit]
+Description=mugen-shell calendar event notifications
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/quickshell/mugen-shell/scripts/notify-events.py

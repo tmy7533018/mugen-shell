@@ -1,0 +1,10 @@
+[Unit]
+Description=Trigger mugen-shell calendar event notifications every minute
+
+[Timer]
+OnCalendar=*:*:00
+Persistent=true
+Unit=mugen-event-notifier.service
+
+[Install]
+WantedBy=timers.target

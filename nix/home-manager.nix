@@ -113,6 +113,30 @@ in
       };
     };
 
+    systemd.user.services.mugen-event-notifier = {
+      Unit = {
+        Description = "mugen-shell calendar event notifications";
+      };
+      Service = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.python3}/bin/python3 ${cfg.package}/scripts/notify-events.py";
+      };
+    };
+
+    systemd.user.timers.mugen-event-notifier = {
+      Unit = {
+        Description = "Trigger mugen-shell calendar event notifications every minute";
+      };
+      Timer = {
+        OnCalendar = "*:*:00";
+        Persistent = true;
+        Unit = "mugen-event-notifier.service";
+      };
+      Install = {
+        WantedBy = [ "timers.target" ];
+      };
+    };
+
     # Mutable defaults for the system/ dotfiles (Hyprland config, cava,
     # kitty, matugen templates, starship, fastfetch). Copied from the
     # /nix/store defaults on first activation; subsequent activations
