@@ -32,6 +32,7 @@ Item {
         formTitle = ""
         formTime = ""
         formAllDay = false
+        if (timeInput) timeInput.text = ""
         modalOpen = true
     }
 
@@ -62,6 +63,7 @@ Item {
         addEvent(modalDate, title, t)
         formTitle = ""
         formTime = ""
+        if (timeInput) timeInput.text = ""
     }
 
     function formatModalDate(key) {
