@@ -70,7 +70,7 @@ Rectangle {
 
             Common.GlowText {
                 visible: !dropdown.isMicMode
-                text: "出力"
+                text: "Output"
                 color: Qt.rgba(0.7, 0.7, 0.8, 0.8)
                 font.pixelSize: dropdown.modeManager ? dropdown.modeManager.scale(12) : 12
                 font.weight: Font.Medium
@@ -128,7 +128,7 @@ Rectangle {
 
             Common.GlowText {
                 visible: dropdown.isMicMode
-                text: "入力"
+                text: "Input"
                 color: Qt.rgba(0.7, 0.7, 0.8, 0.8)
                 font.pixelSize: dropdown.modeManager ? dropdown.modeManager.scale(12) : 12
                 font.weight: Font.Medium

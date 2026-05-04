@@ -197,7 +197,7 @@ Item {
                             property int currentYear: 2025
                             property int currentMonth: 1
 
-                            text: currentYear + "年 " + currentMonth + "月"
+                            text: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][currentMonth - 1] + " " + currentYear
                             color: (theme ? theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.85))
                             font.pixelSize: modeManager.scale(18)
                             font.weight: Font.Medium
@@ -249,7 +249,7 @@ Item {
                         spacing: modeManager.scale(16)
 
                         Repeater {
-                            model: ["日", "月", "火", "水", "木", "金", "土"]
+                            model: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
                             Text {
                                 text: modelData
                                 color: {
@@ -280,7 +280,7 @@ Item {
                         property int today: new Date().getDate()
                         property int todayMonth: new Date().getMonth() + 1
                         property int todayYear: new Date().getFullYear()
-                        property string todayWeekday: ["日", "月", "火", "水", "木", "金", "土"][new Date().getDay()]
+                        property string todayWeekday: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date().getDay()]
 
                         property int selectedIndex: -1
 
