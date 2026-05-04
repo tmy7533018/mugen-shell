@@ -38,6 +38,7 @@ Item {
     }
 
     function closeEventModal() {
+        cancelEdit()
         modalOpen = false
     }
 
@@ -143,6 +144,44 @@ Item {
         deleteEventProcess.running = true
     }
 
+    property string editingId: ""
+    property string editTitle: ""
+    property string editTime: ""
+
+    readonly property bool isEditTimeFieldInvalid: {
+        let t = editTime
+        if (!t) return false
+        if (t.length < 5) return false
+        return !isValidTime(t)
+    }
+
+    function startEdit(event) {
+        if (!event || !event.id) return
+        editingId = event.id
+        editTitle = event.title || ""
+        editTime = event.time || ""
+    }
+
+    function cancelEdit() {
+        editingId = ""
+        editTitle = ""
+        editTime = ""
+    }
+
+    function saveEdit() {
+        if (!editingId) return
+        let title = editTitle.trim()
+        if (!title) return
+        let t = editTime.trim()
+        if (t && !isValidTime(t)) return
+        updateEventProcess.command = [
+            "python3", Quickshell.shellDir + "/scripts/calendar-cli.py",
+            "update", "--id", editingId, "--title", title, "--time", t
+        ]
+        updateEventProcess.running = true
+        editingId = ""
+    }
+
     Process {
         id: loadEventsProcess
         running: false
@@ -174,6 +213,12 @@ Item {
 
     Process {
         id: deleteEventProcess
+        running: false
+        onExited: () => root.reloadEvents()
+    }
+
+    Process {
+        id: updateEventProcess
         running: false
         onExited: () => root.reloadEvents()
     }
@@ -702,7 +747,11 @@ Item {
 
         Keys.onPressed: (event) => {
             if (event.key === Qt.Key_Escape) {
-                root.closeEventModal()
+                if (root.editingId) {
+                    root.cancelEdit()
+                } else {
+                    root.closeEventModal()
+                }
                 event.accepted = true
             }
         }
@@ -773,12 +822,24 @@ Item {
                     Repeater {
                         model: root.modalEvents
                         delegate: Item {
+                            id: eventRow
                             width: parent.width
-                            height: modeManager.scale(24)
+                            height: modeManager.scale(28)
+
+                            property bool isEditing: root.editingId === modelData.id
+
+                            MouseArea {
+                                id: rowClickArea
+                                anchors.fill: parent
+                                cursorShape: eventRow.isEditing ? Qt.ArrowCursor : Qt.PointingHandCursor
+                                enabled: !eventRow.isEditing
+                                onClicked: root.startEdit(modelData)
+                            }
 
                             RowLayout {
                                 anchors.fill: parent
                                 spacing: modeManager.scale(10)
+                                visible: !eventRow.isEditing
 
                                 Text {
                                     text: modelData.time || "All day"
@@ -823,6 +884,159 @@ Item {
                                         hoverEnabled: true
                                         cursorShape: Qt.PointingHandCursor
                                         onClicked: root.deleteEvent(modelData.id)
+                                    }
+                                }
+                            }
+
+                            RowLayout {
+                                anchors.fill: parent
+                                spacing: modeManager.scale(6)
+                                visible: eventRow.isEditing
+
+                                Rectangle {
+                                    Layout.preferredWidth: modeManager.scale(60)
+                                    Layout.preferredHeight: modeManager.scale(26)
+                                    color: "transparent"
+                                    border.width: 1
+                                    border.color: root.isEditTimeFieldInvalid
+                                        ? Qt.rgba(1, 0.5, 0.55, 1)
+                                        : editTimeInput.activeFocus
+                                            ? (theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
+                                            : (theme ? theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.18))
+                                    radius: modeManager.scale(6)
+
+                                    Behavior on border.color { ColorAnimation { duration: 200 } }
+
+                                    TextInput {
+                                        id: editTimeInput
+                                        anchors.fill: parent
+                                        anchors.leftMargin: modeManager.scale(6)
+                                        anchors.rightMargin: modeManager.scale(6)
+                                        text: root.editTime
+                                        color: theme ? theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.9)
+                                        selectionColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4)
+                                        font.pixelSize: modeManager.scale(12)
+                                        font.family: "M PLUS 2"
+                                        verticalAlignment: TextInput.AlignVCenter
+                                        maximumLength: 5
+
+                                        property bool _formatting: false
+
+                                        onTextChanged: {
+                                            if (_formatting) return
+                                            let formatted = root.formatTimeInput(text)
+                                            if (formatted !== text) {
+                                                _formatting = true
+                                                text = formatted
+                                                cursorPosition = text.length
+                                                _formatting = false
+                                            }
+                                            root.editTime = text
+                                        }
+
+                                        Text {
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            text: "All day"
+                                            visible: !editTimeInput.text
+                                            color: theme ? theme.textFaint : Qt.rgba(0.5, 0.5, 0.55, 1)
+                                            font.pixelSize: modeManager.scale(11)
+                                            font.italic: true
+                                            font.family: "M PLUS 2"
+                                        }
+
+                                        Keys.onReturnPressed: root.saveEdit()
+                                        Keys.onEnterPressed: root.saveEdit()
+                                        Keys.onEscapePressed: root.cancelEdit()
+                                    }
+                                }
+
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: modeManager.scale(26)
+                                    color: "transparent"
+                                    border.width: 1
+                                    border.color: editTitleInput.activeFocus
+                                        ? (theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
+                                        : (theme ? theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.18))
+                                    radius: modeManager.scale(6)
+
+                                    Behavior on border.color { ColorAnimation { duration: 200 } }
+
+                                    TextInput {
+                                        id: editTitleInput
+                                        anchors.fill: parent
+                                        anchors.leftMargin: modeManager.scale(8)
+                                        anchors.rightMargin: modeManager.scale(8)
+                                        text: root.editTitle
+                                        onTextChanged: root.editTitle = text
+                                        color: theme ? theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.9)
+                                        selectionColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4)
+                                        font.pixelSize: modeManager.scale(12)
+                                        font.family: "M PLUS 2"
+                                        verticalAlignment: TextInput.AlignVCenter
+                                        clip: true
+
+                                        focus: eventRow.isEditing
+                                        onFocusChanged: {
+                                            if (focus && eventRow.isEditing) {
+                                                selectAll()
+                                            }
+                                        }
+
+                                        Keys.onReturnPressed: root.saveEdit()
+                                        Keys.onEnterPressed: root.saveEdit()
+                                        Keys.onEscapePressed: root.cancelEdit()
+                                    }
+                                }
+
+                                Item {
+                                    Layout.preferredWidth: modeManager.scale(20)
+                                    Layout.fillHeight: true
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "✓"
+                                        color: saveHover.containsMouse ? (theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1)) : (theme ? theme.textSecondary : Qt.rgba(0.75, 0.75, 0.82, 0.9))
+                                        opacity: saveHover.containsMouse ? 1 : 0.85
+                                        font.pixelSize: modeManager.scale(14)
+                                        font.weight: Font.Medium
+
+                                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                                    }
+
+                                    MouseArea {
+                                        id: saveHover
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.saveEdit()
+                                    }
+                                }
+
+                                Item {
+                                    Layout.preferredWidth: modeManager.scale(20)
+                                    Layout.fillHeight: true
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "✕"
+                                        color: editDeleteHover.containsMouse ? Qt.rgba(1, 0.5, 0.55, 1) : (theme ? theme.textFaint : Qt.rgba(0.55, 0.55, 0.6, 1))
+                                        opacity: editDeleteHover.containsMouse ? 1 : 0.6
+                                        font.pixelSize: modeManager.scale(12)
+
+                                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                                    }
+
+                                    MouseArea {
+                                        id: editDeleteHover
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            let id = root.editingId
+                                            root.cancelEdit()
+                                            root.deleteEvent(id)
+                                        }
                                     }
                                 }
                             }

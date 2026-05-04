@@ -144,6 +144,16 @@ def cmd_delete(args) -> None:
     print(json.dumps({"deleted": cur.rowcount, "ok": True}))
 
 
+def cmd_update(args) -> None:
+    conn = open_db()
+    cur = conn.execute(
+        "UPDATE events SET title = ?, time = ?, modified_at = unixepoch() WHERE id = ?",
+        (args.title, args.time or "", args.id),
+    )
+    conn.commit()
+    print(json.dumps({"updated": cur.rowcount, "ok": True}))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="mugen-shell calendar event storage CLI")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -168,6 +178,12 @@ def main() -> int:
     p_del = sub.add_parser("delete", help="Delete an event by id")
     p_del.add_argument("--id", required=True)
     p_del.set_defaults(func=cmd_delete)
+
+    p_update = sub.add_parser("update", help="Update an event's title and time")
+    p_update.add_argument("--id", required=True)
+    p_update.add_argument("--title", required=True)
+    p_update.add_argument("--time", default="")
+    p_update.set_defaults(func=cmd_update)
 
     args = parser.parse_args()
     try:
