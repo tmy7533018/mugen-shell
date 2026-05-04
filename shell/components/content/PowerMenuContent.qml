@@ -14,8 +14,8 @@ FocusScope {
     property int currentButtonIndex: -1
     readonly property var requiredBarSize: ({
         "height": modeManager.scale(120),
-        "leftMargin": modeManager.scale(670),
-        "rightMargin": modeManager.scale(670),
+        "leftMargin": modeManager.scale(620),
+        "rightMargin": modeManager.scale(620),
         "topMargin": modeManager.scale(6),
         "bottomMargin": modeManager.scale(6)
     })
@@ -134,22 +134,22 @@ FocusScope {
                 } else if (event.key === Qt.Key_Escape) {
                     modeManager.closeAllModes()
                     event.accepted = true
-                } else if (event.key === Qt.Key_Left || 
+                } else if (event.key === Qt.Key_Left ||
                           (event.key === Qt.Key_Tab && event.modifiers & Qt.ShiftModifier) ||
                           event.key === Qt.Key_Backtab) {
                     if (root.currentButtonIndex < 0) {
-                        root.currentButtonIndex = 4
+                        root.currentButtonIndex = 5
                     } else if (root.currentButtonIndex > 0) {
                         root.currentButtonIndex--
                     } else {
-                        root.currentButtonIndex = 4
+                        root.currentButtonIndex = 5
                     }
                     updateButtonFocus()
                     event.accepted = true
                 } else if (event.key === Qt.Key_Right || event.key === Qt.Key_Tab) {
                     if (root.currentButtonIndex < 0) {
                         root.currentButtonIndex = 0
-                    } else if (root.currentButtonIndex < 4) {
+                    } else if (root.currentButtonIndex < 5) {
                         root.currentButtonIndex++
                     } else {
                         root.currentButtonIndex = 0
@@ -160,7 +160,7 @@ FocusScope {
                     event.accepted = false
                 }
             }
-            
+
             function executeCurrentButton() {
                 switch(root.currentButtonIndex) {
                     case 0:
@@ -178,21 +178,25 @@ FocusScope {
                     case 4:
                         shutdownButton.clicked()
                         break
+                    case 5:
+                        settingsButton.clicked()
+                        break
                 }
             }
-            
+
             function updateButtonFocus() {
                 lockButton.isFocused = (root.currentButtonIndex === 0)
                 logoutButton.isFocused = (root.currentButtonIndex === 1)
                 sleepButton.isFocused = (root.currentButtonIndex === 2)
                 rebootButton.isFocused = (root.currentButtonIndex === 3)
                 shutdownButton.isFocused = (root.currentButtonIndex === 4)
+                settingsButton.isFocused = (root.currentButtonIndex === 5)
             }
-            
+
             Component.onCompleted: {
                 updateButtonFocus()
             }
-            
+
             UI.PowerButton {
                 id: lockButton
                 modeManager: root.modeManager
@@ -257,6 +261,19 @@ FocusScope {
                 onClicked: {
                     root.resetAutoCloseTimer()
                     shutdownProcess.running = true
+                }
+            }
+
+            UI.PowerButton {
+                id: settingsButton
+                modeManager: root.modeManager
+                icon: icons.iconData.settings.type === "text" ? icons.iconData.settings.value : ""
+                iconSource: icons.iconData.settings.type === "svg" ? icons.iconData.settings.value : ""
+                label: "Settings"
+                color: Qt.rgba(0.72, 0.72, 0.82, 1.0)
+                onClicked: {
+                    root.resetAutoCloseTimer()
+                    modeManager.switchMode("settings", true)
                 }
             }
         }

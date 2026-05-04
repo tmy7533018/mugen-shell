@@ -53,6 +53,7 @@ QtObject {
     readonly property string appLauncherSvg: basePath + "/app-launcher.svg"
     readonly property string clockSvg: basePath + "/clock.svg"
     readonly property string searchSvg: basePath + "/search.svg"
+    readonly property string settingsSvg: basePath + "/settings.svg"
     readonly property string arrowDownwardSvg: basePath + "/arrow-downward-fill.svg"
     readonly property string chevronDownSvg: basePath + "/chevron-down.svg"
     readonly property string refreshOutlineSvg: basePath + "/refresh-outline.svg"
@@ -76,6 +77,7 @@ QtObject {
         property var eyeOpen: ({ type: "svg", value: basePath + "/eye-open.svg" })
         property var eyeClosed: ({ type: "svg", value: basePath + "/eye-closed.svg" })
         property var screenshot: ({ type: "svg", value: basePath + "/screenshot.svg" })
+        property var settings: ({ type: "svg", value: settingsSvg })
     }
 
     function getVolumeIcon(volume, isMuted, isHeadphone) {
