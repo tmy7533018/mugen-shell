@@ -13,10 +13,12 @@ Item {
     required property var iconResolver
     required property var isAppRunning
     required property var modeManager
+    required property bool isFavorite
 
     signal launchApp(var app)
     signal resetAutoCloseTimer()
     signal entered()
+    signal toggleFavorite(string execKey)
 
     width: GridView.view ? GridView.view.cellWidth : 100
     height: GridView.view ? GridView.view.cellHeight : 100
@@ -231,10 +233,15 @@ Item {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
 
-            onClicked: {
+            onClicked: (mouse) => {
                 if (!delegateRoot.currentData) return
-                delegateRoot.launchApp(delegateRoot.currentData)
+                if (mouse.button === Qt.RightButton) {
+                    delegateRoot.toggleFavorite(delegateRoot.currentData.exec || "")
+                } else {
+                    delegateRoot.launchApp(delegateRoot.currentData)
+                }
             }
 
             onEntered: delegateRoot.entered()
@@ -242,6 +249,20 @@ Item {
             onPositionChanged: {
                 delegateRoot.resetAutoCloseTimer()
             }
+        }
+
+        Text {
+            id: favoriteStar
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.rightMargin: 6
+            anchors.topMargin: 6
+            text: "★"
+            font.pixelSize: 12
+            color: delegateRoot.theme ? delegateRoot.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 1.0)
+            visible: delegateRoot.isFavorite
+            opacity: 0.9
+            z: 2
         }
     }
 }

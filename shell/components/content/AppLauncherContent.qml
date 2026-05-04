@@ -578,6 +578,7 @@ FocusScope {
                         iconResolver: root.iconResolver
                         isAppRunning: root.isAppRunning
                         modeManager: root.modeManager
+                        isFavorite: root.isFavorite(delegateWrapper.wrapperModelData ? delegateWrapper.wrapperModelData.exec : "")
 
                         onLaunchApp: (app) => {
                             if (app && app.exec) {
@@ -588,6 +589,10 @@ FocusScope {
 
                         onResetAutoCloseTimer: () => {
                             modeManager.bump()
+                        }
+
+                        onToggleFavorite: (execKey) => {
+                            root.toggleFavorite(execKey)
                         }
 
                         onEntered: {
