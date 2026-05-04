@@ -96,6 +96,40 @@ FocusScope {
         }
     }
 
+    function fuzzyScore(target, query) {
+        if (query.length < 3) return 0
+        if (target.length < query.length) return 0
+
+        let qi = 0
+        let firstMatch = -1
+        let lastMatch = -1
+        let consecutive = 0
+        let maxConsecutive = 0
+        let boundaryBonus = 0
+
+        for (let ti = 0; ti < target.length && qi < query.length; ti++) {
+            if (target[ti] === query[qi]) {
+                if (firstMatch === -1) firstMatch = ti
+                lastMatch = ti
+                consecutive++
+                if (consecutive > maxConsecutive) maxConsecutive = consecutive
+                if (ti === 0 || /[\s\-_./]/.test(target[ti - 1])) {
+                    boundaryBonus += 5
+                }
+                qi++
+            } else {
+                consecutive = 0
+            }
+        }
+
+        if (qi < query.length) return 0
+
+        let span = lastMatch - firstMatch + 1
+        if (span > query.length * 3) return 0
+
+        return query.length * 10 + maxConsecutive * 5 + boundaryBonus - (span - query.length) * 2
+    }
+
     function scoreApp(app, search) {
         if (!app || !app.name) return 0
 
@@ -117,6 +151,9 @@ FocusScope {
                 base = 100
             } else if ((app.categories || "").toLowerCase().includes(search)) {
                 base = 50
+            } else {
+                let fz = fuzzyScore(nameLower, search)
+                if (fz > 0) base = Math.min(40, fz)
             }
         }
 
