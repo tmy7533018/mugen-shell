@@ -96,6 +96,12 @@ FocusScope {
         }
     }
 
+    function appAcronym(name) {
+        let words = name.split(/[\s\-_./]+/).filter(w => w.length > 0)
+        if (words.length < 2) return ""
+        return words.map(w => w[0]).join("")
+    }
+
     function fuzzyScore(target, query) {
         if (query.length < 3) return 0
         if (target.length < query.length) return 0
@@ -143,6 +149,8 @@ FocusScope {
             let nameIdx = nameLower.indexOf(search)
             if (nameIdx >= 0) {
                 base = 300 - Math.min(nameIdx, 100)
+            } else if (appAcronym(nameLower) === search) {
+                base = 250
             } else if ((app.exec || "").toLowerCase().includes(search)) {
                 base = 150
             } else if ((app.wmClass || "").toLowerCase().includes(search)) {
