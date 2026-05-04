@@ -211,6 +211,14 @@ Item {
         if (modeManager.isMode("notification")) modeManager.bump()
     }
 
+    function toggleNotificationsAndPreview() {
+        let wasOff = !notificationManager.notificationsEnabled
+        notificationManager.notificationsEnabled = !notificationManager.notificationsEnabled
+        if (wasOff && notificationManager.notificationsEnabled) {
+            notificationManager.playSound()
+        }
+    }
+
 
     MouseArea {
         anchors.fill: parent
@@ -245,7 +253,7 @@ Item {
             }
 
             if (event.key === Qt.Key_D && !(event.modifiers & Qt.ControlModifier)) {
-                notificationManager.notificationsEnabled = !notificationManager.notificationsEnabled
+                root.toggleNotificationsAndPreview()
                 event.accepted = true
                 return
             }
@@ -425,7 +433,7 @@ Item {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            notificationManager.notificationsEnabled = !notificationManager.notificationsEnabled
+                            root.toggleNotificationsAndPreview()
                             root.resetAutoCloseTimer()
                         }
                     }
