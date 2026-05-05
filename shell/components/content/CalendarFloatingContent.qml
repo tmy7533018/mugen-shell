@@ -127,6 +127,20 @@ Item {
     property real gridOpacity: 1.0
     property real gridShift: 0
 
+    property real selectedHeaderOpacity: 1.0
+    property real selectedHeaderShift: 0
+
+    SequentialAnimation {
+        id: selectedFlip
+        NumberAnimation { target: root; property: "selectedHeaderOpacity"; to: 0.0; duration: 120; easing.type: Easing.OutCubic }
+        ParallelAnimation {
+            NumberAnimation { target: root; property: "selectedHeaderShift"; from: -6; to: 0; duration: 260; easing.type: Easing.OutCubic }
+            NumberAnimation { target: root; property: "selectedHeaderOpacity"; to: 1.0; duration: 260; easing.type: Easing.OutCubic }
+        }
+    }
+
+    onSelectedDateChanged: selectedFlip.restart()
+
     SequentialAnimation {
         id: monthFlip
         property int targetMonth: 0
@@ -683,6 +697,8 @@ Item {
                     font.weight: Font.Medium
                     font.family: "M PLUS 2"
                     Layout.alignment: Qt.AlignHCenter
+                    opacity: root.selectedHeaderOpacity
+                    transform: Translate { y: root.selectedHeaderShift }
                 }
 
                 Flickable {
