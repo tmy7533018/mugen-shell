@@ -405,7 +405,7 @@ Item {
                     spacing: 0
 
                     Repeater {
-                        model: ["日", "月", "火", "水", "木", "金", "土"]
+                        model: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
                         delegate: Item {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 24
