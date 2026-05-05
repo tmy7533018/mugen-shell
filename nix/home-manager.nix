@@ -105,6 +105,11 @@ in
       };
       Service = {
         ExecStart = "${cfg.ai.package}/bin/mugen-ai serve";
+        # Load API keys (GEMINI_API_KEY, ANTHROPIC_API_KEY, ...) from the
+        # user's mugen-ai config dir if they have written one. The leading
+        # dash makes the file optional so the service still starts when
+        # the user only uses local Ollama models.
+        EnvironmentFile = "-%h/.config/mugen-ai/.env";
         Restart = "on-failure";
         RestartSec = 2;
       };
