@@ -199,7 +199,7 @@ Item {
 
         RowLayout {
             anchors.fill: parent
-            anchors.margins: 20
+            anchors.margins: 28
             spacing: 20
 
             ColumnLayout {
@@ -332,6 +332,13 @@ Item {
                     }
                 }
 
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    color: theme ? theme.textPrimary : Qt.rgba(1, 1, 1, 1)
+                    opacity: 0.08
+                }
+
                 GridLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -429,6 +436,64 @@ Item {
                                 }
                             }
                         }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 1
+                    Layout.topMargin: 8
+                    color: theme ? theme.textPrimary : Qt.rgba(1, 1, 1, 1)
+                    opacity: 0.08
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 22
+
+                    Text {
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: {
+                            const y = root.currentYear
+                            const m = root.currentMonth
+                            const prefix = y + "-" + (m < 10 ? "0" : "") + m + "-"
+                            let count = 0
+                            for (let key in root.eventsByDate) {
+                                if (key.indexOf(prefix) === 0) count += root.eventsByDate[key].length
+                            }
+                            return count + " event" + (count === 1 ? "" : "s") + " this month"
+                        }
+                        color: theme ? theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.55)
+                        font.pixelSize: 11
+                        font.family: "M PLUS 2"
+                        font.letterSpacing: 0.3
+                    }
+
+                    Text {
+                        id: floatingTodayLabel
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Qt.formatDate(new Date(), "ddd, MMM d, yyyy")
+                        color: floatingTodayHover.containsMouse
+                            ? (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.95))
+                            : (theme ? theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.55))
+                        font.pixelSize: 11
+                        font.family: "M PLUS 2"
+                        font.letterSpacing: 0.3
+
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                    }
+
+                    MouseArea {
+                        id: floatingTodayHover
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: floatingTodayLabel.implicitWidth + 8
+                        height: floatingTodayLabel.implicitHeight + 8
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.jumpToToday()
                     }
                 }
             }

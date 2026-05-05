@@ -13,7 +13,7 @@ Item {
     property var theme
 
     readonly property var requiredBarSize: ({
-        "height": modeManager.scale(400),
+        "height": modeManager.scale(440),
         "leftMargin": modeManager.scale(650),
         "rightMargin": modeManager.scale(650),
         "topMargin": modeManager.scale(6),
@@ -338,7 +338,7 @@ Item {
             Item {
                 id: calendarWrapper
                 Layout.preferredWidth: modeManager.scale(480)
-                Layout.preferredHeight: modeManager.scale(360)
+                Layout.preferredHeight: modeManager.scale(400)
                 Layout.alignment: Qt.AlignHCenter
 
 
@@ -503,6 +503,14 @@ Item {
                         }
                     }
 
+                    Rectangle {
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.preferredWidth: modeManager.scale(48 * 7 + 16 * 6)
+                        Layout.preferredHeight: 1
+                        color: theme ? theme.textPrimary : Qt.rgba(1, 1, 1, 1)
+                        opacity: 0.08
+                    }
+
                     Grid {
                         id: calendarGrid
                         Layout.alignment: Qt.AlignHCenter
@@ -625,8 +633,8 @@ Item {
                                 Item {
                                     id: highlightLayer
                                     anchors.centerIn: parent
-                                    width: modeManager.scale(56)
-                                    height: modeManager.scale(56)
+                                    width: modeManager.scale(40)
+                                    height: modeManager.scale(40)
 
                                     property bool shouldShow: isToday || isSelected
                                     property color highlightColor: isToday
@@ -646,107 +654,38 @@ Item {
                                         }
                                     }
 
-                                    Repeater {
-                                        model: 4
+                                    Rectangle {
+                                        id: halo
+                                        anchors.centerIn: parent
+                                        width: modeManager.scale(28)
+                                        height: width
+                                        radius: width / 2
+                                        color: Qt.rgba(highlightLayer.highlightColor.r, highlightLayer.highlightColor.g, highlightLayer.highlightColor.b, 0.18)
+                                        border.width: 0
 
-                                        Rectangle {
-                                            id: blob
-                                            x: parent.width / 2 - width / 2
-                                            y: parent.height / 2 - height / 2
-                                            width: modeManager.scale(40 + index * 3)
-                                            height: modeManager.scale(40 + index * 3)
-                                            radius: modeManager.scale(40 + index * 3) / 2
-                                            color: Qt.rgba(highlightLayer.highlightColor.r, highlightLayer.highlightColor.g, highlightLayer.highlightColor.b, 0.12 - index * 0.025)
-                                            border.width: 0
+                                        SequentialAnimation on scale {
+                                            loops: Animation.Infinite
+                                            running: highlightLayer.shouldShow
 
-                                            property real randomAngle: Math.random() * Math.PI * 2
-                                            property real randomDistance: modeManager.scale(2 + Math.random() * 4)
-                                            property real randomDuration: 1200 + Math.random() * 1200
-
-                                            property real floatX: 0
-                                            property real floatY: 0
-
-                                            SequentialAnimation on floatX {
-                                                loops: Animation.Infinite
-                                                running: parent.shouldShow
-
-                                                PauseAnimation { duration: index * 300 }
-                                                NumberAnimation {
-                                                    to: Math.cos(blob.randomAngle) * blob.randomDistance
-                                                    duration: blob.randomDuration
-                                                    easing.type: Easing.InOutSine
-                                                }
-                                                NumberAnimation {
-                                                    to: -Math.cos(blob.randomAngle) * blob.randomDistance
-                                                    duration: blob.randomDuration
-                                                    easing.type: Easing.InOutSine
-                                                }
+                                            NumberAnimation {
+                                                to: 1.06
+                                                duration: 1800
+                                                easing.type: Easing.InOutSine
                                             }
-
-                                            SequentialAnimation on floatY {
-                                                loops: Animation.Infinite
-                                                running: parent.shouldShow
-
-                                                PauseAnimation { duration: index * 500 }
-                                                NumberAnimation {
-                                                    to: Math.sin(blob.randomAngle) * blob.randomDistance
-                                                    duration: blob.randomDuration * 1.1
-                                                    easing.type: Easing.InOutSine
-                                                }
-                                                NumberAnimation {
-                                                    to: -Math.sin(blob.randomAngle) * blob.randomDistance
-                                                    duration: blob.randomDuration * 1.1
-                                                    easing.type: Easing.InOutSine
-                                                }
+                                            NumberAnimation {
+                                                to: 0.96
+                                                duration: 1800
+                                                easing.type: Easing.InOutSine
                                             }
+                                        }
 
-                                            SequentialAnimation on scale {
-                                                loops: Animation.Infinite
-                                                running: parent.shouldShow
-
-                                                PauseAnimation { duration: index * 250 }
-                                                NumberAnimation {
-                                                    to: 1.03 + index * 0.01
-                                                    duration: 1400 + index * 300
-                                                    easing.type: Easing.InOutSine
-                                                }
-                                                NumberAnimation {
-                                                    to: 0.97
-                                                    duration: 1400 + index * 300
-                                                    easing.type: Easing.InOutSine
-                                                }
-                                            }
-
-                                            SequentialAnimation on opacity {
-                                                loops: Animation.Infinite
-                                                running: parent.shouldShow
-
-                                                PauseAnimation { duration: index * 400 }
-                                                NumberAnimation {
-                                                    to: 0.8 - index * 0.15
-                                                    duration: 1800 + index * 200
-                                                    easing.type: Easing.InOutSine
-                                                }
-                                                NumberAnimation {
-                                                    to: 0.5 - index * 0.1
-                                                    duration: 1800 + index * 200
-                                                    easing.type: Easing.InOutSine
-                                                }
-                                            }
-
-                                            layer.enabled: true
-                                            layer.effect: Glow {
-                                                samples: 24 + index * 4
-                                                radius: modeManager.scale(16 + index * 4)
-                                                spread: 0.7 - index * 0.1
-                                                color: highlightLayer.highlightColor
-                                                transparentBorder: true
-                                            }
-
-                                            transform: Translate {
-                                                x: blob.floatX
-                                                y: blob.floatY
-                                            }
+                                        layer.enabled: true
+                                        layer.effect: Glow {
+                                            samples: 24
+                                            radius: modeManager.scale(14)
+                                            spread: 0.45
+                                            color: highlightLayer.highlightColor
+                                            transparentBorder: true
                                         }
                                     }
                                 }
@@ -792,7 +731,7 @@ Item {
 
                                 Rectangle {
                                     anchors.bottom: parent.bottom
-                                    anchors.bottomMargin: -modeManager.scale(2)
+                                    anchors.bottomMargin: modeManager.scale(1)
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     width: modeManager.scale(4)
                                     height: modeManager.scale(4)
@@ -813,6 +752,66 @@ Item {
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.preferredWidth: modeManager.scale(48 * 7 + 16 * 6)
+                        Layout.preferredHeight: 1
+                        Layout.topMargin: modeManager.scale(8)
+                        color: theme ? theme.textPrimary : Qt.rgba(1, 1, 1, 1)
+                        opacity: 0.08
+                    }
+
+                    Item {
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.preferredWidth: modeManager.scale(48 * 7 + 16 * 6)
+                        Layout.preferredHeight: modeManager.scale(20)
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: {
+                                const y = monthHeader.currentYear
+                                const m = monthHeader.currentMonth
+                                const prefix = y + "-" + (m < 10 ? "0" : "") + m + "-"
+                                let count = 0
+                                for (let key in root.eventsByDate) {
+                                    if (key.indexOf(prefix) === 0) count += root.eventsByDate[key].length
+                                }
+                                return count + " event" + (count === 1 ? "" : "s") + " this month"
+                            }
+                            color: theme ? theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.55)
+                            font.pixelSize: modeManager.scale(11)
+                            font.family: "M PLUS 2"
+                            font.letterSpacing: 0.3
+                        }
+
+                        Text {
+                            id: todayLabel
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: Qt.formatDate(new Date(), "ddd, MMM d, yyyy")
+                            color: todayHover.containsMouse
+                                ? (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.95))
+                                : (theme ? theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.55))
+                            font.pixelSize: modeManager.scale(11)
+                            font.family: "M PLUS 2"
+                            font.letterSpacing: 0.3
+
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                        }
+
+                        MouseArea {
+                            id: todayHover
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: todayLabel.implicitWidth + modeManager.scale(8)
+                            height: todayLabel.implicitHeight + modeManager.scale(8)
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: calendarGrid.jumpToToday()
                         }
                     }
                 }
