@@ -106,6 +106,17 @@ QtObject {
         }
     }
     
+    property FileView themeModeWatcher: FileView {
+        path: palette.themeModeFile
+        watchChanges: true
+        preload: false
+        printErrors: false
+
+        onFileChanged: {
+            palette.loadThemeMode()
+        }
+    }
+
     property Process readThemeModeProcess: Process {
         command: ["cat", palette.themeModeFile]
         running: false

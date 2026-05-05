@@ -24,7 +24,11 @@ QtObject {
     property real animationDurationMultiplier: 1.0
     property string notificationSound: "None"  // filename in assets/sounds/, or "None"
     property int lockTimerMinutes: 10  // hypridle screen-lock idle timeout in minutes
-    
+
+    // Suppress save while we are applying values that just came in from disk
+    // (either initial load or an external write detected by the file watcher).
+    property bool _applyingExternal: false
+
     signal settingsChanged()
     
     Component.onCompleted: {
@@ -37,6 +41,8 @@ QtObject {
     }
     
     function saveSettings() {
+        if (_applyingExternal) return
+
         let settings = {
             "autoCloseTimer": {
                 "interval": autoCloseTimerInterval
@@ -79,7 +85,9 @@ QtObject {
     function applySettingsFromJson(jsonString) {
         try {
             let settings = JSON.parse(jsonString)
-            
+
+            _applyingExternal = true
+
             if (settings.autoCloseTimer) {
                 if (settings.autoCloseTimer.interval !== undefined) {
                     autoCloseTimerInterval = settings.autoCloseTimer.interval
@@ -124,9 +132,12 @@ QtObject {
             }
 
             updateAnimationMultiplier()
-            
+
+            _applyingExternal = false
+
             settingsChanged()
         } catch (e) {
+            _applyingExternal = false
             console.error("Failed to parse settings JSON:", e)
         }
     }
@@ -149,7 +160,21 @@ QtObject {
                 animationDurationMultiplier = 1.0
         }
     }
-    
+
+    // Watch the settings file for external writes (e.g. from the floating
+    // settings window in a separate Quickshell process). When it changes,
+    // re-read and re-apply so every process stays in sync.
+    property FileView settingsWatcher: FileView {
+        path: settingsManager.userSettingsFile
+        watchChanges: true
+        preload: false
+        printErrors: false
+
+        onFileChanged: {
+            settingsManager.loadSettings()
+        }
+    }
+
     property Process readSettingsProcess: Process {
         command: []
         running: false
