@@ -218,6 +218,8 @@ For terminal use: `mugen-ai chat`.
 | `Super + H` | WiFi panel |
 | `Super + J` | Bluetooth panel |
 | `Super + ,` | Settings |
+| `Super + Shift + T` | Countdown timer |
+| `Super + /` | Keyboard shortcuts reference |
 | `Super + Shift + I` | Toggle idle inhibitor |
 | `Super + Shift + B` | Pick blur preset (rofi) |
 
@@ -268,14 +270,17 @@ Panel keybinds dispatch through `shell/scripts/mugen-shell-ipc.sh` over a Unix s
 - **PowerMenuContent** - Power menu
 - **ScreenshotGalleryContent** - Screenshot gallery
 - **SettingsContent** - Settings panel (rows in `settings/`)
-- **CalendarContent** - Calendar display
+- **CalendarContent** - Calendar display (SQLite-backed events, inline modal)
+- **CalendarFloatingContent** - Standalone two-pane Calendar window (detach target)
+- **TimerContent** - Countdown timer UI (idle / running, ring + presets, keyboard control)
+- **SettingsFloatingContent** - Standalone scrolling Settings window (detach target)
 - **AiAssistantContent** - AI chat panel
 
 ### Managers (`shell/components/managers/`)
 MusicPlayerManager, NotificationManager, ClipboardManager, WiFiManager, BluetoothManager, AudioManager, AudioLevel, CavaManager, MicCavaManager, BatteryManager, WallpaperManager, ScreenshotManager, IdleInhibitorManager, ImeStatus.
 
 ### Core libraries (`shell/lib/`)
-ModeManager, SettingsManager, Colors, Typography, Animations, IconProvider, IconResolver.
+ModeManager, SettingsManager, TimerManager, Colors, Typography, Animations, IconProvider, IconResolver.
 
 ---
 
