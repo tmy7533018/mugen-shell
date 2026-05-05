@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import Quickshell
 
 Item {
     id: root
@@ -24,6 +23,7 @@ Item {
     }
 
     property string inputBuffer: ""
+    readonly property bool hasInput: parseInputSeconds() > 0
 
     function parseInputSeconds() {
         let s = inputBuffer.trim()

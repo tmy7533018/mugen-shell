@@ -64,7 +64,10 @@ Configuration, the HTTP API, and the Gemini API key step live in [SETUP.md → C
 - Music player integration (playerctl / MPRIS) with YouTube thumbnail fallback and a seekable glowing progress slider
 - Cava audio visualizer
 - Notification center
-- Calendar widget
+- Calendar with SQLite-backed events (add / edit / inline modal, weekday-tinted grid, today indicator, event dots, monthly count, jump-to-today)
+- Countdown Timer (`Super + Shift + T`) with preset durations, free-form M:SS input, full keyboard control, glowing progress ring, configurable completion sound, and a live remaining-time pill in the bar
+- Configurable bar date format (Qt date tokens, e.g. `ddd M/d`, `yyyy-MM-dd`)
+- Detach panels — Calendar and Settings can open as standalone floating windows (state synced with the bar via JSON / SQLite + FileView watchers)
 - Clipboard history (`Super + V`) with item limit
 - WiFi / Bluetooth / IME management
 - Speaker / microphone control sharing the volume panel (`Super + U`) with a swap toggle
@@ -75,7 +78,7 @@ Configuration, the HTTP API, and the Gemini API key step live in [SETUP.md → C
 - Screenshot capture with clipboard copy (`Super + F12`)
 - Screenshot gallery
 - Power menu
-- In-shell settings panel
+- In-shell settings panel with configurable notification + timer sounds, theme, blur, animations, lock-timer, and date format
 
 ---
 
@@ -94,9 +97,14 @@ Most-used panels:
 | `Super + V` | Clipboard history |
 | `Super + T` | Notification center |
 | `Super + A` | AI assistant |
+| `Super + C` | Calendar |
+| `Super + Shift + T` | Timer |
+| `Super + H` | WiFi |
+| `Super + J` | Bluetooth |
 | `Super + S` | Screenshot gallery |
 | `Super + L` | Power menu |
 | `Super + ,` | Settings |
+| `Super + /` | Keyboard shortcuts reference |
 
 Right-click the power menu icon to jump straight into settings. Click the chevron next to the notification icon to expand the system tray. Full keybind list lives in [SETUP.md](SETUP.md).
 
