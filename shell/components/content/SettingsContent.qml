@@ -356,15 +356,22 @@ Item {
                     Layout.preferredWidth: modeManager.scale(22)
                     Layout.preferredHeight: modeManager.scale(22)
 
-                    Text {
+                    Common.GlowSvgIcon {
+                        id: detachIcon
                         anchors.centerIn: parent
-                        text: "↗"
+                        width: modeManager.scale(15)
+                        height: modeManager.scale(15)
+                        source: Quickshell.shellDir + "/assets/icons/external-link.svg"
                         color: detachHover.containsMouse
                             ? (theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
                             : (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.7))
-                        opacity: detachHover.containsMouse ? 1 : 0.7
-                        font.pixelSize: modeManager.scale(14)
-                        font.family: "M PLUS 2"
+                        opacity: detachHover.containsMouse ? 1 : 0.75
+
+                        enableGlow: detachHover.containsMouse
+                        glowColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.5) : Qt.rgba(0.65, 0.55, 0.85, 0.5)
+                        glowSamples: 16
+                        glowRadius: modeManager.scale(8)
+                        glowSpread: 0.4
 
                         Behavior on color { ColorAnimation { duration: 150 } }
                         Behavior on opacity { NumberAnimation { duration: 150 } }
