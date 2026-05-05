@@ -410,6 +410,7 @@ PanelWindow {
             musicPlayerManager: musicPlayerManager
             cavaManager: cavaManager
             settingsManager: settingsManager
+            timerManager: timerManager
         }
 
         Item { Layout.fillWidth: true }

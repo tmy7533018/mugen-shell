@@ -21,6 +21,7 @@ RowLayout {
     property var musicPlayerManager
     property var cavaManager
     property var settingsManager
+    property var timerManager
 
     function scaled(val) {
         if (modeManager) return modeManager.scale(val)
@@ -143,6 +144,61 @@ RowLayout {
                         root.modeManager.switchMode("calendar")
                     }
                 }
+            }
+        }
+    }
+
+    Item {
+        id: timerPill
+        Layout.alignment: Qt.AlignVCenter
+        Layout.leftMargin: scaled(8)
+        Layout.preferredWidth: visible ? pillText.implicitWidth + scaled(22) : 0
+        Layout.preferredHeight: scaled(26)
+        visible: root.timerManager && root.timerManager.running
+
+        function _formatRemaining(sec) {
+            if (sec < 0) sec = 0
+            const h = Math.floor(sec / 3600)
+            const m = Math.floor((sec % 3600) / 60)
+            const s = sec % 60
+            const pad = n => n < 10 ? "0" + n : "" + n
+            if (h > 0) return h + ":" + pad(m) + ":" + pad(s)
+            return pad(m) + ":" + pad(s)
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: scaled(13)
+            property color accent: root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1)
+            color: pillHover.containsMouse
+                ? Qt.rgba(accent.r, accent.g, accent.b, 0.30)
+                : Qt.rgba(accent.r, accent.g, accent.b, 0.18)
+            border.width: 1
+            border.color: Qt.rgba(accent.r, accent.g, accent.b, root.timerManager && root.timerManager.paused ? 0.30 : 0.50)
+            opacity: root.timerManager && root.timerManager.paused ? 0.65 : 1.0
+
+            Behavior on color { ColorAnimation { duration: 150 } }
+            Behavior on opacity { NumberAnimation { duration: 200 } }
+        }
+
+        Text {
+            id: pillText
+            anchors.centerIn: parent
+            text: root.timerManager ? timerPill._formatRemaining(root.timerManager.remainingSec) : "00:00"
+            color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
+            font.pixelSize: root.typo ? scaled(root.typo.clockStyle.size * 0.78) : scaled(11)
+            font.weight: Font.Medium
+            font.family: root.typo ? root.typo.clockStyle.family : "M PLUS 2"
+            font.letterSpacing: 0.5
+        }
+
+        MouseArea {
+            id: pillHover
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                if (root.modeManager) root.modeManager.switchMode("timer")
             }
         }
     }

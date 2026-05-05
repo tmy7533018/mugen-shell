@@ -1,5 +1,4 @@
 import QtQuick
-import Qt5Compat.GraphicalEffects
 
 Text {
     id: dateText
@@ -45,22 +44,6 @@ Text {
 
     renderType: Text.QtRendering
     smooth: true
-
-    layer.enabled: true
-    layer.effect: Glow {
-        samples: 20
-        radius: 8
-        spread: 0.4
-        color: dateText.isHovered ? dateText.glowColor : Qt.rgba(dateText.glowColor.r, dateText.glowColor.g, dateText.glowColor.b, 0)
-        transparentBorder: true
-
-        Behavior on color {
-            ColorAnimation {
-                duration: 300
-                easing.type: Easing.OutCubic
-            }
-        }
-    }
 
     function update() {
         const now = new Date()
