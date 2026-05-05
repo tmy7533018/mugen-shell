@@ -16,6 +16,7 @@ Item {
 
     signal applyPreset(string name)
     signal applySound(string name)
+    signal applyTimerSound(string name)
 
     Rectangle {
         anchors.fill: parent
@@ -120,6 +121,7 @@ Item {
                             case "battery":           return batterySection
                             case "animation":         return animationSection
                             case "notificationSound": return notificationSoundSection
+                            case "timerSound":        return timerSoundSection
                             case "lockTimer":         return lockTimerSection
                             case "dateFormat":        return dateFormatSection
                             case "shortcuts":         return shortcutsSection
@@ -136,6 +138,7 @@ Item {
                     settingsModel.append({ "type": "battery" })
                     settingsModel.append({ "type": "animation" })
                     settingsModel.append({ "type": "notificationSound" })
+                    settingsModel.append({ "type": "timerSound" })
                     settingsModel.append({ "type": "lockTimer" })
                     settingsModel.append({ "type": "dateFormat" })
                     settingsModel.append({ "type": "shortcuts" })
@@ -182,6 +185,13 @@ Item {
         settingsManager: root.settingsManager
         sounds: root.notificationSounds
         onApplySound: name => root.applySound(name)
+    }}
+    Component { id: timerSoundSection; Settings.TimerSoundSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+        sounds: root.notificationSounds
+        onApplySound: name => root.applyTimerSound(name)
     }}
     Component { id: lockTimerSection; Settings.LockTimerSection {
         theme: root.theme

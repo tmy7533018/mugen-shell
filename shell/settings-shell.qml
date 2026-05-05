@@ -76,6 +76,20 @@ ShellRoot {
         }
     }
 
+    function applyTimerSound(name) {
+        if (settingsManager) {
+            settingsManager.timerSound = name
+            settingsManager.saveSettings()
+        }
+        if (name !== "None") {
+            previewSoundProcess.command = [
+                "paplay",
+                root.soundsDir + "/" + name
+            ]
+            previewSoundProcess.running = true
+        }
+    }
+
     function applyLockTimer(minutes) {
         applyLockTimerProcess.command = [
             "bash",
@@ -187,6 +201,7 @@ ShellRoot {
 
             onApplyPreset: name => root.applyBlurPreset(name)
             onApplySound: name => root.applyNotificationSound(name)
+            onApplyTimerSound: name => root.applyTimerSound(name)
         }
     }
 

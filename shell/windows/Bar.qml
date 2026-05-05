@@ -130,6 +130,29 @@ PanelWindow {
 
     Theme.SettingsManager { id: settingsManager }
 
+    readonly property string soundsDir: {
+        let xdg = Quickshell.env("XDG_DATA_HOME")
+        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/share"
+        return xdg + "/mugen-shell/sounds"
+    }
+
+    Theme.TimerManager {
+        id: timerManager
+
+        onCompleted: {
+            const name = settingsManager ? settingsManager.timerSound : "None"
+            if (!name || name === "None" || name === "") return
+            timerSoundProcess.command = ["paplay", barWindow.soundsDir + "/" + name]
+            timerSoundProcess.running = true
+        }
+    }
+
+    Process {
+        id: timerSoundProcess
+        command: []
+        running: false
+    }
+
     Managers.AudioManager { id: audioManager }
 
     Managers.MusicPlayerManager { id: musicPlayerManager }
@@ -448,6 +471,23 @@ PanelWindow {
             visible: calendarLoader.modeManagerRef.isMode("calendar")
             modeManager: calendarLoader.modeManagerRef
             theme: calendarLoader.themeRef
+        }
+    }
+
+    Loader {
+        id: timerLoader
+        anchors.fill: parent
+        z: 2
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var timerManagerRef: timerManager
+        active: modeManagerRef.isMode("timer")
+        sourceComponent: Content.TimerContent {
+            anchors.fill: parent
+            visible: timerLoader.modeManagerRef.isMode("timer")
+            modeManager: timerLoader.modeManagerRef
+            theme: timerLoader.themeRef
+            timerManager: timerLoader.timerManagerRef
         }
     }
 

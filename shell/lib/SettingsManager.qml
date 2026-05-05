@@ -23,6 +23,7 @@ QtObject {
     property string animationSpeed: "normal"  // "slow", "normal", "fast", "instant"
     property real animationDurationMultiplier: 1.0
     property string notificationSound: "None"  // filename in assets/sounds/, or "None"
+    property string timerSound: "None"  // filename in assets/sounds/, played when a countdown finishes
     property int lockTimerMinutes: 10  // hypridle screen-lock idle timeout in minutes
     property string dateFormat: "M/d"  // Qt date tokens: d, dd, ddd, dddd, M, MM, MMM, MMMM, yy, yyyy
 
@@ -60,6 +61,9 @@ QtObject {
             },
             "notification": {
                 "sound": notificationSound
+            },
+            "timer": {
+                "sound": timerSound
             },
             "lockTimer": {
                 "minutes": lockTimerMinutes
@@ -126,6 +130,12 @@ QtObject {
             if (settings.notification) {
                 if (settings.notification.sound !== undefined) {
                     notificationSound = settings.notification.sound
+                }
+            }
+
+            if (settings.timer) {
+                if (settings.timer.sound !== undefined) {
+                    timerSound = settings.timer.sound
                 }
             }
 

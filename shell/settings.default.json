@@ -15,6 +15,9 @@
   "notification": {
     "sound": "None"
   },
+  "timer": {
+    "sound": "None"
+  },
   "lockTimer": {
     "minutes": 10
   },

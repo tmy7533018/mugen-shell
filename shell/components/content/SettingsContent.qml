@@ -76,6 +76,21 @@ Item {
         root.resetAutoCloseTimer()
     }
 
+    function applyTimerSound(name) {
+        if (settingsManager) {
+            settingsManager.timerSound = name
+            settingsManager.saveSettings()
+        }
+        if (name !== "None") {
+            previewSoundProcess.command = [
+                "paplay",
+                soundsDir + "/" + name
+            ]
+            previewSoundProcess.running = true
+        }
+        root.resetAutoCloseTimer()
+    }
+
     function applyLockTimer(minutes) {
         applyLockTimerProcess.command = [
             "bash",
@@ -438,6 +453,7 @@ Item {
                             case "battery": return batterySection
                             case "animation": return animationSection
                             case "notificationSound": return notificationSoundSection
+                            case "timerSound": return timerSoundSection
                             case "lockTimer": return lockTimerSection
                             case "dateFormat": return dateFormatSection
                             case "aiConfig": return aiConfigSection
@@ -455,6 +471,7 @@ Item {
                     settingsModel.append({ "type": "battery" })
                     settingsModel.append({ "type": "animation" })
                     settingsModel.append({ "type": "notificationSound" })
+                    settingsModel.append({ "type": "timerSound" })
                     settingsModel.append({ "type": "lockTimer" })
                     settingsModel.append({ "type": "dateFormat" })
                     settingsModel.append({ "type": "aiConfig" })
@@ -528,6 +545,17 @@ Item {
             settingsManager: root.settingsManager
             sounds: root.notificationSounds
             onApplySound: name => root.applyNotificationSound(name)
+        }
+    }
+
+    Component {
+        id: timerSoundSection
+        Settings.TimerSoundSection {
+            theme: root.theme
+            modeManager: root.modeManager
+            settingsManager: root.settingsManager
+            sounds: root.notificationSounds
+            onApplySound: name => root.applyTimerSound(name)
         }
     }
 
