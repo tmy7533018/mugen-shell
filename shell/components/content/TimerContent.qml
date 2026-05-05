@@ -212,9 +212,20 @@ Item {
 
         // ────────────────────────── Idle layout ──────────────────────────
         ColumnLayout {
+            id: idleLayout
             anchors.centerIn: parent
             spacing: modeManager.scale(14)
-            visible: root.visualState === "idle"
+            opacity: root.visualState === "idle" ? 1.0 : 0.0
+            visible: opacity > 0.01
+
+            transform: Translate {
+                y: idleLayout.opacity > 0.5 ? 0 : -modeManager.scale(6)
+                Behavior on y { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
+            }
+
+            Behavior on opacity {
+                NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+            }
 
             RowLayout {
                 Layout.alignment: Qt.AlignHCenter
@@ -411,9 +422,20 @@ Item {
 
         // ────────────────────────── Running layout ──────────────────────────
         RowLayout {
+            id: runningLayout
             anchors.centerIn: parent
             spacing: modeManager.scale(24)
-            visible: root.visualState === "running"
+            opacity: root.visualState === "running" ? 1.0 : 0.0
+            visible: opacity > 0.01
+
+            transform: Translate {
+                y: runningLayout.opacity > 0.5 ? 0 : modeManager.scale(6)
+                Behavior on y { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
+            }
+
+            Behavior on opacity {
+                NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+            }
 
             Item {
                 Layout.preferredWidth: modeManager.scale(116)
