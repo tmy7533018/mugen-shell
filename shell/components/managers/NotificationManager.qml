@@ -38,7 +38,10 @@ QtObject {
         root.notifications = newNotifications
         root.unreadCount++
         root.notificationReceived(newNotif)
-        playSound()
+        // Skip the notification chime for events that come from internal
+        // mugen-shell triggers — they own their own sound (e.g. the timer
+        // already plays the configured timerSound on completion).
+        if (n.appName !== "Mugen Timer") playSound()
     }
 
     function playSound() {
