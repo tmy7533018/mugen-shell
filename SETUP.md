@@ -212,6 +212,7 @@ For terminal use: `mugen-ai chat`.
 | `Super + M` | Music player |
 | `Super + T` | Notification center |
 | `Super + A` | AI assistant |
+| `Super + Shift + A` | AI assistant (floating window) |
 | `Super + C` | Calendar |
 | `Super + S` | Screenshot gallery |
 | `Super + U` | Volume / microphone control |

@@ -28,6 +28,7 @@ Item {
                 { keys: "Super+L", desc: "Power menu" },
                 { keys: "Super+,", desc: "Settings" },
                 { keys: "Super+Shift+T", desc: "Timer" },
+                { keys: "Super+Shift+A", desc: "AI assistant (floating window)" },
                 { keys: "Super+/", desc: "This shortcuts panel" },
                 { keys: "Super+Return", desc: "Terminal" },
                 { keys: "Super+B", desc: "Browser" },

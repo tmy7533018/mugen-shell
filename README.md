@@ -33,12 +33,13 @@ For directory layout, install paths (Nix flake home-manager module or manual `ma
 
 https://github.com/user-attachments/assets/6fb5bf14-65cd-43af-b2a2-e6d54dd4c409
 
-AI chat panel (`Super + A`) powered by **mugen-ai** — a Go server bundled in this repo under [`ai/`](ai/), supporting local [Ollama](https://ollama.com) models and Google Gemini.
+AI chat panel (`Super + A` for the bar version, `Super + Shift + A` for a dedicated floating window) powered by **mugen-ai** — a Go server bundled in this repo under [`ai/`](ai/), supporting local [Ollama](https://ollama.com) models and Google Gemini.
 
 Built and enabled automatically on either install path (Nix flake or `make install` — see [SETUP.md](SETUP.md)).
 
 - Streaming SSE responses with stop button
 - Runtime model switching from the UI
+- Dedicated floating window with a dream-styled UI (cosmic gradient, drifting particles, ambient orb that travels from the centre to follow the latest AI reply)
 - Welcome screen with suggestion chips
 - Multiline input (Shift + Enter)
 - Copy button per message
@@ -97,6 +98,7 @@ Most-used panels:
 | `Super + V` | Clipboard history |
 | `Super + T` | Notification center |
 | `Super + A` | AI assistant |
+| `Super + Shift + A` | AI assistant (floating window) |
 | `Super + C` | Calendar |
 | `Super + Shift + T` | Timer |
 | `Super + H` | WiFi |
