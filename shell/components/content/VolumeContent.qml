@@ -219,7 +219,7 @@ Item {
         // 0% (or muted) → 80px (small), 1% jumps to 120px then scales up to 240px at 100%
         property real blobSize: (root.currentMuted || root.currentVolume === 0)
             ? modeManager.scale(80)
-            : modeManager.scale(120 + (Math.min(100, root.currentVolume) - 1) * 1.0)
+            : modeManager.scale(120 + (Math.min(100, root.currentVolume) - 1) * 0.9)
 
         Behavior on blobSize {
             NumberAnimation {
