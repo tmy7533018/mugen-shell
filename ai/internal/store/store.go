@@ -21,6 +21,7 @@ const (
 type Conversation struct {
 	ID        int64  `json:"id"`
 	Title     string `json:"title"`
+	Model     string `json:"model"`
 	CreatedAt int64  `json:"created_at"`
 	UpdatedAt int64  `json:"updated_at"`
 }
@@ -58,6 +59,7 @@ func (s *Store) migrate() error {
 		`CREATE TABLE IF NOT EXISTS conversations (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			title TEXT NOT NULL DEFAULT '',
+			model TEXT NOT NULL DEFAULT '',
 			created_at INTEGER NOT NULL,
 			updated_at INTEGER NOT NULL
 		)`,
@@ -79,13 +81,42 @@ func (s *Store) migrate() error {
 			return err
 		}
 	}
+	// Backfill: older databases were created before the model column existed.
+	if err := s.ensureColumn("conversations", "model", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (s *Store) ensureColumn(table, column, decl string) error {
+	rows, err := s.db.Query(fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return err
+		}
+		if name == column {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	_, err = s.db.Exec(fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, decl))
+	return err
 }
 
 func nowUnix() int64 { return time.Now().Unix() }
 
 func (s *Store) ListConversations() ([]Conversation, error) {
-	rows, err := s.db.Query(`SELECT id, title, created_at, updated_at FROM conversations ORDER BY updated_at DESC`)
+	rows, err := s.db.Query(`SELECT id, title, model, created_at, updated_at FROM conversations ORDER BY updated_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +124,7 @@ func (s *Store) ListConversations() ([]Conversation, error) {
 	var out []Conversation
 	for rows.Next() {
 		var c Conversation
-		if err := rows.Scan(&c.ID, &c.Title, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.Title, &c.Model, &c.CreatedAt, &c.UpdatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, c)
@@ -101,10 +132,10 @@ func (s *Store) ListConversations() ([]Conversation, error) {
 	return out, rows.Err()
 }
 
-func (s *Store) CreateConversation(title string) (int64, error) {
+func (s *Store) CreateConversation(title, model string) (int64, error) {
 	now := nowUnix()
-	res, err := s.db.Exec(`INSERT INTO conversations (title, created_at, updated_at) VALUES (?, ?, ?)`,
-		title, now, now)
+	res, err := s.db.Exec(`INSERT INTO conversations (title, model, created_at, updated_at) VALUES (?, ?, ?, ?)`,
+		title, model, now, now)
 	if err != nil {
 		return 0, err
 	}
@@ -112,9 +143,9 @@ func (s *Store) CreateConversation(title string) (int64, error) {
 }
 
 func (s *Store) GetConversation(id int64) (*Conversation, error) {
-	row := s.db.QueryRow(`SELECT id, title, created_at, updated_at FROM conversations WHERE id = ?`, id)
+	row := s.db.QueryRow(`SELECT id, title, model, created_at, updated_at FROM conversations WHERE id = ?`, id)
 	var c Conversation
-	if err := row.Scan(&c.ID, &c.Title, &c.CreatedAt, &c.UpdatedAt); err != nil {
+	if err := row.Scan(&c.ID, &c.Title, &c.Model, &c.CreatedAt, &c.UpdatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}

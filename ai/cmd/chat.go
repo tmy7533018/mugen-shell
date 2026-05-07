@@ -85,7 +85,7 @@ func runChat(_ *cobra.Command, _ []string) error {
 		case "exit":
 			return nil
 		case "new", "clear":
-			if _, err := hist.NewConversation(); err != nil {
+			if _, err := hist.NewConversation(registry.Model()); err != nil {
 				fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			} else {
 				fmt.Println("Started a new conversation.")
@@ -93,7 +93,7 @@ func runChat(_ *cobra.Command, _ []string) error {
 			continue
 		}
 
-		if err := hist.Add("user", input); err != nil {
+		if err := hist.Add("user", input, registry.Model()); err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			continue
 		}
@@ -112,7 +112,7 @@ func runChat(_ *cobra.Command, _ []string) error {
 			continue
 		}
 
-		_ = hist.Add("assistant", fullResponse)
+		_ = hist.Add("assistant", fullResponse, registry.Model())
 	}
 
 	return nil

@@ -14,6 +14,7 @@ type History struct {
 	mu          sync.Mutex
 	store       *store.Store
 	convID      int64
+	convModel   string
 	messages    []provider.Message
 	system      string
 	max         int
@@ -50,8 +51,13 @@ func (h *History) loadCurrent() error {
 func (h *History) switchLocked(id int64) error {
 	if id == 0 {
 		h.convID = 0
+		h.convModel = ""
 		h.messages = nil
 		return nil
+	}
+	conv, err := h.store.GetConversation(id)
+	if err != nil {
+		return err
 	}
 	msgs, err := h.store.ListMessages(id)
 	if err != nil {
@@ -61,6 +67,11 @@ func (h *History) switchLocked(id int64) error {
 		msgs = msgs[len(msgs)-h.max:]
 	}
 	h.convID = id
+	if conv != nil {
+		h.convModel = conv.Model
+	} else {
+		h.convModel = ""
+	}
 	h.messages = h.messages[:0]
 	for _, m := range msgs {
 		h.messages = append(h.messages, provider.Message{Role: m.Role, Content: m.Content})
@@ -72,6 +83,14 @@ func (h *History) ConvID() int64 {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.convID
+}
+
+// ConvModel returns the model bound to the current conversation, or "" if no
+// conversation is loaded (or its model column is unset, e.g. legacy rows).
+func (h *History) ConvModel() string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.convModel
 }
 
 func (h *History) Switch(id int64) error {
@@ -98,7 +117,7 @@ func (h *History) Switch(id int64) error {
 	return h.store.SetCurrentConversationID(id)
 }
 
-func (h *History) Add(role, content string) error {
+func (h *History) Add(role, content, model string) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.convID == 0 {
@@ -106,7 +125,7 @@ func (h *History) Add(role, content string) error {
 		if role == "user" {
 			title = store.DeriveTitle(content)
 		}
-		id, err := h.store.CreateConversation(title)
+		id, err := h.store.CreateConversation(title, model)
 		if err != nil {
 			return err
 		}
@@ -114,6 +133,7 @@ func (h *History) Add(role, content string) error {
 			return err
 		}
 		h.convID = id
+		h.convModel = model
 	} else if role == "user" {
 		conv, err := h.store.GetConversation(h.convID)
 		if err == nil && conv != nil && conv.Title == "" {
@@ -161,10 +181,10 @@ func (h *History) SetSystem(prompt string) {
 }
 
 // NewConversation creates a fresh conversation, makes it current, and clears the cache.
-func (h *History) NewConversation() (int64, error) {
+func (h *History) NewConversation(model string) (int64, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	id, err := h.store.CreateConversation("")
+	id, err := h.store.CreateConversation("", model)
 	if err != nil {
 		return 0, err
 	}
@@ -172,6 +192,7 @@ func (h *History) NewConversation() (int64, error) {
 		return 0, err
 	}
 	h.convID = id
+	h.convModel = model
 	h.messages = h.messages[:0]
 	return id, nil
 }

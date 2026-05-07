@@ -57,6 +57,11 @@ func corsMiddleware(next http.Handler) http.Handler {
 type chatRequest struct {
 	Message        string `json:"message"`
 	ConversationID int64  `json:"conversation_id"`
+	// Model is consulted only when the request creates a new conversation
+	// (ConversationID == 0). For an existing conversation we always honour
+	// the model already bound to that row so a single conversation can't end
+	// up with replies from multiple providers.
+	Model string `json:"model,omitempty"`
 }
 
 func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +82,24 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.history.Add("user", req.Message); err != nil {
+	// Pick the model for this turn:
+	//   - existing conversation → its bound model wins (so a chat stays on
+	//     one provider for its entire life)
+	//   - new conversation → caller's req.Model, falling back to the
+	//     registry default (i.e. whatever PUT /model last set)
+	model := s.history.ConvModel()
+	if model == "" {
+		model = req.Model
+	}
+	if model == "" {
+		model = s.registry.Model()
+	}
+	if model == "" {
+		http.Error(w, "no model configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	if err := s.history.Add("user", req.Message, model); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -95,13 +117,16 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	// Send the conversation id up-front so the client can sync state without a
 	// separate /conversations/current round-trip — eliminates a race where
 	// rapid follow-up messages would create another fresh conversation.
-	idData, _ := json.Marshal(map[string]any{"conversation_id": s.history.ConvID()})
+	idData, _ := json.Marshal(map[string]any{
+		"conversation_id": s.history.ConvID(),
+		"model":           model,
+	})
 	fmt.Fprintf(w, "data: %s\n\n", idData)
 	flusher.Flush()
 
 	var fullResponse string
 
-	err := s.registry.Chat(r.Context(), s.history.Messages(), func(chunk provider.ChatChunk) error {
+	err := s.registry.ChatWith(r.Context(), model, s.history.Messages(), func(chunk provider.ChatChunk) error {
 		fullResponse += chunk.Content
 		data, _ := json.Marshal(map[string]any{
 			"content": chunk.Content,
@@ -121,7 +146,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if fullResponse != "" {
-		_ = s.history.Add("assistant", fullResponse)
+		_ = s.history.Add("assistant", fullResponse, model)
 	}
 }
 
@@ -147,11 +172,11 @@ func (s *Server) handleSwitchModel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// PUT /model now only changes the *default* model used when a future
+	// conversation is created. Existing conversations keep the model they
+	// were started with, so this no longer mints an empty conversation row
+	// or disturbs whatever the user is currently reading.
 	s.registry.SetModel(req.Model)
-	if _, err := s.history.NewConversation(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 	_ = state.SaveModel(req.Model)
 
 	writeJSON(w, map[string]string{"model": req.Model})
@@ -185,7 +210,7 @@ func (s *Server) handleListConversations(w http.ResponseWriter, _ *http.Request)
 }
 
 func (s *Server) handleCreateConversation(w http.ResponseWriter, _ *http.Request) {
-	id, err := s.history.NewConversation()
+	id, err := s.history.NewConversation(s.registry.Model())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -220,6 +245,7 @@ func (s *Server) handleCurrentConversation(w http.ResponseWriter, _ *http.Reques
 	writeJSON(w, map[string]any{
 		"id":         conv.ID,
 		"title":      conv.Title,
+		"model":      conv.Model,
 		"created_at": conv.CreatedAt,
 		"updated_at": conv.UpdatedAt,
 		"messages":   msgs,
@@ -252,6 +278,7 @@ func (s *Server) handleGetConversation(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{
 		"id":         conv.ID,
 		"title":      conv.Title,
+		"model":      conv.Model,
 		"created_at": conv.CreatedAt,
 		"updated_at": conv.UpdatedAt,
 		"messages":   msgs,
