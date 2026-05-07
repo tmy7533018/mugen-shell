@@ -46,9 +46,12 @@ QtObject {
     readonly property string wallpaperSvg: basePath + "/wallpaper.svg"
 
     readonly property string clipboardSvg: basePath + "/clipboard.svg"
+    readonly property string copySvg: basePath + "/copy.svg"
 
     readonly property string aiSvg: basePath + "/ai.svg"
     readonly property string trashSvg: basePath + "/trash.svg"
+    readonly property string plusSvg: basePath + "/plus.svg"
+    readonly property string sidebarSvg: basePath + "/sidebar.svg"
 
     readonly property string appLauncherSvg: basePath + "/app-launcher.svg"
     readonly property string clockSvg: basePath + "/clock.svg"

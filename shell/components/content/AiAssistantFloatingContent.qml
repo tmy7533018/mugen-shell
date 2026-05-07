@@ -24,6 +24,11 @@ FocusScope {
     property var availableModels: []
     property bool modelDropdownOpen: false
 
+    property var conversations: []
+    property int currentConvId: 0
+    property bool sidebarCollapsed: false
+    readonly property int sidebarWidth: modeManager.scale(200)
+
     readonly property bool isEmpty: messages.length === 0
     readonly property var suggestedPrompts: [
         "Help me brainstorm an idea",
@@ -53,7 +58,10 @@ FocusScope {
         appendMessage("assistant", "")
         streaming = true
         userScrolled = false
-        chatProcess.payload = JSON.stringify({ message: text })
+        chatProcess.payload = JSON.stringify({
+            message: text,
+            conversation_id: currentConvId
+        })
         chatProcess.running = true
     }
 
@@ -63,9 +71,67 @@ FocusScope {
         streaming = false
     }
 
-    function clearHistory() {
+    function newChat() {
+        if (streaming) stopStreaming()
         messages = []
-        clearProcess.running = true
+        currentConvId = 0
+        userScrolled = false
+        // No backend call — the conversation is auto-created on first user message,
+        // so abandoning a blank "New chat" leaves no empty row in the store.
+    }
+
+    function selectConversation(convId) {
+        if (convId === currentConvId) return
+        if (streaming) stopStreaming()
+        currentConvId = convId
+        messages = []
+        userScrolled = false
+        selectConvProcess.payload = String(convId)
+        selectConvProcess.running = true
+    }
+
+    function deleteConversation(convId) {
+        deleteConvProcess.payload = String(convId)
+        deleteConvProcess.running = true
+    }
+
+    function refreshConversations() {
+        listConvProcess.running = true
+    }
+
+    function loadCurrentConversation() {
+        if (streaming) return
+        loadCurrentProcess.running = true
+    }
+
+    // Split assistant content into renderable blocks.
+    // Even-indexed splits (on ```) are markdown text; odd-indexed are code blocks.
+    // An unclosed ``` (during streaming) is rendered as an open code block so the
+    // user sees partial code immediately rather than mid-fence text.
+    function parseBlocks(content) {
+        if (!content) return []
+        let blocks = []
+        let parts = content.split("```")
+        for (let i = 0; i < parts.length; i++) {
+            let part = parts[i]
+            if (i % 2 === 0) {
+                if (part.length > 0) blocks.push({ type: "text", content: part })
+            } else {
+                let nl = part.indexOf("\n")
+                let lang = ""
+                let body = part
+                if (nl >= 0) {
+                    let firstLine = part.substring(0, nl).trim()
+                    if (/^[a-zA-Z0-9_+\-]*$/.test(firstLine)) {
+                        lang = firstLine
+                        body = part.substring(nl + 1)
+                    }
+                }
+                if (body.endsWith("\n")) body = body.substring(0, body.length - 1)
+                blocks.push({ type: "code", lang: lang, content: body })
+            }
+        }
+        return blocks
     }
 
     Timer {
@@ -172,7 +238,74 @@ FocusScope {
         }
     }
 
-    // ── Top chrome: model selector + clear (active only) ────────────────
+    // ── Conversation sidebar (left) ─────────────────────────────────────
+    Ai.ConversationList {
+        id: sidebar
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: root.sidebarCollapsed ? 0 : root.sidebarWidth
+        clip: true
+        z: 6
+        modeManager: root.modeManager
+        theme: root.theme
+        icons: root.icons
+        conversations: root.conversations
+        currentId: root.currentConvId
+
+        Behavior on width { NumberAnimation { duration: 240; easing.type: Easing.InOutCubic } }
+
+        onNewChatRequested: root.newChat()
+        onConversationSelected: id => root.selectConversation(id)
+        onConversationDeleteRequested: id => root.deleteConversation(id)
+        onToggleRequested: root.sidebarCollapsed = !root.sidebarCollapsed
+    }
+
+    // Floating expand toggle, only visible when the sidebar is collapsed
+    Item {
+        id: expandToggle
+        anchors.left: sidebar.right
+        anchors.top: parent.top
+        anchors.leftMargin: modeManager.scale(10)
+        anchors.topMargin: modeManager.scale(14)
+        width: modeManager.scale(28)
+        height: modeManager.scale(28)
+        z: 7
+        opacity: root.sidebarCollapsed ? 1.0 : 0.0
+        visible: opacity > 0
+
+        Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+
+        UI.SvgIcon {
+            anchors.centerIn: parent
+            width: modeManager.scale(17)
+            height: modeManager.scale(17)
+            source: root.icons ? root.icons.sidebarSvg : ""
+            color: expandMouse.containsMouse
+                ? (root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
+                : (root.theme ? root.theme.textSecondary : Qt.rgba(0.78, 0.78, 0.88, 0.85))
+            Behavior on color { ColorAnimation { duration: 150 } }
+        }
+
+        MouseArea {
+            id: expandMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: root.sidebarCollapsed = false
+        }
+    }
+
+    // ── Main pane (everything to the right of the sidebar) ──────────────
+    Item {
+        id: mainPane
+        anchors.left: sidebar.right
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        z: 2
+
+    // ── Top chrome: model selector ──────────────────────────────────────
     RowLayout {
         id: topChrome
         anchors.top: parent.top
@@ -201,35 +334,6 @@ FocusScope {
                 root.modelDropdownOpen = false
             }
         }
-
-        Item {
-            Layout.preferredWidth: modeManager.scale(28)
-            Layout.preferredHeight: modeManager.scale(28)
-            visible: root.aiAvailable && root.hasModel && !root.isEmpty
-            opacity: clearMouse.containsMouse ? 1.0 : 0.55
-
-            Behavior on opacity { NumberAnimation { duration: 200 } }
-
-            UI.SvgIcon {
-                anchors.centerIn: parent
-                width: modeManager.scale(15)
-                height: modeManager.scale(15)
-                source: root.icons ? root.icons.trashSvg : ""
-                color: clearMouse.containsMouse
-                    ? Qt.rgba(0.95, 0.55, 0.65, 1.0)
-                    : (root.theme ? root.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.9))
-                Behavior on color { ColorAnimation { duration: 150 } }
-            }
-
-            MouseArea {
-                id: clearMouse
-                anchors.fill: parent
-                anchors.margins: -6
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: root.clearHistory()
-            }
-        }
     }
 
     // ── The orb: morphs between empty (center, large) and active
@@ -239,10 +343,10 @@ FocusScope {
         id: orb
         z: 4
 
-        readonly property real emptySize: Math.min(root.width, root.height) * 0.28
+        readonly property real emptySize: Math.min(mainPane.width, mainPane.height) * 0.28
         readonly property real activeSize: modeManager.scale(36)
-        readonly property real emptyX: (root.width - emptySize) / 2
-        readonly property real emptyY: root.height * 0.18
+        readonly property real emptyX: (mainPane.width - emptySize) / 2
+        readonly property real emptyY: mainPane.height * 0.18
 
         property real activeX: activeOverlay.x
         property real activeY: 0
@@ -407,25 +511,66 @@ FocusScope {
                     && isAssistant
                     && modelData.content === ""
                 readonly property bool showInlineOrb: isAssistant && isLatest
+                readonly property var assistantBlocks: isAssistant && !isThinking
+                    ? root.parseBlocks(modelData.content)
+                    : []
 
                 Column {
                     id: msgCol
                     width: parent.width
                     spacing: modeManager.scale(6)
 
+                    // User messages: plain right-aligned text (no markdown rendering)
                     Text {
-                        visible: !delegateRoot.isThinking && modelData.content !== ""
+                        visible: !delegateRoot.isAssistant && modelData.content !== ""
                         width: parent.width
-                        horizontalAlignment: delegateRoot.isAssistant ? Text.AlignLeft : Text.AlignRight
+                        horizontalAlignment: Text.AlignRight
                         text: modelData.content
                         wrapMode: Text.WordWrap
-                        color: delegateRoot.isAssistant
-                            ? (root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
-                            : (root.theme ? root.theme.textSecondary : Qt.rgba(0.78, 0.78, 0.88, 0.85))
+                        color: root.theme ? root.theme.textSecondary : Qt.rgba(0.78, 0.78, 0.88, 0.85)
                         font.pixelSize: modeManager.scale(14)
                         font.family: "M PLUS 2"
                         font.letterSpacing: 0.3
                         lineHeight: 1.5
+                    }
+
+                    // Assistant messages: split into markdown text + code-block delegates
+                    Repeater {
+                        model: delegateRoot.assistantBlocks
+
+                        delegate: Item {
+                            width: msgCol.width
+                            implicitHeight: blockText.visible ? blockText.implicitHeight : codeBlock.implicitHeight
+
+                            Text {
+                                id: blockText
+                                visible: modelData.type === "text"
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                text: visible ? modelData.content : ""
+                                textFormat: Text.MarkdownText
+                                wrapMode: Text.WordWrap
+                                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                                font.pixelSize: modeManager.scale(14)
+                                font.family: "M PLUS 2"
+                                font.letterSpacing: 0.3
+                                lineHeight: 1.5
+                                linkColor: root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1.0)
+                                onLinkActivated: link => Qt.openUrlExternally(link)
+                            }
+
+                            Ai.CodeBlock {
+                                id: codeBlock
+                                visible: modelData.type === "code"
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                modeManager: root.modeManager
+                                theme: root.theme
+                                icons: root.icons
+                                lang: visible ? modelData.lang : ""
+                                code: visible ? modelData.content : ""
+                            }
+                        }
                     }
 
                     // Reserve space for the global orb that lands at the bottom-left
@@ -510,6 +655,8 @@ FocusScope {
                 font.letterSpacing: parent.font.letterSpacing
                 font.italic: true
                 visible: parent.text.length === 0
+                    && parent.preeditText.length === 0
+                    && !parent.inputMethodComposing
             }
         }
 
@@ -597,8 +744,9 @@ FocusScope {
             }
         }
     }
+    } // mainPane
 
-    // ── Process objects (chat / clear / health / models / switch) ───────
+    // ── Process objects (chat / health / models / switch / conversations) ───────
     Process {
         id: chatProcess
         property string payload: ""
@@ -617,6 +765,10 @@ FocusScope {
                 if (!jsonStr) return
                 try {
                     let obj = JSON.parse(jsonStr)
+                    if (obj.conversation_id !== undefined) {
+                        root.currentConvId = obj.conversation_id
+                        return
+                    }
                     if (obj.error) {
                         root.updateLastMessage("\n[error: " + obj.error + "]")
                         return
@@ -634,13 +786,102 @@ FocusScope {
             if (exitCode !== 0) {
                 root.updateLastMessage("\n[connection failed]")
             }
+            // Refresh the sidebar so the active conversation moves to the top
+            // and picks up its derived title once the first user message lands.
+            root.refreshConversations()
         }
     }
 
     Process {
-        id: clearProcess
+        id: listConvProcess
         running: false
-        command: ["curl", "-sS", "-X", "DELETE", "http://127.0.0.1:11435/history"]
+        property string buf: ""
+        command: ["curl", "-sS", "--max-time", "2", "http://127.0.0.1:11435/conversations"]
+
+        stdout: SplitParser { onRead: data => { listConvProcess.buf += data } }
+        onRunningChanged: { if (running) buf = "" }
+
+        onExited: (exitCode) => {
+            if (exitCode !== 0) return
+            try {
+                let obj = JSON.parse(listConvProcess.buf)
+                root.conversations = obj.conversations || []
+            } catch (e) {}
+        }
+    }
+
+    Process {
+        id: loadCurrentProcess
+        running: false
+        property string buf: ""
+        command: ["curl", "-sS", "--max-time", "2", "http://127.0.0.1:11435/conversations/current"]
+
+        stdout: SplitParser { onRead: data => { loadCurrentProcess.buf += data } }
+        onRunningChanged: { if (running) buf = "" }
+
+        onExited: (exitCode) => {
+            if (exitCode !== 0) return
+            try {
+                let obj = JSON.parse(loadCurrentProcess.buf)
+                root.currentConvId = obj.id || 0
+                let msgs = obj.messages || []
+                root.messages = msgs.map(m => ({ role: m.role, content: m.content }))
+            } catch (e) {}
+        }
+    }
+
+    Process {
+        id: selectConvProcess
+        running: false
+        property string payload: ""
+        property string buf: ""
+        command: ["curl", "-sS", "--max-time", "2", "-X", "POST",
+                  "http://127.0.0.1:11435/conversations/" + payload + "/select"]
+
+        stdout: SplitParser { onRead: data => { selectConvProcess.buf += data } }
+        onRunningChanged: { if (running) buf = "" }
+
+        onExited: (exitCode) => {
+            if (exitCode !== 0) return
+            // After selection, fetch the messages of the now-current conversation.
+            loadCurrentProcess.running = true
+        }
+    }
+
+    Process {
+        id: deleteConvProcess
+        running: false
+        property string payload: ""
+        property string buf: ""
+        command: ["curl", "-sS", "--max-time", "2", "-X", "DELETE",
+                  "http://127.0.0.1:11435/conversations/" + payload]
+
+        stdout: SplitParser { onRead: data => { deleteConvProcess.buf += data } }
+        onRunningChanged: { if (running) buf = "" }
+
+        onExited: (exitCode) => {
+            if (exitCode !== 0) return
+            let newCurrent = 0
+            try {
+                let obj = JSON.parse(deleteConvProcess.buf)
+                newCurrent = obj.current_id || 0
+            } catch (e) {}
+            // If we deleted the active conversation, reload to reflect the new current
+            // (or empty state if none remain). Otherwise just refresh the list.
+            if (parseInt(deleteConvProcess.payload) === root.currentConvId) {
+                root.currentConvId = newCurrent
+                root.messages = []
+                if (newCurrent !== 0) loadCurrentProcess.running = true
+            }
+            root.refreshConversations()
+        }
+    }
+
+    Process {
+        id: copyProcess
+        property string text: ""
+        running: false
+        command: ["wl-copy", text]
     }
 
     Process {
@@ -665,6 +906,9 @@ FocusScope {
                     root.hasModel = obj.status === "ok"
                 } catch (e) {}
                 modelsProcess.running = true
+                // Float opens in fresh-chat state to match bar AI; the sidebar
+                // still lists every past conversation so they can be picked.
+                root.refreshConversations()
             }
         }
     }
@@ -703,6 +947,9 @@ FocusScope {
         onExited: (exitCode) => {
             if (exitCode === 0) {
                 root.messages = []
+                // Backend creates a fresh conversation when the model is switched.
+                root.currentConvId = 0
+                root.refreshConversations()
             }
         }
     }
