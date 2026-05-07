@@ -6,7 +6,7 @@
 
 <p align="center"><i>A 夢幻 desktop, built on Quickshell + Hyprland.</i></p>
 
-https://github.com/user-attachments/assets/618c182d-ecc1-4f84-a228-bddcf990beb1
+https://github.com/user-attachments/assets/a432c3e0-0c1b-4fb7-9ab8-f04bb521743a
 
 > Personal dotfiles, packaged so others can try them via Nix flake or a plain Makefile.
 
