@@ -16,47 +16,59 @@ FocusScope {
     property var icons
     property bool isStandalone: false
 
+    // Spotlight-style: keep the bar at its normal height, just give the AI mode
+    // a centered horizontal slot wide enough for a sentence or two.
     readonly property var requiredBarSize: ({
-        "height": modeManager.scale(440),
+        "height": modeManager.scale(60),
         "leftMargin": modeManager.scale(620),
         "rightMargin": modeManager.scale(620),
         "topMargin": modeManager.scale(6),
         "bottomMargin": modeManager.scale(6)
     })
 
-    property var messages: []
     property bool streaming: false
     property bool aiAvailable: false
     property bool hasModel: false
     property bool healthChecked: false
-    property bool userScrolled: false
     property string currentModel: ""
-    property var availableModels: []
-    property bool modelDropdownOpen: false
+    property int currentConvId: 0
 
-    function appendMessage(role, content) {
-        let copy = messages.slice()
-        copy.push({ role: role, content: content })
-        messages = copy
+    // While streaming, the partial response goes into responseDisplay and is
+    // shown in the placeholder. Once the stream completes we move the full
+    // response into the input field itself (read-only) so the user can scroll
+    // through long replies with arrow keys / Home / End and copy with Ctrl+C.
+    // The first non-navigation keypress clears it back into typing mode.
+    property string responseDisplay: ""
+    property bool displayingResponse: false
+
+    readonly property string idlePlaceholder: {
+        if (!healthChecked) return "Ask anything…"
+        if (!aiAvailable) return "mugen-ai is not running"
+        if (!hasModel) return "No model available"
+        return "Ask anything…"
     }
+    readonly property bool isThinking: streaming && responseDisplay.length === 0
 
-    function updateLastMessage(content) {
-        if (messages.length === 0) return
-        let copy = messages.slice()
-        copy[copy.length - 1] = {
-            role: copy[copy.length - 1].role,
-            content: copy[copy.length - 1].content + content
+    readonly property string activePlaceholder: {
+        if (isThinking) return "thinking"
+        if (responseDisplay.length > 0) {
+            // Bar AI is single-line: collapse newlines so the text flows
+            // horizontally rather than wrapping or pushing layout downward.
+            return responseDisplay.replace(/\s*\n+\s*/g, " ")
         }
-        messages = copy
+        return idlePlaceholder
     }
 
     function sendMessage(text) {
         if (!text || streaming) return
-        appendMessage("user", text)
-        appendMessage("assistant", "")
+        if (!aiAvailable || !hasModel) return
+        responseDisplay = ""
+        displayingResponse = false
         streaming = true
-        userScrolled = false
-        chatProcess.payload = JSON.stringify({ message: text })
+        chatProcess.payload = JSON.stringify({
+            message: text,
+            conversation_id: currentConvId
+        })
         chatProcess.running = true
     }
 
@@ -66,20 +78,27 @@ FocusScope {
         streaming = false
     }
 
-    function clearHistory() {
-        messages = []
-        clearProcess.running = true
+    function newChat() {
+        if (streaming) stopStreaming()
+        currentConvId = 0
+        responseDisplay = ""
+        displayingResponse = false
+        inputField.text = ""
+        // Backend auto-creates a conversation on the first user message.
     }
 
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
             if (modeManager.isMode("ai")) {
+                // Bar AI is the "quick question" entry point — always open as a
+                // fresh blank chat. Long-running conversations live in the float
+                // window where the sidebar exposes history.
+                root.newChat()
                 healthProcess.running = true
                 focusTimer.restart()
             } else {
                 if (streaming) stopStreaming()
-                modelDropdownOpen = false
             }
         }
     }
@@ -93,16 +112,15 @@ FocusScope {
         }
     }
 
+
+    // Click outside the panel to dismiss the AI mode.
     MouseArea {
         anchors.fill: parent
         z: 1.5
         enabled: modeManager.isMode("ai") && !root.isStandalone
         visible: enabled
         hoverEnabled: true
-        onClicked: {
-            if (root.modelDropdownOpen) root.modelDropdownOpen = false
-            else modeManager.closeAllModes()
-        }
+        onClicked: modeManager.closeAllModes()
         onPositionChanged: {
             if (modeManager.isMode("ai")) modeManager.bump()
         }
@@ -111,8 +129,10 @@ FocusScope {
     Item {
         id: panel
         anchors.fill: parent
-        anchors.leftMargin: modeManager.scale(32)
-        anchors.rightMargin: modeManager.scale(32)
+        // Match the bar surface inset (requiredBarSize.leftMargin) so the row
+        // sits inside the rounded visual bar instead of overflowing it.
+        anchors.leftMargin: modeManager.scale(640)
+        anchors.rightMargin: modeManager.scale(640)
         z: 3
         opacity: 0
         visible: true
@@ -128,497 +148,286 @@ FocusScope {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 300 }
-                    NumberAnimation { property: "opacity"; duration: 400; easing.type: Easing.InOutCubic }
+                    PauseAnimation { duration: 200 }
+                    NumberAnimation { property: "opacity"; duration: 300; easing.type: Easing.InOutCubic }
                 }
             },
             Transition {
                 from: "visible"
                 to: ""
-                NumberAnimation { property: "opacity"; duration: 300; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "opacity"; duration: 200; easing.type: Easing.OutCubic }
             }
         ]
 
-        ColumnLayout {
-            anchors.centerIn: parent
-            spacing: modeManager.scale(16)
+        // Single row: orb + input pill + detach icon.
+        RowLayout {
+            anchors.fill: parent
+            anchors.topMargin: modeManager.scale(8)
+            anchors.bottomMargin: modeManager.scale(8)
+            spacing: modeManager.scale(12)
 
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: modeManager.scale(600)
-                spacing: modeManager.scale(12)
-                z: 100
-
-                Common.GlowText {
-                    text: "Assistant"
-                    font.pixelSize: modeManager.scale(20)
-                    font.weight: Font.Light
-                    font.family: "M PLUS 2"
-                    font.letterSpacing: 1.5
-                    color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
-
-                    enableGlow: true
-                    glowColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.6) : Qt.rgba(0.65, 0.55, 0.85, 0.6)
-                    glowSamples: 20
-                    glowRadius: 12
-                    glowSpread: 0.5
-                }
-
-                Ai.ModelSelector {
-                    visible: root.aiAvailable && root.currentModel !== ""
-                    theme: root.theme
-                    modeManager: root.modeManager
-                    currentModel: root.currentModel
-                    availableModels: root.availableModels
-                    isOpen: root.modelDropdownOpen
-
-                    onToggled: root.modelDropdownOpen = !root.modelDropdownOpen
-                    onModelChosen: name => {
-                        if (name !== root.currentModel) {
-                            if (root.streaming) root.stopStreaming()
-                            root.currentModel = name
-                            switchModelProcess.payload = JSON.stringify({ model: name })
-                            switchModelProcess.running = true
-                        }
-                        root.modelDropdownOpen = false
-                    }
-                }
-
-                Item { Layout.fillWidth: true }
-
-                RowLayout {
-                    spacing: 12
-
-                    Rectangle {
-                        width: 32
-                        height: 32
-                        radius: width / 2
-                        visible: root.aiAvailable && root.hasModel
-                        color: Qt.rgba(0.75, 0.45, 0.45, clearMouse.containsMouse ? 0.4 : 0.3)
-
-                        Behavior on color {
-                            ColorAnimation { duration: 300; easing.type: Easing.OutCubic }
-                        }
-
-                        UI.SvgIcon {
-                            anchors.centerIn: parent
-                            width: 16
-                            height: 16
-                            source: icons ? icons.trashSvg : ""
-                            color: Qt.rgba(0.95, 0.55, 0.65, clearMouse.containsMouse ? 1.0 : 0.9)
-                            opacity: clearMouse.containsMouse ? 1.0 : 0.9
-                            scale: clearMouse.containsMouse ? 1.2 : 1.0
-
-                            Behavior on opacity {
-                                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
-                            }
-
-                            Behavior on scale {
-                                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
-                            }
-                        }
-
-                        MouseArea {
-                            id: clearMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.clearHistory()
-                        }
-                    }
-
-                    Item {
-                        Layout.preferredWidth: modeManager.scale(22)
-                        Layout.preferredHeight: modeManager.scale(22)
-                        visible: !root.isStandalone
-
-                        Common.GlowSvgIcon {
-                            id: detachIcon
-                            anchors.centerIn: parent
-                            width: modeManager.scale(15)
-                            height: modeManager.scale(15)
-                            source: Quickshell.shellDir + "/assets/icons/external-link.svg"
-                            color: detachHover.containsMouse
-                                ? (theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
-                                : (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.7))
-                            opacity: detachHover.containsMouse ? 1 : 0.75
-
-                            enableGlow: detachHover.containsMouse
-                            glowColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.5) : Qt.rgba(0.65, 0.55, 0.85, 0.5)
-                            glowSamples: 16
-                            glowRadius: modeManager.scale(8)
-                            glowSpread: 0.4
-
-                            Behavior on color { ColorAnimation { duration: 150 } }
-                            Behavior on opacity { NumberAnimation { duration: 150 } }
-                        }
-
-                        MouseArea {
-                            id: detachHover
-                            anchors.fill: parent
-                            anchors.margins: -8
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                modeManager.closeAllModes()
-                                Hyprland.dispatch("exec ~/.config/quickshell/mugen-shell/scripts/toggle-ai.sh")
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Service unavailable state
+            // Ambient orb on the left — also a portal: click to detach into the
+            // floating window. Hover gently scales it up to hint interactivity.
             Item {
-                Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: modeManager.scale(600)
-                Layout.preferredHeight: modeManager.scale(260)
-                visible: !root.aiAvailable && root.healthChecked
+                id: orbSlot
+                Layout.preferredWidth: modeManager.scale(36)
+                Layout.preferredHeight: modeManager.scale(36)
+                Layout.alignment: Qt.AlignVCenter
 
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: modeManager.scale(10)
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: "mugen-ai is not running"
-                        color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                        font.pixelSize: modeManager.scale(15)
-                        font.weight: Font.Medium
-                        font.family: "M PLUS 2"
-                        font.letterSpacing: 0.5
-                    }
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        horizontalAlignment: Text.AlignHCenter
-                        text: "Install mugen-ai from this repo:"
-                        color: root.theme ? root.theme.textFaint : Qt.rgba(0.72, 0.72, 0.82, 0.70)
-                        font.pixelSize: modeManager.scale(12)
-                        font.family: "M PLUS 2"
-                        lineHeight: 1.4
-                    }
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        horizontalAlignment: Text.AlignHCenter
-                        text: "cd dotfiles-mugen && make install-ai"
-                        color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
-                        font.pixelSize: modeManager.scale(11)
-                        font.family: "monospace"
-                    }
-                }
-            }
-
-            // No models configured state
-            Item {
-                Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: modeManager.scale(600)
-                Layout.preferredHeight: modeManager.scale(260)
-                visible: root.aiAvailable && !root.hasModel
-
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: modeManager.scale(10)
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: "No models available"
-                        color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                        font.pixelSize: modeManager.scale(15)
-                        font.weight: Font.Medium
-                        font.family: "M PLUS 2"
-                        font.letterSpacing: 0.5
-                    }
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        horizontalAlignment: Text.AlignHCenter
-                        text: "Pull an Ollama model (e.g. `ollama pull gemma3:4b`)\nor configure Gemini in ~/.config/mugen-ai/config.toml"
-                        color: root.theme ? root.theme.textFaint : Qt.rgba(0.72, 0.72, 0.82, 0.70)
-                        font.pixelSize: modeManager.scale(12)
-                        font.family: "M PLUS 2"
-                        lineHeight: 1.4
-                    }
-                }
-            }
-
-            // Welcome state
-            Item {
-                Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: modeManager.scale(600)
-                Layout.preferredHeight: modeManager.scale(260)
-                visible: root.aiAvailable && root.hasModel && root.messages.length === 0
-
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    spacing: modeManager.scale(18)
-
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter
-                        text: "What can I help you with?"
-                        color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                        font.pixelSize: modeManager.scale(16)
-                        font.weight: Font.Light
-                        font.family: "M PLUS 2"
-                        font.letterSpacing: 0.5
-                        opacity: 0.8
-                    }
-
-                    Item {
-                        Layout.alignment: Qt.AlignHCenter
-                        Layout.preferredWidth: modeManager.scale(600)
-                        implicitHeight: chipRow.height
-
-                        Row {
-                            id: chipRow
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            spacing: modeManager.scale(10)
-
-                        Repeater {
-                            model: ["What's the weather?", "Summarize a topic", "Help me write"]
-
-                            Rectangle {
-                                required property string modelData
-                                required property int index
-                                width: chipText.implicitWidth + modeManager.scale(24)
-                                height: chipText.implicitHeight + modeManager.scale(14)
-                                radius: height / 2
-                                color: chipMouse.containsMouse
-                                    ? (root.theme ? root.theme.chipActiveBg : Qt.rgba(0.45, 0.45, 0.60, 0.25))
-                                    : (root.theme ? root.theme.chipInactiveBg : Qt.rgba(0.45, 0.45, 0.60, 0.12))
-                                border.color: root.theme ? root.theme.chipInactiveBorder : Qt.rgba(0.55, 0.55, 0.68, 0.15)
-                                border.width: 1
-
-                                Behavior on color {
-                                    ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
-                                }
-
-                                Text {
-                                    id: chipText
-                                    anchors.centerIn: parent
-                                    text: modelData
-                                    color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                                    font.pixelSize: modeManager.scale(12)
-                                    font.family: "M PLUS 2"
-                                    opacity: chipMouse.containsMouse ? 1.0 : 0.7
-                                    Behavior on opacity {
-                                        NumberAnimation { duration: 200 }
-                                    }
-                                }
-
-                                MouseArea {
-                                    id: chipMouse
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        root.sendMessage(modelData)
-                                    }
-                                }
-                            }
-                        }
-                        } // Row
-                    } // Item
-                }
-            }
-
-            // Message list
-            ListView {
-                id: messageList
-                Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: modeManager.scale(600)
-                Layout.preferredHeight: modeManager.scale(260)
-                visible: root.aiAvailable && root.hasModel && root.messages.length > 0
-                clip: true
-                spacing: modeManager.scale(8)
-                model: root.messages
-                boundsBehavior: Flickable.StopAtBounds
-
-                onMovingChanged: {
-                    if (moving && !atYEnd) root.userScrolled = true
-                }
-
-                onAtYEndChanged: {
-                    if (atYEnd) root.userScrolled = false
-                }
-
-                onCountChanged: {
-                    if (!root.userScrolled) positionViewAtEnd()
-                }
-
-                Connections {
-                    target: root
-                    function onMessagesChanged() {
-                        if (!root.userScrolled) messageList.positionViewAtEnd()
-                    }
-                }
-
-                delegate: Ai.MessageBubble {
-                    width: messageList.width
-                    theme: root.theme
-                    modeManager: root.modeManager
-                    messagesLength: root.messages.length
-                    streaming: root.streaming
-
-                    onCopyRequested: content => {
-                        copyProcess.text = content
-                        copyProcess.running = true
-                    }
-                }
-            }
-
-            // Input area
-            Rectangle {
-                Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: modeManager.scale(600)
-                Layout.preferredHeight: Math.min(Math.max(inputField.contentHeight + modeManager.scale(16), modeManager.scale(40)), modeManager.scale(120))
-                visible: root.aiAvailable && root.hasModel
-                color: "transparent"
-                border.color: root.theme ? root.theme.surfaceBorder : Qt.rgba(0.70, 0.65, 0.90, 0.3)
-                border.width: 2
-                radius: height > modeManager.scale(50) ? modeManager.scale(16) : height / 2
-
-                RowLayout {
+                Ai.AmbientOrb {
                     anchors.fill: parent
+                    orbColor: root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+                    streaming: root.streaming
+                    haloScale: orbHover.containsMouse ? 1.7 : 1.5
+                    haloOpacity: orbHover.containsMouse ? 0.65 : 0.5
+
+                    Behavior on haloScale { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                    Behavior on haloOpacity { NumberAnimation { duration: 220 } }
+                }
+
+                MouseArea {
+                    id: orbHover
+                    anchors.fill: parent
+                    anchors.margins: -modeManager.scale(4)
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    enabled: !root.isStandalone
+                    onClicked: {
+                        modeManager.closeAllModes()
+                        Hyprland.dispatch("exec ~/.config/quickshell/mugen-shell/scripts/toggle-ai.sh")
+                    }
+                }
+            }
+
+            // Input pill — TextInput + send button inside a rounded glass rect
+            Rectangle {
+                id: inputPill
+                Layout.fillWidth: true
+                Layout.preferredHeight: modeManager.scale(40)
+                Layout.alignment: Qt.AlignVCenter
+                radius: height / 2
+                color: root.theme ? Qt.rgba(0.04, 0.03, 0.10, 0.55) : Qt.rgba(0.04, 0.03, 0.10, 0.55)
+                border.color: inputField.activeFocus
+                    ? (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.55) : Qt.rgba(0.65, 0.55, 0.85, 0.55))
+                    : Qt.rgba(0.55, 0.55, 0.75, 0.18)
+                border.width: 1
+
+                Behavior on border.color { ColorAnimation { duration: 200 } }
+
+                TextInput {
+                    id: inputField
+                    anchors.left: parent.left
+                    anchors.right: sendIcon.left
+                    anchors.verticalCenter: parent.verticalCenter
                     anchors.leftMargin: modeManager.scale(20)
                     anchors.rightMargin: modeManager.scale(8)
-                    anchors.topMargin: modeManager.scale(4)
-                    anchors.bottomMargin: modeManager.scale(4)
-                    spacing: modeManager.scale(12)
+                    color: root.displayingResponse
+                        ? (root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.92))
+                        : (root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
+                    font.pixelSize: modeManager.scale(14)
+                    font.family: "M PLUS 2"
+                    font.letterSpacing: 0.3
+                    selectByMouse: true
+                    clip: true
+                    verticalAlignment: TextInput.AlignVCenter
+                    inputMethodHints: Qt.ImhNone
+                    enabled: root.aiAvailable && root.hasModel && !root.streaming
+                    readOnly: root.displayingResponse
+                    cursorVisible: true
 
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
+                    // Step size for arrow-key navigation while reading a long
+                    // response. Per-char moves rarely scroll the visible
+                    // window in a 1-row Spotlight, so we jump in chunks for
+                    // a more responsive scroll feel.
+                    readonly property int navStep: 25
 
-                        Text {
-                            anchors.fill: parent
-                            verticalAlignment: Text.AlignVCenter
-                            text: "Ask anything..."
-                            color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
-                            font.pixelSize: modeManager.scale(13)
-                            font.family: "M PLUS 2"
-                            visible: inputField.text.length === 0 && !inputField.activeFocus
-                            opacity: 0.5
+                    Keys.onPressed: (event) => {
+                        if (event.key === Qt.Key_Escape) {
+                            modeManager.closeAllModes()
+                            event.accepted = true
+                            return
                         }
 
-                        Flickable {
-                            anchors.fill: parent
-                            contentWidth: width
-                            contentHeight: inputField.contentHeight
-                            topMargin: Math.max(0, (height - contentHeight) / 2)
-                            clip: true
-                            flickableDirection: Flickable.VerticalFlick
-                            boundsBehavior: Flickable.StopAtBounds
-
-                            TextEdit {
-                                id: inputField
-                                width: parent.width
-                                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                                font.pixelSize: modeManager.scale(13)
-                                font.family: "M PLUS 2"
-                                selectByMouse: true
-                                selectionColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.4)
-                                focus: modeManager.isMode("ai")
-                                wrapMode: TextEdit.Wrap
-
-                                onTextChanged: {
-                                    if (modeManager.isMode("ai")) modeManager.bump()
+                        if (root.displayingResponse) {
+                            let pos = inputField.cursorPosition
+                            let len = inputField.text.length
+                            if (event.key === Qt.Key_Left) {
+                                inputField.cursorPosition = Math.max(0, pos - inputField.navStep)
+                                event.accepted = true
+                                return
+                            }
+                            if (event.key === Qt.Key_Right) {
+                                inputField.cursorPosition = Math.min(len, pos + inputField.navStep)
+                                event.accepted = true
+                                return
+                            }
+                            if (event.key === Qt.Key_Home || event.key === Qt.Key_PageUp) {
+                                inputField.cursorPosition = 0
+                                event.accepted = true
+                                return
+                            }
+                            if (event.key === Qt.Key_End || event.key === Qt.Key_PageDown) {
+                                inputField.cursorPosition = len
+                                event.accepted = true
+                                return
+                            }
+                            if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+                                event.accepted = true
+                                return
+                            }
+                            if (event.modifiers & Qt.ControlModifier) {
+                                if (event.key === Qt.Key_C) {
+                                    inputField.copy()
+                                    event.accepted = true
+                                    return
                                 }
-
-                                Keys.onPressed: (event) => {
-                                    if (modeManager.isMode("ai")) modeManager.bump()
-                                    if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && !(event.modifiers & Qt.ShiftModifier)) {
-                                        let txt = inputField.text.trim()
-                                        if (txt.length > 0 && !root.streaming) {
-                                            root.sendMessage(txt)
-                                            inputField.text = ""
-                                        }
-                                        event.accepted = true
-                                    } else if (event.key === Qt.Key_Escape) {
-                                        modeManager.closeAllModes()
-                                        event.accepted = true
-                                    } else if (event.key === Qt.Key_L && (event.modifiers & Qt.ControlModifier)) {
-                                        root.clearHistory()
-                                        event.accepted = true
-                                    } else if (event.key === Qt.Key_PageUp) {
-                                        let maxY = Math.max(0, messageList.contentHeight - messageList.height)
-                                        messageList.contentY = Math.max(0, messageList.contentY - messageList.height * 0.8)
-                                        root.userScrolled = messageList.contentY < maxY - 4
-                                        event.accepted = true
-                                    } else if (event.key === Qt.Key_PageDown) {
-                                        let maxY = Math.max(0, messageList.contentHeight - messageList.height)
-                                        messageList.contentY = Math.min(maxY, messageList.contentY + messageList.height * 0.8)
-                                        root.userScrolled = messageList.contentY < maxY - 4
-                                        event.accepted = true
-                                    } else if ((event.key === Qt.Key_Up || event.key === Qt.Key_Down) && (event.modifiers & Qt.ControlModifier)) {
-                                        let maxY = Math.max(0, messageList.contentHeight - messageList.height)
-                                        let dir = event.key === Qt.Key_Up ? -1 : 1
-                                        messageList.contentY = Math.max(0, Math.min(maxY, messageList.contentY + dir * 120))
-                                        root.userScrolled = messageList.contentY < maxY - 4
-                                        event.accepted = true
-                                    } else if (event.key === Qt.Key_End && (event.modifiers & Qt.ControlModifier)) {
-                                        root.userScrolled = false
-                                        messageList.positionViewAtEnd()
-                                        event.accepted = true
-                                    }
+                                if (event.key === Qt.Key_A) {
+                                    inputField.selectAll()
+                                    event.accepted = true
+                                    return
                                 }
                             }
+                            // Ignore modifier-only / function keys (event.text
+                            // is empty for Ctrl, Shift, Alt, F1-F12, etc).
+                            if (!event.text || event.text.length === 0) {
+                                event.accepted = true
+                                return
+                            }
+                            // Printable key — switch into typing mode and use
+                            // this character as the first input.
+                            inputField.text = event.text
+                            inputField.cursorPosition = inputField.text.length
+                            root.displayingResponse = false
+                            root.responseDisplay = ""
+                            event.accepted = true
+                            return
+                        }
+
+                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                            let txt = inputField.text.trim()
+                            if (txt.length > 0 && !root.streaming) {
+                                root.sendMessage(txt)
+                                inputField.text = ""
+                            }
+                            event.accepted = true
                         }
                     }
 
-                    Rectangle {
-                        Layout.preferredWidth: modeManager.scale(30)
-                        Layout.preferredHeight: modeManager.scale(30)
-                        Layout.alignment: Qt.AlignVCenter
-                        radius: width / 2
-                        color: root.streaming
-                            ? Qt.rgba(0.75, 0.45, 0.45, sendMouse.containsMouse ? 0.5 : 0.35)
-                            : Qt.rgba(0.45, 0.65, 0.90, sendMouse.containsMouse ? 0.45 : 0.30)
+                    Common.GlowText {
+                        id: placeholderText
+                        anchors.fill: parent
+                        verticalAlignment: Text.AlignVCenter
+                        text: root.activePlaceholder
+                        color: root.responseDisplay.length > 0 || root.streaming
+                            ? (root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.92))
+                            : (root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.6))
+                        // Match the float "What's on your mind?" styling — same
+                        // family/weight/letterSpacing — and bump it slightly
+                        // when thinking so the bar feels in tune with float.
+                        font.pixelSize: root.isThinking
+                            ? modeManager.scale(15)
+                            : parent.font.pixelSize
+                        font.family: "M PLUS 2"
+                        font.weight: Font.Light
+                        font.letterSpacing: root.isThinking ? 1.2 : 0.3
+                        font.italic: !(root.responseDisplay.length > 0 && !root.isThinking)
+                        // While streaming, keep the *latest* chunk visible by
+                        // eliding from the left so the head turns into "…"
+                        // and the tail flows under the cursor.
+                        elide: root.streaming && root.responseDisplay.length > 0
+                            ? Text.ElideLeft
+                            : Text.ElideRight
+                        // Hide while the user is composing IME preedit text too,
+                        // otherwise the response and the half-typed Japanese
+                        // characters render on top of each other.
+                        visible: parent.text.length === 0
+                            && parent.preeditText.length === 0
+                            && !parent.inputMethodComposing
 
-                        Behavior on color {
-                            ColorAnimation { duration: 300; easing.type: Easing.OutCubic }
+                        enableGlow: root.isThinking
+                        glowColor: root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.55) : Qt.rgba(0.65, 0.55, 0.85, 0.55)
+                        glowSamples: 18
+                        glowRadius: 8
+                        glowSpread: 0.35
+
+                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on font.letterSpacing { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+
+                        // Breath pulse — opacity oscillates while thinking,
+                        // syncing with the orb's idle breath rhythm. Snaps back
+                        // to 1.0 once the response starts streaming in.
+                        SequentialAnimation on opacity {
+                            id: breathAnim
+                            loops: Animation.Infinite
+                            running: root.isThinking
+                            NumberAnimation { to: 0.45; duration: 900; easing.type: Easing.InOutSine }
+                            NumberAnimation { to: 1.0; duration: 900; easing.type: Easing.InOutSine }
                         }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: root.streaming ? "■" : "→"
-                            color: root.streaming
-                                ? Qt.rgba(0.95, 0.55, 0.65, sendMouse.containsMouse ? 1.0 : 0.9)
-                                : Qt.rgba(0.65, 0.85, 1.0, sendMouse.containsMouse ? 1.0 : 0.9)
-                            font.pixelSize: root.streaming ? modeManager.scale(12) : modeManager.scale(15)
-                            font.family: "M PLUS 2"
-                            font.weight: Font.Medium
-                            scale: sendMouse.containsMouse ? 1.2 : 1.0
-
-                            Behavior on scale {
-                                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+                        Connections {
+                            target: breathAnim
+                            function onRunningChanged() {
+                                if (!breathAnim.running) placeholderText.opacity = 1.0
                             }
                         }
+                    }
+                }
 
-                        MouseArea {
-                            id: sendMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (root.streaming) {
-                                    root.stopStreaming()
-                                } else {
-                                    let txt = inputField.text.trim()
-                                    if (txt.length > 0) {
-                                        root.sendMessage(txt)
-                                        inputField.text = ""
-                                    }
+                Item {
+                    id: sendIcon
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.rightMargin: modeManager.scale(6)
+                    width: modeManager.scale(28)
+                    height: modeManager.scale(28)
+                    opacity: root.displayingResponse
+                        ? 0.0
+                        : ((root.streaming || inputField.text.trim().length > 0) ? 1.0 : 0.4)
+                    visible: opacity > 0
+
+                    Behavior on opacity { NumberAnimation { duration: 200 } }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: width / 2
+                        color: sendMouse.containsMouse
+                            ? (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4))
+                            : (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.22) : Qt.rgba(0.65, 0.55, 0.85, 0.22))
+
+                        Behavior on color { ColorAnimation { duration: 200 } }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: root.streaming ? "■" : "→"
+                        color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                        font.pixelSize: modeManager.scale(root.streaming ? 11 : 14)
+                        font.family: "M PLUS 2"
+                    }
+
+                    MouseArea {
+                        id: sendMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (root.streaming) {
+                                root.stopStreaming()
+                            } else {
+                                let txt = inputField.text.trim()
+                                if (txt.length > 0) {
+                                    root.sendMessage(txt)
+                                    inputField.text = ""
                                 }
                             }
                         }
                     }
                 }
             }
+
         }
     }
 
+    // ── Process objects (chat / health / models / switch / current) ─────
     Process {
         id: chatProcess
         property string payload: ""
@@ -637,30 +446,36 @@ FocusScope {
                 if (!jsonStr) return
                 try {
                     let obj = JSON.parse(jsonStr)
+                    if (obj.conversation_id !== undefined) {
+                        root.currentConvId = obj.conversation_id
+                        return
+                    }
                     if (obj.error) {
-                        root.updateLastMessage("\n[error: " + obj.error + "]")
+                        root.responseDisplay = "[error: " + obj.error + "]"
                         return
                     }
                     if (obj.content) {
-                        root.updateLastMessage(obj.content)
+                        root.responseDisplay += obj.content
                     }
-                } catch (e) {
-                }
+                } catch (e) {}
             }
         }
 
         onExited: (exitCode) => {
             root.streaming = false
-            if (exitCode !== 0) {
-                root.updateLastMessage("\n[connection failed]")
+            if (exitCode !== 0 && root.responseDisplay.length === 0) {
+                root.responseDisplay = "[connection failed]"
+            }
+            // Move the full response into the input field so the user can
+            // scroll, select, and copy it. Any printable keypress flips back
+            // into typing mode (handled in inputField.Keys.onPressed).
+            if (root.responseDisplay.length > 0) {
+                inputField.text = root.responseDisplay.replace(/\s*\n+\s*/g, " ")
+                inputField.cursorPosition = 0
+                root.displayingResponse = true
+                inputField.forceActiveFocus()
             }
         }
-    }
-
-    Process {
-        id: clearProcess
-        running: false
-        command: ["curl", "-sS", "-X", "DELETE", "http://127.0.0.1:11435/history"]
     }
 
     Process {
@@ -669,10 +484,7 @@ FocusScope {
         property string buf: ""
         command: ["curl", "-sSf", "--max-time", "2", "http://127.0.0.1:11435/health"]
 
-        stdout: SplitParser {
-            onRead: data => { healthProcess.buf += data }
-        }
-
+        stdout: SplitParser { onRead: data => { healthProcess.buf += data } }
         onRunningChanged: { if (running) buf = "" }
 
         onExited: (exitCode) => {
@@ -684,54 +496,8 @@ FocusScope {
                     root.currentModel = obj.model || ""
                     root.hasModel = obj.status === "ok"
                 } catch (e) {}
-                modelsProcess.running = true
             }
         }
-    }
-
-    Process {
-        id: modelsProcess
-        running: false
-        property string buf: ""
-        command: ["curl", "-sS", "--max-time", "2", "http://127.0.0.1:11435/models"]
-
-        stdout: SplitParser {
-            onRead: data => { modelsProcess.buf += data }
-        }
-
-        onRunningChanged: { if (running) buf = "" }
-
-        onExited: (exitCode) => {
-            if (exitCode === 0) {
-                try {
-                    let obj = JSON.parse(buf)
-                    if (obj.models) root.availableModels = obj.models
-                } catch (e) {}
-            }
-        }
-    }
-
-    Process {
-        id: switchModelProcess
-        running: false
-        property string payload: ""
-        command: ["curl", "-sS", "-X", "PUT",
-                  "http://127.0.0.1:11435/model",
-                  "-H", "Content-Type: application/json",
-                  "-d", payload]
-
-        onExited: (exitCode) => {
-            if (exitCode === 0) {
-                root.messages = []
-            }
-        }
-    }
-
-    Process {
-        id: copyProcess
-        property string text: ""
-        running: false
-        command: ["wl-copy", text]
     }
 
     Component.onCompleted: {
