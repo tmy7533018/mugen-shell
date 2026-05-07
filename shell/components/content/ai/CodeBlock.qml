@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import Quickshell.Io
 import "../../ui" as UI
 
 Item {
@@ -12,6 +11,11 @@ Item {
     required property var icons
     property string lang: ""
     property string code: ""
+
+    // Emitted when the copy icon is clicked. The parent owns a single shared
+    // wl-copy Process — keeping it out of CodeBlock means a chat with many
+    // code blocks doesn't stack up that many idle Process instances.
+    signal copyRequested(string text)
 
     implicitHeight: container.implicitHeight
     implicitWidth: parent ? parent.width : 200
@@ -91,8 +95,7 @@ Item {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            copyProcess.text = root.code
-                            copyProcess.running = true
+                            root.copyRequested(root.code)
                             container.justCopied = true
                             resetTimer.restart()
                         }
@@ -141,10 +144,4 @@ Item {
         }
     }
 
-    Process {
-        id: copyProcess
-        property string text: ""
-        running: false
-        command: ["wl-copy", text]
-    }
 }

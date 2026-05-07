@@ -585,6 +585,10 @@ FocusScope {
                                 icons: root.icons
                                 lang: visible ? modelData.lang : ""
                                 code: visible ? modelData.content : ""
+                                onCopyRequested: text => {
+                                    copyProcess.text = text
+                                    copyProcess.running = true
+                                }
                             }
                         }
                     }
