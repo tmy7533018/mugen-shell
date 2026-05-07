@@ -33,6 +33,7 @@ __pycache__/
 # Claude Code local settings
 .claude/
 
-# nix build output symlink
-/result
-/result-*
+# nix build output symlink (anywhere in the tree, since `nix build` drops it
+# in the current working directory)
+result
+result-*
