@@ -33,6 +33,9 @@ __pycache__/
 # Claude Code local settings
 .claude/
 
+# Personal scratchpad
+TODO.md
+
 # nix build output symlink (anywhere in the tree, since `nix build` drops it
 # in the current working directory)
 result
