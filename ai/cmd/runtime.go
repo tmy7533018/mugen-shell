@@ -89,6 +89,17 @@ func buildRegistry(cfg config.Config, model string) *provider.Registry {
 			providers = append(providers, provider.NewGoogle(key, cfg.Provider.Google.Model))
 		}
 	}
+	// OpenAI-compatible: register if either an API key is set (OpenAI itself,
+	// OpenRouter, ...) or a base_url is configured (LM Studio / vLLM running
+	// locally without a key).
+	openaiKey := os.Getenv("OPENAI_API_KEY")
+	if openaiKey != "" || cfg.Provider.OpenAI.BaseURL != "" {
+		providers = append(providers, provider.NewOpenAI(
+			cfg.Provider.OpenAI.BaseURL,
+			openaiKey,
+			cfg.Provider.OpenAI.Models,
+		))
+	}
 	return provider.NewRegistry(model, providers...)
 }
 

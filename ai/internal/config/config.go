@@ -25,6 +25,7 @@ type Context struct {
 type Provider struct {
 	Ollama Ollama `toml:"ollama"`
 	Google Google `toml:"google"`
+	OpenAI OpenAI `toml:"openai"`
 }
 
 type Ollama struct {
@@ -33,6 +34,15 @@ type Ollama struct {
 
 type Google struct {
 	Model string `toml:"model"`
+}
+
+// OpenAI covers any provider that speaks the OpenAI Chat Completions API:
+// OpenAI itself, OpenRouter, LM Studio, vLLM, LiteLLM, etc. The API key is
+// loaded from OPENAI_API_KEY (left empty for local servers that don't need
+// one). Models is optional — if empty, the provider asks /v1/models.
+type OpenAI struct {
+	BaseURL string   `toml:"base_url"`
+	Models  []string `toml:"models"`
 }
 
 func Default() Config {

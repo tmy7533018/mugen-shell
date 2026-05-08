@@ -170,15 +170,28 @@ city = ""
 
 [provider.google]
 model = "gemini-2.5-flash"
+
+[provider.openai]
+# Any OpenAI-compatible backend: OpenAI, OpenRouter, LM Studio, vLLM, ...
+# base_url = "https://api.openai.com/v1"        # OpenAI itself
+# base_url = "https://openrouter.ai/api/v1"     # OpenRouter
+# base_url = "http://localhost:1234/v1"         # LM Studio (no API key needed)
+# models = ["gpt-4o-mini", "gpt-4o"]            # leave empty to ask /v1/models
 ```
 
 - **`city`** — enables live weather via [wttr.in](https://wttr.in). Leave empty to disable.
 - **`[provider.google].model`** — enables Gemini (requires `GEMINI_API_KEY`). Omit to disable.
+- **`[provider.openai]`** — enables any OpenAI-compatible provider. Activated when either `OPENAI_API_KEY` is set (cloud providers) or `base_url` points at a local server. `models` is optional; when empty the provider asks the backend's `/v1/models` endpoint.
 
-### Gemini API key
+### Provider API keys
+
+Save secrets in the env file the systemd unit reads:
 
 ```sh
-echo 'GEMINI_API_KEY=...' > ~/.config/mugen-ai/.env
+cat >> ~/.config/mugen-ai/.env <<'EOF'
+GEMINI_API_KEY=...
+OPENAI_API_KEY=...
+EOF
 chmod 600 ~/.config/mugen-ai/.env
 systemctl --user restart mugen-ai.service
 ```
