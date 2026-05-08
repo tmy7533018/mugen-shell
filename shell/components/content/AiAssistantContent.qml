@@ -18,8 +18,7 @@ FocusScope {
     property var aiBackend
     property bool isStandalone: false
 
-    // Helper: backend URL prefix. Falls back to the historical default when
-    // the AiBackend object isn't wired (e.g. legacy embedding paths).
+    // Fallback used when no AiBackend is wired (e.g. legacy embedding paths).
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://127.0.0.1:11435"
 
     // Spotlight-style: keep the bar at its normal height, just give the AI mode

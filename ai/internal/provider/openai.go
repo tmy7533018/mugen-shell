@@ -12,9 +12,6 @@ import (
 	"time"
 )
 
-// OpenAI talks to any backend that speaks the OpenAI Chat Completions API:
-// OpenAI itself, OpenRouter, LM Studio, vLLM, LiteLLM proxies, etc. The
-// configured base URL points at the host's /v1 prefix.
 type OpenAI struct {
 	baseURL     string
 	apiKey      string
@@ -40,8 +37,7 @@ func (o *OpenAI) Ping(_ context.Context) bool {
 	if o.apiKey != "" {
 		return true
 	}
-	// Local OpenAI-compatible servers (LM Studio, vLLM, ...) often run
-	// without an API key — accept a localhost base URL as enough.
+	// Local servers (LM Studio / vLLM) often skip the key.
 	return strings.HasPrefix(o.baseURL, "http://localhost") ||
 		strings.HasPrefix(o.baseURL, "http://127.")
 }

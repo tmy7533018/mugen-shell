@@ -14,10 +14,6 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/store"
 )
 
-// runtimeContext bundles everything `serve` and `chat` need to bootstrap.
-// Both commands used to build this by hand and the bodies drifted; keeping
-// it in one place means a future provider / context-source / history-store
-// change only has to happen once.
 type runtimeContext struct {
 	Cfg      config.Config
 	Model    string
@@ -26,11 +22,7 @@ type runtimeContext struct {
 	History  *history.History
 }
 
-// loadRuntimeContext does the shared startup work for the CLI subcommands:
-// load config (falling back to defaults on error), resolve the active model
-// (flag → persisted state → first available), resolve the system prompt
-// (flag → config), build the provider registry, and open the persistent
-// history store. Callers are responsible for `Close()`-ing rt.Store.
+// loadRuntimeContext is the shared `serve` / `chat` bootstrap. Caller closes rt.Store.
 func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, error) {
 	cfg, err := config.Load()
 	if err != nil {
@@ -89,9 +81,6 @@ func buildRegistry(cfg config.Config, model string) *provider.Registry {
 			providers = append(providers, provider.NewGoogle(key, cfg.Provider.Google.Model))
 		}
 	}
-	// OpenAI-compatible: register if either an API key is set (OpenAI itself,
-	// OpenRouter, ...) or a base_url is configured (LM Studio / vLLM running
-	// locally without a key).
 	openaiKey := os.Getenv("OPENAI_API_KEY")
 	if openaiKey != "" || cfg.Provider.OpenAI.BaseURL != "" {
 		providers = append(providers, provider.NewOpenAI(

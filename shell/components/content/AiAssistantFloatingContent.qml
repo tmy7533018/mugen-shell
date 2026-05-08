@@ -15,6 +15,7 @@ FocusScope {
     property var icons
     property var aiBackend
 
+    // Fallback used when no AiBackend is wired (e.g. legacy embedding paths).
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://127.0.0.1:11435"
 
     property var messages: []

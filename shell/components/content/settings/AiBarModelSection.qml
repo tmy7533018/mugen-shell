@@ -10,9 +10,8 @@ Rectangle {
     required property var modeManager
     required property var settingsManager
 
-    // The Settings panel is loaded via Loader chains where threading another
-    // shared object every step is noisy; AiBackend is a stateless QtObject
-    // that just reads env vars, so a local instance is the cheapest fix.
+    // Local instance — AiBackend is stateless, threading it through the
+    // Settings Loader chain just to share one would be noisier than this.
     Theme.AiBackend { id: aiBackend }
 
     width: parent ? parent.width : 420

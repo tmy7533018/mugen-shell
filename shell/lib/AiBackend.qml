@@ -1,13 +1,9 @@
 import QtQuick
 import Quickshell
 
-// Single source of truth for the mugen-ai backend address. Both the bar AI,
-// the floating AI, and Settings → Bar AI model use baseUrl + path so that
-// changing the port (via the MUGEN_AI_PORT env var, or by editing the
-// defaults below) only happens in one place.
-//
-// The systemd unit can set MUGEN_AI_PORT in EnvironmentFile to keep the
-// backend's --port flag and the shell client in sync without code edits.
+// Single source of truth for the mugen-ai backend address. Honours
+// MUGEN_AI_HOST / MUGEN_AI_PORT so the systemd unit's EnvironmentFile
+// keeps the backend's --port and the shell client in sync.
 QtObject {
     id: aiBackend
 
