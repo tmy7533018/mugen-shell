@@ -13,6 +13,9 @@ FocusScope {
     required property var modeManager
     property var theme
     property var icons
+    property var aiBackend
+
+    readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://127.0.0.1:11435"
 
     property var messages: []
     property bool streaming: false
@@ -772,7 +775,7 @@ FocusScope {
         property string payload: ""
         running: false
         command: ["curl", "-sS", "-N", "-X", "POST",
-                  "http://127.0.0.1:11435/chat",
+                  root._baseUrl + "/chat",
                   "-H", "Content-Type: application/json",
                   "-d", payload]
 
@@ -817,7 +820,7 @@ FocusScope {
         id: listConvProcess
         running: false
         property string buf: ""
-        command: ["curl", "-sS", "--max-time", "2", "http://127.0.0.1:11435/conversations"]
+        command: ["curl", "-sS", "--max-time", "2", root._baseUrl + "/conversations"]
 
         stdout: SplitParser { onRead: data => { listConvProcess.buf += data } }
         onRunningChanged: { if (running) buf = "" }
@@ -835,7 +838,7 @@ FocusScope {
         id: loadCurrentProcess
         running: false
         property string buf: ""
-        command: ["curl", "-sS", "--max-time", "2", "http://127.0.0.1:11435/conversations/current"]
+        command: ["curl", "-sS", "--max-time", "2", root._baseUrl + "/conversations/current"]
 
         stdout: SplitParser { onRead: data => { loadCurrentProcess.buf += data } }
         onRunningChanged: { if (running) buf = "" }
@@ -862,7 +865,7 @@ FocusScope {
         property string payload: ""
         property string buf: ""
         command: ["curl", "-sS", "--max-time", "2", "-X", "POST",
-                  "http://127.0.0.1:11435/conversations/" + payload + "/select"]
+                  root._baseUrl + "/conversations/" + payload + "/select"]
 
         stdout: SplitParser { onRead: data => { selectConvProcess.buf += data } }
         onRunningChanged: { if (running) buf = "" }
@@ -880,7 +883,7 @@ FocusScope {
         property string payload: ""
         property string buf: ""
         command: ["curl", "-sS", "--max-time", "2", "-X", "DELETE",
-                  "http://127.0.0.1:11435/conversations/" + payload]
+                  root._baseUrl + "/conversations/" + payload]
 
         stdout: SplitParser { onRead: data => { deleteConvProcess.buf += data } }
         onRunningChanged: { if (running) buf = "" }
@@ -914,7 +917,7 @@ FocusScope {
         id: healthProcess
         running: false
         property string buf: ""
-        command: ["curl", "-sSf", "--max-time", "2", "http://127.0.0.1:11435/health"]
+        command: ["curl", "-sSf", "--max-time", "2", root._baseUrl + "/health"]
 
         stdout: SplitParser {
             onRead: data => { healthProcess.buf += data }
@@ -944,7 +947,7 @@ FocusScope {
         id: modelsProcess
         running: false
         property string buf: ""
-        command: ["curl", "-sS", "--max-time", "2", "http://127.0.0.1:11435/models"]
+        command: ["curl", "-sS", "--max-time", "2", root._baseUrl + "/models"]
 
         stdout: SplitParser {
             onRead: data => { modelsProcess.buf += data }
@@ -967,7 +970,7 @@ FocusScope {
         running: false
         property string payload: ""
         command: ["curl", "-sS", "-X", "PUT",
-                  "http://127.0.0.1:11435/model",
+                  root._baseUrl + "/model",
                   "-H", "Content-Type: application/json",
                   "-d", payload]
 

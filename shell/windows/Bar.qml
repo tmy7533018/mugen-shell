@@ -130,6 +130,8 @@ PanelWindow {
 
     Theme.SettingsManager { id: settingsManager }
 
+    Theme.AiBackend { id: aiBackend }
+
     readonly property string soundsDir: {
         let xdg = Quickshell.env("XDG_DATA_HOME")
         if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/share"
@@ -499,6 +501,7 @@ PanelWindow {
         property var themeRef: theme
         property var iconsRef: icons
         property var settingsManagerRef: settingsManager
+        property var aiBackendRef: aiBackend
 
         // Keep AI loaded after first open so chat history, streaming state,
         // and model selection survive panel close/reopen. Other modules
@@ -514,6 +517,7 @@ PanelWindow {
             theme: aiAssistantLoader.themeRef
             icons: aiAssistantLoader.iconsRef
             settingsManager: aiAssistantLoader.settingsManagerRef
+            aiBackend: aiAssistantLoader.aiBackendRef
         }
     }
 

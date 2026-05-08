@@ -21,6 +21,10 @@ ShellRoot {
         id: icons
     }
 
+    Theme.AiBackend {
+        id: aiBackend
+    }
+
     QtObject {
         id: modeStub
 
@@ -59,6 +63,7 @@ ShellRoot {
                 modeManager: modeStub
                 theme: themeColors
                 icons: icons
+                aiBackend: aiBackend
             }
         }
     }

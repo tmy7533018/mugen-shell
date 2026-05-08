@@ -6,12 +6,18 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/tmy7533018/mugen-ai/internal/server"
 )
+
+// defaultPort is the port mugen-ai listens on when neither the --port flag
+// nor MUGEN_AI_PORT env var is set. The shell client (shell/lib/AiBackend.qml)
+// uses the same fallback.
+const defaultPort = 11435
 
 var serveCmd = &cobra.Command{
 	Use:   "serve",
@@ -27,7 +33,16 @@ var (
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
-	serveCmd.Flags().IntVarP(&servePort, "port", "p", 11435, "port to listen on")
+	// Resolve the default port: --port flag wins; otherwise honour
+	// MUGEN_AI_PORT (lets the systemd EnvironmentFile keep backend +
+	// shell client in sync); fall back to the constant.
+	def := defaultPort
+	if v, ok := os.LookupEnv("MUGEN_AI_PORT"); ok {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			def = n
+		}
+	}
+	serveCmd.Flags().IntVarP(&servePort, "port", "p", def, "port to listen on")
 	serveCmd.Flags().StringVarP(&serveModel, "model", "m", "", "model to use on startup (overrides config)")
 	serveCmd.Flags().StringVar(&serveSystem, "system", "", "System prompt (overrides config)")
 }

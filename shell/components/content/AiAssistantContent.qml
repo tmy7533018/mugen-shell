@@ -15,7 +15,12 @@ FocusScope {
     property var theme
     property var icons
     property var settingsManager
+    property var aiBackend
     property bool isStandalone: false
+
+    // Helper: backend URL prefix. Falls back to the historical default when
+    // the AiBackend object isn't wired (e.g. legacy embedding paths).
+    readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://127.0.0.1:11435"
 
     // Spotlight-style: keep the bar at its normal height, just give the AI mode
     // a centered horizontal slot wide enough for a sentence or two.
@@ -439,7 +444,7 @@ FocusScope {
         property string payload: ""
         running: false
         command: ["curl", "-sS", "-N", "-X", "POST",
-                  "http://127.0.0.1:11435/chat",
+                  root._baseUrl + "/chat",
                   "-H", "Content-Type: application/json",
                   "-d", payload]
 
@@ -488,7 +493,7 @@ FocusScope {
         id: healthProcess
         running: false
         property string buf: ""
-        command: ["curl", "-sSf", "--max-time", "2", "http://127.0.0.1:11435/health"]
+        command: ["curl", "-sSf", "--max-time", "2", root._baseUrl + "/health"]
 
         stdout: SplitParser { onRead: data => { healthProcess.buf += data } }
         onRunningChanged: { if (running) buf = "" }

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Io
+import "../../../lib" as Theme
 
 Rectangle {
     id: section
@@ -8,6 +9,11 @@ Rectangle {
     required property var theme
     required property var modeManager
     required property var settingsManager
+
+    // The Settings panel is loaded via Loader chains where threading another
+    // shared object every step is noisy; AiBackend is a stateless QtObject
+    // that just reads env vars, so a local instance is the cheapest fix.
+    Theme.AiBackend { id: aiBackend }
 
     width: parent ? parent.width : 420
     height: section.isExpanded ? 64 + Math.min(section.options.length, 6) * 36 + 12 : 64
@@ -149,7 +155,7 @@ Rectangle {
         id: modelsProcess
         running: false
         property string buf: ""
-        command: ["curl", "-sS", "--max-time", "2", "http://127.0.0.1:11435/models"]
+        command: ["curl", "-sS", "--max-time", "2", aiBackend.baseUrl + "/models"]
 
         stdout: SplitParser { onRead: data => { modelsProcess.buf += data } }
         onRunningChanged: { if (running) buf = "" }
