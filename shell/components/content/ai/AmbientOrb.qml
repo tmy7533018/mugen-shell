@@ -7,6 +7,7 @@ Item {
 
     property color orbColor: Qt.rgba(0.65, 0.55, 0.85, 0.9)
     property bool streaming: false
+    property bool active: true
     property real haloScale: 1.5
     property real haloOpacity: 0.5
 
@@ -29,10 +30,15 @@ Item {
     function refresh() {
         idleBreath.stop()
         streamPulse.stop()
+        if (!active) {
+            pulseScale = 1.0
+            return
+        }
         if (streaming) streamPulse.start()
         else idleBreath.start()
     }
 
+    onActiveChanged: refresh()
     onStreamingChanged: refresh()
     Component.onCompleted: refresh()
 
@@ -55,7 +61,7 @@ Item {
         baseOpacity: root.haloOpacity * (root.streaming ? 1.2 : 0.9)
         animationSpeed: root.streaming ? 0.07 : 0.025
         pointCount: 14
-        running: true
+        running: root.active
 
         Behavior on baseOpacity { NumberAnimation { duration: 600; easing.type: Easing.InOutCubic } }
     }
@@ -69,6 +75,6 @@ Item {
         baseOpacity: 0.9
         animationSpeed: root.streaming ? 0.13 : 0.04
         pointCount: 16
-        running: true
+        running: root.active
     }
 }

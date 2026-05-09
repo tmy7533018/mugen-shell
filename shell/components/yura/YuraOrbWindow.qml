@@ -56,6 +56,7 @@ PanelWindow {
             orbColor: orbWindow.theme ? orbWindow.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
             haloScale: 1.6
             haloOpacity: 0.5
+            active: yuraState.expanded
         }
 
         MouseArea {
