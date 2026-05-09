@@ -12,6 +12,10 @@ Item {
     property real haloScale: 1.5
     property real haloOpacity: 0.5
     property real coreOpacity: 0.9
+    property int corePointCount: 16
+    property int haloPointCount: 14
+    property real coreWaveAmplitude: 4.0
+    property real haloWaveAmplitude: 5.0
 
     property real pulseScale: 1.0
 
@@ -60,10 +64,10 @@ Item {
         anchors.centerIn: parent
         blobColor: Qt.rgba(root.orbColor.r, root.orbColor.g, root.orbColor.b, root.streaming ? 0.4 : 0.25)
         layers: 2
-        waveAmplitude: 5.0
+        waveAmplitude: root.haloWaveAmplitude
         baseOpacity: root.haloOpacity * (root.streaming ? 1.2 : 0.9)
         animationSpeed: root.streaming ? 0.07 : 0.025
-        pointCount: 14
+        pointCount: root.haloPointCount
         running: root.active && root.showHalo
 
         Behavior on baseOpacity { NumberAnimation { duration: 600; easing.type: Easing.InOutCubic } }
@@ -74,10 +78,10 @@ Item {
         anchors.fill: parent
         blobColor: root.orbColor
         layers: 3
-        waveAmplitude: 4.0
+        waveAmplitude: root.coreWaveAmplitude
         baseOpacity: root.coreOpacity
         animationSpeed: root.streaming ? 0.13 : 0.04
-        pointCount: 16
+        pointCount: root.corePointCount
         running: root.active
     }
 }

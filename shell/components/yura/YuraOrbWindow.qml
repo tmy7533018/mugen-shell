@@ -125,8 +125,6 @@ PanelWindow {
 
         smooth: true
         antialiasing: true
-        layer.enabled: true
-        layer.smooth: true
 
         Behavior on x { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
         Behavior on y { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
@@ -138,6 +136,8 @@ PanelWindow {
             orbColor: orbWindow.theme ? orbWindow.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
             showHalo: false
             coreOpacity: 0.6
+            corePointCount: 48
+            coreWaveAmplitude: 0.5
             active: orbWindow.visible && !(orbWindow.fullscreenActive && !yuraState.expanded)
         }
 
