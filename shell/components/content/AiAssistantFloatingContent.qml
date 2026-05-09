@@ -133,19 +133,52 @@ FocusScope {
         loadCurrentProcess.running = true
     }
 
-    Timer {
-        id: syncPollTimer
-        interval: 3000
+    Process {
+        id: eventsSubscriber
         running: true
-        repeat: true
-        onTriggered: {
+        property string buf: ""
+        command: ["curl", "-sS", "-N", root._baseUrl + "/events"]
+
+        function handleLine(line) {
+            if (!line.startsWith("data:")) return
+            let data = line.substring(5).trim()
+            if (!data) return
+            let evt
+            try { evt = JSON.parse(data) } catch (e) { return }
             if (root.streaming) return
-            if (listConvProcess.running || loadCurrentProcess.running) return
-            root.refreshConversations()
-            if (root.currentConvId !== 0) {
-                root.loadCurrentConversation()
+            if (evt.type === "conversations") {
+                root.refreshConversations()
+            } else if (evt.type === "messages") {
+                let convId = evt.data && evt.data.conversation_id
+                if (root.currentConvId !== 0 && convId === root.currentConvId) {
+                    root.loadCurrentConversation()
+                }
             }
         }
+
+        stdout: SplitParser {
+            onRead: data => {
+                eventsSubscriber.buf += data
+                let idx
+                while ((idx = eventsSubscriber.buf.indexOf("\n")) !== -1) {
+                    let line = eventsSubscriber.buf.substring(0, idx)
+                    eventsSubscriber.buf = eventsSubscriber.buf.substring(idx + 1)
+                    eventsSubscriber.handleLine(line)
+                }
+            }
+        }
+
+        onExited: {
+            eventsSubscriber.buf = ""
+            eventsReconnectTimer.restart()
+        }
+    }
+
+    Timer {
+        id: eventsReconnectTimer
+        interval: 2000
+        repeat: false
+        onTriggered: eventsSubscriber.running = true
     }
 
     // Split on ``` — even parts are markdown prose, odd parts are code

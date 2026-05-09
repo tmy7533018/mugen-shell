@@ -18,10 +18,11 @@ type Server struct {
 	registry *provider.Registry
 	history  *history.History
 	store    *store.Store
+	events   *eventBus
 }
 
 func New(registry *provider.Registry, hist *history.History, st *store.Store) *Server {
-	return &Server{registry: registry, history: hist, store: st}
+	return &Server{registry: registry, history: hist, store: st, events: newEventBus()}
 }
 
 func (s *Server) Routes() http.Handler {
@@ -37,6 +38,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /conversations/{id}", s.handleGetConversation)
 	mux.HandleFunc("DELETE /conversations/{id}", s.handleDeleteConversation)
 	mux.HandleFunc("POST /conversations/{id}/select", s.handleSelectConversation)
+
+	mux.HandleFunc("GET /events", s.handleEvents)
 
 	return corsMiddleware(mux)
 }
@@ -97,6 +100,10 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	convID := s.history.ConvID()
+	s.events.broadcast("conversations", nil)
+	s.events.broadcast("messages", map[string]any{"conversation_id": convID})
+
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -139,6 +146,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 
 	if fullResponse != "" {
 		_ = s.history.Add("assistant", fullResponse, model)
+		s.events.broadcast("conversations", nil)
+		s.events.broadcast("messages", map[string]any{"conversation_id": convID})
 	}
 }
 
@@ -206,6 +215,7 @@ func (s *Server) handleCreateConversation(w http.ResponseWriter, _ *http.Request
 		return
 	}
 	conv, _ := s.store.GetConversation(id)
+	s.events.broadcast("conversations", nil)
 	writeJSON(w, conv)
 }
 
@@ -285,6 +295,7 @@ func (s *Server) handleDeleteConversation(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	s.events.broadcast("conversations", nil)
 	writeJSON(w, map[string]any{"current_id": s.history.ConvID()})
 }
 
