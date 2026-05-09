@@ -166,7 +166,7 @@ FocusScope {
             anchors.bottomMargin: modeManager.scale(8)
             spacing: modeManager.scale(12)
 
-            // Click to detach into the floating window.
+            // Click to detach into Yura's corner-popup window.
             Item {
                 id: orbSlot
                 Layout.preferredWidth: modeManager.scale(36)
@@ -193,7 +193,7 @@ FocusScope {
                     enabled: !root.isStandalone
                     onClicked: {
                         modeManager.closeAllModes()
-                        Hyprland.dispatch("exec ~/.config/quickshell/mugen-shell/scripts/toggle-ai.sh")
+                        Hyprland.dispatch("exec qs -p ~/.config/quickshell/mugen-shell/yura-shell.qml ipc call yura toggle")
                     }
                 }
             }
