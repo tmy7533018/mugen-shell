@@ -33,12 +33,12 @@ For directory layout, install paths (Nix flake home-manager module or manual `ma
 
 https://github.com/user-attachments/assets/2409880e-4214-4b38-951c-834876570aaa
 
-Yura is the desktop chat persona — a Spotlight-style row in the bar (`Super + A`) and a corner pop-up chat panel that slides in from off-screen (`Super + Y`). The legacy floating window (`Super + Shift + A`) is still around for parallel testing but will be retired once the pop-up is fully validated. Yura is powered by **mugen-ai**, a Go server bundled in this repo under [`ai/`](ai/) that fronts local [Ollama](https://ollama.com) models, Google Gemini, and any OpenAI-compatible backend (OpenAI, OpenRouter, LM Studio, vLLM, ...).
+Yura is the desktop chat persona — a Spotlight-style row in the bar (`Super + A`) and a corner pop-up chat panel that slides in from off-screen (`Super + Y`). The older floating window (`Super + Shift + A`) is still around while I'm using both side by side, and will go once the pop-up has settled in. Yura is powered by **mugen-ai**, a Go server bundled in this repo under [`ai/`](ai/) that fronts local [Ollama](https://ollama.com) models, Google Gemini, and any OpenAI-compatible backend (OpenAI, OpenRouter, LM Studio, vLLM, ...).
 
 Built and enabled automatically on any install path (NixOS, Arch + Nix, or pure manual `make install` — see [SETUP.md](SETUP.md)).
 
 - Spotlight-style one-row prompt in the bar — Yura icon + input pill, response streams into the placeholder, navigable read-only after streaming, clicking the icon detaches into the corner panel
-- Corner pop-up panel (left or right, configurable); sidebar of past conversations, dream-styled cosmic gradient + drifting particles, ambient breathing presence that drifts from the centre of the empty state to follow the latest reply
+- Corner pop-up panel (left or right, configurable); sidebar of past conversations, cosmic gradient background, drifting particles, and a soft breathing indicator that follows the latest reply
 - The bar row and the corner pop-up stay in sync — send a message in one and it shows up in the other instantly
 - Multi-conversation history persisted on disk — pick up old chats from the sidebar, delete with a hover trash, "+ New chat" stays empty until you actually send something
 - Per-conversation model binding — each chat stays on the provider it was started with; the panel dropdown locks to read-only mid-conversation, and a Settings entry pins the bar's model
@@ -64,10 +64,10 @@ Configuration, the HTTP API, and the Gemini API key step live in [SETUP.md → C
 - Music player integration (playerctl / MPRIS) with YouTube thumbnail fallback and a seekable glowing progress slider
 - Cava audio visualizer
 - Notification center
-- Calendar with SQLite-backed events in a standalone night-sky window (purple gradient + starfield + crescent moon, two-pane month grid + events list, add / edit / inline modal, weekday-tinted grid, today ring, event dots, monthly count, jump-to-today)
+- Calendar in a standalone night-sky window — month grid + events list, inline add / edit modal, today ring, event dots
 - Countdown Timer (`Super + Shift + T`) with preset durations, free-form M:SS input, full keyboard control, glowing progress ring, configurable completion sound, and a live remaining-time pill in the bar
 - Configurable bar date format (Qt date tokens, e.g. `ddd M/d`, `yyyy-MM-dd`)
-- Detach panel — Settings can open as a standalone floating window (state synced with the bar via JSON + FileView watcher)
+- Settings can detach into a standalone floating window, kept in sync with the bar
 - Clipboard history (`Super + V`) with item limit
 - WiFi / Bluetooth / IME management
 - Speaker / microphone control sharing the volume panel (`Super + U`) with a swap toggle
@@ -78,13 +78,13 @@ Configuration, the HTTP API, and the Gemini API key step live in [SETUP.md → C
 - Screenshot capture with clipboard copy (`Super + F12`)
 - Screenshot gallery
 - Power menu
-- In-shell settings panel with configurable notification + timer sounds, theme, blur, animations, lock-timer, date format, bar Yura model, and Yura panel side
+- In-shell settings panel covering theme, blur, animations, notification + timer sounds, lock timer, date format, and Yura's bar model + panel side
 
 ---
 
 ## Usage
 
-Once installed (see [SETUP.md](SETUP.md)), the bar starts via Hyprland's `exec-once`.
+Once installed (see [SETUP.md](SETUP.md)), the bar starts automatically with the Hyprland session.
 
 Most-used panels:
 
