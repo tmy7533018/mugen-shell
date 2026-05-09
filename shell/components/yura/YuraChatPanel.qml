@@ -123,6 +123,25 @@ PanelWindow {
             }
         }
 
+        Binding {
+            target: yuraState
+            property: "aiOrbX"
+            when: contentLoader.item !== null
+            value: contentLoader.item ? contentLoader.item.orbExternalX : -1
+        }
+        Binding {
+            target: yuraState
+            property: "aiOrbY"
+            when: contentLoader.item !== null
+            value: contentLoader.item ? contentLoader.item.orbExternalY : -1
+        }
+        Binding {
+            target: yuraState
+            property: "aiOrbSize"
+            when: contentLoader.item !== null
+            value: contentLoader.item ? contentLoader.item.orbExternalSize : -1
+        }
+
         MouseArea {
             anchors.fill: parent
             acceptedButtons: Qt.NoButton

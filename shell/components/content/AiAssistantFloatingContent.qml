@@ -17,6 +17,14 @@ FocusScope {
     property var settingsManager
     property bool showInternalOrb: true
 
+    // Orb position / size mirrored from the internal Item, expressed in
+    // root coordinates (mainPane.x + orb.x). Lets a separate global orb
+    // window track the same morph an external client (e.g. Yura) needs.
+    readonly property real orbExternalX: orb.x + mainPane.x
+    readonly property real orbExternalY: orb.y + mainPane.y
+    readonly property real orbExternalSize: orb.width
+    readonly property bool orbExternalEmptyState: orb.isInEmptyState
+
     // Fallback used when no AiBackend is wired (e.g. legacy embedding paths).
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://127.0.0.1:11435"
 
