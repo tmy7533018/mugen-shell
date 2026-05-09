@@ -23,7 +23,10 @@ PanelWindow {
         : false
 
     onFullscreenActiveChanged: {
-        if (!fullscreenActive && !yuraState.expanded) {
+        if (yuraState.expanded) return
+        if (fullscreenActive) {
+            hideTimer.stop()
+        } else {
             orbWindow.visible = true
             orb.restOpacity = 1
             scheduleHide()
@@ -129,7 +132,7 @@ PanelWindow {
 
         Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.InOutCubic } }
 
-        onOpacityChanged: if (opacity < 0.01 && !yuraState.expanded) orbWindow.visible = false
+        onOpacityChanged: if (opacity < 0.01 && orb.restOpacity < 0.01 && !yuraState.expanded) orbWindow.visible = false
 
         smooth: true
         antialiasing: true
