@@ -15,6 +15,26 @@ PanelWindow {
 
     color: "transparent"
 
+    visible: false
+
+    Connections {
+        target: yuraState
+        function onExpandedChanged() {
+            if (yuraState.expanded) {
+                chatWindow.visible = true
+                chatHideTimer.stop()
+            } else {
+                chatHideTimer.restart()
+            }
+        }
+    }
+
+    Timer {
+        id: chatHideTimer
+        interval: 650
+        onTriggered: chatWindow.visible = false
+    }
+
     anchors {
         top: true
         bottom: true
