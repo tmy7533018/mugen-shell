@@ -17,7 +17,7 @@ Rectangle {
 
     // Multiplied into every animated gradient stop's opacity. Used to dim the
     // sliding accent gradients in dark mode so they don't fight the deep base.
-    property real gradientStrength: (theme && theme.themeMode === "dark") ? 0.4 : 1.0
+    property real gradientStrength: (theme && theme.themeMode === "dark") ? 0.75 : 1.0
 
     property color gradientColor1: Qt.rgba(0.65, 0.55, 0.85, 1.0)
     property color gradientColor2: Qt.rgba(0.45, 0.60, 0.90, 1.0)
