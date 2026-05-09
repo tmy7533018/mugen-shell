@@ -31,7 +31,7 @@ For directory layout, install paths (Nix flake home-manager module or manual `ma
 
 ## Yura
 
-https://github.com/user-attachments/assets/e9fef972-9445-4ec4-a08e-2d1ae98c8a11
+https://github.com/user-attachments/assets/2409880e-4214-4b38-951c-834876570aaa
 
 Yura is the desktop chat persona — a Spotlight-style row in the bar (`Super + A`), a dedicated floating window (`Super + Shift + A`), and a corner orb that pops up a chat panel (`Super + Y`). It's powered by **mugen-ai**, a Go server bundled in this repo under [`ai/`](ai/) that fronts local [Ollama](https://ollama.com) models, Google Gemini, and any OpenAI-compatible backend (OpenAI, OpenRouter, LM Studio, vLLM, ...).
 
