@@ -56,7 +56,7 @@ FocusScope {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.leftMargin: modeManager.scale(6)
-                text: "Mugen AI"
+                text: "Yura"
                 color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
                 font.pixelSize: modeManager.scale(17)
                 font.family: "M PLUS 2"

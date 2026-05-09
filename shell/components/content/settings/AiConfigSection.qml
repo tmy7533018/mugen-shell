@@ -28,7 +28,7 @@ Rectangle {
 
         Text {
             Layout.fillWidth: true
-            text: "AI Assistant"
+            text: "Yura"
             color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
             font.pixelSize: 12
             font.family: "M PLUS 2"

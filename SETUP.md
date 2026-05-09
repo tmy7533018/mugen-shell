@@ -202,7 +202,7 @@ make install        # symlinks + builds and enables mugen-ai
 
 ## Configuring mugen-ai
 
-The AI panel (`Super + A`) talks to a local Go server. Settings → AI Assistant has "Edit Config" / "Restart AI" buttons that open `~/.config/mugen-ai/config.toml` in your default editor and bounce the systemd unit, so you don't have to drop to a terminal for tweaks. The neighbouring "Bar AI model" dropdown pins which model the bar `Super + A` panel uses — leave it on "Default (last used in float)" to follow whichever model the floating window most recently selected. When `mugen-ai.service` isn't running, the panel shows an install hint instead of the chat UI — safe to leave the bar icon if you skip this feature.
+Yura (`Super + A` for the bar row, `Super + Shift + A` for the floating window, `Super + Shift + Y` for the corner orb) talks to the local Go server. Settings → Yura has "Edit Config" / "Restart AI" buttons that open `~/.config/mugen-ai/config.toml` in your default editor and bounce the systemd unit, so you don't have to drop to a terminal for tweaks. The neighbouring "Bar Yura model" dropdown pins which model the bar `Super + A` row uses — leave it on "Default (last used in float)" to follow whichever model the floating window most recently selected. When `mugen-ai.service` isn't running, the panel shows an install hint instead of the chat UI — safe to ignore the bar icon if you skip this feature.
 
 `~/.config/mugen-ai/config.toml`:
 
@@ -284,8 +284,9 @@ For terminal use: `mugen-ai chat`.
 | `Super + V` | Clipboard history |
 | `Super + M` | Music player |
 | `Super + T` | Notification center |
-| `Super + A` | AI assistant |
-| `Super + Shift + A` | AI assistant (floating window) |
+| `Super + A` | Yura (bar) |
+| `Super + Shift + A` | Yura (floating window) |
+| `Super + Shift + Y` | Yura (corner orb) |
 | `Super + C` | Calendar |
 | `Super + S` | Screenshot gallery |
 | `Super + U` | Volume / microphone control |

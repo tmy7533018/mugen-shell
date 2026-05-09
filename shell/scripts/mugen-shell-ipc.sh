@@ -13,7 +13,7 @@ Available modes:
   notification        Open notifications
   powermenu           Open power menu
   volume              Open volume control
-  ai                  Open AI assistant
+  ai                  Open Yura (bar)
   clipboard           Open clipboard history
   wifi                Open WiFi panel
   bluetooth           Open Bluetooth panel

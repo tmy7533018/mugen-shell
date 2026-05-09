@@ -23,7 +23,7 @@ Item {
                 { keys: "Super+U", desc: "Volume panel" },
                 { keys: "Super+V", desc: "Clipboard history" },
                 { keys: "Super+T", desc: "Notification center" },
-                { keys: "Super+A", desc: "AI assistant" },
+                { keys: "Super+A", desc: "Yura (bar)" },
                 { keys: "Super+C", desc: "Calendar" },
                 { keys: "Super+S", desc: "Screenshot gallery" },
                 { keys: "Super+I", desc: "WiFi panel" },
@@ -31,7 +31,8 @@ Item {
                 { keys: "Super+P", desc: "Power menu" },
                 { keys: "Super+,", desc: "Settings" },
                 { keys: "Super+Shift+T", desc: "Timer" },
-                { keys: "Super+Shift+A", desc: "AI assistant (floating window)" },
+                { keys: "Super+Shift+A", desc: "Yura (floating window)" },
+                { keys: "Super+Shift+Y", desc: "Yura (corner orb)" },
                 { keys: "Super+/", desc: "This shortcuts panel" },
                 { keys: "Super+Return", desc: "Terminal" },
                 { keys: "Super+B", desc: "Browser" },
@@ -105,7 +106,7 @@ Item {
             ]
         },
         {
-            name: "AI Assistant",
+            name: "Yura",
             rows: [
                 { keys: "Enter", desc: "Send message" },
                 { keys: "←→", desc: "Scroll the response (≈25 chars per press)" },

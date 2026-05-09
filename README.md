@@ -29,11 +29,11 @@ For directory layout, install paths (Nix flake home-manager module or manual `ma
 
 ---
 
-## AI Assistant
+## Yura
 
 https://github.com/user-attachments/assets/e9fef972-9445-4ec4-a08e-2d1ae98c8a11
 
-AI chat panel (`Super + A` for the bar version, `Super + Shift + A` for a dedicated floating window) powered by **mugen-ai** — a Go server bundled in this repo under [`ai/`](ai/), supporting local [Ollama](https://ollama.com) models, Google Gemini, and any OpenAI-compatible backend (OpenAI, OpenRouter, LM Studio, vLLM, ...).
+Yura is the desktop chat persona — a Spotlight-style row in the bar (`Super + A`), a dedicated floating window (`Super + Shift + A`), and a corner orb that pops up a chat panel (`Super + Shift + Y`). It's powered by **mugen-ai**, a Go server bundled in this repo under [`ai/`](ai/) that fronts local [Ollama](https://ollama.com) models, Google Gemini, and any OpenAI-compatible backend (OpenAI, OpenRouter, LM Studio, vLLM, ...).
 
 Built and enabled automatically on either install path (Nix flake or `make install` — see [SETUP.md](SETUP.md)).
 
@@ -95,8 +95,9 @@ Most-used panels:
 | `Super + U` | Volume / mic control |
 | `Super + V` | Clipboard history |
 | `Super + T` | Notification center |
-| `Super + A` | AI assistant |
-| `Super + Shift + A` | AI assistant (floating window) |
+| `Super + A` | Yura (bar) |
+| `Super + Shift + A` | Yura (floating window) |
+| `Super + Shift + Y` | Yura (corner orb) |
 | `Super + C` | Calendar |
 | `Super + Shift + T` | Timer |
 | `Super + I` | WiFi |

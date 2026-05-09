@@ -41,7 +41,7 @@ ShellRoot {
         id: aiWindow
 
         visible: true
-        title: "Mugen AI"
+        title: "Yura"
         color: "transparent"
         width: 720
         height: 540
