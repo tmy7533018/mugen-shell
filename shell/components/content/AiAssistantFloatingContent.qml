@@ -21,6 +21,7 @@ FocusScope {
     // editing the empty-state formula or the active-state base width.
     property real orbEmptyScale: 0.28      // ratio of min(mainPane.w, h)
     property real orbActiveBase: 36        // base px (then modeManager.scale'd)
+    property real orbEmptyYRatio: 0.18     // orb top from mainPane top, as ratio of mainPane height
 
     // Orb position / size mirrored from the internal Item, expressed in
     // root coordinates (mainPane.x + orb.x). Lets a separate global orb
@@ -375,19 +376,27 @@ FocusScope {
         readonly property real emptySize: Math.min(mainPane.width, mainPane.height) * root.orbEmptyScale
         readonly property real activeSize: modeManager.scale(root.orbActiveBase)
         readonly property real emptyX: (mainPane.width - emptySize) / 2
-        readonly property real emptyY: mainPane.height * 0.18
+        readonly property real emptyY: mainPane.height * root.orbEmptyYRatio
 
         property real activeX: activeOverlay.x
         property real activeY: 0
         property bool activePosReady: false
 
-        // Hold at empty position until we know where to land in active state,
-        // so the orb doesn't briefly jump to (0,0) before reaching the message.
-        readonly property bool isInEmptyState: root.isEmpty || !activePosReady
+        // Latch: once we've successfully positioned in active state, stay
+        // out of empty state even if a delegate goes momentarily null
+        // (happens during streaming as ListView re-layouts). Resets when
+        // messages clear (new conversation).
+        property bool _activePosEverReady: false
+        onActivePosReadyChanged: if (activePosReady) _activePosEverReady = true
+
+        readonly property bool isInEmptyState: root.isEmpty || (!activePosReady && !_activePosEverReady)
 
         Connections {
             target: root
-            function onMessagesChanged() { Qt.callLater(orb.updateActivePos) }
+            function onMessagesChanged() {
+                if (root.messages.length === 0) orb._activePosEverReady = false
+                Qt.callLater(orb.updateActivePos)
+            }
         }
 
         function updateActivePos() {
@@ -402,7 +411,13 @@ FocusScope {
                 return
             }
             activeX = activeOverlay.x
-            activeY = activeOverlay.y + item.y - chatList.contentY + item.height - modeManager.scale(40)
+            let rawY = activeOverlay.y + item.y - chatList.contentY + item.height - modeManager.scale(40)
+            // Clamp inside activeOverlay so a scrolled-off latest message
+            // can't drag the orb past the panel bottom (Yura's orb lives on
+            // a separate fullscreen window and would leak out otherwise).
+            let minY = activeOverlay.y
+            let maxY = activeOverlay.y + activeOverlay.height - orb.activeSize
+            activeY = Math.max(minY, Math.min(rawY, maxY))
             activePosReady = true
         }
 
@@ -455,7 +470,7 @@ FocusScope {
         ColumnLayout {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.top: parent.top
-            anchors.topMargin: parent.height * 0.18 + orb.emptySize + modeManager.scale(28)
+            anchors.topMargin: parent.height * root.orbEmptyYRatio + orb.emptySize + modeManager.scale(28)
             spacing: modeManager.scale(18)
             width: Math.min(parent.width - modeManager.scale(64), modeManager.scale(560))
 

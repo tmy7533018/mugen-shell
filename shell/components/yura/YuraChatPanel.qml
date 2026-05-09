@@ -120,7 +120,7 @@ PanelWindow {
                 settingsManager: chatWindow.settingsManager
                 showInternalOrb: false
                 orbEmptyScale: 0.48
-                orbActiveBase: 68
+                orbEmptyYRatio: 0.10
                 onSidebarCollapsedChanged: yuraState.sidebarCollapsed = sidebarCollapsed
             }
         }
