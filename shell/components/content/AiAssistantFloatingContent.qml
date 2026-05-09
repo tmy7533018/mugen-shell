@@ -17,6 +17,11 @@ FocusScope {
     property var settingsManager
     property bool showInternalOrb: true
 
+    // Orb sizing knobs so external owners (Yura) can scale up without
+    // editing the empty-state formula or the active-state base width.
+    property real orbEmptyScale: 0.28      // ratio of min(mainPane.w, h)
+    property real orbActiveBase: 36        // base px (then modeManager.scale'd)
+
     // Orb position / size mirrored from the internal Item, expressed in
     // root coordinates (mainPane.x + orb.x). Lets a separate global orb
     // window track the same morph an external client (e.g. Yura) needs.
@@ -367,8 +372,8 @@ FocusScope {
         z: 4
         visible: root.showInternalOrb
 
-        readonly property real emptySize: Math.min(mainPane.width, mainPane.height) * 0.28
-        readonly property real activeSize: modeManager.scale(36)
+        readonly property real emptySize: Math.min(mainPane.width, mainPane.height) * root.orbEmptyScale
+        readonly property real activeSize: modeManager.scale(root.orbActiveBase)
         readonly property real emptyX: (mainPane.width - emptySize) / 2
         readonly property real emptyY: mainPane.height * 0.18
 
