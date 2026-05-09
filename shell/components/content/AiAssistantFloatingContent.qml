@@ -406,15 +406,21 @@ FocusScope {
         width: isInEmptyState ? emptySize : activeSize
         height: width
 
+        // External consumers (Yura) animate the orb in their own window
+        // and watch orbExternalX/Y/Size as the source of truth — running
+        // a Behavior here too would just stack a 900ms lag on top.
         Behavior on x {
-            enabled: !chatList.moving && !chatList.flicking
+            enabled: root.showInternalOrb && !chatList.moving && !chatList.flicking
             NumberAnimation { duration: 900; easing.type: Easing.InOutCubic }
         }
         Behavior on y {
-            enabled: !chatList.moving && !chatList.flicking
+            enabled: root.showInternalOrb && !chatList.moving && !chatList.flicking
             NumberAnimation { duration: 900; easing.type: Easing.InOutCubic }
         }
-        Behavior on width { NumberAnimation { duration: 900; easing.type: Easing.InOutCubic } }
+        Behavior on width {
+            enabled: root.showInternalOrb
+            NumberAnimation { duration: 900; easing.type: Easing.InOutCubic }
+        }
 
         Ai.AmbientOrb {
             anchors.fill: parent
