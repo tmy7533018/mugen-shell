@@ -28,7 +28,6 @@ QtObject {
     property string dateFormat: "ddd M/d"  // Qt date tokens: d, dd, ddd, dddd, M, MM, MMM, MMMM, yy, yyyy
     property string barAiModel: ""  // "" = follow the backend default (last model selected in float)
     property string yuraPanelSide: "left"  // "left" | "right"
-    property int yuraOrbRestSeconds: 5
 
     // Suppress save while we are applying values that just came in from disk
     // (either initial load or an external write detected by the file watcher).
@@ -78,8 +77,7 @@ QtObject {
                 "barModel": barAiModel
             },
             "yura": {
-                "panelSide": yuraPanelSide,
-                "orbRestSeconds": yuraOrbRestSeconds
+                "panelSide": yuraPanelSide
             }
         }
 
@@ -170,9 +168,6 @@ QtObject {
             if (settings.yura) {
                 if (settings.yura.panelSide !== undefined) {
                     yuraPanelSide = settings.yura.panelSide
-                }
-                if (settings.yura.orbRestSeconds !== undefined) {
-                    yuraOrbRestSeconds = settings.yura.orbRestSeconds
                 }
             }
 

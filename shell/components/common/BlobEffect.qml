@@ -10,6 +10,7 @@ Item {
     property real animationSpeed: 0.08
     property int pointCount: 16
     property bool running: true
+    property real edgeAlpha: 0.0
 
     function getLayerOpacity(layerIndex) {
         return baseOpacity - layerIndex * 0.12
@@ -83,7 +84,7 @@ Item {
                         root.blobColor.r,
                         root.blobColor.g,
                         root.blobColor.b,
-                        0
+                        root.edgeAlpha
                     ))
                     
                     ctx.fillStyle = gradient

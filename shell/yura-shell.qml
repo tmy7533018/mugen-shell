@@ -30,7 +30,6 @@ ShellRoot {
     Yura.YuraOrbWindow {
         yuraState: yuraState
         theme: themeColors
-        settingsManager: settingsManager
     }
 
     IpcHandler {

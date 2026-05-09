@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Wayland
 import "../content/ai" as Ai
 
@@ -9,29 +8,9 @@ PanelWindow {
 
     required property var yuraState
     required property var theme
-    property var settingsManager
 
     color: "transparent"
-    visible: false
     screen: Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
-
-    readonly property var hyprMonitor: orbWindow.screen
-        ? Hyprland.monitorFor(orbWindow.screen)
-        : null
-    readonly property bool fullscreenActive: hyprMonitor && hyprMonitor.activeWorkspace
-        ? hyprMonitor.activeWorkspace.hasFullscreen
-        : false
-
-    onFullscreenActiveChanged: {
-        if (yuraState.expanded) return
-        if (fullscreenActive) {
-            hideTimer.stop()
-        } else {
-            orbWindow.visible = true
-            orb.restOpacity = 1
-            scheduleHide()
-        }
-    }
 
     anchors {
         top: true
@@ -59,53 +38,6 @@ PanelWindow {
     onWidthChanged: syncScreenSize()
     onHeightChanged: syncScreenSize()
 
-    Component.onCompleted: {
-        orbWindow.visible = true
-        scheduleHide()
-    }
-
-    function scheduleHide() {
-        if (orbWindow.settingsManager && orbWindow.settingsManager.yuraOrbRestSeconds <= 0) {
-            hideTimer.stop()
-            return
-        }
-        hideTimer.restart()
-    }
-
-    Timer {
-        id: hideTimer
-        interval: orbWindow.settingsManager
-            ? Math.max(1000, orbWindow.settingsManager.yuraOrbRestSeconds * 1000)
-            : 5000
-        onTriggered: orb.restOpacity = 0
-    }
-
-    Connections {
-        target: yuraState
-        function onExpandedChanged() {
-            if (yuraState.expanded) {
-                hideTimer.stop()
-                orbWindow.visible = true
-                orb.restOpacity = 1
-            } else {
-                orbWindow.scheduleHide()
-            }
-        }
-    }
-
-    Connections {
-        target: orbWindow.settingsManager
-        ignoreUnknownSignals: true
-        function onYuraOrbRestSecondsChanged() {
-            if (!orbWindow.settingsManager) return
-            if (orbWindow.settingsManager.yuraOrbRestSeconds <= 0) {
-                hideTimer.stop()
-                orbWindow.visible = true
-                orb.restOpacity = 1
-            }
-        }
-    }
-
     Item {
         id: orb
 
@@ -114,14 +46,8 @@ PanelWindow {
         width: yuraState.orbSize
         height: yuraState.orbSize
 
-        property real restOpacity: 1
-        opacity: restOpacity
-            * (yuraState.aiDropdownOpen ? 0 : 1)
-            * (orbWindow.fullscreenActive && !yuraState.expanded ? 0 : 1)
-
-        Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.InOutCubic } }
-
-        onOpacityChanged: if (opacity < 0.01 && orb.restOpacity < 0.01 && !yuraState.expanded) orbWindow.visible = false
+        opacity: yuraState.aiDropdownOpen ? 0 : 1
+        Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
 
         smooth: true
         antialiasing: true
@@ -138,9 +64,9 @@ PanelWindow {
             coreOpacity: 0.6
             corePointCount: 48
             coreWaveAmplitude: 0.5
-            idleBreathPeak: 1.15
-            idleBreathDuration: 1800
-            active: orbWindow.visible && !(orbWindow.fullscreenActive && !yuraState.expanded)
+            idleBreathPeak: 1.20
+            idleBreathDuration: 1400
+            active: yuraState.expanded
         }
 
         MouseArea {

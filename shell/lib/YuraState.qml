@@ -42,9 +42,9 @@ QtObject {
         : screenWidth
 
     readonly property real orbRestX: isLeft
-        ? panelMargin
-        : screenWidth - orbCollapsedSize - panelMargin
-    readonly property real orbRestY: screenHeight - orbCollapsedSize - panelMargin
+        ? -orbCollapsedSize - panelMargin
+        : screenWidth + panelMargin
+    readonly property real orbRestY: panelRestY + mainPaneHeight * 0.18
 
     readonly property real orbActiveX: aiOrbX >= 0
         ? panelRestX + 1 + aiOrbX

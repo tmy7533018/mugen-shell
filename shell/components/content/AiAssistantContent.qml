@@ -177,16 +177,15 @@ FocusScope {
                     anchors.fill: parent
                     orbColor: root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
                     streaming: root.streaming
-                    haloScale: orbHover.containsMouse ? 1.7 : 1.5
-                    haloOpacity: orbHover.containsMouse ? 0.65 : 0.5
+                    haloScale: 1.25
+                    haloOpacity: orbHover.containsMouse ? 0.75 : 0.5
                     corePointCount: 48
                     coreWaveAmplitude: 0.5
                     haloPointCount: 32
                     haloWaveAmplitude: 1.0
-                    idleBreathPeak: 1.15
-                    idleBreathDuration: 1800
+                    idleBreathPeak: 1.14
+                    idleBreathDuration: 950
 
-                    Behavior on haloScale { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
                     Behavior on haloOpacity { NumberAnimation { duration: 220 } }
                 }
 

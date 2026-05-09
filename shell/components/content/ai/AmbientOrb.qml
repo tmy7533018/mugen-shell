@@ -16,6 +16,8 @@ Item {
     property int haloPointCount: 14
     property real coreWaveAmplitude: 4.0
     property real haloWaveAmplitude: 5.0
+    property real coreEdgeAlpha: 0.0
+    property real haloEdgeAlpha: 0.0
     property real idleBreathPeak: 1.06
     property int idleBreathDuration: 1800
 
@@ -70,6 +72,7 @@ Item {
         baseOpacity: root.haloOpacity * (root.streaming ? 1.2 : 0.9)
         animationSpeed: root.streaming ? 0.07 : 0.025
         pointCount: root.haloPointCount
+        edgeAlpha: root.haloEdgeAlpha
         running: root.active && root.showHalo
 
         Behavior on baseOpacity { NumberAnimation { duration: 600; easing.type: Easing.InOutCubic } }
@@ -84,6 +87,7 @@ Item {
         baseOpacity: root.coreOpacity
         animationSpeed: root.streaming ? 0.13 : 0.04
         pointCount: root.corePointCount
+        edgeAlpha: root.coreEdgeAlpha
         running: root.active
     }
 }
