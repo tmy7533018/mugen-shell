@@ -67,14 +67,18 @@ PanelWindow {
             radius: 24
         }
 
-        Item {
-            id: contentClip
+        Loader {
+            id: contentLoader
             anchors.fill: parent
             anchors.margins: 1
             clip: true
+            asynchronous: true
 
-            Content.AiAssistantFloatingContent {
-                id: aiContent
+            property bool everLoaded: false
+            active: yuraState.expanded || everLoaded
+            onLoaded: everLoaded = true
+
+            sourceComponent: Content.AiAssistantFloatingContent {
                 anchors.fill: parent
                 modeManager: stubModeManager
                 theme: chatWindow.theme
