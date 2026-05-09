@@ -26,8 +26,8 @@ PanelWindow {
     mask: Region {
         x: orb.x
         y: orb.y
-        width: orb.width
-        height: orb.height
+        width: yuraState.aiDropdownOpen ? 0 : orb.width
+        height: yuraState.aiDropdownOpen ? 0 : orb.height
     }
 
     function syncScreenSize() {
