@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../ui" as UI
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -12,8 +13,8 @@ Item {
     
     readonly property var requiredBarSize: ({
         "height": modeManager.scale(70),
-        "leftMargin": modeManager.scale(600),
-        "rightMargin": modeManager.scale(600),
+        "leftMargin": modeManager.scale(650),
+        "rightMargin": modeManager.scale(650),
         "topMargin": modeManager.scale(6),
         "bottomMargin": modeManager.scale(6)
     })
@@ -122,87 +123,134 @@ Item {
             }
         ]
         
+        Theme.IconResolver { id: iconResolver }
+
         Item {
             anchors.fill: parent
             anchors.topMargin: modeManager.scale(8)
             anchors.bottomMargin: modeManager.scale(8)
             anchors.leftMargin: modeManager.scale(16)
             anchors.rightMargin: modeManager.scale(16)
-            
+
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: modeManager.scale(12)
-                anchors.rightMargin: modeManager.scale(12)
-                anchors.topMargin: 0
-                anchors.bottomMargin: 0
-                spacing: modeManager.scale(10)
-                
-                UI.SvgIcon {
-                    width: modeManager.scale(18)
-                    height: modeManager.scale(18)
-                    Layout.alignment: Qt.AlignVCenter
-                    source: icons ? icons.notificationSvg : ""
-                    color: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
-                    opacity: 0.9
-                }
-                
-                Text {
-                    text: root.currentNotification ? root.currentNotification.title : ""
-                    color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
-                    font.pixelSize: modeManager.scale(13)
-                    font.weight: Font.Medium
-                    font.family: "M PLUS 2"
-                    elide: Text.ElideRight
-                    Layout.maximumWidth: modeManager.scale(150)
-                    Layout.alignment: Qt.AlignVCenter
-                }
-                
-                Text {
-                    text: "·"
-                    color: (theme ? theme.textFaint : Qt.rgba(0.72, 0.72, 0.82, 0.50))
-                    font.pixelSize: modeManager.scale(13)
-                    font.family: "M PLUS 2"
-                    visible: root.currentNotification && root.currentNotification.message.length > 0
-                    Layout.alignment: Qt.AlignVCenter
-                }
-                
-                Text {
-                    Layout.fillWidth: true
-                    text: root.currentNotification ? root.currentNotification.message : ""
-                    color: Qt.rgba(0.82, 0.82, 0.87, 0.80)
-                    font.pixelSize: modeManager.scale(12)
-                    font.family: "M PLUS 2"
-                    elide: Text.ElideRight
-                    maximumLineCount: 1
-                    Layout.alignment: Qt.AlignVCenter
-                }
-                
+                anchors.leftMargin: modeManager.scale(8)
+                anchors.rightMargin: modeManager.scale(8)
+                spacing: modeManager.scale(18)
+
                 Item {
-                    width: modeManager.scale(20)
-                    height: modeManager.scale(20)
+                    Layout.preferredWidth: modeManager.scale(28)
+                    Layout.preferredHeight: modeManager.scale(28)
                     Layout.alignment: Qt.AlignVCenter
-                    
+
+                    // Quickshell already resolves notify-send's -i hint into
+                    // an `image://icon/<name>` URL on `image`. Prefer that;
+                    // fall back to walking IconResolver paths from desktopEntry
+                    // / appName for senders that only set those.
+                    property var iconPaths: {
+                        if (!root.currentNotification) return []
+                        let n = root.currentNotification
+                        let candidates = []
+                        if (n.desktopEntry && n.desktopEntry.length > 0) candidates.push(n.desktopEntry)
+                        if (n.appName && n.appName.length > 0) candidates.push(n.appName.toLowerCase())
+                        let paths = []
+                        for (let i = 0; i < candidates.length; i++) {
+                            let resolved = iconResolver.resolveIconPath(candidates[i])
+                            for (let j = 0; j < resolved.length; j++) paths.push(resolved[j])
+                        }
+                        return paths
+                    }
+                    property int currentPathIndex: 0
+                    property string directImage: root.currentNotification && root.currentNotification.image
+                        ? root.currentNotification.image
+                        : ""
+
+                    Image {
+                        id: appIcon
+                        anchors.fill: parent
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                        asynchronous: true
+                        cache: false
+                        visible: status === Image.Ready
+                        source: {
+                            if (parent.directImage.length > 0) return parent.directImage
+                            if (parent.iconPaths.length > 0 && parent.currentPathIndex < parent.iconPaths.length) {
+                                return "file://" + parent.iconPaths[parent.currentPathIndex]
+                            }
+                            return ""
+                        }
+                        onStatusChanged: {
+                            if (status === Image.Error) {
+                                let p = parent
+                                if (p.currentPathIndex + 1 < p.iconPaths.length) {
+                                    p.currentPathIndex++
+                                }
+                            }
+                        }
+                    }
+
+                    UI.SvgIcon {
+                        anchors.centerIn: parent
+                        width: modeManager.scale(20)
+                        height: modeManager.scale(20)
+                        visible: !appIcon.visible
+                        source: icons ? icons.notificationSvg : ""
+                        color: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+                        opacity: 0.9
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: modeManager.scale(2)
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.currentNotification ? root.currentNotification.title : ""
+                        color: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
+                        font.pixelSize: modeManager.scale(13)
+                        font.weight: Font.Medium
+                        font.family: "M PLUS 2"
+                        elide: Text.ElideRight
+                        maximumLineCount: 1
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: root.currentNotification ? root.currentNotification.message : ""
+                        color: theme ? theme.textSecondary : Qt.rgba(0.82, 0.82, 0.87, 0.78)
+                        font.pixelSize: modeManager.scale(11)
+                        font.family: "M PLUS 2"
+                        elide: Text.ElideRight
+                        wrapMode: Text.WordWrap
+                        maximumLineCount: 2
+                        visible: text.length > 0
+                    }
+                }
+
+                Item {
+                    Layout.preferredWidth: modeManager.scale(22)
+                    Layout.preferredHeight: modeManager.scale(22)
+                    Layout.alignment: Qt.AlignVCenter
+
                     Text {
                         anchors.centerIn: parent
                         text: "×"
-                        color: Qt.rgba(0.95, 0.55, 0.65, closeArea.containsMouse ? 1.0 : 0.7)
-                        font.pixelSize: modeManager.scale(16)
-                        font.weight: Font.Light
-                        
-                        Behavior on color {
-                            ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
-                        }
+                        color: Qt.rgba(0.95, 0.55, 0.65, closeArea.containsMouse ? 1.0 : 0.6)
+                        font.pixelSize: modeManager.scale(18)
+                        font.weight: Font.Medium
+                        Behavior on color { ColorAnimation { duration: 200; easing.type: Easing.OutCubic } }
                     }
-                    
+
                     MouseArea {
                         id: closeArea
                         anchors.fill: parent
                         anchors.margins: modeManager.scale(-4)
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            modeManager.closeAllModes()
-                        }
+                        onClicked: modeManager.closeAllModes()
                     }
                 }
             }

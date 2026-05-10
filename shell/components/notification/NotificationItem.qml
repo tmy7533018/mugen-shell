@@ -2,12 +2,15 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell.Io
+import "../../lib" as Theme
+import "../ui" as UI
 
 Rectangle {
     id: notificationItem
     
     property var modelData
     property var theme
+    property var icons
     property var removingNotifications
     property var notifications
     property int index
@@ -112,7 +115,9 @@ Rectangle {
         color: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.15) : Qt.rgba(0.65, 0.55, 0.85, 0.15)
         transparentBorder: true
     }
-    
+
+    Theme.IconResolver { id: iconResolver }
+
     ColumnLayout {
         id: contentColumn
         anchors.fill: parent
@@ -123,11 +128,68 @@ Rectangle {
         spacing: 4
         z: 3
         
-        Row {
+        RowLayout {
             Layout.fillWidth: true
-            spacing: 8
-            
+            spacing: 10
+
+            Item {
+                Layout.preferredWidth: 22
+                Layout.preferredHeight: 22
+                Layout.alignment: Qt.AlignVCenter
+
+                property var iconPaths: {
+                    if (!modelData) return []
+                    let candidates = []
+                    if (modelData.desktopEntry && modelData.desktopEntry.length > 0) candidates.push(modelData.desktopEntry)
+                    if (modelData.appName && modelData.appName.length > 0) candidates.push(modelData.appName.toLowerCase())
+                    let paths = []
+                    for (let i = 0; i < candidates.length; i++) {
+                        let resolved = iconResolver.resolveIconPath(candidates[i])
+                        for (let j = 0; j < resolved.length; j++) paths.push(resolved[j])
+                    }
+                    return paths
+                }
+                property int currentPathIndex: 0
+                property string directImage: modelData && modelData.image ? modelData.image : ""
+
+                Image {
+                    id: itemAppIcon
+                    anchors.fill: parent
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    asynchronous: true
+                    cache: false
+                    visible: status === Image.Ready
+                    source: {
+                        if (parent.directImage.length > 0) return parent.directImage
+                        if (parent.iconPaths.length > 0 && parent.currentPathIndex < parent.iconPaths.length) {
+                            return "file://" + parent.iconPaths[parent.currentPathIndex]
+                        }
+                        return ""
+                    }
+                    onStatusChanged: {
+                        if (status === Image.Error) {
+                            let p = parent
+                            if (p.currentPathIndex + 1 < p.iconPaths.length) {
+                                p.currentPathIndex++
+                            }
+                        }
+                    }
+                }
+
+                UI.SvgIcon {
+                    anchors.centerIn: parent
+                    width: 16
+                    height: 16
+                    visible: !itemAppIcon.visible
+                    source: notificationItem.icons ? notificationItem.icons.notificationSvg : ""
+                    color: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+                    opacity: 0.85
+                }
+            }
+
             Text {
+                Layout.fillWidth: true
                 text: modelData.title
                 color: (theme ? theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.90))
                 font.pixelSize: 14
@@ -135,11 +197,11 @@ Rectangle {
                 font.family: "M PLUS 2"
                 elide: notificationItem.showFullText ? Text.ElideNone : Text.ElideRight
                 maximumLineCount: notificationItem.showFullText ? 999 : 1
-                Layout.fillWidth: true
                 wrapMode: notificationItem.showFullText ? Text.WordWrap : Text.NoWrap
             }
-            
+
             Text {
+                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
                 text: modelData.time
                 color: Qt.rgba(0.72, 0.72, 0.82, 0.60)
                 font.pixelSize: 11

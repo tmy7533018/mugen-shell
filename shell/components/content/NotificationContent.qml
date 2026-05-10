@@ -583,6 +583,7 @@ Item {
                     delegate: NotificationComponents.NotificationItem {
                         modelData: model.modelData
                         theme: root.theme
+                        icons: root.icons
                         removingNotifications: root.removingNotifications
                         notifications: root.notifications
                         index: model.index

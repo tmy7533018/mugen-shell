@@ -28,7 +28,10 @@ QtObject {
             message: n.body || n.summary || "",
             time: "just now",
             timestamp: Date.now(),
-            desktopEntry: n.desktopEntry || ""
+            desktopEntry: n.desktopEntry || "",
+            appIcon: n.appIcon || "",
+            appName: n.appName || "",
+            image: n.image || ""
         }
 
         let newNotifications = [newNotif]
@@ -41,11 +44,17 @@ QtObject {
         playSound()
     }
 
+    property real soundThrottleMs: 1000
+    property real lastSoundAt: 0
+
     function playSound() {
         if (!notificationsEnabled) return
         if (!settingsManager) return
         let sound = settingsManager.notificationSound
         if (!sound || sound === "None") return
+        let now = Date.now()
+        if (now - lastSoundAt < soundThrottleMs) return
+        lastSoundAt = now
         soundPlayProcess.command = ["paplay", soundsDir + "/" + sound]
         soundPlayProcess.running = true
     }
