@@ -91,12 +91,13 @@ PanelWindow {
     Item {
         id: chatBox
 
-        x: yuraState.panelHiddenX
         y: yuraState.panelRestY
         width: yuraState.panelWidth
         height: yuraState.panelHeight
         opacity: 0
         visible: opacity > 0.01
+
+        Component.onCompleted: x = yuraState.panelHiddenX
 
         NumberAnimation {
             id: panelSlideIn
@@ -189,7 +190,21 @@ PanelWindow {
                 showInternalOrb: false
                 orbEmptyScale: 0.48
                 orbEmptyYRatio: 0.10
-                onSidebarCollapsedChanged: yuraState.sidebarCollapsed = sidebarCollapsed
+
+                Component.onCompleted: {
+                    if (chatWindow.settingsManager) {
+                        sidebarCollapsed = chatWindow.settingsManager.yuraSidebarCollapsed
+                    }
+                    yuraState.sidebarCollapsed = sidebarCollapsed
+                }
+
+                onSidebarCollapsedChanged: {
+                    yuraState.sidebarCollapsed = sidebarCollapsed
+                    if (chatWindow.settingsManager) {
+                        chatWindow.settingsManager.yuraSidebarCollapsed = sidebarCollapsed
+                        chatWindow.settingsManager.saveSettings()
+                    }
+                }
             }
         }
 
@@ -290,6 +305,53 @@ PanelWindow {
             anchors.fill: parent
             acceptedButtons: Qt.NoButton
             onWheel: (w) => w.accepted = false
+        }
+
+        Item {
+            id: resizeHandle
+            width: 18
+            height: 18
+            z: 20
+
+            anchors.top: parent.top
+            anchors.right: yuraState.isLeft ? parent.right : undefined
+            anchors.left: yuraState.isLeft ? undefined : parent.left
+
+            MouseArea {
+                anchors.fill: parent
+                anchors.margins: -8
+                cursorShape: yuraState.isLeft ? Qt.SizeBDiagCursor : Qt.SizeFDiagCursor
+                preventStealing: true
+
+                property real pressX: 0
+                property real pressY: 0
+                property int pressW: 0
+                property int pressH: 0
+
+                onPressed: (mouse) => {
+                    let p = mapToItem(chatWindow.contentItem, mouse.x, mouse.y)
+                    pressX = p.x
+                    pressY = p.y
+                    pressW = yuraState.panelWidth
+                    pressH = yuraState.panelHeight
+                }
+                onPositionChanged: (mouse) => {
+                    if (!pressed) return
+                    let p = mapToItem(chatWindow.contentItem, mouse.x, mouse.y)
+                    let dx = p.x - pressX
+                    let dy = p.y - pressY
+                    let widthSign = yuraState.isLeft ? 1 : -1
+                    yuraState.panelWidth = Math.max(480, Math.min(1100, pressW + dx * widthSign))
+                    yuraState.panelHeight = Math.max(480, Math.min(1100, pressH - dy))
+                }
+                onReleased: {
+                    if (chatWindow.settingsManager) {
+                        chatWindow.settingsManager.yuraPanelWidth = yuraState.panelWidth
+                        chatWindow.settingsManager.yuraPanelHeight = yuraState.panelHeight
+                        chatWindow.settingsManager.saveSettings()
+                    }
+                }
+            }
         }
 
         Keys.onPressed: (event) => {
