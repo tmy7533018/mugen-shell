@@ -49,11 +49,6 @@ FocusScope {
     readonly property int sidebarWidth: modeManager.scale(200)
 
     readonly property bool isEmpty: messages.length === 0
-    readonly property var suggestedPrompts: [
-        "Help me brainstorm an idea",
-        "Explain a concept simply",
-        "Write a short poem about the moon"
-    ]
 
     function appendMessage(role, content) {
         let copy = messages.slice()
@@ -524,26 +519,6 @@ FocusScope {
                 glowSpread: 0.4
             }
 
-            ColumnLayout {
-                Layout.alignment: Qt.AlignHCenter
-                spacing: modeManager.scale(10)
-
-                Repeater {
-                    model: root.suggestedPrompts
-                    delegate: Ai.PromptChip {
-                        Layout.alignment: Qt.AlignHCenter
-                        theme: root.theme
-                        modeManager: root.modeManager
-                        label: modelData
-                        onClicked: {
-                            if (!root.streaming) {
-                                inputField.text = ""
-                                root.sendMessage(modelData)
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 

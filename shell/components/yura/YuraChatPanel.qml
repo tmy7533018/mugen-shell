@@ -297,6 +297,7 @@ PanelWindow {
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
+                enabled: !yuraState.aiDropdownOpen
                 onClicked: yuraState.toggle()
             }
         }
