@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 
 QtObject {
     id: state
@@ -6,8 +7,8 @@ QtObject {
     property bool expanded: false
     property string panelSide: "left"
 
-    property int screenWidth: 1920
-    property int screenHeight: 1080
+    property int screenWidth: Quickshell.screens.length > 0 ? Quickshell.screens[0].width : 1920
+    property int screenHeight: Quickshell.screens.length > 0 ? Quickshell.screens[0].height : 1080
 
     readonly property bool isLeft: panelSide !== "right"
 
@@ -38,22 +39,15 @@ QtObject {
         : screenWidth - panelWidth - panelMargin
     readonly property int panelRestY: screenHeight - panelHeight - panelMargin
     readonly property int panelHiddenX: isLeft
-        ? -panelWidth
-        : screenWidth
-
-    readonly property real orbRestX: isLeft
-        ? -orbCollapsedSize - panelMargin
+        ? -panelWidth - panelMargin
         : screenWidth + panelMargin
-    readonly property real orbRestY: panelRestY + mainPaneHeight * 0.18
 
     readonly property real orbActiveX: aiOrbX >= 0
-        ? panelRestX + 1 + aiOrbX
-        : (isLeft
-            ? panelRestX + (sidebarCollapsed ? 0 : sidebarWidth) + (mainPaneWidth - orbExpandedSize) / 2
-            : panelRestX + (mainPaneWidth - orbExpandedSize) / 2)
+        ? 1 + aiOrbX
+        : (sidebarCollapsed ? 0 : sidebarWidth) + (mainPaneWidth - orbExpandedSize) / 2
     readonly property real orbActiveY: aiOrbY >= 0
-        ? panelRestY + 1 + aiOrbY
-        : panelRestY + mainPaneHeight * 0.18
+        ? 1 + aiOrbY
+        : mainPaneHeight * 0.18
 
     readonly property real orbX: orbActiveX
     readonly property real orbY: orbActiveY

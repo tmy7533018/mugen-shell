@@ -3,6 +3,7 @@ import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Wayland
 import "../content" as Content
+import "../content/ai" as Ai
 import "../ui" as UI
 
 PanelWindow {
@@ -57,6 +58,26 @@ PanelWindow {
         height: chatBox.height
     }
 
+    property bool _sizeReady: false
+
+    function syncScreenSize() {
+        if (chatWindow.width <= 0 || chatWindow.height <= 0) return
+        yuraState.screenWidth = chatWindow.width
+        yuraState.screenHeight = chatWindow.height
+        if (!chatWindow._sizeReady) {
+            chatWindow._sizeReady = true
+            if (yuraState.expanded) chatWindow.runOpenAnim()
+        }
+    }
+
+    function runOpenAnim() {
+        panelSlideIn.restart()
+        panelFadeIn.restart()
+    }
+
+    onWidthChanged: syncScreenSize()
+    onHeightChanged: syncScreenSize()
+
     QtObject {
         id: stubModeManager
         property string currentMode: "ai"
@@ -70,15 +91,61 @@ PanelWindow {
     Item {
         id: chatBox
 
-        x: yuraState.panelX
-        y: yuraState.panelY
+        x: yuraState.panelHiddenX
+        y: yuraState.panelRestY
         width: yuraState.panelWidth
         height: yuraState.panelHeight
-        opacity: yuraState.panelOpacity
+        opacity: 0
         visible: opacity > 0.01
 
-        Behavior on x { NumberAnimation { duration: 850; easing.type: Easing.InOutCubic } }
-        Behavior on opacity { NumberAnimation { duration: 700; easing.type: Easing.InOutCubic } }
+        NumberAnimation {
+            id: panelSlideIn
+            target: chatBox
+            property: "x"
+            to: yuraState.panelRestX
+            duration: 850
+            easing.type: Easing.InOutCubic
+        }
+        NumberAnimation {
+            id: panelSlideOut
+            target: chatBox
+            property: "x"
+            to: yuraState.panelHiddenX
+            duration: 850
+            easing.type: Easing.InOutCubic
+        }
+        NumberAnimation {
+            id: panelFadeIn
+            target: chatBox
+            property: "opacity"
+            to: 1.0
+            duration: 700
+            easing.type: Easing.InOutCubic
+        }
+        NumberAnimation {
+            id: panelFadeOut
+            target: chatBox
+            property: "opacity"
+            to: 0
+            duration: 700
+            easing.type: Easing.InOutCubic
+        }
+
+        Connections {
+            target: yuraState
+            function onExpandedChanged() {
+                if (yuraState.expanded) {
+                    panelSlideOut.stop()
+                    panelFadeOut.stop()
+                    if (chatWindow._sizeReady) chatWindow.runOpenAnim()
+                } else {
+                    panelSlideIn.stop()
+                    panelFadeIn.stop()
+                    panelSlideOut.restart()
+                    panelFadeOut.restart()
+                }
+            }
+        }
 
         readonly property int panelRadius: 24
 
@@ -149,6 +216,74 @@ PanelWindow {
             property: "aiDropdownOpen"
             when: contentLoader.item !== null
             value: contentLoader.item ? contentLoader.item.modelDropdownOpen : false
+        }
+
+        Item {
+            id: orb
+            x: yuraState.orbX
+            y: yuraState.orbY
+            width: yuraState.orbSize
+            height: yuraState.orbSize
+            z: 4
+
+            property real expandGate: 0
+
+            SequentialAnimation {
+                id: orbOpenAnim
+                PauseAnimation { duration: 250 }
+                NumberAnimation { target: orb; property: "expandGate"; to: 1.0; duration: 900; easing.type: Easing.InOutSine }
+            }
+
+            NumberAnimation {
+                id: orbCloseAnim
+                target: orb; property: "expandGate"; to: 0; duration: 750; easing.type: Easing.OutCubic
+            }
+
+            Connections {
+                target: yuraState
+                function onExpandedChanged() {
+                    if (yuraState.expanded) {
+                        orbCloseAnim.stop()
+                        orb.expandGate = 0
+                        orbOpenAnim.restart()
+                    } else {
+                        orbOpenAnim.stop()
+                        orbCloseAnim.restart()
+                    }
+                }
+            }
+
+            opacity: yuraState.aiDropdownOpen ? 0 : 1
+            Behavior on opacity { NumberAnimation { duration: 320; easing.type: Easing.InOutCubic } }
+
+            scale: 0.4 + expandGate * 0.6
+            transformOrigin: Item.Center
+
+            smooth: true
+            antialiasing: true
+
+            Behavior on x { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+            Behavior on y { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+            Behavior on width { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+            Behavior on height { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+
+            Ai.AmbientOrb {
+                anchors.fill: parent
+                orbColor: chatWindow.theme ? chatWindow.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+                showHalo: false
+                coreOpacity: 0.6
+                corePointCount: 48
+                coreWaveAmplitude: 0.5
+                idleBreathPeak: 1.20
+                idleBreathDuration: 1400
+                active: yuraState.expanded
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: yuraState.toggle()
+            }
         }
 
         MouseArea {

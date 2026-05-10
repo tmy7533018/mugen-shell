@@ -27,11 +27,6 @@ ShellRoot {
         settingsManager: settingsManager
     }
 
-    Yura.YuraOrbWindow {
-        yuraState: yuraState
-        theme: themeColors
-    }
-
     IpcHandler {
         target: "yura"
         function toggle() { yuraState.toggle() }
