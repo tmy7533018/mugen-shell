@@ -26,7 +26,6 @@ mugen-shell/
 │   ├── settings.default.json # OSS-friendly defaults
 │   ├── shell.qml             # Main Quickshell entry (bar + notifications)
 │   ├── yura-shell.qml        # Standalone Quickshell entry for Yura (separate process)
-│   ├── ai-shell.qml          # Legacy floating AI window (Super+Shift+A, scheduled for removal)
 │   └── settings-shell.qml    # Standalone Settings window (detach target)
 ├── ai/                       # mugen-ai Go backend
 │   ├── cmd/                  # CLI subcommands (chat, serve)
@@ -210,7 +209,7 @@ make install        # symlinks + builds and enables mugen-ai
 
 ## Configuring mugen-ai
 
-Yura (`Super + A` for the bar row, `Super + Shift + A` for the floating window, `Super + Y` for the corner pop-up) talks to the local Go server. Settings → Yura has "Edit Config" / "Restart AI" buttons that open `~/.config/mugen-ai/config.toml` in your default editor and bounce the systemd unit, so you don't have to drop to a terminal for tweaks. The neighbouring "Bar Yura model" dropdown pins which model the bar `Super + A` row uses — leave it on "Default (last used in float)" to follow whichever model the floating window most recently selected. When `mugen-ai.service` isn't running, the panel shows an install hint instead of the chat UI — safe to ignore the bar icon if you skip this feature.
+Yura (`Super + Y` for the bar row, `Super + Shift + Y` for the corner pop-up) talks to the local Go server. Settings → Yura has "Edit Config" / "Restart AI" buttons that open `~/.config/mugen-ai/config.toml` in your default editor and bounce the systemd unit, so you don't have to drop to a terminal for tweaks. The neighbouring "Bar Yura model" dropdown pins which model the bar row uses — leave it on the default to follow whichever model the corner pop-up most recently selected. When `mugen-ai.service` isn't running, the panel shows an install hint instead of the chat UI — safe to ignore the bar icon if you skip this feature.
 
 `~/.config/mugen-ai/config.toml`:
 
@@ -292,9 +291,8 @@ For terminal use: `mugen-ai chat`.
 | `Super + V` | Clipboard history |
 | `Super + M` | Music player |
 | `Super + T` | Notification center |
-| `Super + A` | Yura (bar) |
-| `Super + Shift + A` | Yura (floating window) |
-| `Super + Y` | Yura (corner pop-up) |
+| `Super + Y` | Yura (bar) |
+| `Super + Shift + Y` | Yura (corner pop-up) |
 | `Super + C` | Calendar |
 | `Super + S` | Screenshot gallery |
 | `Super + U` | Volume / microphone control |
@@ -360,7 +358,7 @@ Panel keybinds dispatch through `shell/scripts/mugen-shell-ipc.sh` over a Unix s
 - **TimerContent** - Countdown timer UI (idle / running, ring + presets, keyboard control)
 - **SettingsFloatingContent** - Standalone scrolling Settings window (detach target)
 - **AiAssistantContent** - Bar Spotlight row (Super+A)
-- **AiAssistantFloatingContent** - Shared chat tree used by the Yura corner panel and the legacy floating window — sidebar, message list, model dropdown, internal Yura indicator
+- **AiAssistantFloatingContent** - Chat tree mounted inside the Yura corner panel — sidebar, message list, model dropdown, internal Yura indicator
 
 ### Yura (`shell/components/yura/`, `shell/yura-shell.qml`)
 - **yura-shell.qml** - Standalone Quickshell process; auto-started by Hyprland and toggled via `qs ipc call yura toggle`
