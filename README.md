@@ -1,8 +1,7 @@
-<p align="center">
-  <img src="shell/assets/branding/mugen-shell_logo.png" width="200" alt="mugen-shell logo" />
-</p>
-
-<h1 align="center">mugen-shell</h1>
+<h1 align="center">
+  <img src="shell/assets/branding/mugen-shell_logo.png" width="200" alt="mugen-shell logo" /><br/>
+  mugen-shell
+</h1>
 
 <p align="center"><i>A 夢幻 desktop, built on Quickshell + Hyprland.</i></p>
 
