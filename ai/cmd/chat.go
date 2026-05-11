@@ -65,7 +65,7 @@ func runChat(_ *cobra.Command, _ []string) error {
 		}
 
 		var fullResponse string
-		err := rt.Registry.Chat(context.Background(), rt.History.Messages(), func(chunk provider.ChatChunk) error {
+		err := rt.Registry.Chat(context.Background(), rt.History.Messages(), provider.ChatOptions{}, func(chunk provider.ChatChunk) error {
 			fmt.Print(chunk.Content)
 			fullResponse += chunk.Content
 			return nil

@@ -12,7 +12,13 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/provider"
 	"github.com/tmy7533018/mugen-ai/internal/state"
 	"github.com/tmy7533018/mugen-ai/internal/store"
+	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
+
+// toolingSystemPrompt is prepended to the user's personality prompt so the
+// model knows the rules around calling shell tools. Confirmations are
+// expected in plain language; we do not surface a confirmation UI.
+const toolingSystemPrompt = `You can control the mugen-shell desktop through function-calling tools (audio, music, panel groups). Call read-only and reversible tools (reading volume, toggling music, opening a panel, switching theme) immediately when the user asks. For destructive or irreversible actions (deleting calendar events, clearing notifications, launching arbitrary apps, anything the user might regret), first describe what you are about to do in plain language and wait for the user's explicit confirmation in their next message; do not call the tool on the same turn as the request. Never call power-related tools — those are gated by a separate confirmation UI and are not exposed here yet.`
 
 type runtimeContext struct {
 	Cfg      config.Config
@@ -20,6 +26,7 @@ type runtimeContext struct {
 	Registry *provider.Registry
 	Store    *store.Store
 	History  *history.History
+	Tools    *tools.Registry
 }
 
 // loadRuntimeContext is the shared `serve` / `chat` bootstrap. Caller closes rt.Store.
@@ -37,6 +44,13 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 	system := systemOverride
 	if system == "" {
 		system = cfg.Personality.SystemPrompt
+	}
+	// Always prepend tooling guidance so the model knows when to call
+	// shell tools vs. ask first. Personality stays the user's domain.
+	if system != "" {
+		system = toolingSystemPrompt + "\n\n" + system
+	} else {
+		system = toolingSystemPrompt
 	}
 
 	registry := buildRegistry(cfg, model)
@@ -65,6 +79,7 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		Registry: registry,
 		Store:    st,
 		History:  hist,
+		Tools:    tools.New(cfg.Shell.QsConfig),
 	}, nil
 }
 
@@ -87,6 +102,13 @@ func buildRegistry(cfg config.Config, model string) *provider.Registry {
 			cfg.Provider.OpenAI.BaseURL,
 			openaiKey,
 			cfg.Provider.OpenAI.Models,
+		))
+	}
+	anthropicKey := os.Getenv("ANTHROPIC_API_KEY")
+	if anthropicKey != "" {
+		providers = append(providers, provider.NewAnthropic(
+			anthropicKey,
+			cfg.Provider.Anthropic.Models,
 		))
 	}
 	return provider.NewRegistry(model, providers...)

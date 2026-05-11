@@ -34,6 +34,12 @@
             version = "0.1.0";
             src = ./ai;
             vendorHash = "sha256-n4brPv9eZJPqdTvnjdqQK7Q8JVgZvJbD5ndKFQEfu0I=";
+            # Annotated templates so Nix-installed users can find the .env
+            # and config.toml schemas without cloning the repo.
+            postInstall = ''
+              mkdir -p $out/share/mugen-ai
+              cp .env.example config.toml.example $out/share/mugen-ai/
+            '';
             meta = {
               description = "AI backend service for mugen-shell";
               homepage = "https://github.com/tmy7533018/mugen-shell";

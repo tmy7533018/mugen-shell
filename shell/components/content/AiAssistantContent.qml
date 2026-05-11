@@ -440,6 +440,13 @@ FocusScope {
                         root.responseDisplay = "[error: " + obj.error + "]"
                         return
                     }
+                    // bar Spotlight is a one-line UX; tool calls / results
+                    // are dropped here — the LLM's surrounding text already
+                    // narrates the action ("音量を 30 にしたよ"). The
+                    // floating AI surfaces them as chips instead.
+                    if (obj.tool_calls || obj.tool_result) {
+                        return
+                    }
                     if (obj.content) {
                         root.responseDisplay += obj.content
                     }

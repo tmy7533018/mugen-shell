@@ -11,6 +11,13 @@ type Config struct {
 	Personality Personality `toml:"personality"`
 	Context     Context     `toml:"context"`
 	Provider    Provider    `toml:"provider"`
+	Shell       Shell       `toml:"shell"`
+}
+
+type Shell struct {
+	// QsConfig is the quickshell `-c` name used to target mugen-shell from
+	// `qs ipc call`. Defaults to "mugen-shell".
+	QsConfig string `toml:"qs_config"`
 }
 
 type Personality struct {
@@ -23,9 +30,16 @@ type Context struct {
 }
 
 type Provider struct {
-	Ollama Ollama `toml:"ollama"`
-	Google Google `toml:"google"`
-	OpenAI OpenAI `toml:"openai"`
+	Ollama    Ollama    `toml:"ollama"`
+	Google    Google    `toml:"google"`
+	OpenAI    OpenAI    `toml:"openai"`
+	Anthropic Anthropic `toml:"anthropic"`
+}
+
+// Anthropic lists the Claude models to expose. Empty → defaults to
+// claude-haiku-4-5 (cheap, fast, tool-capable).
+type Anthropic struct {
+	Models []string `toml:"models"`
 }
 
 type Ollama struct {
@@ -54,6 +68,7 @@ func Default() Config {
 		Provider: Provider{
 			Ollama: Ollama{Host: "http://localhost:11434"},
 		},
+		Shell: Shell{QsConfig: "mugen-shell"},
 	}
 }
 

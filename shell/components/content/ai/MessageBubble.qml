@@ -15,7 +15,9 @@ Item {
 
     readonly property bool isAssistant: modelData.role === "assistant"
     readonly property bool isLastAssistant: isAssistant && index === messagesLength - 1
-    readonly property bool isThinking: streaming && isLastAssistant && modelData.content === ""
+    readonly property var toolCalls: modelData.toolCalls || []
+    readonly property bool hasToolCalls: isAssistant && toolCalls.length > 0
+    readonly property bool isThinking: streaming && isLastAssistant && modelData.content === "" && !hasToolCalls
     readonly property bool hasContent: modelData.content !== ""
 
     height: delegateCol.height + (modeManager ? modeManager.scale(4) : 4)
@@ -106,6 +108,73 @@ Item {
                 hoverEnabled: true
                 acceptedButtons: Qt.NoButton
                 propagateComposedEvents: true
+            }
+        }
+
+        Column {
+            id: toolChipsCol
+            visible: bubbleRoot.hasToolCalls
+            anchors.left: parent.left
+            spacing: bubbleRoot.modeManager ? bubbleRoot.modeManager.scale(3) : 3
+
+            Repeater {
+                model: bubbleRoot.toolCalls
+
+                delegate: Rectangle {
+                    id: chip
+                    required property var modelData
+
+                    readonly property string callName: chip.modelData.name || ""
+                    readonly property var callArgs: chip.modelData.arguments || ({})
+                    readonly property string callResult: chip.modelData.result == null ? "" : String(chip.modelData.result)
+                    readonly property string callError: chip.modelData.error || ""
+                    readonly property bool pending: chip.modelData.pending === true
+
+                    readonly property string argsText: {
+                        let parts = []
+                        for (let k in chip.callArgs) {
+                            parts.push(k + "=" + chip.callArgs[k])
+                        }
+                        return parts.join(", ")
+                    }
+
+                    readonly property real hPad: bubbleRoot.modeManager ? bubbleRoot.modeManager.scale(8) : 8
+                    readonly property real vPad: bubbleRoot.modeManager ? bubbleRoot.modeManager.scale(4) : 4
+
+                    width: chipText.implicitWidth + hPad * 2
+                    height: chipText.implicitHeight + vPad * 2
+                    radius: bubbleRoot.modeManager ? bubbleRoot.modeManager.scale(9) : 9
+                    color: chip.callError !== ""
+                        ? Qt.rgba(0.85, 0.45, 0.45, 0.18)
+                        : (chip.pending
+                            ? (bubbleRoot.theme ? bubbleRoot.theme.chipInactiveBg : Qt.rgba(0.55, 0.55, 0.68, 0.10))
+                            : (bubbleRoot.theme ? bubbleRoot.theme.chipActiveBg : Qt.rgba(0.55, 0.65, 0.85, 0.18)))
+                    border.color: chip.callError !== ""
+                        ? Qt.rgba(0.85, 0.45, 0.45, 0.40)
+                        : (bubbleRoot.theme ? bubbleRoot.theme.chipInactiveBorder : Qt.rgba(0.55, 0.55, 0.68, 0.15))
+                    border.width: 1
+                    opacity: chip.pending ? 0.7 : 1.0
+
+                    Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                    Behavior on color { ColorAnimation { duration: 250 } }
+
+                    Text {
+                        id: chipText
+                        anchors.centerIn: parent
+                        text: {
+                            let head = "🔧 " + chip.callName
+                            if (chip.argsText !== "") head += "(" + chip.argsText + ")"
+                            if (chip.pending) return head + "…"
+                            if (chip.callError !== "") return head + " ⚠ " + chip.callError
+                            if (chip.callResult !== "") return head + " → " + chip.callResult
+                            return head + " ✓"
+                        }
+                        color: bubbleRoot.theme ? bubbleRoot.theme.textSecondary : Qt.rgba(0.85, 0.85, 0.90, 0.85)
+                        font.pixelSize: bubbleRoot.modeManager ? bubbleRoot.modeManager.scale(11) : 11
+                        font.family: "M PLUS 2"
+                        font.letterSpacing: 0.2
+                    }
+                }
             }
         }
 

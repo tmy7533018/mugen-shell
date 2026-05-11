@@ -1,0 +1,44 @@
+# mugen-ai configuration
+#
+# Copy to ~/.config/mugen-ai/config.toml. mugen-ai also writes a minimal
+# default file on first run, so editing that one in place works too.
+
+[personality]
+  # System prompt prepended to every conversation. Customize tone, language
+  # rules, persona. mugen-ai prepends a small tooling-guidance prompt of its
+  # own on top of this so the model knows when to call shell tools.
+  system_prompt = "You are a helpful desktop assistant. Be concise."
+
+[context]
+  # Locale for natural-language formatting hints surfaced to the model.
+  locale = "en"
+  # Optional: enables live weather context via wttr.in. Leave blank to disable.
+  city = ""
+
+[shell]
+  # Quickshell config name used by `qs ipc call` from mugen-ai's tool
+  # dispatcher. The mugen-shell default is "mugen-shell"; only change if you
+  # run a forked / renamed quickshell config.
+  qs_config = "mugen-shell"
+
+# Each [provider.*] block enables that provider, IF its API key env var is
+# also set (except ollama, which needs no key). Enable any subset.
+
+[provider.ollama]
+  # Local Ollama server. No API key needed.
+  host = "http://localhost:11434"
+
+# [provider.google]
+#   # Requires GEMINI_API_KEY. Omit the block to disable Gemini.
+#   model = "gemini-2.5-flash"
+
+# [provider.openai]
+#   # OpenAI-compatible endpoint. Requires OPENAI_API_KEY (or local server).
+#   base_url = "https://api.openai.com/v1"         # OpenAI itself
+#   # base_url = "https://openrouter.ai/api/v1"    # OpenRouter
+#   # base_url = "http://localhost:1234/v1"        # LM Studio / vLLM
+#   models = []                                     # empty = ask /v1/models
+
+# [provider.anthropic]
+#   # Requires ANTHROPIC_API_KEY. Omit `models` to default to claude-haiku-4-5.
+#   models = ["claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-7"]

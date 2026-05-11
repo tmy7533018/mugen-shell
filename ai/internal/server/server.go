@@ -10,6 +10,7 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/provider"
 	"github.com/tmy7533018/mugen-ai/internal/state"
 	"github.com/tmy7533018/mugen-ai/internal/store"
+	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
 
 const maxRequestBody = 64 * 1024 // 64KB
@@ -18,11 +19,12 @@ type Server struct {
 	registry *provider.Registry
 	history  *history.History
 	store    *store.Store
+	tools    *tools.Registry
 	events   *eventBus
 }
 
-func New(registry *provider.Registry, hist *history.History, st *store.Store) *Server {
-	return &Server{registry: registry, history: hist, store: st, events: newEventBus()}
+func New(registry *provider.Registry, hist *history.History, st *store.Store, t *tools.Registry) *Server {
+	return &Server{registry: registry, history: hist, store: st, tools: t, events: newEventBus()}
 }
 
 func (s *Server) Routes() http.Handler {
@@ -40,6 +42,9 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /conversations/{id}/select", s.handleSelectConversation)
 
 	mux.HandleFunc("GET /events", s.handleEvents)
+
+	mux.HandleFunc("GET /tools", s.handleListTools)
+	mux.HandleFunc("POST /tools/call", s.handleToolCall)
 
 	return corsMiddleware(mux)
 }
@@ -123,32 +128,98 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "data: %s\n\n", idData)
 	flusher.Flush()
 
+	// Tool-call loop: run the provider, then if it asked for tool calls,
+	// execute them, append the results to the in-memory message slice,
+	// and rerun. Stop on max iterations or when the model returns no more
+	// tool calls. tool calls / results are NOT persisted in history — only
+	// the concatenated assistant text is.
+	const maxIterations = 5
+	tools := providerTools(s.tools.List())
+	opts := provider.ChatOptions{Tools: tools}
+	msgs := s.history.Messages()
+
+	sendEvent := func(payload map[string]any) {
+		data, _ := json.Marshal(payload)
+		fmt.Fprintf(w, "data: %s\n\n", data)
+		flusher.Flush()
+	}
+
 	var fullResponse string
 
-	err := s.registry.ChatWith(r.Context(), model, s.history.Messages(), func(chunk provider.ChatChunk) error {
-		fullResponse += chunk.Content
-		data, _ := json.Marshal(map[string]any{
-			"content": chunk.Content,
-			"done":    chunk.Done,
+	for iteration := 0; iteration < maxIterations; iteration++ {
+		var iterContent string
+		var iterToolCalls []provider.ToolCall
+
+		err := s.registry.ChatWith(r.Context(), model, msgs, opts, func(chunk provider.ChatChunk) error {
+			if chunk.Content != "" {
+				iterContent += chunk.Content
+				fullResponse += chunk.Content
+				sendEvent(map[string]any{"content": chunk.Content})
+			}
+			if chunk.Done {
+				iterToolCalls = chunk.ToolCalls
+			}
+			return nil
 		})
-		fmt.Fprintf(w, "data: %s\n\n", data)
-		flusher.Flush()
-		return nil
-	})
 
-	if err != nil {
-		s.history.RemoveLast()
-		data, _ := json.Marshal(map[string]any{"error": err.Error(), "done": true})
-		fmt.Fprintf(w, "data: %s\n\n", data)
-		flusher.Flush()
-		return
+		if err != nil {
+			s.history.RemoveLast()
+			sendEvent(map[string]any{"error": err.Error(), "done": true})
+			return
+		}
+
+		if len(iterToolCalls) == 0 {
+			if fullResponse != "" {
+				_ = s.history.Add("assistant", fullResponse, model)
+				s.events.broadcast("conversations", nil)
+				s.events.broadcast("messages", map[string]any{"conversation_id": convID})
+			}
+			sendEvent(map[string]any{"done": true})
+			return
+		}
+
+		// Transient assistant turn carrying the tool call request.
+		msgs = append(msgs, provider.Message{
+			Role:      "assistant",
+			Content:   iterContent,
+			ToolCalls: iterToolCalls,
+		})
+
+		sendEvent(map[string]any{"tool_calls": iterToolCalls})
+
+		for _, tc := range iterToolCalls {
+			result, callErr := s.tools.Call(r.Context(), tc.Name, tc.Arguments)
+			resultPayload := result
+			if callErr != nil {
+				resultPayload = fmt.Sprintf("error: %v (output: %s)", callErr, result)
+			}
+
+			sendEvent(map[string]any{
+				"tool_result": map[string]any{
+					"id":     tc.ID,
+					"name":   tc.Name,
+					"result": resultPayload,
+					"error":  errString(callErr),
+				},
+			})
+
+			msgs = append(msgs, provider.Message{
+				Role:       "tool",
+				ToolCallID: tc.ID,
+				ToolName:   tc.Name,
+				Content:    resultPayload,
+			})
+		}
 	}
 
-	if fullResponse != "" {
-		_ = s.history.Add("assistant", fullResponse, model)
-		s.events.broadcast("conversations", nil)
-		s.events.broadcast("messages", map[string]any{"conversation_id": convID})
+	sendEvent(map[string]any{"error": "max tool iterations exceeded", "done": true})
+}
+
+func errString(err error) string {
+	if err == nil {
+		return ""
 	}
+	return err.Error()
 }
 
 func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
@@ -324,4 +395,43 @@ func parsePathID(r *http.Request, name string) (int64, bool) {
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+func (s *Server) handleListTools(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, map[string]any{"tools": s.tools.List()})
+}
+
+func providerTools(in []tools.Tool) []provider.Tool {
+	out := make([]provider.Tool, len(in))
+	for i, t := range in {
+		out[i] = provider.Tool{
+			Name:        t.Name,
+			Description: t.Description,
+			Parameters:  t.Parameters,
+		}
+	}
+	return out
+}
+
+type toolCallRequest struct {
+	Name string         `json:"name"`
+	Args map[string]any `json:"args"`
+}
+
+// handleToolCall is a thin debug/test path: invoke a tool by name with no
+// LLM involvement. The chat endpoint will route tool calls through here too
+// once provider tool-calling is wired up.
+func (s *Server) handleToolCall(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBody)
+	var req toolCallRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	result, err := s.tools.Call(r.Context(), req.Name, req.Args)
+	resp := map[string]any{"result": result}
+	if err != nil {
+		resp["error"] = err.Error()
+	}
+	writeJSON(w, resp)
 }

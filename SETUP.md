@@ -212,7 +212,7 @@ make install        # symlinks + builds and enables mugen-ai
 
 Yura (`Super + Y` for the bar row, `Super + Shift + Y` for the corner pop-up) talks to the local Go server. Settings → Yura has "Edit Config" / "Restart AI" buttons that open `~/.config/mugen-ai/config.toml` in your default editor and bounce the systemd unit, so you don't have to drop to a terminal for tweaks. The neighbouring "Bar Yura model" dropdown pins which model the bar row uses — leave it on the default to follow whichever model the corner pop-up most recently selected. When `mugen-ai.service` isn't running, the panel shows an install hint instead of the chat UI — safe to ignore the bar icon if you skip this feature.
 
-`~/.config/mugen-ai/config.toml`:
+A full annotated template lives at `ai/config.toml.example` (or `$(nix path-info .#mugen-ai)/share/mugen-ai/config.toml.example` if you installed via Nix); a minimal `~/.config/mugen-ai/config.toml` looks like:
 
 ```toml
 [personality]
@@ -236,19 +236,23 @@ model = "gemini-2.5-flash"
 - **`city`** — enables live weather via [wttr.in](https://wttr.in). Leave empty to disable.
 - **`[provider.google].model`** — enables Gemini (requires `GEMINI_API_KEY`). Omit to disable.
 - **`[provider.openai]`** — enables any OpenAI-compatible provider. Activated when either `OPENAI_API_KEY` is set (cloud providers) or `base_url` points at a local server. `models` is optional; when empty the provider asks the backend's `/v1/models` endpoint.
+- **`[provider.anthropic].models`** — enables Claude (requires `ANTHROPIC_API_KEY`). Omit `models` to default to `claude-haiku-4-5`. Recommended for tool-calling (fast, accurate, low cost).
 
 ### Provider API keys
 
-Save secrets in the env file the systemd unit reads:
+Copy `ai/.env.example` (Nix install: `$(nix path-info .#mugen-ai)/share/mugen-ai/.env.example`) to `~/.config/mugen-ai/.env` and fill in the keys you have, or append directly:
 
 ```sh
 cat >> ~/.config/mugen-ai/.env <<'EOF'
+ANTHROPIC_API_KEY=sk-ant-...
 GEMINI_API_KEY=...
 OPENAI_API_KEY=...
 EOF
 chmod 600 ~/.config/mugen-ai/.env
 systemctl --user restart mugen-ai.service
 ```
+
+Only keys with a non-empty value enable their provider; leave a line blank to opt out of that provider entirely.
 
 ### Listen address
 

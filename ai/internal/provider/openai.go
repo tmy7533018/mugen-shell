@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 )
@@ -77,12 +78,22 @@ func (o *OpenAI) Models(ctx context.Context) ([]string, error) {
 	return models, nil
 }
 
-func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, fn func(ChatChunk) error) error {
-	body, err := json.Marshal(map[string]any{
+func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opts ChatOptions, fn func(ChatChunk) error) error {
+	msgs, err := openAIMessages(messages)
+	if err != nil {
+		return err
+	}
+
+	payload := map[string]any{
 		"model":    model,
-		"messages": messages,
+		"messages": msgs,
 		"stream":   true,
-	})
+	}
+	if tw := toolsAsOpenAI(opts.Tools); len(tw) > 0 {
+		payload["tools"] = tw
+	}
+
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
@@ -111,10 +122,27 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, fn 
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
 
+	// Streaming tool calls arrive as deltas indexed by `index`; assemble
+	// per-index buffers until finish_reason fires.
+	type pending struct {
+		ID   string
+		Name string
+		Args strings.Builder
+	}
+	calls := map[int]*pending{}
+
 	var chunk struct {
 		Choices []struct {
 			Delta struct {
-				Content string `json:"content"`
+				Content   string `json:"content"`
+				ToolCalls []struct {
+					Index    int    `json:"index"`
+					ID       string `json:"id"`
+					Function struct {
+						Name      string `json:"name"`
+						Arguments string `json:"arguments"`
+					} `json:"function"`
+				} `json:"tool_calls"`
 			} `json:"delta"`
 			FinishReason string `json:"finish_reason"`
 		} `json:"choices"`
@@ -141,12 +169,90 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, fn 
 					return err
 				}
 			}
+			for _, tc := range c.Delta.ToolCalls {
+				p, ok := calls[tc.Index]
+				if !ok {
+					p = &pending{}
+					calls[tc.Index] = p
+				}
+				if tc.ID != "" {
+					p.ID = tc.ID
+				}
+				if tc.Function.Name != "" {
+					p.Name = tc.Function.Name
+				}
+				if tc.Function.Arguments != "" {
+					p.Args.WriteString(tc.Function.Arguments)
+				}
+			}
 			if c.FinishReason != "" {
-				return fn(ChatChunk{Done: true})
+				final := ChatChunk{Done: true}
+				if len(calls) > 0 {
+					indices := make([]int, 0, len(calls))
+					for i := range calls {
+						indices = append(indices, i)
+					}
+					sort.Ints(indices)
+					for _, idx := range indices {
+						p := calls[idx]
+						args := map[string]any{}
+						if p.Args.Len() > 0 {
+							if err := json.Unmarshal([]byte(p.Args.String()), &args); err != nil {
+								args = map[string]any{"_raw": p.Args.String()}
+							}
+						}
+						final.ToolCalls = append(final.ToolCalls, ToolCall{
+							ID:        p.ID,
+							Name:      p.Name,
+							Arguments: args,
+						})
+					}
+				}
+				return fn(final)
 			}
 		}
 	}
 	return scanner.Err()
+}
+
+// openAIMessages converts internal Message → OpenAI's chat schema.
+func openAIMessages(messages []Message) ([]map[string]any, error) {
+	out := make([]map[string]any, 0, len(messages))
+	for _, m := range messages {
+		switch m.Role {
+		case "tool":
+			out = append(out, map[string]any{
+				"role":         "tool",
+				"tool_call_id": m.ToolCallID,
+				"content":      m.Content,
+			})
+		default:
+			msg := map[string]any{
+				"role":    m.Role,
+				"content": m.Content,
+			}
+			if len(m.ToolCalls) > 0 {
+				calls := make([]map[string]any, 0, len(m.ToolCalls))
+				for _, tc := range m.ToolCalls {
+					argsJSON, err := json.Marshal(tc.Arguments)
+					if err != nil {
+						return nil, err
+					}
+					calls = append(calls, map[string]any{
+						"id":   tc.ID,
+						"type": "function",
+						"function": map[string]any{
+							"name":      tc.Name,
+							"arguments": string(argsJSON),
+						},
+					})
+				}
+				msg["tool_calls"] = calls
+			}
+			out = append(out, msg)
+		}
+	}
+	return out, nil
 }
 
 func parseOpenAIError(body []byte, status int) string {

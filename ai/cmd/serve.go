@@ -48,7 +48,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	}
 	defer rt.Store.Close()
 
-	srv := server.New(rt.Registry, rt.History, rt.Store)
+	srv := server.New(rt.Registry, rt.History, rt.Store, rt.Tools)
 
 	addr := fmt.Sprintf("127.0.0.1:%d", servePort)
 	httpSrv := &http.Server{Addr: addr, Handler: srv.Routes()}

@@ -6,7 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -36,12 +38,52 @@ func (o *Ollama) Ping(ctx context.Context) bool {
 	return resp.StatusCode == http.StatusOK
 }
 
-func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, fn func(ChatChunk) error) error {
-	body, err := json.Marshal(map[string]any{
+type ollamaToolCall struct {
+	Function struct {
+		Name      string         `json:"name"`
+		Arguments map[string]any `json:"arguments"`
+	} `json:"function"`
+}
+
+func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opts ChatOptions, fn func(ChatChunk) error) error {
+	// Map Message → ollama wire shape. role="tool" carries the result of a
+	// previous tool call; ollama wants {role:"tool", content:"..."} with no
+	// tool_call_id.
+	msgs := make([]map[string]any, 0, len(messages))
+	for _, m := range messages {
+		msg := map[string]any{
+			"role":    m.Role,
+			"content": m.Content,
+		}
+		if len(m.ToolCalls) > 0 {
+			calls := make([]map[string]any, 0, len(m.ToolCalls))
+			for _, tc := range m.ToolCalls {
+				calls = append(calls, map[string]any{
+					"function": map[string]any{
+						"name":      tc.Name,
+						"arguments": tc.Arguments,
+					},
+				})
+			}
+			msg["tool_calls"] = calls
+		}
+		msgs = append(msgs, msg)
+	}
+
+	payload := map[string]any{
 		"model":    model,
-		"messages": messages,
+		"messages": msgs,
 		"stream":   true,
-	})
+		// Suppress thinking models' (qwen3 etc.) reasoning channel — ollama
+		// streams it on a separate `thinking` field, leaving `content` empty
+		// for tens of seconds. Models without thinking ignore this.
+		"think": false,
+	}
+	if tw := toolsAsOpenAI(opts.Tools); len(tw) > 0 {
+		payload["tools"] = tw
+	}
+
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
@@ -59,32 +101,53 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, fn 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("ollama returned status %d", resp.StatusCode)
-	}
-
-	var raw struct {
-		Message struct {
-			Content string `json:"content"`
-		} `json:"message"`
-		Done bool `json:"done"`
+		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		bodyStr := string(bodyBytes)
+		// Older / smaller models (gemma3, etc.) reject tools with a 400 and
+		// "does not support tools". Retry without tools so the conversation
+		// keeps working — the user can still ask, just without the shell
+		// controls until they switch to a tool-capable model.
+		if resp.StatusCode == http.StatusBadRequest &&
+			strings.Contains(bodyStr, "does not support tools") &&
+			len(opts.Tools) > 0 {
+			retry := opts
+			retry.Tools = nil
+			return o.Chat(ctx, model, messages, retry, fn)
+		}
+		return fmt.Errorf("ollama returned status %d: %s", resp.StatusCode, strings.TrimSpace(bodyStr))
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if len(line) == 0 {
 			continue
 		}
-		raw = struct {
+		var raw struct {
 			Message struct {
-				Content string `json:"content"`
+				Content   string           `json:"content"`
+				ToolCalls []ollamaToolCall `json:"tool_calls,omitempty"`
 			} `json:"message"`
 			Done bool `json:"done"`
-		}{}
+		}
 		if err := json.Unmarshal(line, &raw); err != nil {
 			continue
 		}
-		if err := fn(ChatChunk{Content: raw.Message.Content, Done: raw.Done}); err != nil {
+
+		chunk := ChatChunk{Content: raw.Message.Content, Done: raw.Done}
+		if len(raw.Message.ToolCalls) > 0 {
+			chunk.ToolCalls = make([]ToolCall, 0, len(raw.Message.ToolCalls))
+			for i, tc := range raw.Message.ToolCalls {
+				chunk.ToolCalls = append(chunk.ToolCalls, ToolCall{
+					ID:        fmt.Sprintf("call_%d_%d", time.Now().UnixNano(), i),
+					Name:      tc.Function.Name,
+					Arguments: tc.Function.Arguments,
+				})
+			}
+		}
+		if err := fn(chunk); err != nil {
 			return err
 		}
 		if raw.Done {

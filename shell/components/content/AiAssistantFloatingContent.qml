@@ -59,9 +59,56 @@ FocusScope {
     function updateLastMessage(content) {
         if (messages.length === 0) return
         let copy = messages.slice()
+        let last = copy[copy.length - 1]
         copy[copy.length - 1] = {
-            role: copy[copy.length - 1].role,
-            content: copy[copy.length - 1].content + content
+            role: last.role,
+            content: last.content + content,
+            toolCalls: last.toolCalls || []
+        }
+        messages = copy
+    }
+
+    function appendToolCalls(calls) {
+        if (messages.length === 0 || !calls || calls.length === 0) return
+        let copy = messages.slice()
+        let last = copy[copy.length - 1]
+        let existing = last.toolCalls || []
+        let added = calls.map(c => ({
+            id: c.id,
+            name: c.name,
+            arguments: c.arguments || {},
+            result: null,
+            error: null,
+            pending: true
+        }))
+        copy[copy.length - 1] = {
+            role: last.role,
+            content: last.content,
+            toolCalls: existing.concat(added)
+        }
+        messages = copy
+    }
+
+    function attachToolResult(id, name, result, error) {
+        if (messages.length === 0) return
+        let copy = messages.slice()
+        let last = copy[copy.length - 1]
+        if (!last.toolCalls || last.toolCalls.length === 0) return
+        let updated = last.toolCalls.map(tc => {
+            if (tc.id !== id) return tc
+            return {
+                id: tc.id,
+                name: tc.name,
+                arguments: tc.arguments,
+                result: result,
+                error: error || "",
+                pending: false
+            }
+        })
+        copy[copy.length - 1] = {
+            role: last.role,
+            content: last.content,
+            toolCalls: updated
         }
         messages = copy
     }
@@ -826,6 +873,15 @@ FocusScope {
                     }
                     if (obj.error) {
                         root.updateLastMessage("\n[error: " + obj.error + "]")
+                        return
+                    }
+                    if (obj.tool_calls) {
+                        root.appendToolCalls(obj.tool_calls)
+                        return
+                    }
+                    if (obj.tool_result) {
+                        let tr = obj.tool_result
+                        root.attachToolResult(tr.id, tr.name, tr.result, tr.error)
                         return
                     }
                     if (obj.content) {

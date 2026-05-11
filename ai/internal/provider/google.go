@@ -39,7 +39,7 @@ func (g *Google) Models(_ context.Context) ([]string, error) {
 	return g.models, nil
 }
 
-func (g *Google) Chat(ctx context.Context, model string, messages []Message, fn func(ChatChunk) error) error {
+func (g *Google) Chat(ctx context.Context, model string, messages []Message, opts ChatOptions, fn func(ChatChunk) error) error {
 	if g.apiKey == "" {
 		return fmt.Errorf("GEMINI_API_KEY is not set")
 	}
@@ -54,14 +54,56 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, fn 
 			system += m.Content
 			continue
 		}
+		if m.Role == "tool" {
+			// Gemini doesn't have a "tool" role; tool results ride back on a
+			// user-role part with functionResponse. response must be an
+			// object, so wrap non-JSON output.
+			var responseObj any
+			if err := json.Unmarshal([]byte(m.Content), &responseObj); err != nil {
+				responseObj = map[string]any{"result": m.Content}
+			}
+			if _, isMap := responseObj.(map[string]any); !isMap {
+				responseObj = map[string]any{"result": responseObj}
+			}
+			contents = append(contents, map[string]any{
+				"role": "user",
+				"parts": []map[string]any{{
+					"functionResponse": map[string]any{
+						"name":     m.ToolName,
+						"response": responseObj,
+					},
+				}},
+			})
+			continue
+		}
+
 		role := m.Role
 		if role == "assistant" {
 			role = "model"
 		}
-		contents = append(contents, map[string]any{
-			"role":  role,
-			"parts": []map[string]string{{"text": m.Content}},
-		})
+
+		parts := make([]map[string]any, 0, 1+len(m.ToolCalls))
+		if m.Content != "" {
+			parts = append(parts, map[string]any{"text": m.Content})
+		}
+		for _, tc := range m.ToolCalls {
+			args := tc.Arguments
+			if args == nil {
+				args = map[string]any{}
+			}
+			parts = append(parts, map[string]any{
+				"functionCall": map[string]any{
+					"name": tc.Name,
+					"args": args,
+				},
+			})
+		}
+		if len(parts) > 0 {
+			contents = append(contents, map[string]any{
+				"role":  role,
+				"parts": parts,
+			})
+		}
 	}
 
 	payload := map[string]any{"contents": contents}
@@ -69,6 +111,9 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, fn 
 		payload["systemInstruction"] = map[string]any{
 			"parts": []map[string]string{{"text": system}},
 		}
+	}
+	if tg := toolsAsGemini(opts.Tools); len(tg) > 0 {
+		payload["tools"] = tg
 	}
 
 	body, err := json.Marshal(payload)
@@ -101,12 +146,20 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, fn 
 		Candidates []struct {
 			Content struct {
 				Parts []struct {
-					Text string `json:"text"`
+					Text         string `json:"text"`
+					FunctionCall struct {
+						Name string         `json:"name"`
+						Args map[string]any `json:"args"`
+					} `json:"functionCall"`
 				} `json:"parts"`
 			} `json:"content"`
 			FinishReason string `json:"finishReason"`
 		} `json:"candidates"`
 	}
+
+	// Accumulate function calls across stream chunks so a single final
+	// ChatChunk surfaces them with Done=true.
+	var accumulated []ToolCall
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -130,9 +183,20 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, fn 
 						return err
 					}
 				}
+				if p.FunctionCall.Name != "" {
+					accumulated = append(accumulated, ToolCall{
+						ID:        fmt.Sprintf("call_%d_%d", time.Now().UnixNano(), len(accumulated)),
+						Name:      p.FunctionCall.Name,
+						Arguments: p.FunctionCall.Args,
+					})
+				}
 			}
 			if c.FinishReason != "" {
-				return fn(ChatChunk{Done: true})
+				final := ChatChunk{Done: true}
+				if len(accumulated) > 0 {
+					final.ToolCalls = accumulated
+				}
+				return fn(final)
 			}
 		}
 	}

@@ -28,18 +28,18 @@ func (r *Registry) Model() string {
 	return r.model
 }
 
-func (r *Registry) Chat(ctx context.Context, messages []Message, fn func(ChatChunk) error) error {
-	return r.ChatWith(ctx, r.Model(), messages, fn)
+func (r *Registry) Chat(ctx context.Context, messages []Message, opts ChatOptions, fn func(ChatChunk) error) error {
+	return r.ChatWith(ctx, r.Model(), messages, opts, fn)
 }
 
 // ChatWith routes a chat through the explicit model, bypassing the registry's
 // stored default. Used by /chat to honour each conversation's bound model.
-func (r *Registry) ChatWith(ctx context.Context, model string, messages []Message, fn func(ChatChunk) error) error {
+func (r *Registry) ChatWith(ctx context.Context, model string, messages []Message, opts ChatOptions, fn func(ChatChunk) error) error {
 	p, err := r.providerFor(ctx, model)
 	if err != nil {
 		return err
 	}
-	return p.Chat(ctx, model, messages, fn)
+	return p.Chat(ctx, model, messages, opts, fn)
 }
 
 func (r *Registry) Models(ctx context.Context) ([]string, error) {

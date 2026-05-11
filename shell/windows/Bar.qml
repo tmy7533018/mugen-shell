@@ -226,6 +226,12 @@ PanelWindow {
 
     Managers.MusicPlayerManager { id: musicPlayerManager }
 
+    Theme.IpcRouter {
+        audioManager: audioManager
+        musicPlayerManager: musicPlayerManager
+        modeManager: modeManager
+    }
+
     Managers.WallpaperManager { id: wallpaperManager }
 
     Managers.IdleInhibitorManager { id: idleInhibitorManager }
