@@ -44,7 +44,30 @@ Built and enabled automatically on any install path (NixOS, Arch + Nix, or pure 
 - Markdown rendering for assistant replies, with monospace code blocks that have their own hover-reveal copy button
 - Streaming responses with a stop button, a breathing indicator, and an IME-aware placeholder
 - Configurable personality and real-time context injection (date/time, weather)
-- Natural-language shell control — ask Yura to set the volume, toggle music, or open a panel and it drives mugen-shell directly via tool calls. Reversible actions fire immediately; destructive ones (e.g. deleting calendar events) are confirmed in plain language in chat first
+- Natural-language shell control via function-calling tools — see *Shell control by chat* below
+
+#### Shell control by chat
+
+Yura speaks function calls back to mugen-shell. Tools route through
+`qs ipc call` so the existing managers stay the source of truth.
+Reversible actions fire immediately; destructive ones (clearing
+notification history, deleting calendar events, etc.) are confirmed in
+plain language in chat first — no modal popups.
+
+| Domain | What Yura can do |
+|---|---|
+| Audio output | set / read volume, toggle mute |
+| Audio input | set / read mic volume, toggle mic mute |
+| Display | set / read brightness |
+| Theme | switch dark / light, toggle, read |
+| Wallpaper | switch, list available, read current |
+| Music (MPRIS) | play / pause, next, previous |
+| Notifications | set / toggle DnD, clear history, read unread count |
+| Panels | open named panel, close any panel |
+
+Examples that land today: "set volume to 30", "lower the brightness",
+"switch to light mode", "shuffle the wallpaper", "next track", "DnD on",
+"open settings".
 
 Configuration, the HTTP API, and the Gemini API key step live in [SETUP.md → Configuring mugen-ai](SETUP.md#configuring-mugen-ai).
 
