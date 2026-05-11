@@ -63,11 +63,18 @@ plain language in chat first — no modal popups.
 | Wallpaper | switch, list available, read current |
 | Music (MPRIS) | play / pause, next, previous |
 | Notifications | set / toggle DnD, clear history, read unread count |
+| Apps | launch any command (inherits $PATH) |
+| Timer | start / pause / resume / cancel, read state |
+| Calendar | add / delete events, list today or a date range |
 | Panels | open named panel, close any panel |
+
+Power actions (lock / suspend / logout / reboot / shutdown) intentionally
+stay out of Yura's reach — drive those from the Power Menu directly.
 
 Examples that land today: "set volume to 30", "lower the brightness",
 "switch to light mode", "shuffle the wallpaper", "next track", "DnD on",
-"open settings".
+"open settings", "set a 25 minute timer", "add a calendar event tomorrow
+at 3pm", "launch firefox".
 
 Configuration, the HTTP API, and the Gemini API key step live in [SETUP.md → Configuring mugen-ai](SETUP.md#configuring-mugen-ai).
 
