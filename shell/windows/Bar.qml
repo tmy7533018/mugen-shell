@@ -234,6 +234,7 @@ PanelWindow {
         wallpaperManager: wallpaperManager
         notificationManager: notificationManager
         theme: theme
+        timerManager: timerManager
     }
 
     Managers.WallpaperManager { id: wallpaperManager }

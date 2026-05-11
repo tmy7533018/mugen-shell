@@ -16,6 +16,7 @@ Item {
     required property var wallpaperManager
     required property var notificationManager
     required property var theme
+    required property var timerManager
 
     IpcHandler {
         target: "audio"
@@ -161,6 +162,60 @@ Item {
 
         function list(): string {
             return JSON.stringify(ipcRouter.wallpaperManager.wallpapers || [])
+        }
+    }
+
+    IpcHandler {
+        target: "app"
+
+        function launch(cmd: string): string {
+            let trimmed = (cmd || "").trim()
+            if (trimmed === "") return "error: empty command"
+            // Hyprland exec inherits the user's $PATH, so plain executable
+            // names like "firefox" work — no need for absolute paths.
+            Hyprland.dispatch("exec " + trimmed)
+            return "launched: " + trimmed
+        }
+    }
+
+    IpcHandler {
+        target: "timer"
+
+        function start(seconds: int): string {
+            if (seconds <= 0) return "error: seconds must be positive"
+            ipcRouter.timerManager.start(seconds)
+            return "started: " + seconds + "s"
+        }
+
+        function pause(): string {
+            if (!ipcRouter.timerManager.running) return "error: no timer running"
+            ipcRouter.timerManager.pause()
+            return "paused"
+        }
+
+        function resume(): string {
+            if (!ipcRouter.timerManager.paused) return "error: timer is not paused"
+            ipcRouter.timerManager.resume()
+            return "resumed"
+        }
+
+        function cancel(): string {
+            if (!ipcRouter.timerManager.running && !ipcRouter.timerManager.paused) {
+                return "error: no timer to cancel"
+            }
+            ipcRouter.timerManager.cancel()
+            return "cancelled"
+        }
+
+        function get(): string {
+            // JSON so the model can pick out whichever field it needs.
+            return JSON.stringify({
+                running: ipcRouter.timerManager.running,
+                paused: ipcRouter.timerManager.paused,
+                duration_sec: ipcRouter.timerManager.durationSec,
+                remaining_sec: ipcRouter.timerManager.remainingSec,
+                alerting: ipcRouter.timerManager.alerting
+            })
         }
     }
 

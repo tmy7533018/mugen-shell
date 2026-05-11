@@ -19,20 +19,30 @@ type Tool struct {
 	target   string
 	function string
 	argOrder []string
+
+	// When non-empty, the tool is dispatched by exec'ing this command
+	// instead of `qs ipc call`. Tokens of the form "{{argName}}" are
+	// substituted from the caller's arguments; "{{scripts_dir}}" expands
+	// to the registry's configured scripts dir. Used for tools that need
+	// to read stdout (Calendar DB queries, etc.) which Quickshell's async
+	// Process can't return from an IpcHandler.
+	cmdTemplate []string
 }
 
 type Registry struct {
-	qsConfig string
-	tools    []Tool
+	qsConfig   string
+	scriptsDir string
+	tools      []Tool
 }
 
-func New(qsConfig string) *Registry {
+func New(qsConfig, scriptsDir string) *Registry {
 	if qsConfig == "" {
 		qsConfig = "mugen-shell"
 	}
 	return &Registry{
-		qsConfig: qsConfig,
-		tools:    builtin(),
+		qsConfig:   qsConfig,
+		scriptsDir: scriptsDir,
+		tools:      builtin(),
 	}
 }
 
@@ -50,27 +60,67 @@ func (r *Registry) Find(name string) *Tool {
 }
 
 // Call executes the named tool with the given arguments and returns the raw
-// stdout of `qs ipc call`. Errors include qs exit status and combined output
-// so the provider can surface them back to the LLM.
+// stdout of the underlying command. Tools without a cmdTemplate route
+// through `qs ipc call`; tools with one exec it directly so they can read
+// stdout (Calendar DB queries, etc.).
 func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (string, error) {
 	t := r.Find(name)
 	if t == nil {
 		return "", fmt.Errorf("unknown tool: %s", name)
 	}
-	cmdArgs := []string{"-c", r.qsConfig, "ipc", "call", t.target, t.function}
-	for _, key := range t.argOrder {
-		v, ok := args[key]
-		if !ok {
-			return "", fmt.Errorf("missing argument %q for tool %s", key, name)
+
+	var cmdName string
+	var cmdArgs []string
+
+	if len(t.cmdTemplate) > 0 {
+		expanded, err := expandTemplate(t.cmdTemplate, args, r.scriptsDir)
+		if err != nil {
+			return "", fmt.Errorf("expand %s: %w", name, err)
 		}
-		cmdArgs = append(cmdArgs, fmt.Sprint(v))
+		if len(expanded) == 0 {
+			return "", fmt.Errorf("empty command for tool %s", name)
+		}
+		cmdName = expanded[0]
+		cmdArgs = expanded[1:]
+	} else {
+		cmdName = "qs"
+		cmdArgs = []string{"-c", r.qsConfig, "ipc", "call", t.target, t.function}
+		for _, key := range t.argOrder {
+			v, ok := args[key]
+			if !ok {
+				return "", fmt.Errorf("missing argument %q for tool %s", key, name)
+			}
+			cmdArgs = append(cmdArgs, fmt.Sprint(v))
+		}
 	}
-	out, err := exec.CommandContext(ctx, "qs", cmdArgs...).CombinedOutput()
+
+	out, err := exec.CommandContext(ctx, cmdName, cmdArgs...).CombinedOutput()
 	res := strings.TrimSpace(string(out))
 	if err != nil {
-		return res, fmt.Errorf("qs ipc call %s.%s failed: %w (output: %s)", t.target, t.function, err, res)
+		return res, fmt.Errorf("%s failed: %w (output: %s)", name, err, res)
 	}
 	return res, nil
+}
+
+// expandTemplate substitutes "{{argName}}" / "{{scripts_dir}}" tokens. Any
+// remaining "{{...}}" tokens cause an error so a missing argument isn't
+// silently passed through to the underlying command.
+func expandTemplate(tmpl []string, args map[string]any, scriptsDir string) ([]string, error) {
+	out := make([]string, 0, len(tmpl))
+	for _, tok := range tmpl {
+		s := tok
+		if scriptsDir != "" {
+			s = strings.ReplaceAll(s, "{{scripts_dir}}", scriptsDir)
+		}
+		for key, v := range args {
+			s = strings.ReplaceAll(s, "{{"+key+"}}", fmt.Sprint(v))
+		}
+		if strings.Contains(s, "{{") && strings.Contains(s, "}}") {
+			return nil, fmt.Errorf("unresolved placeholder in token %q", tok)
+		}
+		out = append(out, s)
+	}
+	return out, nil
 }
 
 func emptyParams() map[string]any {
@@ -326,6 +376,114 @@ func builtin() []Tool {
 			Parameters:  emptyParams(),
 			target:      "notification",
 			function:    "unread",
+		},
+		{
+			Name:        "app_launch",
+			Description: "Launch a desktop app or command. Pass the executable name or full command line (it inherits the user's $PATH). For destructive or unfamiliar commands, confirm in plain language with the user first; obvious requests like \"launch firefox\" you can run immediately.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"cmd": map[string]any{
+						"type":        "string",
+						"description": "Command to exec (e.g. \"firefox\", \"code .\", \"kitty -e htop\").",
+					},
+				},
+				"required": []string{"cmd"},
+			},
+			target:   "app",
+			function: "launch",
+			argOrder: []string{"cmd"},
+		},
+		{
+			Name:        "timer_start",
+			Description: "Start a countdown timer for the given duration in seconds. Only one timer runs at a time — starting a new one replaces any pending timer.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"seconds": map[string]any{
+						"type":        "integer",
+						"minimum":     1,
+						"description": "Countdown duration in seconds.",
+					},
+				},
+				"required": []string{"seconds"},
+			},
+			target:   "timer",
+			function: "start",
+			argOrder: []string{"seconds"},
+		},
+		{
+			Name:        "timer_pause",
+			Description: "Pause the running timer.",
+			Parameters:  emptyParams(),
+			target:      "timer",
+			function:    "pause",
+		},
+		{
+			Name:        "timer_resume",
+			Description: "Resume a paused timer.",
+			Parameters:  emptyParams(),
+			target:      "timer",
+			function:    "resume",
+		},
+		{
+			Name:        "timer_cancel",
+			Description: "Cancel the running or paused timer.",
+			Parameters:  emptyParams(),
+			target:      "timer",
+			function:    "cancel",
+		},
+		{
+			Name:        "timer_get",
+			Description: "Return the current timer state as JSON: { running, paused, duration_sec, remaining_sec, alerting }.",
+			Parameters:  emptyParams(),
+			target:      "timer",
+			function:    "get",
+		},
+		{
+			Name:        "calendar_add",
+			Description: "Add a calendar event. `date` is YYYY-MM-DD, `time` is HH:MM (24h). Returns the new event as JSON.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"date":  map[string]any{"type": "string", "description": "Event date in YYYY-MM-DD."},
+					"time":  map[string]any{"type": "string", "description": "Event time in HH:MM (24h)."},
+					"title": map[string]any{"type": "string", "description": "Event title."},
+				},
+				"required": []string{"date", "time", "title"},
+			},
+			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "add", "--date", "{{date}}", "--time", "{{time}}", "--title", "{{title}}"},
+		},
+		{
+			Name:        "calendar_delete",
+			Description: "Delete a calendar event by id. Destructive — confirm in plain language with the user before invoking.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"id": map[string]any{"type": "integer", "description": "Event id (from calendar_list_*)."},
+				},
+				"required": []string{"id"},
+			},
+			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "delete", "--id", "{{id}}"},
+		},
+		{
+			Name:        "calendar_list_today",
+			Description: "List today's calendar events as JSON: { events: [{ id, date, time, title }, ...] }.",
+			Parameters:  emptyParams(),
+			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "list-today"},
+		},
+		{
+			Name:        "calendar_list_range",
+			Description: "List calendar events between two dates (inclusive). `start` and `end` are YYYY-MM-DD. Returns JSON { events: [...] }.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"start": map[string]any{"type": "string", "description": "Range start date YYYY-MM-DD."},
+					"end":   map[string]any{"type": "string", "description": "Range end date YYYY-MM-DD."},
+				},
+				"required": []string{"start", "end"},
+			},
+			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "list-range", "--start", "{{start}}", "--end", "{{end}}"},
 		},
 	}
 }

@@ -79,8 +79,20 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		Registry: registry,
 		Store:    st,
 		History:  hist,
-		Tools:    tools.New(cfg.Shell.QsConfig),
+		Tools:    tools.New(cfg.Shell.QsConfig, resolveScriptsDir(cfg.Shell.ScriptsDir)),
 	}, nil
+}
+
+func resolveScriptsDir(configured string) string {
+	if configured != "" {
+		return configured
+	}
+	xdg := os.Getenv("XDG_CONFIG_HOME")
+	if xdg == "" {
+		home, _ := os.UserHomeDir()
+		xdg = filepath.Join(home, ".config")
+	}
+	return filepath.Join(xdg, "quickshell", "mugen-shell", "scripts")
 }
 
 func buildRegistry(cfg config.Config, model string) *provider.Registry {

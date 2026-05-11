@@ -18,6 +18,11 @@ type Shell struct {
 	// QsConfig is the quickshell `-c` name used to target mugen-shell from
 	// `qs ipc call`. Defaults to "mugen-shell".
 	QsConfig string `toml:"qs_config"`
+	// ScriptsDir is where calendar-cli.py / toggle-*.sh live. mugen-ai
+	// shells out to these for tools that can't fit through the IPC layer
+	// (Calendar DB queries etc.). Defaults to
+	// "$XDG_CONFIG_HOME/quickshell/mugen-shell/scripts".
+	ScriptsDir string `toml:"scripts_dir"`
 }
 
 type Personality struct {
