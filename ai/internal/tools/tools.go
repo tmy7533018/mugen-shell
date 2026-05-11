@@ -160,5 +160,172 @@ func builtin() []Tool {
 			target:      "panel",
 			function:    "close",
 		},
+		{
+			Name:        "audio_set_mic_volume",
+			Description: "Set the microphone input volume. Range 0-100 (percent). Returns the new volume as a string, or a string starting with \"error:\" when no microphone is available — surface that to the user, don't claim success.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"volume": map[string]any{
+						"type":        "integer",
+						"minimum":     0,
+						"maximum":     100,
+						"description": "Target mic volume in percent (0-100).",
+					},
+				},
+				"required": []string{"volume"},
+			},
+			target:   "audio",
+			function: "set_mic_volume",
+			argOrder: []string{"volume"},
+		},
+		{
+			Name:        "audio_get_mic_volume",
+			Description: "Read the current microphone input volume (0-100). Returns a string starting with \"error:\" when no microphone is available.",
+			Parameters:  emptyParams(),
+			target:      "audio",
+			function:    "get_mic_volume",
+		},
+		{
+			Name:        "audio_toggle_mic_mute",
+			Description: "Toggle the microphone mute state. Returns the new muted state as a string (\"true\"/\"false\"), or a string starting with \"error:\" when no microphone is available.",
+			Parameters:  emptyParams(),
+			target:      "audio",
+			function:    "toggle_mic_mute",
+		},
+		{
+			Name:        "brightness_set",
+			Description: "Set the display brightness. Range 0-100 (percent). Returns the new brightness as a string, or a string starting with \"error:\" on desktops without a backlight — surface that to the user, don't claim success.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"percent": map[string]any{
+						"type":        "integer",
+						"minimum":     0,
+						"maximum":     100,
+						"description": "Target brightness in percent (0-100).",
+					},
+				},
+				"required": []string{"percent"},
+			},
+			target:   "brightness",
+			function: "set",
+			argOrder: []string{"percent"},
+		},
+		{
+			Name:        "brightness_get",
+			Description: "Read the current display brightness (0-100). Returns a string starting with \"error:\" on desktops without a backlight.",
+			Parameters:  emptyParams(),
+			target:      "brightness",
+			function:    "get",
+		},
+		{
+			Name:        "theme_set",
+			Description: "Switch the desktop theme. Accepts \"dark\" or \"light\".",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"mode": map[string]any{
+						"type":        "string",
+						"enum":        []string{"dark", "light"},
+						"description": "Theme mode: \"dark\" or \"light\".",
+					},
+				},
+				"required": []string{"mode"},
+			},
+			target:   "theme",
+			function: "set",
+			argOrder: []string{"mode"},
+		},
+		{
+			Name:        "theme_toggle",
+			Description: "Flip between dark and light theme. Returns the new mode.",
+			Parameters:  emptyParams(),
+			target:      "theme",
+			function:    "toggle",
+		},
+		{
+			Name:        "theme_get",
+			Description: "Read the current theme mode (\"dark\" or \"light\").",
+			Parameters:  emptyParams(),
+			target:      "theme",
+			function:    "get",
+		},
+		{
+			Name:        "wallpaper_set",
+			Description: "Switch the desktop wallpaper. `path` must be an absolute path to a file under the user's wallpaper directory; use wallpaper_list to discover available wallpapers.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"path": map[string]any{
+						"type":        "string",
+						"description": "Absolute path to a wallpaper file.",
+					},
+				},
+				"required": []string{"path"},
+			},
+			target:   "wallpaper",
+			function: "set",
+			argOrder: []string{"path"},
+		},
+		{
+			Name:        "wallpaper_current",
+			Description: "Read the absolute path of the currently active wallpaper.",
+			Parameters:  emptyParams(),
+			target:      "wallpaper",
+			function:    "current",
+		},
+		{
+			Name:        "wallpaper_list",
+			Description: "List available wallpapers as a JSON array of absolute paths.",
+			Parameters:  emptyParams(),
+			target:      "wallpaper",
+			function:    "list",
+		},
+		{
+			Name:        "notification_toggle_dnd",
+			Description: "Flip Do Not Disturb. Prefer notification_set_dnd when the user explicitly asks to turn it on or off — toggle is for \"switch DnD\".",
+			Parameters:  emptyParams(),
+			target:      "notification",
+			function:    "toggle_dnd",
+		},
+		{
+			Name:        "notification_set_dnd",
+			Description: "Set Do Not Disturb explicitly. When DnD is on, notification popups and sounds are suppressed but history still records them. Idempotent — call this for \"turn DnD on/off\" requests so you don't depend on the current state.",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"enabled": map[string]any{
+						"type":        "boolean",
+						"description": "true = DnD on (suppress popups), false = DnD off (allow popups).",
+					},
+				},
+				"required": []string{"enabled"},
+			},
+			target:   "notification",
+			function: "set_dnd",
+			argOrder: []string{"enabled"},
+		},
+		{
+			Name:        "notification_get_dnd",
+			Description: "Read the current Do Not Disturb state (true = DnD enabled, popups suppressed).",
+			Parameters:  emptyParams(),
+			target:      "notification",
+			function:    "get_dnd",
+		},
+		{
+			Name:        "notification_clear_all",
+			Description: "Clear all notification history. Returns the number of notifications cleared. DESTRUCTIVE — confirm in plain language before invoking.",
+			Parameters:  emptyParams(),
+			target:      "notification",
+			function:    "clear_all",
+		},
+		{
+			Name:        "notification_unread",
+			Description: "Read the current unread notification count.",
+			Parameters:  emptyParams(),
+			target:      "notification",
+			function:    "unread",
+		},
 	}
 }

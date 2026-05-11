@@ -166,7 +166,12 @@ QtObject {
     Component.onCompleted: {
         mkdirProcess.command = ["mkdir", "-p", thumbDir]
         mkdirProcess.running = true
-        
+
+        // Eagerly populate `wallpapers` so consumers (UI picker, IPC tools)
+        // don't observe an empty list until the picker is opened for the
+        // first time. The scan is a single async find — cost is negligible.
+        loadWallpapers()
+
         isInitialized = true
     }
 }

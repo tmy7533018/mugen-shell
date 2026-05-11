@@ -230,6 +230,10 @@ PanelWindow {
         audioManager: audioManager
         musicPlayerManager: musicPlayerManager
         modeManager: modeManager
+        brightnessManager: brightnessManager
+        wallpaperManager: wallpaperManager
+        notificationManager: notificationManager
+        theme: theme
     }
 
     Managers.WallpaperManager { id: wallpaperManager }
