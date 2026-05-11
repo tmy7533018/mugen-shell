@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
 
 // External tool entry point for the MCP layer in mugen-ai. Each target maps
@@ -77,14 +78,30 @@ Item {
         }
     }
 
+    // settings / calendar / shortcuts run as separate quickshell processes —
+    // switchMode would just empty the bar. Route those through their toggle
+    // scripts so the actual window appears.
+    readonly property var _detachedScripts: ({
+        "settings": "toggle-settings.sh",
+        "calendar": "toggle-calendar.sh",
+        "shortcuts": "toggle-shortcuts.sh"
+    })
+
     IpcHandler {
         target: "panel"
 
         function open(name: string): void {
+            let script = ipcRouter._detachedScripts[name]
+            if (script) {
+                Hyprland.dispatch("exec ~/.config/quickshell/mugen-shell/scripts/" + script)
+                return
+            }
             ipcRouter.modeManager.switchMode(name, true)
         }
 
         function close(): void {
+            // Only affects the bar's inline modes; detached panels close
+            // via their own toggle (call open() again or press ESC in them).
             ipcRouter.modeManager.closeAllModes()
         }
     }

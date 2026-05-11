@@ -138,7 +138,7 @@ func builtin() []Tool {
 		},
 		{
 			Name:        "panel_open",
-			Description: "Open a mugen-shell side panel. Valid names include: volume, wifi, bluetooth, brightness, calendar, ai, settings, timer, clipboard, notification, wallpaper, power.",
+			Description: "Open a mugen-shell panel. Inline bar panels: volume, wifi, bluetooth, brightness, ai, timer, clipboard, notification, wallpaper, power, music. Detached floating windows (toggle behaviour — calling open again closes them): settings, calendar, shortcuts.",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
