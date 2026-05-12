@@ -10,6 +10,12 @@ ShellRoot {
 
     Windows.Bar {
         id: barWindow
+        // Pin the bar to the first known screen. Without this the
+        // wlr-layer-shell surface drifts onto whatever output is
+        // currently focused, and panels opened from the bar would end
+        // up on the wrong monitor when a fullscreen window was active
+        // on the bar's display.
+        screen: Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
     }
 
     Connections {
