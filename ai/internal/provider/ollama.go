@@ -74,10 +74,10 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 		"model":    model,
 		"messages": msgs,
 		"stream":   true,
-		// Suppress thinking models' (qwen3 etc.) reasoning channel — ollama
-		// streams it on a separate `thinking` field, leaving `content` empty
-		// for tens of seconds. Models without thinking ignore this.
-		"think": false,
+		// Thinking models (qwen3 etc.) stream reasoning on a separate
+		// `thinking` field. Caller decides per-conversation; models without
+		// thinking ignore this field.
+		"think": opts.Thinking,
 	}
 	if tw := toolsAsOpenAI(opts.Tools); len(tw) > 0 {
 		payload["tools"] = tw

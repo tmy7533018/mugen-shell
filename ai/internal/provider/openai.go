@@ -92,6 +92,13 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opt
 	if tw := toolsAsOpenAI(opts.Tools); len(tw) > 0 {
 		payload["tools"] = tw
 	}
+	if opts.Thinking {
+		// OpenAI / OpenRouter accept reasoning_effort for o-series and a few
+		// other reasoning-capable models; non-reasoning models silently
+		// ignore the field on the official API. We still retry without it
+		// below if a strict server returns 400.
+		payload["reasoning_effort"] = "medium"
+	}
 
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -116,6 +123,14 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opt
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		// Some OpenAI-compat servers strictly reject reasoning_effort on
+		// non-reasoning models; retry without it instead of failing.
+		if resp.StatusCode == http.StatusBadRequest && opts.Thinking &&
+			strings.Contains(strings.ToLower(string(b)), "reasoning") {
+			retry := opts
+			retry.Thinking = false
+			return o.Chat(ctx, model, messages, retry, fn)
+		}
 		return fmt.Errorf("openai: %s", parseOpenAIError(b, resp.StatusCode))
 	}
 

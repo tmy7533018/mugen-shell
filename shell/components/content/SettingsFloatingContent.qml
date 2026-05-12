@@ -29,7 +29,7 @@ Item {
         { id: "appearance", label: "Appearance",   types: ["theme", "gradient", "blur", "animation", "dateFormat"] },
         { id: "sound",      label: "Sound",        types: ["notificationSound", "timerSound"] },
         { id: "timer",      label: "Timer & Lock", types: ["timer", "lockTimer"] },
-        { id: "ai",         label: "AI / Yura",    types: ["aiBarModel", "aiConfig", "yuraPanelSide"] },
+        { id: "ai",         label: "AI / Yura",    types: ["yuraPersonality", "aiBarModel", "yuraThinking", "yuraPanelSide"] },
         { id: "system",     label: "System",       types: ["battery", "shortcuts"] },
         { id: "reset",      label: "Reset",        types: ["reset"], danger: true }
     ]
@@ -176,8 +176,9 @@ Item {
                                 case "lockTimer":         return lockTimerSection
                                 case "dateFormat":        return dateFormatSection
                                 case "aiBarModel":        return aiBarModelSection
-                                case "aiConfig":          return aiConfigSection
                                 case "yuraPanelSide":     return yuraPanelSideSection
+                                case "yuraPersonality":   return yuraPersonalitySection
+                                case "yuraThinking":      return yuraThinkingSection
                                 case "shortcuts":         return shortcutsSection
                                 case "reset":             return resetSection
                                 default:                  return null
@@ -272,13 +273,18 @@ Item {
         modeManager: root.modeManager
         settingsManager: root.settingsManager
     }}
-    Component { id: aiConfigSection; Settings.AiConfigSection {
+    Component { id: yuraPanelSideSection; Settings.YuraPanelSideSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: yuraPersonalitySection; Settings.YuraPersonalitySection {
         theme: root.theme
         modeManager: root.modeManager
         onEditConfig: root.editAiConfig()
         onRestartService: root.restartAi()
     }}
-    Component { id: yuraPanelSideSection; Settings.YuraPanelSideSection {
+    Component { id: yuraThinkingSection; Settings.YuraThinkingSection {
         theme: root.theme
         modeManager: root.modeManager
         settingsManager: root.settingsManager

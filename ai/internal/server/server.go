@@ -46,6 +46,10 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /tools", s.handleListTools)
 	mux.HandleFunc("POST /tools/call", s.handleToolCall)
 
+	mux.HandleFunc("GET /config", s.handleGetConfig)
+	mux.HandleFunc("PUT /config", s.handlePutConfig)
+	mux.HandleFunc("POST /config/restart", s.handleRestart)
+
 	return corsMiddleware(mux)
 }
 
@@ -68,6 +72,10 @@ type chatRequest struct {
 	// Used only when ConversationID == 0; existing conversations always run
 	// on the model bound to their row.
 	Model string `json:"model,omitempty"`
+	// Pointer so absent vs. explicit-false are distinguishable. For new
+	// conversations it sets the bound value; for existing ones it updates
+	// the bound value (per-conversation toggle from the UI).
+	Thinking *bool `json:"thinking,omitempty"`
 }
 
 func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +108,20 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.history.Add("user", req.Message, model); err != nil {
+	// Resolve thinking: explicit request wins; otherwise inherit from the
+	// bound conversation (or false for a brand-new one).
+	thinking := s.history.ConvThinking()
+	if req.Thinking != nil {
+		thinking = *req.Thinking
+		if s.history.ConvID() != 0 {
+			if err := s.history.SetConvThinking(thinking); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
+	if err := s.history.Add("user", req.Message, model, thinking); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -132,7 +153,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	// concatenated assistant text.
 	const maxIterations = 5
 	tools := providerTools(s.tools.List())
-	opts := provider.ChatOptions{Tools: tools}
+	opts := provider.ChatOptions{Tools: tools, Thinking: thinking}
 	msgs := s.history.Messages()
 
 	sendEvent := func(payload map[string]any) {
@@ -150,7 +171,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	persistOnError := func(errMsg string) {
 		if sideEffected {
 			if fullResponse != "" {
-				_ = s.history.Add("assistant", fullResponse, model)
+				_ = s.history.Add("assistant", fullResponse, model, thinking)
 				s.events.broadcast("conversations", nil)
 				s.events.broadcast("messages", map[string]any{"conversation_id": convID})
 			}
@@ -184,7 +205,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 
 		if len(iterToolCalls) == 0 {
 			if fullResponse != "" {
-				_ = s.history.Add("assistant", fullResponse, model)
+				_ = s.history.Add("assistant", fullResponse, model, thinking)
 				s.events.broadcast("conversations", nil)
 				s.events.broadcast("messages", map[string]any{"conversation_id": convID})
 			}
@@ -295,7 +316,7 @@ func (s *Server) handleListConversations(w http.ResponseWriter, _ *http.Request)
 }
 
 func (s *Server) handleCreateConversation(w http.ResponseWriter, _ *http.Request) {
-	id, err := s.history.NewConversation(s.registry.Model())
+	id, err := s.history.NewConversation(s.registry.Model(), false)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -332,6 +353,7 @@ func (s *Server) handleCurrentConversation(w http.ResponseWriter, _ *http.Reques
 		"id":         conv.ID,
 		"title":      conv.Title,
 		"model":      conv.Model,
+		"thinking":   conv.Thinking,
 		"created_at": conv.CreatedAt,
 		"updated_at": conv.UpdatedAt,
 		"messages":   msgs,
@@ -365,6 +387,7 @@ func (s *Server) handleGetConversation(w http.ResponseWriter, r *http.Request) {
 		"id":         conv.ID,
 		"title":      conv.Title,
 		"model":      conv.Model,
+		"thinking":   conv.Thinking,
 		"created_at": conv.CreatedAt,
 		"updated_at": conv.UpdatedAt,
 		"messages":   msgs,

@@ -108,14 +108,26 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		})
 	}
 
+	maxTokens := 2048
+	if opts.Thinking {
+		// budget_tokens must be < max_tokens; bump the ceiling so the model
+		// still has room to answer after spending up to 1k tokens reasoning.
+		maxTokens = 4096
+	}
 	payload := map[string]any{
 		"model":      model,
 		"messages":   msgs,
-		"max_tokens": 2048,
+		"max_tokens": maxTokens,
 		"stream":     true,
 	}
 	if system != "" {
 		payload["system"] = system
+	}
+	if opts.Thinking {
+		payload["thinking"] = map[string]any{
+			"type":          "enabled",
+			"budget_tokens": 1024,
+		}
 	}
 	if len(toolsPayload) > 0 {
 		// Mark the last tool with ephemeral cache_control; per Anthropic's
@@ -146,6 +158,15 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		// Not all Claude tiers support extended thinking (haiku-4-5 in
+		// particular). Mirror the ollama "no tools" retry: if the model
+		// rejects thinking, re-issue without it so the conversation works.
+		if resp.StatusCode == http.StatusBadRequest && opts.Thinking &&
+			strings.Contains(strings.ToLower(string(b)), "thinking") {
+			retry := opts
+			retry.Thinking = false
+			return a.Chat(ctx, model, messages, retry, fn)
+		}
 		return fmt.Errorf("anthropic: %s", parseAnthropicError(b, resp.StatusCode))
 	}
 

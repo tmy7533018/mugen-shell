@@ -18,11 +18,14 @@ type Google struct {
 	models []string
 }
 
-func NewGoogle(apiKey, model string) *Google {
+func NewGoogle(apiKey string, models []string) *Google {
+	if len(models) == 0 {
+		models = []string{"gemini-2.5-flash"}
+	}
 	return &Google{
 		apiKey: apiKey,
 		http:   &http.Client{Timeout: 120 * time.Second},
-		models: []string{model},
+		models: models,
 	}
 }
 
@@ -115,6 +118,14 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 	if tg := toolsAsGemini(opts.Tools); len(tg) > 0 {
 		payload["tools"] = tg
 	}
+	if opts.Thinking {
+		// thinkingBudget=-1 = dynamic; the model decides how long to think.
+		// Only the 2.5 family supports this; older models return 400 and we
+		// fall through to a retry without the field below.
+		payload["generationConfig"] = map[string]any{
+			"thinkingConfig": map[string]any{"thinkingBudget": -1},
+		}
+	}
 
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -136,6 +147,14 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		// Older Gemini models (1.5 etc.) reject thinkingConfig; retry once
+		// without thinking so the conversation still completes.
+		if resp.StatusCode == http.StatusBadRequest && opts.Thinking &&
+			strings.Contains(strings.ToLower(string(b)), "thinking") {
+			retry := opts
+			retry.Thinking = false
+			return g.Chat(ctx, model, messages, retry, fn)
+		}
 		return fmt.Errorf("gemini: %s", parseGoogleError(b, resp.StatusCode))
 	}
 

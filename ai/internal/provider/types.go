@@ -30,6 +30,9 @@ type ToolCall struct {
 
 type ChatOptions struct {
 	Tools []Tool
+	// Thinking enables thinking models' reasoning channel (qwen3 etc.).
+	// Currently honored by ollama; other providers ignore it.
+	Thinking bool
 }
 
 type ChatChunk struct {

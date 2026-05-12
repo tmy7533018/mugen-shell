@@ -68,10 +68,12 @@ FocusScope {
         streaming = true
         // Empty string falls back to the backend's registry default.
         let modelChoice = (settingsManager && settingsManager.barAiModel) ? settingsManager.barAiModel : ""
+        let thinking = settingsManager ? settingsManager.barThinking : false
         chatProcess.payload = JSON.stringify({
             message: text,
             conversation_id: currentConvId,
-            model: modelChoice
+            model: modelChoice,
+            thinking: thinking
         })
         chatProcess.running = true
     }

@@ -22,6 +22,7 @@ type Conversation struct {
 	ID        int64  `json:"id"`
 	Title     string `json:"title"`
 	Model     string `json:"model"`
+	Thinking  bool   `json:"thinking"`
 	CreatedAt int64  `json:"created_at"`
 	UpdatedAt int64  `json:"updated_at"`
 }
@@ -85,6 +86,9 @@ func (s *Store) migrate() error {
 	if err := s.ensureColumn("conversations", "model", "TEXT NOT NULL DEFAULT ''"); err != nil {
 		return err
 	}
+	if err := s.ensureColumn("conversations", "thinking", "INTEGER NOT NULL DEFAULT 0"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -116,7 +120,7 @@ func (s *Store) ensureColumn(table, column, decl string) error {
 func nowUnix() int64 { return time.Now().Unix() }
 
 func (s *Store) ListConversations() ([]Conversation, error) {
-	rows, err := s.db.Query(`SELECT id, title, model, created_at, updated_at FROM conversations ORDER BY updated_at DESC`)
+	rows, err := s.db.Query(`SELECT id, title, model, thinking, created_at, updated_at FROM conversations ORDER BY updated_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -124,18 +128,24 @@ func (s *Store) ListConversations() ([]Conversation, error) {
 	var out []Conversation
 	for rows.Next() {
 		var c Conversation
-		if err := rows.Scan(&c.ID, &c.Title, &c.Model, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		var thinking int
+		if err := rows.Scan(&c.ID, &c.Title, &c.Model, &thinking, &c.CreatedAt, &c.UpdatedAt); err != nil {
 			return nil, err
 		}
+		c.Thinking = thinking != 0
 		out = append(out, c)
 	}
 	return out, rows.Err()
 }
 
-func (s *Store) CreateConversation(title, model string) (int64, error) {
+func (s *Store) CreateConversation(title, model string, thinking bool) (int64, error) {
 	now := nowUnix()
-	res, err := s.db.Exec(`INSERT INTO conversations (title, model, created_at, updated_at) VALUES (?, ?, ?, ?)`,
-		title, model, now, now)
+	thinkingInt := 0
+	if thinking {
+		thinkingInt = 1
+	}
+	res, err := s.db.Exec(`INSERT INTO conversations (title, model, thinking, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+		title, model, thinkingInt, now, now)
 	if err != nil {
 		return 0, err
 	}
@@ -143,15 +153,26 @@ func (s *Store) CreateConversation(title, model string) (int64, error) {
 }
 
 func (s *Store) GetConversation(id int64) (*Conversation, error) {
-	row := s.db.QueryRow(`SELECT id, title, model, created_at, updated_at FROM conversations WHERE id = ?`, id)
+	row := s.db.QueryRow(`SELECT id, title, model, thinking, created_at, updated_at FROM conversations WHERE id = ?`, id)
 	var c Conversation
-	if err := row.Scan(&c.ID, &c.Title, &c.Model, &c.CreatedAt, &c.UpdatedAt); err != nil {
+	var thinking int
+	if err := row.Scan(&c.ID, &c.Title, &c.Model, &thinking, &c.CreatedAt, &c.UpdatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
 	}
+	c.Thinking = thinking != 0
 	return &c, nil
+}
+
+func (s *Store) UpdateConversationThinking(id int64, thinking bool) error {
+	t := 0
+	if thinking {
+		t = 1
+	}
+	_, err := s.db.Exec(`UPDATE conversations SET thinking = ? WHERE id = ?`, t, id)
+	return err
 }
 
 func (s *Store) UpdateConversationTitle(id int64, title string) error {

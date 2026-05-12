@@ -11,14 +11,14 @@ import (
 const defaultMaxMessages = 100
 
 type History struct {
-	mu          sync.Mutex
-	store       *store.Store
-	convID      int64
-	convModel   string
-	messages    []provider.Message
-	system      string
-	max         int
-	ContextFunc func() string
+	mu           sync.Mutex
+	store        *store.Store
+	convID       int64
+	convModel    string
+	convThinking bool
+	messages     []provider.Message
+	system       string
+	max          int
 }
 
 func New(s *store.Store, systemPrompt string) (*History, error) {
@@ -52,6 +52,7 @@ func (h *History) switchLocked(id int64) error {
 	if id == 0 {
 		h.convID = 0
 		h.convModel = ""
+		h.convThinking = false
 		h.messages = nil
 		return nil
 	}
@@ -69,8 +70,10 @@ func (h *History) switchLocked(id int64) error {
 	h.convID = id
 	if conv != nil {
 		h.convModel = conv.Model
+		h.convThinking = conv.Thinking
 	} else {
 		h.convModel = ""
+		h.convThinking = false
 	}
 	h.messages = h.messages[:0]
 	for _, m := range msgs {
@@ -90,6 +93,28 @@ func (h *History) ConvModel() string {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.convModel
+}
+
+// ConvThinking returns the thinking flag bound to the current conversation.
+func (h *History) ConvThinking() bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.convThinking
+}
+
+// SetConvThinking updates the thinking flag for the current conversation.
+func (h *History) SetConvThinking(thinking bool) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.convID == 0 {
+		h.convThinking = thinking
+		return nil
+	}
+	if err := h.store.UpdateConversationThinking(h.convID, thinking); err != nil {
+		return err
+	}
+	h.convThinking = thinking
+	return nil
 }
 
 func (h *History) Switch(id int64) error {
@@ -116,7 +141,7 @@ func (h *History) Switch(id int64) error {
 	return h.store.SetCurrentConversationID(id)
 }
 
-func (h *History) Add(role, content, model string) error {
+func (h *History) Add(role, content, model string, thinking bool) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.convID == 0 {
@@ -124,7 +149,7 @@ func (h *History) Add(role, content, model string) error {
 		if role == "user" {
 			title = store.DeriveTitle(content)
 		}
-		id, err := h.store.CreateConversation(title, model)
+		id, err := h.store.CreateConversation(title, model, thinking)
 		if err != nil {
 			return err
 		}
@@ -133,6 +158,7 @@ func (h *History) Add(role, content, model string) error {
 		}
 		h.convID = id
 		h.convModel = model
+		h.convThinking = thinking
 	} else if role == "user" {
 		conv, err := h.store.GetConversation(h.convID)
 		if err == nil && conv != nil && conv.Title == "" {
@@ -163,11 +189,7 @@ func (h *History) Messages() []provider.Message {
 	defer h.mu.Unlock()
 	result := make([]provider.Message, 0, len(h.messages)+1)
 	if h.system != "" {
-		prompt := h.system
-		if h.ContextFunc != nil {
-			prompt += h.ContextFunc()
-		}
-		result = append(result, provider.Message{Role: "system", Content: prompt})
+		result = append(result, provider.Message{Role: "system", Content: h.system})
 	}
 	return append(result, h.messages...)
 }
@@ -179,10 +201,10 @@ func (h *History) SetSystem(prompt string) {
 }
 
 // NewConversation creates a fresh conversation, makes it current, and clears the cache.
-func (h *History) NewConversation(model string) (int64, error) {
+func (h *History) NewConversation(model string, thinking bool) (int64, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	id, err := h.store.CreateConversation("", model)
+	id, err := h.store.CreateConversation("", model, thinking)
 	if err != nil {
 		return 0, err
 	}
@@ -191,6 +213,7 @@ func (h *History) NewConversation(model string) (int64, error) {
 	}
 	h.convID = id
 	h.convModel = model
+	h.convThinking = thinking
 	h.messages = h.messages[:0]
 	return id, nil
 }

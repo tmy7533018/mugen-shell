@@ -27,6 +27,7 @@ QtObject {
     property int lockTimerMinutes: 10  // hypridle screen-lock idle timeout in minutes
     property string dateFormat: "ddd M/d"  // Qt date tokens: d, dd, ddd, dddd, M, MM, MMM, MMMM, yy, yyyy
     property string barAiModel: ""  // "" = follow the backend default (last model selected in float)
+    property bool barThinking: false  // global default for bar chat thinking field (qwen3 etc.)
     property string yuraPanelSide: "left"  // "left" | "right"
     property int yuraPanelWidth: 700
     property int yuraPanelHeight: 640
@@ -77,7 +78,8 @@ QtObject {
                 "format": dateFormat
             },
             "ai": {
-                "barModel": barAiModel
+                "barModel": barAiModel,
+                "barThinking": barThinking
             },
             "yura": {
                 "panelSide": yuraPanelSide,
@@ -168,6 +170,9 @@ QtObject {
             if (settings.ai) {
                 if (settings.ai.barModel !== undefined) {
                     barAiModel = settings.ai.barModel
+                }
+                if (settings.ai.barThinking !== undefined) {
+                    barThinking = settings.ai.barThinking
                 }
             }
 

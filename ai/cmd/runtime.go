@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/tmy7533018/mugen-ai/internal/config"
-	ctxinfo "github.com/tmy7533018/mugen-ai/internal/context"
 	"github.com/tmy7533018/mugen-ai/internal/history"
 	"github.com/tmy7533018/mugen-ai/internal/provider"
 	"github.com/tmy7533018/mugen-ai/internal/state"
@@ -50,7 +50,7 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 	}
 	system := systemOverride
 	if system == "" {
-		system = cfg.Personality.SystemPrompt
+		system = assemblePersona(cfg.Personality)
 	}
 	// Always prepend tooling guidance so the model knows when to call
 	// shell tools vs. ask first. Personality stays the user's domain.
@@ -80,7 +80,6 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		st.Close()
 		return nil, fmt.Errorf("init history: %w", err)
 	}
-	hist.ContextFunc = func() string { return ctxinfo.Build(cfg.Context) }
 
 	return &runtimeContext{
 		Cfg:      cfg,
@@ -113,13 +112,17 @@ func buildRegistry(cfg config.Config, model string) *provider.Registry {
 	providers := []provider.Provider{
 		provider.NewOllama(cfg.Provider.Ollama.Host),
 	}
-	if cfg.Provider.Google.Model != "" {
+	googleModels := cfg.Provider.Google.Models
+	if len(googleModels) == 0 && cfg.Provider.Google.Model != "" {
+		googleModels = []string{cfg.Provider.Google.Model}
+	}
+	if len(googleModels) > 0 {
 		key := os.Getenv("GEMINI_API_KEY")
 		if key == "" {
 			key = os.Getenv("GOOGLE_API_KEY")
 		}
 		if key != "" {
-			providers = append(providers, provider.NewGoogle(key, cfg.Provider.Google.Model))
+			providers = append(providers, provider.NewGoogle(key, googleModels))
 		}
 	}
 	openaiKey := os.Getenv("OPENAI_API_KEY")
@@ -138,6 +141,40 @@ func buildRegistry(cfg config.Config, model string) *provider.Registry {
 		))
 	}
 	return provider.NewRegistry(model, providers...)
+}
+
+// assemblePersona prepends an auto-built header (name/tone/language) to the
+// user's free-form SystemPrompt. Name defaults to "Yura" when empty so the
+// assistant always has an identity; Tone and Language only contribute their
+// line when set, and an entirely-empty Personality returns SystemPrompt as-is.
+func assemblePersona(p config.Personality) string {
+	if p.Name == "" && p.Tone == "" && p.Language == "" {
+		return p.SystemPrompt
+	}
+	name := p.Name
+	if name == "" {
+		name = "Yura"
+	}
+	var lines []string
+	if p.Tone != "" {
+		lines = append(lines, fmt.Sprintf("You are %s, a %s desktop assistant for mugen-shell.", name, p.Tone))
+	} else {
+		lines = append(lines, fmt.Sprintf("You are %s, a desktop assistant for mugen-shell.", name))
+	}
+	// Yura's visual identity is a luminous orb — pin gender-neutral pronouns
+	// so models don't default to "俺/僕" in Japanese even under casual tone.
+	// Skip this for custom names where the user has redefined the persona.
+	if name == "Yura" {
+		lines = append(lines, "You appear as a luminous orb of light and have no gender. Your first-person pronoun is わたし in Japanese (never 俺, 僕, or あたし) and I in English. This identity rule overrides any casual tone.")
+	}
+	if p.Language != "" {
+		lines = append(lines, fmt.Sprintf("Respond in %s.", p.Language))
+	}
+	header := strings.Join(lines, "\n")
+	if p.SystemPrompt == "" {
+		return header
+	}
+	return header + "\n\n" + p.SystemPrompt
 }
 
 func stateBaseDir() string {

@@ -8,15 +8,14 @@ import (
 )
 
 type Config struct {
-	Personality Personality `toml:"personality"`
-	Context     Context     `toml:"context"`
-	Provider    Provider    `toml:"provider"`
-	Shell       Shell       `toml:"shell"`
-	Tools       Tools       `toml:"tools"`
+	Personality Personality `toml:"personality" json:"personality"`
+	Provider    Provider    `toml:"provider" json:"provider"`
+	Shell       Shell       `toml:"shell" json:"shell"`
+	Tools       Tools       `toml:"tools" json:"tools"`
 }
 
 type Tools struct {
-	AppLaunch AppLaunchTool `toml:"app_launch"`
+	AppLaunch AppLaunchTool `toml:"app_launch" json:"app_launch"`
 }
 
 // AppLaunchTool gates the app_launch tool. Leaving AllowedCommands empty
@@ -24,64 +23,65 @@ type Tools struct {
 // flips the tool into strict allowlist mode so a prompt-injected request
 // can't ask Yura to run rm or curl.
 type AppLaunchTool struct {
-	AllowedCommands []string `toml:"allowed_commands"`
+	AllowedCommands []string `toml:"allowed_commands" json:"allowed_commands"`
 }
 
 type Shell struct {
 	// QsConfig is the quickshell `-c` name used to target mugen-shell from
 	// `qs ipc call`. Defaults to "mugen-shell".
-	QsConfig string `toml:"qs_config"`
+	QsConfig string `toml:"qs_config" json:"qs_config"`
 	// ScriptsDir is where calendar-cli.py / toggle-*.sh live. mugen-ai
 	// shells out to these for tools that can't fit through the IPC layer
 	// (Calendar DB queries etc.). Defaults to
 	// "$XDG_CONFIG_HOME/quickshell/mugen-shell/scripts".
-	ScriptsDir string `toml:"scripts_dir"`
+	ScriptsDir string `toml:"scripts_dir" json:"scripts_dir"`
 }
 
 type Personality struct {
-	SystemPrompt string `toml:"system_prompt"`
-}
-
-type Context struct {
-	Locale string `toml:"locale"`
-	City   string `toml:"city"`
+	// Name / Tone / Language drive the auto-assembled persona header that is
+	// prepended to SystemPrompt. SystemPrompt is the user's free-form append.
+	// All four are optional — empty fields skip their line in the header.
+	Name         string `toml:"name" json:"name"`
+	Tone         string `toml:"tone" json:"tone"`
+	Language     string `toml:"language" json:"language"`
+	SystemPrompt string `toml:"system_prompt" json:"system_prompt"`
 }
 
 type Provider struct {
-	Ollama    Ollama    `toml:"ollama"`
-	Google    Google    `toml:"google"`
-	OpenAI    OpenAI    `toml:"openai"`
-	Anthropic Anthropic `toml:"anthropic"`
+	Ollama    Ollama    `toml:"ollama" json:"ollama"`
+	Google    Google    `toml:"google" json:"google"`
+	OpenAI    OpenAI    `toml:"openai" json:"openai"`
+	Anthropic Anthropic `toml:"anthropic" json:"anthropic"`
 }
 
 // Anthropic lists the Claude models to expose. Empty → defaults to
 // claude-haiku-4-5 (cheap, fast, tool-capable).
 type Anthropic struct {
-	Models []string `toml:"models"`
+	Models []string `toml:"models" json:"models"`
 }
 
 type Ollama struct {
-	Host string `toml:"host"`
+	Host string `toml:"host" json:"host"`
 }
 
+// Google reads from Models (plural). Legacy single-string Model is kept as
+// fallback for old configs; new code should populate Models instead.
 type Google struct {
-	Model string `toml:"model"`
+	Model  string   `toml:"model,omitempty" json:"model,omitempty"`
+	Models []string `toml:"models" json:"models"`
 }
 
 // OpenAI configures any OpenAI-compatible backend (OpenAI, OpenRouter,
 // LM Studio, vLLM, ...). Empty Models means the provider asks /v1/models.
 type OpenAI struct {
-	BaseURL string   `toml:"base_url"`
-	Models  []string `toml:"models"`
+	BaseURL string   `toml:"base_url" json:"base_url"`
+	Models  []string `toml:"models" json:"models"`
 }
 
 func Default() Config {
 	return Config{
 		Personality: Personality{
 			SystemPrompt: "You are a helpful desktop assistant. Be concise.",
-		},
-		Context: Context{
-			Locale: "en",
 		},
 		Provider: Provider{
 			Ollama: Ollama{Host: "http://localhost:11434"},
@@ -114,6 +114,34 @@ func filePath() string {
 		dir = filepath.Join(home, ".config")
 	}
 	return filepath.Join(dir, "mugen-ai", "config.toml")
+}
+
+// Path returns the canonical config file path.
+func Path() string { return filePath() }
+
+// Save writes cfg to disk atomically (write to tmp, rename) so a crash mid-
+// write can't corrupt the file. BurntSushi's encoder does not preserve user
+// comments — callers should warn users that hand-written comments are lost.
+func Save(cfg Config) error {
+	path := filePath()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), "config.toml.*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+
+	if err := toml.NewEncoder(tmp).Encode(cfg); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpPath, path)
 }
 
 func writeDefault(path string, cfg Config) error {
