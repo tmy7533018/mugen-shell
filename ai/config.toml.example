@@ -1,19 +1,23 @@
 # mugen-ai configuration
 #
 # Copy to ~/.config/mugen-ai/config.toml. mugen-ai also writes a minimal
-# default file on first run, so editing that one in place works too.
+# default file on first run, so editing that one in place works too. The
+# Yura settings panel in mugen-shell edits this file through the HTTP API
+# (GET / PUT /config), and the same panel exposes a "Edit toml" button if
+# you'd rather hand-edit.
 
 [personality]
-  # System prompt prepended to every conversation. Customize tone, language
-  # rules, persona. mugen-ai prepends a small tooling-guidance prompt of its
-  # own on top of this so the model knows when to call shell tools.
+  # Optional auto-header fields. When any of name/tone/language is set,
+  # mugen-ai assembles a "You are <name>, a <tone> desktop assistant for
+  # mugen-shell." header (plus a "Respond in <language>." line) and
+  # prepends it to system_prompt. Leave all three empty to use only
+  # system_prompt verbatim. When name is empty (or "Yura") the header
+  # also pins a gender-neutral luminous-orb identity so casual tones
+  # don't drift to 俺/僕 in Japanese.
+  name = "Yura"
+  tone = "calm"        # any descriptor: calm / friendly / formal / playful / …
+  language = "en"      # ISO 639-1 code; passed straight through to the model
   system_prompt = "You are a helpful desktop assistant. Be concise."
-
-[context]
-  # Locale for natural-language formatting hints surfaced to the model.
-  locale = "en"
-  # Optional: enables live weather context via wttr.in. Leave blank to disable.
-  city = ""
 
 [shell]
   # Quickshell config name used by `qs ipc call` from mugen-ai's tool
@@ -29,8 +33,9 @@
   host = "http://localhost:11434"
 
 # [provider.google]
-#   # Requires GEMINI_API_KEY. Omit the block to disable Gemini.
-#   model = "gemini-2.5-flash"
+#   # Requires GEMINI_API_KEY (or GOOGLE_API_KEY). Legacy single-string
+#   # `model` is still honoured as a fallback when `models` is empty.
+#   models = ["gemini-2.5-flash", "gemini-2.5-pro"]
 
 # [provider.openai]
 #   # OpenAI-compatible endpoint. Requires OPENAI_API_KEY (or local server).

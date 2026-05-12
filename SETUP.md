@@ -210,20 +210,22 @@ make install        # symlinks + builds and enables mugen-ai
 
 ## Configuring mugen-ai
 
-Yura (`Super + Y` for the bar row, `Super + Shift + Y` for the corner pop-up) talks to the local Go server. Settings → Yura has "Edit Config" / "Restart AI" buttons that open `~/.config/mugen-ai/config.toml` in your default editor and bounce the systemd unit, so you don't have to drop to a terminal for tweaks. The neighbouring "Bar Yura model" dropdown pins which model the bar row uses — leave it on the default to follow whichever model the corner pop-up most recently selected. When `mugen-ai.service` isn't running, the panel shows an install hint instead of the chat UI — safe to ignore the bar icon if you skip this feature.
+Yura (`Super + Y` for the bar row, `Super + Shift + Y` for the corner pop-up) talks to the local Go server. Settings → Yura now ships a full Personality card (name / tone / language / system prompt) whose **Save & Apply** button writes `~/.config/mugen-ai/config.toml` through the backend's HTTP API and hot-restarts the systemd unit, so you don't have to drop to a terminal for tweaks. The same card has **Edit toml** (opens the file in your default editor) and **Restart AI** as escape hatches. **Bar Yura thinking** routes the bar's chat through each provider's reasoning channel for capable models. The "Bar Yura model" dropdown pins which model the bar row uses — leave it on the default to follow whichever model the corner pop-up most recently selected. When `mugen-ai.service` isn't running, the panel shows an install hint instead of the chat UI — safe to ignore the bar icon if you skip this feature.
 
 A full annotated template lives at `ai/config.toml.example` (or `$(nix path-info .#mugen-ai)/share/mugen-ai/config.toml.example` if you installed via Nix); a minimal `~/.config/mugen-ai/config.toml` looks like:
 
 ```toml
 [personality]
+# Optional auto-header. When name is empty (or "Yura"), the header
+# pins a gender-neutral luminous-orb identity. Leave all three of
+# name/tone/language empty to use system_prompt verbatim.
+name = "Yura"
+tone = "calm"
+language = "en"
 system_prompt = "You are a helpful desktop assistant. Be concise."
 
-[context]
-locale = "en"
-city = ""
-
 [provider.google]
-model = "gemini-2.5-flash"
+models = ["gemini-2.5-flash"]
 
 [provider.openai]
 # Any OpenAI-compatible backend: OpenAI, OpenRouter, LM Studio, vLLM, ...
@@ -233,8 +235,8 @@ model = "gemini-2.5-flash"
 # models = ["gpt-4o-mini", "gpt-4o"]            # leave empty to ask /v1/models
 ```
 
-- **`city`** — enables live weather via [wttr.in](https://wttr.in). Leave empty to disable.
-- **`[provider.google].model`** — enables Gemini (requires `GEMINI_API_KEY`). Omit to disable.
+- **`[personality]`** — `name`/`tone`/`language` build the auto-header; `system_prompt` is your free-form append. Empty fields are skipped.
+- **`[provider.google].models`** — enables Gemini (requires `GEMINI_API_KEY`). Legacy single-string `model` is still honoured when `models` is empty.
 - **`[provider.openai]`** — enables any OpenAI-compatible provider. Activated when either `OPENAI_API_KEY` is set (cloud providers) or `base_url` points at a local server. `models` is optional; when empty the provider asks the backend's `/v1/models` endpoint.
 - **`[provider.anthropic].models`** — enables Claude (requires `ANTHROPIC_API_KEY`). Omit `models` to default to `claude-haiku-4-5`. Recommended for tool-calling (fast, accurate, low cost).
 
