@@ -30,9 +30,9 @@ For directory layout, install paths (Nix flake home-manager module or manual `ma
 
 ## Yura
 
-https://github.com/user-attachments/assets/261fb9e2-2ea6-4fd5-95ce-2d3a2b5e3a8e
+https://github.com/user-attachments/assets/7220fe2f-6c55-4620-ae1a-79c6ad4caec9
 
-<sub><i>A casual hello in the bar; over in the corner pop-up Yura shuffles the wallpaper, flips into light mode, and opens Chrome through tool calls.</i></sub>
+<sub><i>A casual hello in the bar; over in the corner pop-up, Yura swaps the wallpaper and flips into light mode through tool calls.</i></sub>
 
 Yura is the desktop chat persona — a Spotlight-style row in the bar (`Super + Y`) and a corner pop-up chat panel that slides in from off-screen (`Super + Shift + Y`). It's powered by **mugen-ai**, a Go server bundled in this repo under [`ai/`](ai/) that fronts:
 
