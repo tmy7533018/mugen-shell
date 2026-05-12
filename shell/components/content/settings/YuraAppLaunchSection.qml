@@ -93,6 +93,21 @@ Rectangle {
         section.dirtyTick++
     }
 
+    // Bulk on/off applies to whatever is currently visible after the search
+    // filter — keeps "All on" from accidentally allowing 200 desktop apps
+    // when the user just wanted to grant a subset.
+    function bulkAllow(on) {
+        let next = Object.assign({}, section.allowedSet)
+        let rows = section.filteredRows
+        for (let i = 0; i < rows.length; i++) {
+            let bin = rows[i].binary
+            if (on) next[bin] = true
+            else delete next[bin]
+        }
+        section.allowedSet = next
+        section.dirtyTick++
+    }
+
     Behavior on height {
         NumberAnimation { duration: 280; easing.type: Easing.OutCubic }
     }
@@ -294,14 +309,70 @@ Rectangle {
         spacing: 10
         visible: section.isExpanded
 
-        Text {
+        RowLayout {
             Layout.fillWidth: true
-            text: "Pick the apps Yura is allowed to open. Empty list = any app (permissive — not recommended outside personal setups). Shell metacharacters (; | & $ etc.) are always rejected, so even an allowed app can't be tricked into running side commands."
-            color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.60)
-            font.pixelSize: 10
-            font.family: "M PLUS 2"
-            opacity: 0.65
-            wrapMode: Text.WordWrap
+            spacing: 8
+
+            Text {
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                text: "Pick the apps Yura is allowed to open. Empty list = any app (permissive — not recommended outside personal setups). Shell metacharacters (; | & $ etc.) are always rejected, so even an allowed app can't be tricked into running side commands."
+                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.60)
+                font.pixelSize: 10
+                font.family: "M PLUS 2"
+                opacity: 0.65
+                wrapMode: Text.WordWrap
+            }
+
+            Rectangle {
+                Layout.preferredWidth: 56
+                Layout.preferredHeight: 24
+                Layout.alignment: Qt.AlignTop
+                radius: 12
+                color: allOnMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
+                Behavior on color { ColorAnimation { duration: 150 } }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "All on"
+                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                    font.pixelSize: 10
+                    font.family: "M PLUS 2"
+                }
+
+                MouseArea {
+                    id: allOnMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: section.bulkAllow(true)
+                }
+            }
+
+            Rectangle {
+                Layout.preferredWidth: 56
+                Layout.preferredHeight: 24
+                Layout.alignment: Qt.AlignTop
+                radius: 12
+                color: allOffMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
+                Behavior on color { ColorAnimation { duration: 150 } }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "All off"
+                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                    font.pixelSize: 10
+                    font.family: "M PLUS 2"
+                }
+
+                MouseArea {
+                    id: allOffMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: section.bulkAllow(false)
+                }
+            }
         }
 
         Rectangle {
