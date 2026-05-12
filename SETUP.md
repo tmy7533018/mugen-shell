@@ -210,7 +210,17 @@ make install        # symlinks + builds and enables mugen-ai
 
 ## Configuring mugen-ai
 
-Yura (`Super + Y` for the bar row, `Super + Shift + Y` for the corner pop-up) talks to the local Go server. Settings → Yura now ships a full Personality card (name / tone / language / system prompt) whose **Save & Apply** button writes `~/.config/mugen-ai/config.toml` through the backend's HTTP API and hot-restarts the systemd unit, so you don't have to drop to a terminal for tweaks. The same card has **Edit toml** (opens the file in your default editor) and **Restart AI** as escape hatches. **Bar Yura thinking** routes the bar's chat through each provider's reasoning channel for capable models. The "Bar Yura model" dropdown pins which model the bar row uses — leave it on the default to follow whichever model the corner pop-up most recently selected. When `mugen-ai.service` isn't running, the panel shows an install hint instead of the chat UI — safe to ignore the bar icon if you skip this feature.
+Yura (`Super + Y` for the bar row, `Super + Shift + Y` for the corner pop-up) talks to the local Go server. **Settings → AI / Yura** is the home for everything Yura-related and every panel writes through the backend's HTTP API plus a hot restart, so you don't have to drop to a terminal for tweaks:
+
+- **Personality** — name / tone / language / system prompt. **Save & Apply** writes `~/.config/mugen-ai/config.toml` and bounces the systemd unit. Two escape hatches sit on the same row: **Edit toml** opens the file in `$EDITOR`, and **Restart AI** kicks the service when you've edited the file by hand.
+- **Providers** — read-only status card showing which API keys are set, each provider's host / base_url, and the models list. Refresh re-fetches.
+- **Bar Yura model** — pins the model the bar row uses; leave it on the default to follow whichever model the corner pop-up most recently selected.
+- **Bar Yura thinking** — routes the bar's chat through each provider's reasoning channel for capable models (qwen3 / Claude sonnet+opus / Gemini 2.5 / o-series), silent fallback otherwise.
+- **Tool categories** — toggle whole groups (audio, music, brightness, theme, wallpaper, notification, timer, calendar, panels, app launcher) on/off. Off categories disappear from Yura's tool list and Yura proactively tells you when you ask for something disabled.
+- **Allowed apps** — strict allowlist for `app_launch`. **The default is empty, meaning Yura cannot open anything until you pick apps here.** The picker shows your installed desktop apps with a search; toggle pills for individual apps, or use "All on / All off" against the current filter. Shell metacharacters (`; | & $` etc.) in launch requests are always rejected.
+- **Yura panel side** — Left / Right for the corner pop-up.
+
+When `mugen-ai.service` isn't running, the bar shows an install hint instead of the chat UI — safe to ignore the bar icon if you skip this feature.
 
 A full annotated template lives at `ai/config.toml.example` (or `$(nix path-info .#mugen-ai)/share/mugen-ai/config.toml.example` if you installed via Nix); a minimal `~/.config/mugen-ai/config.toml` looks like:
 
@@ -233,12 +243,20 @@ models = ["gemini-2.5-flash"]
 # base_url = "https://openrouter.ai/api/v1"     # OpenRouter
 # base_url = "http://localhost:1234/v1"         # LM Studio (no API key needed)
 # models = ["gpt-4o-mini", "gpt-4o"]            # leave empty to ask /v1/models
+
+[tools.app_launch]
+# Strict by default: empty list = Yura cannot launch anything. The
+# Settings → AI / Yura → Allowed apps picker is the easy way to fill
+# this in, but you can hand-edit too.
+allowed_commands = ["firefox", "kitty", "code"]
 ```
 
 - **`[personality]`** — `name`/`tone`/`language` build the auto-header; `system_prompt` is your free-form append. Empty fields are skipped.
 - **`[provider.google].models`** — enables Gemini (requires `GEMINI_API_KEY`). Legacy single-string `model` is still honoured when `models` is empty.
 - **`[provider.openai]`** — enables any OpenAI-compatible provider. Activated when either `OPENAI_API_KEY` is set (cloud providers) or `base_url` points at a local server. `models` is optional; when empty the provider asks the backend's `/v1/models` endpoint.
 - **`[provider.anthropic].models`** — enables Claude (requires `ANTHROPIC_API_KEY`). Omit `models` to default to `claude-haiku-4-5`. Recommended for tool-calling (fast, accurate, low cost).
+- **`[tools.app_launch].allowed_commands`** — strict allowlist for the `app_launch` tool. Empty (or block omitted) = no apps can be launched. Binary basename match; the backend resolves the basename to the real Exec path from the matching `.desktop` entry so off-`$PATH` binaries (like Zen Browser's `/opt/zen-browser-bin/zen-bin`) launch correctly.
+- **`[tools].disabled_categories`** — list any of `audio music brightness theme wallpaper notification timer calendar panel app` to hide that group of tools from Yura.
 
 ### Provider API keys
 

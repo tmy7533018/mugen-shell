@@ -47,6 +47,7 @@ Built and enabled automatically on any install path (NixOS, Arch + Nix, or pure 
 - Streaming responses with a stop button, a breathing indicator, and an IME-aware placeholder
 - Configurable personality (name / tone / language / system prompt) with a "Save & Apply" flow that hot-restarts the backend
 - Per-conversation Thinking toggle that routes to each provider's reasoning channel (qwen3 think / Claude extended thinking / Gemini thinkingConfig / OpenAI reasoning_effort), with a silent fallback for models that don't support it
+- Allowed apps picker (strict by default — until you enable an app, Yura can't open anything; shell metacharacters are always rejected so an allowed app can't be turned into a shell-injection) and per-category tool toggles for everything Yura can touch
 - Natural-language shell control via function-calling tools — see *Shell control by chat* below
 
 #### Shell control by chat
@@ -103,7 +104,7 @@ Configuration, the HTTP API, and the Gemini API key step live in [SETUP.md → C
 - WiFi / Bluetooth / IME management
 - Battery indicator (water-level fill inside the power menu icon, opt-in) and a collapsible system tray
 - App launcher, idle inhibitor toggle, screenshot capture with clipboard copy, screenshot gallery, power menu
-- Standalone settings window — theme, blur, animations, notification + timer sounds, lock timer, date format, and a Yura tab for personality (name / tone / language / system prompt), bar model, thinking toggle, and panel side
+- Standalone settings window — theme, blur, animations, notification + timer sounds, lock timer, date format, and a Yura tab covering personality (name / tone / language / system prompt), providers, bar model, thinking toggle, tool categories, allowed apps, and panel side
 
 ---
 
