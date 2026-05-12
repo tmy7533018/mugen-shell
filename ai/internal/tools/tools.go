@@ -482,7 +482,7 @@ func builtin() []Tool {
 				},
 				"required": []string{"date", "time", "title"},
 			},
-			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "add", "--date", "{{date}}", "--time", "{{time}}", "--title", "{{title}}"},
+			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "add", "--date={{date}}", "--time={{time}}", "--title={{title}}"},
 		},
 		{
 			Name:        "calendar_delete",
@@ -494,7 +494,7 @@ func builtin() []Tool {
 				},
 				"required": []string{"id"},
 			},
-			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "delete", "--id", "{{id}}"},
+			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "delete", "--id={{id}}"},
 		},
 		{
 			Name:        "calendar_list_today",
@@ -513,7 +513,7 @@ func builtin() []Tool {
 				},
 				"required": []string{"start", "end"},
 			},
-			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "list-range", "--start", "{{start}}", "--end", "{{end}}"},
+			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "list-range", "--start={{start}}", "--end={{end}}"},
 		},
 	}
 }
