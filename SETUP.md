@@ -183,6 +183,14 @@ yay -S hyprland quickshell hypridle hyprlock zsh kitty starship libnotify \
 
 You still wire Hyprland into your display manager / login session yourself (`Hyprland` from TTY, sddm session entry, etc.).
 
+The home-manager activation copies the shipped `system/hypr/` defaults into `~/.config/hypr/` only when the directory is empty, so first-time users get a working Hyprland config with mugen-shell autostart baked in. **If you already have your own `~/.config/hypr/hyprland.conf`** the copy is skipped — adopt the mugen-shell autostart by adding a single line to your existing config:
+
+```hypr
+source = ~/.config/hypr/configs/mugen-shell.conf
+```
+
+That file ships in the package output (`$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.conf`); copy it into `~/.config/hypr/configs/` once and the `source =` line keeps it up-to-date across rebuilds. Without that line nothing will spawn `quickshell -c mugen-shell` and the bar/yura panels stay dark.
+
 A couple of Arch-specific gotchas the NixOS module handles automatically:
 
 - **`hyprlock` PAM file** — Arch ships none by default, so `hyprlock` will refuse to unlock your screen. Drop the upstream sample into `/etc/pam.d/hyprlock`:
