@@ -57,6 +57,18 @@ in
     # home-manager activation so flake updates propagate automatically.
     xdg.configFile."quickshell/mugen-shell".source = cfg.package;
 
+    # list-apps.py imports `gi` and calls `gi.require_version("Gtk", "3.0")`
+    # / `("Gio", "2.0")`. Wrapping python3 with pygobject3 puts the bindings
+    # on sys.path but the typelibs live in the gtk3/glib derivations and
+    # need GI_TYPELIB_PATH to be findable at runtime. Set it once for the
+    # whole user session so Hyprland → quickshell → python3 inherits it.
+    home.sessionVariables = lib.mkIf cfg.includeSystemDeps {
+      GI_TYPELIB_PATH = lib.concatStringsSep ":" [
+        "${pkgs.gtk3}/lib/girepository-1.0"
+        "${pkgs.glib.out}/lib/girepository-1.0"
+      ];
+    };
+
     # Runtime dependencies. Everything mugen-shell launches via Process or
     # references from a script. Gated by includeSystemDeps so users whose
     # OS already provides this stack (pacman, dpkg, NixOS module, ...)
