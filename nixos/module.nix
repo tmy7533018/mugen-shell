@@ -84,6 +84,7 @@ in
       environment.systemPackages = with pkgs; [
         quickshell
         hypridle
+        # hyprlock comes from programs.hyprlock.enable above (sets up PAM).
         mpvpaper
         awww
         matugen
@@ -97,11 +98,17 @@ in
         ffmpeg
         imv
         pavucontrol
-        pamixer
+        pulseaudio    # provides `pactl` (audio panel set-sink-volume / mute / etc.)
+        brightnessctl # backlight slider + brightness tools
+        jq            # App Launcher running-apps filter, several shell scripts
+        xdg-utils     # `xdg-open` for Settings → Personality → Edit toml
         socat
         curl
         fastfetch
-        python3
+        # list-apps.py imports `gi` (PyGObject) to enumerate desktop entries;
+        # gtk3 carries the GI typelibs the script needs (Gtk / Gio 2.0).
+        (python3.withPackages (ps: [ ps.pygobject3 ]))
+        gtk3
         kitty
         thunar
         firefox
