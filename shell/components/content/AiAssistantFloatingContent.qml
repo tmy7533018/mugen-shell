@@ -42,6 +42,10 @@ FocusScope {
     property string defaultModel: ""
     property var availableModels: []
     property bool modelDropdownOpen: false
+    // Per-conversation thinking flag — flows into the chat payload. The
+    // server persists it to conversations.thinking, so reopening an old
+    // chat restores whichever state it was last sent with.
+    property bool currentThinking: false
 
     property var conversations: []
     property int currentConvId: 0
@@ -122,7 +126,8 @@ FocusScope {
         chatProcess.payload = JSON.stringify({
             message: text,
             conversation_id: currentConvId,
-            model: currentModel
+            model: currentModel,
+            thinking: currentThinking
         })
         chatProcess.running = true
     }
@@ -142,6 +147,7 @@ FocusScope {
         // stuck on that conversation's bound model — restore it to the
         // backend default so the dropdown shows what the next chat will use.
         if (defaultModel !== "") currentModel = defaultModel
+        currentThinking = false
         // No backend call — the conversation is auto-created on first user message,
         // so abandoning a blank "New chat" leaves no empty row in the store.
     }
@@ -445,6 +451,47 @@ FocusScope {
                     switchModelProcess.running = true
                 }
                 root.modelDropdownOpen = false
+            }
+        }
+
+        // Per-conversation thinking toggle. Capable models reason internally
+        // before replying; unsupported ones fall back silently on the backend.
+        Rectangle {
+            id: thinkingPill
+            visible: root.aiAvailable && root.currentModel !== ""
+            Layout.preferredWidth: modeManager.scale(72)
+            Layout.preferredHeight: modeManager.scale(26)
+            Layout.alignment: Qt.AlignVCenter
+            radius: height / 2
+
+            readonly property bool on: root.currentThinking
+
+            color: thinkingPill.on
+                ? (root.theme ? Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.55) : Qt.rgba(0.65, 0.55, 0.85, 0.55))
+                : Qt.rgba(0.3, 0.3, 0.36, 0.4)
+            border.width: 1
+            border.color: thinkingPill.on
+                ? (root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95))
+                : Qt.rgba(1, 1, 1, 0.12)
+            Behavior on color { ColorAnimation { duration: 180 } }
+            Behavior on border.color { ColorAnimation { duration: 180 } }
+
+            Text {
+                anchors.centerIn: parent
+                text: thinkingPill.on ? "Think ON" : "Think OFF"
+                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.95)
+                font.pixelSize: modeManager.scale(10)
+                font.family: "M PLUS 2"
+                font.weight: Font.Medium
+                opacity: thinkingPill.on ? 1.0 : 0.7
+                Behavior on opacity { NumberAnimation { duration: 180 } }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.currentThinking = !root.currentThinking
             }
         }
     }
@@ -941,6 +988,7 @@ FocusScope {
                 if (root.currentConvId !== 0 && obj.model) {
                     root.currentModel = obj.model
                 }
+                root.currentThinking = obj.thinking === true
             } catch (e) {}
         }
     }
