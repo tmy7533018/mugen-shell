@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 
 Item {
@@ -64,65 +65,66 @@ Item {
         }
     }
 
-    Column {
+    // Popup sits in the window's overlay layer so its mouse hits aren't
+    // gated by the parent Item's preferredHeight. The previous Column-on-
+    // anchors approach rendered correctly but Qt Quick's hit testing
+    // refused to route clicks below the chip's 26px box.
+    Popup {
+        id: dropdown
+        x: selector.width - width
+        y: selector.height + (selector.modeManager ? selector.modeManager.scale(4) : 4)
         visible: selector.isOpen
-        anchors.top: parent.bottom
-        anchors.topMargin: selector.modeManager ? selector.modeManager.scale(4) : 4
-        // Grow leftward so long "vendor/model:tag" names don't hit the window edge.
-        anchors.right: parent.right
-        z: 10
+        padding: selector.modeManager ? selector.modeManager.scale(6) : 6
+        closePolicy: Popup.NoAutoClose
 
-        Rectangle {
-            width: modelDropdownCol.width + (selector.modeManager ? selector.modeManager.scale(12) : 12)
-            height: modelDropdownCol.height + (selector.modeManager ? selector.modeManager.scale(12) : 12)
+        background: Rectangle {
             radius: selector.modeManager ? selector.modeManager.scale(10) : 10
             color: selector.theme
                 ? Qt.rgba(selector.theme.surfaceGlass.r, selector.theme.surfaceGlass.g, selector.theme.surfaceGlass.b, 0.9)
                 : Qt.rgba(0.08, 0.05, 0.15, 0.9)
             border.color: selector.theme ? selector.theme.surfaceBorder : Qt.rgba(0.55, 0.55, 0.68, 0.2)
             border.width: 1
+        }
 
-            Column {
-                id: modelDropdownCol
-                anchors.centerIn: parent
-                spacing: selector.modeManager ? selector.modeManager.scale(2) : 2
+        contentItem: Column {
+            id: modelDropdownCol
+            spacing: selector.modeManager ? selector.modeManager.scale(2) : 2
 
-                Repeater {
-                    model: selector.availableModels
+            Repeater {
+                model: selector.availableModels
 
-                    Rectangle {
-                        required property string modelData
-                        required property int index
-                        width: dropdownItemText.implicitWidth + (selector.modeManager ? selector.modeManager.scale(24) : 24)
-                        height: dropdownItemText.implicitHeight + (selector.modeManager ? selector.modeManager.scale(10) : 10)
-                        radius: selector.modeManager ? selector.modeManager.scale(6) : 6
-                        color: dropdownItemMouse.containsMouse
-                            ? (selector.theme ? selector.theme.chipActiveBg : Qt.rgba(0.45, 0.45, 0.60, 0.3))
-                            : "transparent"
+                Rectangle {
+                    required property string modelData
+                    required property int index
+                    width: dropdownItemText.implicitWidth + (selector.modeManager ? selector.modeManager.scale(24) : 24)
+                    height: dropdownItemText.implicitHeight + (selector.modeManager ? selector.modeManager.scale(10) : 10)
+                    radius: selector.modeManager ? selector.modeManager.scale(6) : 6
+                    color: dropdownItemMouse.containsMouse
+                        ? (selector.theme ? selector.theme.chipActiveBg : Qt.rgba(0.45, 0.45, 0.60, 0.3))
+                        : "transparent"
 
-                        Behavior on color {
-                            ColorAnimation { duration: 150 }
-                        }
+                    Behavior on color {
+                        ColorAnimation { duration: 150 }
+                    }
 
-                        Text {
-                            id: dropdownItemText
-                            anchors.centerIn: parent
-                            text: modelData
-                            color: modelData === selector.currentModel
-                                ? (selector.theme ? selector.theme.accent : Qt.rgba(0.65, 0.85, 1.0, 1.0))
-                                : (selector.theme ? selector.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
-                            font.pixelSize: selector.modeManager ? selector.modeManager.scale(11) : 11
-                            font.family: "M PLUS 2"
-                            font.weight: modelData === selector.currentModel ? Font.Medium : Font.Normal
-                        }
+                    Text {
+                        id: dropdownItemText
+                        anchors.centerIn: parent
+                        text: modelData
+                        color: modelData === selector.currentModel
+                            ? (selector.theme ? selector.theme.accent : Qt.rgba(0.65, 0.85, 1.0, 1.0))
+                            : (selector.theme ? selector.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
+                        font.pixelSize: selector.modeManager ? selector.modeManager.scale(11) : 11
+                        font.family: "M PLUS 2"
+                        font.weight: modelData === selector.currentModel ? Font.Medium : Font.Normal
+                    }
 
-                        MouseArea {
-                            id: dropdownItemMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: selector.modelChosen(modelData)
-                        }
+                    MouseArea {
+                        id: dropdownItemMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: selector.modelChosen(modelData)
                     }
                 }
             }
