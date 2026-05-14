@@ -297,16 +297,22 @@ systemctl --user restart mugen-ai.service
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/chat` | Send a message, receive SSE stream. Body: `{message, conversation_id, model}` — `conversation_id: 0` auto-creates a new conversation, `>0` appends to that one. The first SSE event is `{conversation_id, model}` so the client can sync state. The model bound to a conversation always wins; the request's `model` field only seeds the model on a brand-new conversation. |
+| POST | `/chat` | Send a message, receive SSE stream. Body: `{message, conversation_id, model, thinking?}` — `conversation_id: 0` auto-creates a new conversation, `>0` appends to that one. `thinking` is an optional bool; absent → inherit the conversation's stored value, present → override (and persist for that conversation). The first SSE event is `{conversation_id, model}` so the client can sync state. The model bound to a conversation always wins; the request's `model` field only seeds the model on a brand-new conversation. |
 | GET | `/health` | Server status and active model |
 | GET | `/models` | List available models |
 | PUT | `/model` | Set the default model for the *next* new conversation (`{"model": "name"}`). Existing conversations keep their bound model. |
-| GET | `/conversations` | List every conversation (id, title, model, timestamps) |
+| GET | `/conversations` | List every conversation (id, title, model, thinking, timestamps) |
 | GET | `/conversations/current` | Current conversation with its messages |
 | GET | `/conversations/{id}` | A specific conversation with its messages |
 | POST | `/conversations` | Create an empty conversation explicitly |
 | POST | `/conversations/{id}/select` | Make a conversation current |
 | DELETE | `/conversations/{id}` | Delete a conversation |
+| GET | `/events` | Server-Sent Events stream of state changes (new conversations / messages) for live UI sync |
+| GET | `/tools` | List the shell-control tools the backend exposes to the LLM |
+| POST | `/tools/call` | Debug path: invoke a tool by name with no LLM involvement. Body: `{name, args}` |
+| GET | `/config` | Read the on-disk config plus an `api_key_configured` map (provider env-var presence, value never exposed) |
+| PUT | `/config` | Replace the on-disk config atomically. The Settings GUI uses this; response is `{saved: true, restart_required: true}` |
+| POST | `/config/restart` | Bounce the systemd unit so changes from `/config` take effect. Requires the service to be managed by systemd |
 
 For terminal use: `mugen-ai chat`.
 
@@ -335,7 +341,6 @@ For terminal use: `mugen-ai chat`.
 | `Super + Shift + T` | Countdown timer |
 | `Super + /` | Keyboard shortcuts reference |
 | `Super + Shift + I` | Toggle idle inhibitor |
-| `Super + Shift + B` | Pick blur preset (rofi) |
 
 Most panel keybinds dispatch through `shell/scripts/mugen-shell-ipc.sh` over a Unix socket. The standalone windows (Calendar, Settings, Keyboard shortcuts) live in their own Quickshell processes and are toggled via the matching `toggle-*.sh` scripts instead.
 
@@ -363,9 +368,9 @@ Most panel keybinds dispatch through `shell/scripts/mugen-shell-ipc.sh` over a U
 
 | Keybinding | Action |
 |-----------|--------|
-| `F10` / `XF86AudioLowerVolume` | Volume down |
-| `F11` / `XF86AudioRaiseVolume` | Volume up |
-| `F9` / `XF86AudioMute` | Toggle mute |
+| `XF86AudioLowerVolume` | Volume down |
+| `XF86AudioRaiseVolume` | Volume up |
+| `XF86AudioMute` | Toggle mute |
 | `XF86AudioMicMute` | Toggle mic mute |
 | `XF86AudioPlay` | Play/pause |
 | `XF86AudioNext` | Next track |
@@ -398,14 +403,13 @@ Most panel keybinds dispatch through `shell/scripts/mugen-shell-ipc.sh` over a U
 
 ### Yura (`shell/components/yura/`, `shell/yura-shell.qml`)
 - **yura-shell.qml** - Standalone Quickshell process; auto-started by Hyprland and toggled via `qs ipc call yura toggle`
-- **YuraOrbWindow** - Fullscreen overlay layer-shell window hosting the Yura indicator; slides in from off-screen on toggle
-- **YuraChatPanel** - Side-anchored layer-shell window that loads `AiAssistantFloatingContent` with `showInternalOrb: false`
+- **YuraChatPanel** - Side-anchored layer-shell window that loads `AiAssistantFloatingContent`; the indicator orb is rendered inside the panel rather than as a separate overlay
 
 ### Managers (`shell/components/managers/`)
 MusicPlayerManager, NotificationManager, ClipboardManager, WiFiManager, BluetoothManager, AudioManager, AudioLevel, CavaManager, MicCavaManager, BatteryManager, BrightnessManager, WallpaperManager, ScreenshotManager, IdleInhibitorManager, ImeStatus.
 
 ### Core libraries (`shell/lib/`)
-ModeManager, SettingsManager, TimerManager, Colors, Typography, Animations, IconProvider, IconResolver, AiBackend, YuraState.
+ModeManager, SettingsManager, TimerManager, Colors, Typography, Animations, IconProvider, IconResolver, AiBackend, IpcRouter, YuraState.
 
 ---
 
