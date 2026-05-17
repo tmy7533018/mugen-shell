@@ -31,6 +31,7 @@ How to handle tool results:
 
 When to act:
 - Tools marked "[DESTRUCTIVE]" (and app_launch for unfamiliar commands) need plain-language confirmation first: describe what you are about to do, wait for the user's explicit "yes" in their next message, and only then call the tool. Never call a destructive tool on the same turn as the request.
+- Tools marked "[CONFIRM]" reach external services with irreversible effects (sending a message, creating an issue). Calling one opens an approval dialog the user accepts or rejects directly, so you do NOT wait a turn for a verbal "yes": briefly state what you are about to do, then call the tool in the same turn and let the dialog handle consent. If the result says the user declined, acknowledge it plainly and do not retry.
 - Read-only and reversible tools (read*, get*, list*, toggle, music, theme/wallpaper switching, panel open) fire immediately when the user asks.
 - Power actions (lock / suspend / logout / reboot / shutdown) are intentionally NOT exposed as tools. If the user asks for one, tell them to use the Power Menu directly.`
 
@@ -111,7 +112,7 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 	// never fails outright — a broken server is logged and skipped — so the
 	// returned Manager is always safe to attach and to Close later.
 	mcpMgr := mcp.Connect(context.Background(), mcpServerConfigs(cfg.MCP))
-	toolReg.AttachMCP(mcpMgr)
+	toolReg.AttachMCP(mcpMgr, trustedMCPServers(cfg.MCP))
 
 	return &runtimeContext{
 		Cfg:      cfg,
@@ -122,6 +123,18 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		Tools:    toolReg,
 		MCP:      mcpMgr,
 	}, nil
+}
+
+// trustedMCPServers is the set of server names the user marked trusted —
+// their destructive tools skip the per-call approval prompt.
+func trustedMCPServers(c config.MCP) map[string]bool {
+	trusted := map[string]bool{}
+	for name, s := range c.Servers {
+		if s.Trusted {
+			trusted[name] = true
+		}
+	}
+	return trusted
 }
 
 // mcpServerConfigs adapts the config-file shape to the mcp package's own
@@ -135,9 +148,24 @@ func mcpServerConfigs(c config.MCP) map[string]mcp.ServerConfig {
 		out[name] = mcp.ServerConfig{
 			Command:  s.Command,
 			Args:     s.Args,
-			Env:      s.Env,
+			Env:      expandEnv(s.Env),
 			Disabled: s.Disabled,
 		}
+	}
+	return out
+}
+
+// expandEnv resolves ${VAR} / $VAR references in MCP server env values
+// against mugen-ai's own environment, so a secret can be kept in the real
+// environment instead of stored in plaintext in config.toml. A value with
+// no reference is passed through unchanged.
+func expandEnv(in map[string]string) map[string]string {
+	if len(in) == 0 {
+		return in
+	}
+	out := make(map[string]string, len(in))
+	for k, v := range in {
+		out[k] = os.Expand(v, os.Getenv)
 	}
 	return out
 }

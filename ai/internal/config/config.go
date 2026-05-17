@@ -26,11 +26,14 @@ type MCP struct {
 // MCPServer is one stdio MCP server entry. Command is the executable,
 // Args its arguments, Env extra variables layered onto the inherited
 // environment. Disabled keeps the entry in the file but skips spawning it.
+// Trusted skips the per-call approval prompt for this server's destructive
+// tools — opt-in, since it removes the only gate on irreversible writes.
 type MCPServer struct {
 	Command  string            `toml:"command" json:"command"`
 	Args     []string          `toml:"args" json:"args"`
 	Env      map[string]string `toml:"env" json:"env"`
 	Disabled bool              `toml:"disabled" json:"disabled"`
+	Trusted  bool              `toml:"trusted" json:"trusted"`
 }
 
 type Tools struct {
@@ -117,11 +120,17 @@ func Load() (Config, error) {
 	cfg := Default()
 	path := filePath()
 
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
 		if err := writeDefault(path, cfg); err != nil {
 			return cfg, err
 		}
 		return cfg, nil
+	}
+	// config.toml can carry MCP server secrets in [mcp.servers.*.env];
+	// tighten an existing file that a looser umask left group/world-readable.
+	if err == nil && info.Mode().Perm()&0o077 != 0 {
+		_ = os.Chmod(path, 0o600)
 	}
 
 	if _, err := toml.DecodeFile(path, &cfg); err != nil {
@@ -171,7 +180,8 @@ func writeDefault(path string, cfg Config) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
-	f, err := os.Create(path)
+	// 0600: the file may later gain MCP server secrets in [mcp.servers.*.env].
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}

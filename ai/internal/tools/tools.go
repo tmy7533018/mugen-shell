@@ -46,6 +46,12 @@ type Tool struct {
 	kind      string
 	mcpServer string // configured server name, for kind=="mcp"
 	mcpTool   string // un-prefixed tool name on that server
+
+	// needsConfirm gates a tool behind an explicit, out-of-band user
+	// approval before the chat loop may run it — set for destructive MCP
+	// tools whose server the user has not marked trusted. The registry
+	// only reports it; handleChat is what blocks on the approval.
+	needsConfirm bool
 }
 
 type Registry struct {
@@ -84,7 +90,11 @@ func New(qsConfig, scriptsDir string, allowedApps, disabledCategories []string, 
 // name becomes its category — making it gateable via disabled_categories
 // like any built-in group. A tool whose prefixed name collides with an
 // existing tool is skipped. Call once, before serving.
-func (r *Registry) AttachMCP(m *mcp.Manager) {
+//
+// A destructive tool from a server not in trusted is flagged needsConfirm
+// and gets a "[CONFIRM]" description prefix so the model narrates the action
+// and expects the approval dialog; a trusted server's tools fire freely.
+func (r *Registry) AttachMCP(m *mcp.Manager, trusted map[string]bool) {
 	if m == nil {
 		return
 	}
@@ -96,17 +106,36 @@ func (r *Registry) AttachMCP(m *mcp.Manager) {
 				fmt.Fprintf(os.Stderr, "mcp[%s]: tool %q collides with an existing tool, skipping\n", server, name)
 				continue
 			}
+			gated := def.Destructive && !trusted[server]
+			desc := def.Description
+			if gated {
+				desc = "[CONFIRM] " + desc
+			}
 			r.tools = append(r.tools, Tool{
-				Name:        name,
-				Description: def.Description,
-				Parameters:  def.InputSchema,
-				readonly:    def.ReadOnly,
-				kind:        "mcp",
-				mcpServer:   server,
-				mcpTool:     def.Name,
+				Name:         name,
+				Description:  desc,
+				Parameters:   def.InputSchema,
+				readonly:     def.ReadOnly,
+				kind:         "mcp",
+				mcpServer:    server,
+				mcpTool:      def.Name,
+				needsConfirm: gated,
 			})
 		}
 	}
+}
+
+// NeedsConfirm reports whether the named tool must be approved by the user
+// before the chat loop runs it. Unknown tools return false.
+func (r *Registry) NeedsConfirm(name string) bool {
+	t := r.Find(name)
+	return t != nil && t.needsConfirm
+}
+
+// Audit records a tool decision in the audit log. handleChat uses it for
+// outcomes that never reach Call() — chiefly a confirmation the user denied.
+func (r *Registry) Audit(name string, args map[string]any, result string, err error) {
+	r.auditor.Log(name, args, result, err)
 }
 
 // CategoryOf returns the category prefix of a tool name (everything before

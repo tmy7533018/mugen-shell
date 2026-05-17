@@ -1,10 +1,12 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/tmy7533018/mugen-ai/internal/history"
 	"github.com/tmy7533018/mugen-ai/internal/mcp"
@@ -23,15 +25,25 @@ type Server struct {
 	tools    *tools.Registry
 	mcp      *mcp.Manager
 	events   *eventBus
+	confirms *confirmRegistry
 }
 
 func New(registry *provider.Registry, hist *history.History, st *store.Store, t *tools.Registry, m *mcp.Manager) *Server {
-	return &Server{registry: registry, history: hist, store: st, tools: t, mcp: m, events: newEventBus()}
+	return &Server{
+		registry: registry,
+		history:  hist,
+		store:    st,
+		tools:    t,
+		mcp:      m,
+		events:   newEventBus(),
+		confirms: newConfirmRegistry(),
+	}
 }
 
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /chat", s.handleChat)
+	mux.HandleFunc("POST /chat/confirm", s.handleChatConfirm)
 	mux.HandleFunc("GET /health", s.handleHealth)
 	mux.HandleFunc("GET /models", s.handleModels)
 	mux.HandleFunc("PUT /model", s.handleSwitchModel)
@@ -227,7 +239,17 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		sendEvent(map[string]any{"tool_calls": iterToolCalls})
 
 		for _, tc := range iterToolCalls {
-			result, callErr := s.tools.Call(r.Context(), tc.Name, tc.Arguments)
+			var result string
+			var callErr error
+			// A confirm-gated tool must be approved out-of-band before it
+			// runs; a denial (or timeout) is fed back as a plain result so
+			// the model can react without the action ever happening.
+			if s.tools.NeedsConfirm(tc.Name) && !s.awaitConfirm(r.Context(), tc, sendEvent) {
+				result = "error: the user declined this action. Do not retry it; acknowledge their choice and move on."
+				s.tools.Audit(tc.Name, tc.Arguments, result, nil)
+			} else {
+				result, callErr = s.tools.Call(r.Context(), tc.Name, tc.Arguments)
+			}
 			sideEffected = true
 			resultPayload := result
 			if callErr != nil {
@@ -253,6 +275,55 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	persistOnError("max tool iterations exceeded")
+}
+
+// awaitConfirm streams a tool_confirm event for tc and blocks until the user
+// answers it via POST /chat/confirm, the wait times out, or the client
+// disconnects. It returns whether the action was approved; a timeout or a
+// disconnect counts as a denial so an irreversible tool never runs
+// unattended.
+func (s *Server) awaitConfirm(ctx context.Context, tc provider.ToolCall, send func(map[string]any)) bool {
+	id, ch := s.confirms.register()
+	defer s.confirms.discard(id)
+
+	send(map[string]any{
+		"tool_confirm": map[string]any{
+			"confirm_id": id,
+			"name":       tc.Name,
+			"arguments":  tc.Arguments,
+		},
+	})
+
+	select {
+	case approved := <-ch:
+		return approved
+	case <-time.After(confirmTimeout):
+		return false
+	case <-ctx.Done():
+		return false
+	}
+}
+
+type chatConfirmRequest struct {
+	ConfirmID string `json:"confirm_id"`
+	Approved  bool   `json:"approved"`
+}
+
+// handleChatConfirm resolves a pending tool-approval prompt. The blocked
+// chat turn picks the answer up and either runs the tool or feeds the model
+// a decline. A 404 means the prompt already lapsed (answered or timed out).
+func (s *Server) handleChatConfirm(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBody)
+	var req chatConfirmRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ConfirmID == "" {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	if !s.confirms.resolve(req.ConfirmID, req.Approved) {
+		http.Error(w, "no such pending confirmation", http.StatusNotFound)
+		return
+	}
+	writeJSON(w, map[string]any{"resolved": true})
 }
 
 func errString(err error) string {

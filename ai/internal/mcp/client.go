@@ -40,6 +40,12 @@ type ToolDef struct {
 	Description string
 	InputSchema map[string]any
 	ReadOnly    bool
+	// Destructive is the resolved verdict from the readOnlyHint /
+	// destructiveHint annotations: true when the tool may make an
+	// irreversible change. Per the MCP spec a non-read-only tool is
+	// assumed destructive unless the server sends destructiveHint:false,
+	// so an absent annotation still resolves to true here.
+	Destructive bool
 }
 
 // Client is a JSON-RPC client bound to a single MCP server. A background
@@ -207,7 +213,8 @@ func (c *Client) ListTools(ctx context.Context) ([]ToolDef, error) {
 				Description string         `json:"description"`
 				InputSchema map[string]any `json:"inputSchema"`
 				Annotations struct {
-					ReadOnlyHint bool `json:"readOnlyHint"`
+					ReadOnlyHint    bool  `json:"readOnlyHint"`
+					DestructiveHint *bool `json:"destructiveHint"`
 				} `json:"annotations"`
 			} `json:"tools"`
 			NextCursor string `json:"nextCursor"`
@@ -220,11 +227,16 @@ func (c *Client) ListTools(ctx context.Context) ([]ToolDef, error) {
 			if schema == nil {
 				schema = map[string]any{"type": "object", "properties": map[string]any{}}
 			}
+			// A read-only tool is never destructive; otherwise the spec
+			// default is destructive unless the server opts out explicitly.
+			destructive := !t.Annotations.ReadOnlyHint &&
+				(t.Annotations.DestructiveHint == nil || *t.Annotations.DestructiveHint)
 			all = append(all, ToolDef{
 				Name:        t.Name,
 				Description: t.Description,
 				InputSchema: schema,
 				ReadOnly:    t.Annotations.ReadOnlyHint,
+				Destructive: destructive,
 			})
 		}
 		if res.NextCursor == "" {
