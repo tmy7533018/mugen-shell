@@ -1,6 +1,7 @@
 import QtQuick
 import Qt5Compat.GraphicalEffects
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Wayland
 import "../content" as Content
 import "../content/ai" as Ai
@@ -26,8 +27,10 @@ PanelWindow {
             if (yuraState.expanded) {
                 chatWindow.visible = true
                 chatHideTimer.stop()
+                chatWindow.grabWanted = true
             } else {
                 chatHideTimer.restart()
+                chatWindow.grabWanted = false
             }
         }
     }
@@ -47,14 +50,26 @@ PanelWindow {
 
     exclusiveZone: 0
     WlrLayershell.layer: WlrLayer.Top
-    // Exclusive (not OnDemand) while open: an OnDemand layer surface joins
-    // normal focus management, so a focus re-evaluation — e.g. an IME
-    // switch under focus_follows_mouse — can hand keyboard focus to whatever
-    // window the pointer happens to sit over. Exclusive holds the keyboard
-    // regardless of pointer position for as long as the panel is shown.
+    // OnDemand only lets a click focus the panel; the HyprlandFocusGrab
+    // below is what actually holds the keyboard while the panel is in use,
+    // so an IME switch under follow_mouse can't hand focus to whatever
+    // window the cursor sits over.
     WlrLayershell.keyboardFocus: yuraState.expanded
-        ? WlrKeyboardFocus.Exclusive
+        ? WlrKeyboardFocus.OnDemand
         : WlrKeyboardFocus.None
+
+    // grabWanted drives the focus grab: armed when the panel opens and
+    // re-armed by a tap inside it (see chatBox). A click outside breaks the
+    // grab — onCleared clears the flag, releasing the keyboard to the
+    // clicked window without closing the panel, so it still works as a
+    // docked sidebar you click in and out of.
+    property bool grabWanted: false
+
+    HyprlandFocusGrab {
+        windows: [chatWindow]
+        active: yuraState.expanded && chatWindow.grabWanted
+        onCleared: chatWindow.grabWanted = false
+    }
 
     mask: Region {
         x: chatBox.x
@@ -103,6 +118,14 @@ PanelWindow {
         visible: opacity > 0.01
 
         Component.onCompleted: x = yuraState.panelHiddenX
+
+        // Re-arm the focus grab on any tap inside the panel, so clicking
+        // back in after using another window restores keyboard focus here.
+        // Passive — it monitors taps without stealing them from the input
+        // field or buttons underneath.
+        TapHandler {
+            onPressedChanged: if (pressed) chatWindow.grabWanted = true
+        }
 
         NumberAnimation {
             id: panelSlideIn
