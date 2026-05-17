@@ -317,6 +317,22 @@ systemctl --user restart mugen-ai.service
 
 Only keys with a non-empty value enable their provider; leave a line blank to opt out of that provider entirely.
 
+### Choosing a model for shell control
+
+Yura acts on the desktop through function-calling tools, so how reliably it
+can *do* things — not just chat — depends on the model's tool-calling skill:
+
+- **Hosted API models** (Claude, Gemini) are the most reliable; they emit
+  structured tool calls consistently even with the full tool set.
+- **Local Ollama** — prefer a recent, mid-sized model. `qwen3:14b` drives
+  the tools reliably. `qwen3:4b` works too, but turn the **Thinking** toggle
+  on for it — with thinking off it leaks its reasoning into the reply. Older
+  or small models (e.g. `qwen2.5:7b`) tend to print tool calls as plain text
+  instead of emitting them: fine for chat, unreliable for shell control.
+
+A model with no tool support at all is detected, and the conversation falls
+back to chat-only automatically.
+
 ### Listen address
 
 `mugen-ai serve --port 11436` switches the listen port for that invocation. To make it sticky for the systemd unit, set `MUGEN_AI_PORT` (and optionally `MUGEN_AI_HOST`, default `127.0.0.1`) in `~/.config/mugen-ai/.env` — the same env vars are read by the shell client (`shell/lib/AiBackend.qml`) so the bar / floating panels stay in sync.
