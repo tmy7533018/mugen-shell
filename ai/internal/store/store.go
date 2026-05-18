@@ -198,10 +198,25 @@ func (s *Store) ConversationCount() (int, error) {
 	return n, err
 }
 
-// DeleteAllConversations removes every conversation; messages cascade.
+// DeleteAllConversations removes every conversation; messages cascade. It
+// then VACUUMs so the freed pages are returned to the filesystem. A VACUUM
+// under WAL leaves that space in the file until the last connection closes,
+// so the journal is dropped to rollback mode for the VACUUM — which does
+// truncate the file — and restored to WAL afterwards.
 func (s *Store) DeleteAllConversations() error {
-	_, err := s.db.Exec(`DELETE FROM conversations`)
-	return err
+	if _, err := s.db.Exec(`DELETE FROM conversations`); err != nil {
+		return err
+	}
+	if _, err := s.db.Exec(`PRAGMA journal_mode=DELETE`); err != nil {
+		return err
+	}
+	_, vacErr := s.db.Exec(`VACUUM`)
+	// Restore WAL even if the VACUUM failed, so the store keeps working.
+	_, walErr := s.db.Exec(`PRAGMA journal_mode=WAL`)
+	if vacErr != nil {
+		return vacErr
+	}
+	return walErr
 }
 
 // PruneConversationsOlderThan deletes conversations whose last activity is
@@ -218,16 +233,15 @@ func (s *Store) PruneConversationsOlderThan(cutoff int64) (int, error) {
 // Path is the database file's path.
 func (s *Store) Path() string { return s.path }
 
-// SizeBytes is the on-disk size of the database, including its write-ahead
-// log — under WAL mode the -wal file can hold a meaningful slice of data.
+// SizeBytes is the on-disk size of the database file. The transient -wal
+// and -shm sidecars are excluded so the figure stays stable as the WAL
+// grows and checkpoints, rather than jumping around during normal use.
 func (s *Store) SizeBytes() int64 {
-	var total int64
-	for _, suffix := range []string{"", "-wal"} {
-		if info, err := os.Stat(s.path + suffix); err == nil {
-			total += info.Size()
-		}
+	info, err := os.Stat(s.path)
+	if err != nil {
+		return 0
 	}
-	return total
+	return info.Size()
 }
 
 func (s *Store) AppendMessage(convID int64, role, content string) error {
