@@ -1,8 +1,13 @@
 package tools
 
 import (
+	"context"
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -121,4 +126,216 @@ func TestSanitizeForLLM(t *testing.T) {
 			}
 		})
 	}
+}
+
+// fakeRun stands in for the Registry's exec: it records the last command it
+// was handed and returns a canned result, so Call's dispatch and audit paths
+// can be exercised without spawning a subprocess.
+type fakeRun struct {
+	name   string
+	args   []string
+	calls  int
+	result string
+	err    error
+}
+
+func (f *fakeRun) run(_ context.Context, name string, args []string) (string, error) {
+	f.name = name
+	f.args = args
+	f.calls++
+	return f.result, f.err
+}
+
+// newTestRegistry builds a Registry wired for tests: a fake exec, no app
+// resolver (so app_launch never touches real .desktop files), and an auditor
+// writing to a temp file whose path is returned.
+func newTestRegistry(t *testing.T, allowedApps, disabledCategories []string) (*Registry, *fakeRun, string) {
+	t.Helper()
+	auditPath := filepath.Join(t.TempDir(), "audit.log")
+	r := New("mugen-shell", "/scripts", allowedApps, disabledCategories, NewAuditor(auditPath))
+	r.apps = nil
+	fr := &fakeRun{result: "ok"}
+	r.run = fr.run
+	return r, fr, auditPath
+}
+
+func TestCallUnknownTool(t *testing.T) {
+	r, fr, _ := newTestRegistry(t, nil, nil)
+	if _, err := r.Call(context.Background(), "no_such_tool", nil); err == nil {
+		t.Fatal("expected an error for an unknown tool")
+	}
+	if fr.calls != 0 {
+		t.Fatal("run must not fire for an unknown tool")
+	}
+}
+
+func TestCallMissingArgument(t *testing.T) {
+	r, fr, _ := newTestRegistry(t, nil, nil)
+	if _, err := r.Call(context.Background(), "audio_set_volume", map[string]any{}); err == nil {
+		t.Fatal("expected an error when a required argument is missing")
+	}
+	if fr.calls != 0 {
+		t.Fatal("run must not fire when an argument is missing")
+	}
+}
+
+func TestCallIPCDispatch(t *testing.T) {
+	r, fr, _ := newTestRegistry(t, nil, nil)
+	fr.result = "30"
+	out, err := r.Call(context.Background(), "audio_set_volume", map[string]any{"volume": 30})
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+	if out != "30" {
+		t.Fatalf("output = %q, want 30", out)
+	}
+	if fr.name != "qs" {
+		t.Fatalf("dispatched %q, want qs", fr.name)
+	}
+	want := []string{"-c", "mugen-shell", "ipc", "call", "audio", "set_volume", "30"}
+	if !reflect.DeepEqual(fr.args, want) {
+		t.Fatalf("args = %v, want %v", fr.args, want)
+	}
+}
+
+func TestCallCmdTemplateDispatch(t *testing.T) {
+	r, fr, _ := newTestRegistry(t, nil, nil)
+	_, err := r.Call(context.Background(), "calendar_add", map[string]any{
+		"date": "2026-05-20", "time": "15:00", "title": "design review",
+	})
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+	if fr.name != "/scripts/calendar-cli.py" {
+		t.Fatalf("dispatched %q, want the calendar-cli.py path", fr.name)
+	}
+	want := []string{"add", "--date=2026-05-20", "--time=15:00", "--title=design review"}
+	if !reflect.DeepEqual(fr.args, want) {
+		t.Fatalf("args = %v, want %v", fr.args, want)
+	}
+}
+
+func TestCallCategoryGate(t *testing.T) {
+	r, fr, _ := newTestRegistry(t, nil, []string{"audio"})
+	out, err := r.Call(context.Background(), "audio_set_volume", map[string]any{"volume": 30})
+	if err != nil {
+		t.Fatalf("a gated category must not error: %v", err)
+	}
+	if !strings.Contains(out, "disabled") {
+		t.Fatalf("expected a 'disabled' message, got %q", out)
+	}
+	if fr.calls != 0 {
+		t.Fatal("run must not fire for a gated category")
+	}
+}
+
+func TestCallAppLaunchRejected(t *testing.T) {
+	cases := []struct {
+		name        string
+		allowed     []string
+		cmd         string
+		wantContain string
+	}{
+		{"empty allowlist", nil, "firefox", "error:"},
+		{"shell metacharacter", []string{"sh"}, "sh -c 'rm -rf ~'", "metacharacter"},
+		{"not in allowlist", []string{"kitty"}, "firefox", "not in the app launcher allowlist"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r, fr, _ := newTestRegistry(t, tc.allowed, nil)
+			out, err := r.Call(context.Background(), "app_launch", map[string]any{"cmd": tc.cmd})
+			if err != nil {
+				t.Fatalf("a rejection must not error: %v", err)
+			}
+			if !strings.Contains(out, tc.wantContain) {
+				t.Fatalf("output %q does not contain %q", out, tc.wantContain)
+			}
+			if fr.calls != 0 {
+				t.Fatal("run must not fire for a rejected app_launch")
+			}
+		})
+	}
+}
+
+func TestCallAppLaunchAllowed(t *testing.T) {
+	r, fr, _ := newTestRegistry(t, []string{"kitty"}, nil)
+	if _, err := r.Call(context.Background(), "app_launch", map[string]any{"cmd": "kitty"}); err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+	if fr.name != "qs" {
+		t.Fatalf("dispatched %q, want qs", fr.name)
+	}
+	want := []string{"-c", "mugen-shell", "ipc", "call", "app", "launch", "kitty"}
+	if !reflect.DeepEqual(fr.args, want) {
+		t.Fatalf("args = %v, want %v", fr.args, want)
+	}
+}
+
+func TestCallMCPNotConnected(t *testing.T) {
+	r, fr, _ := newTestRegistry(t, nil, nil)
+	// An MCP-kind tool with no Manager attached: the mcp dispatch path must
+	// report the server as unavailable rather than panic on a nil Manager.
+	r.tools = append(r.tools, Tool{
+		Name:       "memory__store",
+		Parameters: emptyParams(),
+		kind:       "mcp",
+		mcpServer:  "memory",
+		mcpTool:    "store",
+	})
+	out, err := r.Call(context.Background(), "memory__store", map[string]any{})
+	if err != nil {
+		t.Fatalf("a disconnected MCP server must not error: %v", err)
+	}
+	if !strings.Contains(out, "not connected") {
+		t.Fatalf("expected a 'not connected' message, got %q", out)
+	}
+	if fr.calls != 0 {
+		t.Fatal("the built-in run must not fire for an MCP tool")
+	}
+}
+
+func TestCallAuditLog(t *testing.T) {
+	r, fr, auditPath := newTestRegistry(t, nil, nil)
+	fr.result = "42"
+	if _, err := r.Call(context.Background(), "audio_get_volume", map[string]any{}); err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+	data, err := os.ReadFile(auditPath)
+	if err != nil {
+		t.Fatalf("read audit log: %v", err)
+	}
+	var entry map[string]any
+	if err := json.Unmarshal([]byte(strings.TrimSpace(string(data))), &entry); err != nil {
+		t.Fatalf("audit line is not JSON: %v (%q)", err, data)
+	}
+	if entry["tool"] != "audio_get_volume" {
+		t.Fatalf("audit tool = %v, want audio_get_volume", entry["tool"])
+	}
+	if entry["result"] != "42" {
+		t.Fatalf("audit result = %v, want 42", entry["result"])
+	}
+}
+
+func TestCallConcurrent(t *testing.T) {
+	// A stateless run, so `go test -race` flags a race in the Registry's
+	// locking rather than in the test's own fake.
+	r := New("mugen-shell", "/scripts", nil, nil, NewAuditor(filepath.Join(t.TempDir(), "audit.log")))
+	r.apps = nil
+	r.run = func(context.Context, string, []string) (string, error) { return "ok", nil }
+
+	var wg sync.WaitGroup
+	for i := 0; i < 24; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			tool := "audio_get_volume" // readonly → RLock
+			if i%2 == 1 {
+				tool = "audio_toggle_mute" // mutating → Lock
+			}
+			if _, err := r.Call(context.Background(), tool, map[string]any{}); err != nil {
+				t.Errorf("concurrent Call(%s): %v", tool, err)
+			}
+		}(i)
+	}
+	wg.Wait()
 }

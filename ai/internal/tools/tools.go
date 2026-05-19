@@ -64,6 +64,11 @@ type Registry struct {
 	mcp          *mcp.Manager
 	tools        []Tool
 	mu           sync.RWMutex
+
+	// run executes a built command (the `qs ipc call …` or cmdTemplate
+	// invocation) and returns its trimmed combined output. A field so tests
+	// can substitute a fake for the real subprocess exec.
+	run func(ctx context.Context, name string, args []string) (string, error)
 }
 
 func New(qsConfig, scriptsDir string, allowedApps, disabledCategories []string, auditor *Auditor) *Registry {
@@ -82,7 +87,15 @@ func New(qsConfig, scriptsDir string, allowedApps, disabledCategories []string, 
 		auditor:      auditor,
 		apps:         apps.Load(),
 		tools:        builtin(),
+		run:          execCommand,
 	}
+}
+
+// execCommand is the Registry's default run func: it execs name with args
+// and returns the trimmed combined output.
+func execCommand(ctx context.Context, name string, args []string) (string, error) {
+	out, err := exec.CommandContext(ctx, name, args...).CombinedOutput()
+	return strings.TrimSpace(string(out)), err
 }
 
 // AttachMCP merges the tools advertised by every connected MCP server into
@@ -322,8 +335,7 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 		}
 	}
 
-	out, err := exec.CommandContext(ctx, cmdName, cmdArgs...).CombinedOutput()
-	res := strings.TrimSpace(string(out))
+	res, err := r.run(ctx, cmdName, cmdArgs)
 	var callErr error
 	if err != nil {
 		callErr = fmt.Errorf("%s failed: %w (output: %s)", name, err, res)
