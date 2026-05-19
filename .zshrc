@@ -222,12 +222,12 @@ command -v bat &>/dev/null && alias cat='bat --style header --style snip --style
 [ ! -x /usr/bin/yay ] && [ -x /usr/bin/paru ] && alias yay='paru'
 
 # Common use
-alias grubup="sudo update-grub"
-alias fixpacman="sudo rm /var/lib/pacman/db.lck"
+command -v update-grub &>/dev/null && alias grubup="sudo update-grub"
+command -v pacman &>/dev/null && alias fixpacman="sudo rm /var/lib/pacman/db.lck"
 alias tarnow='tar -acf '
 alias untar='tar -zxvf '
 alias wget='wget -c '
-alias rmpkg="sudo pacman -Rdd"
+command -v pacman &>/dev/null && alias rmpkg="sudo pacman -Rdd"
 alias psmem='ps auxf | sort -nr -k 4'
 alias psmem10='ps auxf | sort -nr -k 4 | head -10'
 if command -v garuda-update &>/dev/null; then
@@ -250,31 +250,37 @@ if command -v ugrep &>/dev/null; then
     alias egrep='ugrep -E --color=auto'
 fi
 alias hw='hwinfo --short'                          # Hardware Info
-alias big="expac -H M '%m\t%n' | sort -h | nl"     # Sort installed packages according to size in MB (expac must be installed)
-alias gitpkg='pacman -Q | grep -i "\-git" | wc -l' # List amount of -git packages
+command -v expac &>/dev/null && alias big="expac -H M '%m\t%n' | sort -h | nl"      # installed packages by size (MB)
+command -v pacman &>/dev/null && alias gitpkg='pacman -Q | grep -i "\-git" | wc -l' # count of -git packages
 alias ip='ip -color'
 
-# Get fastest mirrors
-alias mirror="sudo reflector -f 30 -l 30 --number 10 --verbose --save /etc/pacman.d/mirrorlist"
-alias mirrord="sudo reflector --latest 50 --number 20 --sort delay --save /etc/pacman.d/mirrorlist"
-alias mirrors="sudo reflector --latest 50 --number 20 --sort score --save /etc/pacman.d/mirrorlist"
-alias mirrora="sudo reflector --latest 50 --number 20 --sort age --save /etc/pacman.d/mirrorlist"
+# Get fastest mirrors. Guarded — reflector is Arch-only, so this stays inert
+# when the .zshrc is sourced on another distro.
+if command -v reflector &>/dev/null; then
+    alias mirror="sudo reflector -f 30 -l 30 --number 10 --verbose --save /etc/pacman.d/mirrorlist"
+    alias mirrord="sudo reflector --latest 50 --number 20 --sort delay --save /etc/pacman.d/mirrorlist"
+    alias mirrors="sudo reflector --latest 50 --number 20 --sort score --save /etc/pacman.d/mirrorlist"
+    alias mirrora="sudo reflector --latest 50 --number 20 --sort age --save /etc/pacman.d/mirrorlist"
+fi
 
-# Help people new to Arch
-alias apt='man pacman'
-alias apt-get='man pacman'
+# Help people new to Arch. Guarded on pacman so it can't shadow the real apt
+# on a Debian-family system.
+if command -v pacman &>/dev/null; then
+    alias apt='man pacman'
+    alias apt-get='man pacman'
+fi
 alias please='sudo'
 alias helpme='cht.sh --shell'
-alias pacdiff='sudo -H DIFFPROG=meld pacdiff'
+command -v pacdiff &>/dev/null && alias pacdiff='sudo -H DIFFPROG=meld pacdiff'
 
 # Cleanup orphaned packages
-alias cleanup='sudo pacman -Rns $(pacman -Qtdq)'
+command -v pacman &>/dev/null && alias cleanup='sudo pacman -Rns $(pacman -Qtdq)'
 
 # Get the error messages from journalctl
 alias jctl="journalctl -p 3 -xb"
 
 # Recent installed packages
-alias rip="expac --timefmt='%Y-%m-%d %T' '%l\t%n %v' | sort | tail -200 | nl"
+command -v expac &>/dev/null && alias rip="expac --timefmt='%Y-%m-%d %T' '%l\t%n %v' | sort | tail -200 | nl"
 
 # Load Mcfly
 export MCFLY_FUZZY=true
