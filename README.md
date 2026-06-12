@@ -1,3 +1,5 @@
+<p align="right"><b>English</b> | <a href="README.ja.md">日本語</a></p>
+
 <h1 align="center">
   <img src="shell/assets/branding/mugen-shell_logo.png" width="200" alt="mugen-shell logo" /><br/>
   mugen-shell
@@ -7,9 +9,9 @@
 
 https://github.com/user-attachments/assets/2a8fe2e5-ced6-4de1-acda-d7e0493882a6
 
-> Personal dotfiles, packaged so others can try them via Nix flake or a plain Makefile.
+Personal dotfiles for a Hyprland + Quickshell desktop, packaged so they can be installed via Nix flake or `make install`.
 
-For directory layout, install paths (Nix flake home-manager module or manual `make install`), dependencies, and keybindings see [SETUP.md](SETUP.md).
+For directory layout, install paths, dependencies, and keybindings see [SETUP.md](SETUP.md).
 
 ---
 
@@ -32,38 +34,37 @@ For directory layout, install paths (Nix flake home-manager module or manual `ma
 
 https://github.com/user-attachments/assets/aba8efb6-d528-42d3-af7b-d85f4b66913e
 
-<sub><i>A casual hello in the bar; over in the corner pop-up Yura shuffles the wallpaper, flips into light mode, and opens Chrome through tool calls.</i></sub>
+<sub><i>A casual hello in the bar; the corner pop-up shuffles the wallpaper, switches to light mode, and opens Chrome through tool calls.</i></sub>
 
-Yura is the desktop chat persona — a Spotlight-style row in the bar (`Super + Y`) and a corner pop-up chat panel that slides in from off-screen (`Super + Shift + Y`). It's powered by **mugen-ai**, a Go server bundled in this repo under [`ai/`](ai/) that fronts:
+Yura is the desktop chat assistant. It runs in two places: a single input row in the bar (`Super + Y`) and a chat panel anchored to a screen corner (`Super + Shift + Y`).
 
-- **Local** — any [Ollama](https://ollama.com) model on your machine (no network)
-- **Cloud** — Anthropic Claude, Google Gemini, or any OpenAI-compatible backend (OpenAI, OpenRouter, LM Studio, vLLM, …)
+The backend is **mugen-ai**, a Go server in [`ai/`](ai/). It supports:
 
-Set up alongside mugen-shell via NixOS, Arch + Nix, or `make install` — see [SETUP.md](SETUP.md). Everything Yura-related — providers, personality, tool toggles, allowed apps — lives under **Settings → AI / Yura**.
+- Local models via [Ollama](https://ollama.com)
+- Anthropic Claude
+- Google Gemini
+- OpenAI-compatible APIs (OpenAI, OpenRouter, LM Studio, vLLM, etc.)
 
-- Spotlight-style one-row prompt in the bar — Yura icon + input pill, response streams into the placeholder, navigable read-only after streaming, clicking the icon detaches into the corner panel
-- Corner pop-up panel (left or right, configurable); sidebar of past conversations, cosmic gradient background, drifting particles, and a soft breathing indicator that follows the latest reply
-- The bar row and the corner pop-up stay in sync — send a message in one and it shows up in the other
-- Multi-conversation history persisted on disk — pick up old chats from the sidebar, delete with a hover trash, "+ New chat" stays empty until you send something
-- Per-conversation model binding — each chat stays on the provider it was started with; the panel dropdown locks to read-only mid-conversation, and the Settings → AI / Yura tab pins the bar's default model
-- Markdown rendering for assistant replies, with monospace code blocks that have their own hover-reveal copy button
-- Streaming responses with a stop button, a breathing indicator, and an IME-aware placeholder
-- Configurable personality (name / tone / language / system prompt) edited in-app — Save & Apply writes the config and hot-restarts the backend, no terminal trip
-- Per-conversation Thinking toggle that routes to each provider's reasoning channel (qwen3 think / Claude extended thinking / Gemini thinkingConfig / OpenAI reasoning_effort), with a silent fallback for models that don't support it
-- **Strict-by-default allowed-apps gate**: the picker shows your installed desktop apps, and until you enable one Yura can't open anything. Shell metacharacters (`; | & $` etc.) are always rejected so an allowed app can't smuggle in a shell injection.
-- **Per-category tool toggles** (audio, music, brightness, theme, wallpaper, notifications, timer, calendar, panels, app launcher) — disabled categories vanish from Yura's tool list, and Yura proactively tells you when you ask for something turned off
-- Natural-language shell control via function-calling tools — see *Shell control by chat* below
-- **External MCP servers** — point Yura at any [Model Context Protocol](https://modelcontextprotocol.io) server (memory, filesystem, GitHub, …) in the config; its tools merge into the same gated tool set, and live connection status shows under Settings → AI / Yura → MCP servers
+Set up alongside mugen-shell via NixOS, Arch + Nix, or `make install`; see [SETUP.md](SETUP.md). All Yura configuration (providers, personality, tool toggles, allowed apps) lives under **Settings → AI / Yura**.
 
-#### Shell control by chat
+### Features
 
-Yura speaks function calls back to mugen-shell. Tools route through
-`qs ipc call` so the existing managers stay the source of truth.
-Reversible actions fire immediately; built-in destructive ones (clearing
-notification history, deleting calendar events) are confirmed in plain
-language in chat first. A tool from an external MCP server that may make
-an irreversible change is held for a one-tap Approve / Deny prompt before
-it runs.
+- Bar row: input pill with Yura icon. Responses stream into the placeholder. Clicking the icon opens the corner panel on the same conversation.
+- Corner panel (left or right): sidebar of past conversations with an indicator that pulses while a reply streams.
+- Bar row and corner panel stay in sync. A message sent in one appears in the other.
+- Multi-conversation history persisted on disk. Pick up old chats from the sidebar; delete via the hover trash icon.
+- Per-conversation model binding. Each conversation keeps the provider it started with, and the panel dropdown is read-only mid-conversation.
+- Markdown rendering for assistant replies. Code blocks have a copy button revealed on hover.
+- Streaming responses with a stop button and an IME-aware input placeholder.
+- Personality (name, tone, language, system prompt) is editable in the Settings GUI. Save & Apply writes the config and restarts the backend.
+- Per-conversation Thinking toggle. Routes through each provider's reasoning channel (qwen3 think, Claude extended thinking, Gemini thinkingConfig, OpenAI reasoning_effort), with a silent fallback for unsupported models.
+- Strict-by-default app launch allowlist. Until an app is enabled in the picker, Yura cannot launch anything. Shell metacharacters (`; | & $` etc.) are always rejected.
+- Per-category tool toggles (audio, music, brightness, theme, wallpaper, notifications, timer, calendar, panels, app launcher).
+- External [MCP](https://modelcontextprotocol.io) server support. Configured servers have their tools merged into the same gated set, with live connection status shown in Settings.
+
+### Shell control by chat
+
+Tool calls from Yura are dispatched through `qs ipc call`, so the existing shell managers remain the single source of truth. Reversible tools run immediately. Built-in destructive tools (clearing notifications, deleting calendar events) ask for confirmation in chat. External MCP tools that may write are held behind an Approve / Deny prompt in the UI.
 
 | Domain | What Yura can do |
 |---|---|
@@ -74,23 +75,20 @@ it runs.
 | Wallpaper | switch, list available, read current |
 | Music (MPRIS) | play / pause, next, previous |
 | Notifications | set / toggle DnD, clear history, read unread count |
-| Apps | launch any app you've enabled in Settings → AI / Yura → Allowed apps (off-$PATH binaries resolved via `.desktop` Exec) |
+| Apps | launch any app enabled in Settings → AI / Yura → Allowed apps (off-$PATH binaries resolved via `.desktop` Exec) |
 | Timer | start / pause / resume / cancel, read state |
 | Calendar | add / delete events, list today or a date range |
 | Panels | open named panel, close any panel |
 
-Each row above can be turned off as a whole category in Settings → AI / Yura → Tool categories, and app launches are gated by the Allowed apps picker (so "launch firefox" only works once you've enabled firefox there).
+Each row above can be disabled as a category in Settings → AI / Yura → Tool categories. App launches are also gated by the Allowed apps picker, so "launch firefox" only works once firefox is enabled there.
 
-Yura's tools aren't limited to the table above — add any **MCP server** under `[mcp.servers.*]` in the config (memory, filesystem, GitHub, …) and its tools merge into the same gated set, passing through the per-category gate, audit log, result sanitisation, and a one-tap approval prompt before anything that writes. See [SETUP.md](SETUP.md#mcp-servers).
+External MCP servers feed into the same gated set. Add `[mcp.servers.*]` blocks to the config (memory, filesystem, GitHub, etc.) and the tools merge with the same per-category gate, audit log, result sanitisation, and approval prompt before any write. See [SETUP.md](SETUP.md#mcp-servers).
 
-Power actions (lock / suspend / logout / reboot / shutdown) intentionally stay out of Yura's reach — drive those from the Power Menu directly.
+Power actions (lock, suspend, logout, reboot, shutdown) are not exposed to Yura. Use the Power Menu directly for those.
 
-Examples that land today: "set volume to 30", "lower the brightness",
-"switch to light mode", "shuffle the wallpaper", "next track", "DnD on",
-"open settings", "set a 25 minute timer", "add a calendar event tomorrow
-at 3pm", "launch firefox".
+Example prompts that work today: "set volume to 30", "lower the brightness", "switch to light mode", "shuffle the wallpaper", "next track", "DnD on", "open settings", "set a 25 minute timer", "add a calendar event tomorrow at 3pm", "launch firefox".
 
-Provider API keys, the config file layout, and the HTTP API live in [SETUP.md → Configuring mugen-ai](SETUP.md#configuring-mugen-ai).
+Provider API keys, the config file layout, and the HTTP API are documented in [SETUP.md → Configuring mugen-ai](SETUP.md#configuring-mugen-ai).
 
 ---
 
@@ -102,25 +100,25 @@ Provider API keys, the config file layout, and the HTTP API live in [SETUP.md �
 
 ## Features
 
-- Wallpaper-driven Material You color scheme via Matugen
-- Video and image wallpaper switching (mpvpaper + awww) with a wallpaper picker UI
+- Material You color scheme generated from the current wallpaper via Matugen
+- Video and image wallpaper switching (mpvpaper + awww) with a picker UI
 - Cava audio visualizer
-- Calendar in a standalone night-sky window — month grid, events list, inline add / edit, today ring
-- Countdown timer with preset durations, free-form M:SS input, glowing progress ring, and a live remaining-time pill in the bar
-- Music player integration (playerctl / MPRIS) with YouTube thumbnail fallback and a seekable glowing progress slider
+- Standalone Calendar window with month grid, events list, and inline add / edit
+- Countdown timer with preset durations, free-form M:SS input, a progress ring, and a remaining-time pill in the bar
+- Music player integration (playerctl / MPRIS) with YouTube thumbnail fallback and a seekable progress slider
 - Clipboard history and notification center
-- Speaker / microphone control sharing the volume panel with a swap toggle
-- Laptop backlight slider with hardware-key integration (auto-hidden on desktops without a backlight)
-- WiFi / Bluetooth / IME management
-- Battery indicator (water-level fill inside the power menu icon, opt-in) and a collapsible system tray
+- Speaker and microphone control sharing one volume panel
+- Laptop backlight slider with hardware-key integration (hidden on systems without a backlight)
+- WiFi, Bluetooth, and IME management
+- Battery indicator (optional water-level fill inside the power menu icon) and a collapsible system tray
 - App launcher, idle inhibitor toggle, screenshot capture with clipboard copy, screenshot gallery, power menu
-- Standalone settings window — theme, blur, animations, notification + timer sounds, lock timer, date format, and a Yura tab covering personality (name / tone / language / system prompt), providers, bar model, thinking toggle, tool categories, allowed apps, and panel side
+- Standalone Settings window for theme, blur, animations, notification and timer sounds, lock timer, date format, plus the Yura tab (personality, providers, bar model, thinking, tool categories, allowed apps, panel side)
 
 ---
 
 ## Usage
 
-Once installed (see [SETUP.md](SETUP.md)), the bar starts automatically with the Hyprland session. Press `Super + /` for the keyboard shortcut reference, right-click the power menu icon to jump straight into Settings, or click the chevron next to the notification icon to expand the system tray. The full keybind list lives in [SETUP.md → Keybindings](SETUP.md#keybindings).
+After installation (see [SETUP.md](SETUP.md)), the bar starts automatically with the Hyprland session. Press `Super + /` for the keyboard shortcut reference. Right-click the power menu icon to open Settings. Click the chevron next to the notification icon to expand the system tray. The full keybind list is in [SETUP.md → Keybindings](SETUP.md#keybindings).
 
 ---
 
