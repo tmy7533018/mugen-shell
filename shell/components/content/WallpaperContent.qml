@@ -386,12 +386,14 @@ FocusScope {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 listView.currentIndex = index
+                                // setWallpaper() closes all modes and tears down this delegate,
+                                // so bump first or resetAutoCloseTimer() runs in a dead context.
+                                root.resetAutoCloseTimer()
                                 if (cellRoot.isAddCell) {
                                     root.openWallpaperFolder()
                                 } else {
                                     root.setWallpaper(cellRoot.wallpaperPath)
                                 }
-                                root.resetAutoCloseTimer()
                             }
                         }
                     }

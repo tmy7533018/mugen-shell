@@ -216,25 +216,22 @@ FocusScope {
         }
     }
 
-    property var _runningAppsCache: ({})
-    property var _lastRunningAppsHash: ""
+    // Derived, not mutated inside isAppRunning(): a binding that both reads and
+    // writes the cache is what Qt flags as a loop.
+    readonly property var _runningSet: {
+        let set = ({})
+        for (let i = 0; i < runningApps.length; i++) {
+            set[runningApps[i].toLowerCase()] = true
+        }
+        return set
+    }
 
     function isAppRunning(appName) {
-        let currentHash = runningApps.join("|")
-        if (_lastRunningAppsHash !== currentHash) {
-            _runningAppsCache = {}
-            for (let i = 0; i < runningApps.length; i++) {
-                let running = runningApps[i].toLowerCase()
-                _runningAppsCache[running] = true
-            }
-            _lastRunningAppsHash = currentHash
-        }
-
         let name = appName.toLowerCase()
-        if (_runningAppsCache[name]) {
+        if (_runningSet[name]) {
             return true
         }
-        for (let key in _runningAppsCache) {
+        for (let key in _runningSet) {
             if (key.includes(name) || name.includes(key)) {
                 return true
             }
