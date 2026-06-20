@@ -198,6 +198,48 @@ func TestCallIPCDispatch(t *testing.T) {
 	}
 }
 
+func TestParseInstancePID(t *testing.T) {
+	out := `Instance c71lt3ogt:
+  Process ID: 1560
+  Shell ID: abc
+  Config path: /home/noki/.config/quickshell/mugen-shell/shell.qml
+  Display connection: wayland/wayland-1
+Instance d71lt3ogt:
+  Process ID: 1561
+  Config path: /home/noki/.config/quickshell/mugen-shell/yura-shell.qml
+`
+	if got := parseInstancePID(out, "mugen-shell"); got != 1560 {
+		t.Fatalf("pid = %d, want 1560 (the shell.qml instance, not yura-shell.qml)", got)
+	}
+	if got := parseInstancePID(out, "other"); got != 0 {
+		t.Fatalf("pid = %d, want 0 when no config matches", got)
+	}
+	if got := parseInstancePID("garbage output", "mugen-shell"); got != 0 {
+		t.Fatalf("pid = %d, want 0 for unparseable output", got)
+	}
+}
+
+func TestCallIPCDispatchByPID(t *testing.T) {
+	r, _, _ := newTestRegistry(t, nil, nil)
+	listing := "Instance c71lt3ogt:\n  Process ID: 1560\n" +
+		"  Config path: /home/noki/.config/quickshell/mugen-shell/shell.qml\n"
+	var last []string
+	r.run = func(_ context.Context, name string, args []string) (string, error) {
+		if len(args) > 0 && args[0] == "list" {
+			return listing, nil
+		}
+		last = args
+		return "30", nil
+	}
+	if _, err := r.Call(context.Background(), "audio_set_volume", map[string]any{"volume": 30}); err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+	want := []string{"ipc", "--pid", "1560", "call", "audio", "set_volume", "30"}
+	if !reflect.DeepEqual(last, want) {
+		t.Fatalf("args = %v, want %v", last, want)
+	}
+}
+
 func TestCallCmdTemplateDispatch(t *testing.T) {
 	r, fr, _ := newTestRegistry(t, nil, nil)
 	_, err := r.Call(context.Background(), "calendar_add", map[string]any{

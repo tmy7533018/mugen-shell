@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -96,6 +97,34 @@ func New(qsConfig, scriptsDir string, allowedApps, disabledCategories []string, 
 func execCommand(ctx context.Context, name string, args []string) (string, error) {
 	out, err := exec.CommandContext(ctx, name, args...).CombinedOutput()
 	return strings.TrimSpace(string(out)), err
+}
+
+// resolveQsPID finds the mugen-shell instance's pid via `qs list --all` (which,
+// unlike `qs ipc`, works with no display). Returns 0 if not found.
+func (r *Registry) resolveQsPID(ctx context.Context) int {
+	out, err := r.run(ctx, "qs", []string{"list", "--all"})
+	if err != nil {
+		return 0
+	}
+	return parseInstancePID(out, r.qsConfig)
+}
+
+// parseInstancePID returns the pid of the instance whose config path ends in
+// "<qsConfig>/shell.qml", or 0 if none matches.
+func parseInstancePID(listOutput, qsConfig string) int {
+	suffix := "/" + qsConfig + "/shell.qml"
+	pid := 0
+	for _, line := range strings.Split(listOutput, "\n") {
+		line = strings.TrimSpace(line)
+		if v, ok := strings.CutPrefix(line, "Process ID:"); ok {
+			pid, _ = strconv.Atoi(strings.TrimSpace(v))
+		} else if v, ok := strings.CutPrefix(line, "Config path:"); ok {
+			if strings.HasSuffix(strings.TrimSpace(v), suffix) {
+				return pid
+			}
+		}
+	}
+	return 0
 }
 
 // AttachMCP merges the tools advertised by every connected MCP server into
@@ -325,14 +354,22 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 		cmdArgs = expanded[1:]
 	} else {
 		cmdName = "qs"
-		cmdArgs = []string{"-c", r.qsConfig, "ipc", "call", t.target, t.function}
+		var posArgs []string
 		for _, key := range t.argOrder {
 			v, ok := args[key]
 			if !ok {
 				return "", fmt.Errorf("missing argument %q for tool %s", key, name)
 			}
-			cmdArgs = append(cmdArgs, fmt.Sprint(v))
+			posArgs = append(posArgs, fmt.Sprint(v))
 		}
+		// Quickshell 0.3.0 filters `qs ipc` by the caller's display, which this
+		// headless service lacks; --pid bypasses it. Fall back to -c if not found.
+		if pid := r.resolveQsPID(ctx); pid > 0 {
+			cmdArgs = []string{"ipc", "--pid", strconv.Itoa(pid), "call", t.target, t.function}
+		} else {
+			cmdArgs = []string{"-c", r.qsConfig, "ipc", "call", t.target, t.function}
+		}
+		cmdArgs = append(cmdArgs, posArgs...)
 	}
 
 	res, err := r.run(ctx, cmdName, cmdArgs)
@@ -464,7 +501,7 @@ func builtin() []Tool {
 		},
 		{
 			Name:        "panel_open",
-			Description: "Open a mugen-shell panel. Inline: volume, wifi, bluetooth, brightness, ai, timer, clipboard, notification, wallpaper, power, music. Detached (toggle): settings, calendar, shortcuts.",
+			Description: "Open a mugen-shell panel. Inline: launcher (the app launcher), volume, wifi, bluetooth, brightness, ai, timer, clipboard, notification, wallpaper, power, music. Detached (toggle): settings, calendar, shortcuts.",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
