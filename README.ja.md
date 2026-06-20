@@ -7,7 +7,7 @@
 
 <p align="center"><i>Quickshell + Hyprland で組んだ、夢幻デスクトップ。</i></p>
 
-https://github.com/user-attachments/assets/a5a8922e-459f-483f-9c7d-a3e103529a60
+https://github.com/user-attachments/assets/beaaf135-5cdf-46d9-975d-91e3e6f04068
 
 Hyprland + Quickshell デスクトップ向けの個人 dotfiles を、Nix flake または `make install` で入れられる形にまとめたものです。
 
@@ -32,7 +32,7 @@ Hyprland + Quickshell デスクトップ向けの個人 dotfiles を、Nix flake
 
 ## Yura
 
-https://github.com/user-attachments/assets/ec637cc4-be2f-40a7-ba4e-0047ab0d6399
+https://github.com/user-attachments/assets/61328371-aa8e-4f96-aae8-2817fadf3ed4
 
 <sub><i>バーで軽く挨拶した後、コーナーの Yura が壁紙をシャッフル、ライトモードに切替え、ツール呼び出しで Chrome を開きます。</i></sub>
 
