@@ -7,7 +7,7 @@
 
 <p align="center"><i>A 夢幻 desktop, built on Quickshell + Hyprland.</i></p>
 
-https://github.com/user-attachments/assets/2a8fe2e5-ced6-4de1-acda-d7e0493882a6
+https://github.com/user-attachments/assets/a5a8922e-459f-483f-9c7d-a3e103529a60
 
 Personal dotfiles for a Hyprland + Quickshell desktop, packaged so they can be installed via Nix flake or `make install`.
 
@@ -32,7 +32,7 @@ For directory layout, install paths, dependencies, and keybindings see [SETUP.md
 
 ## Yura
 
-https://github.com/user-attachments/assets/aba8efb6-d528-42d3-af7b-d85f4b66913e
+https://github.com/user-attachments/assets/ec637cc4-be2f-40a7-ba4e-0047ab0d6399
 
 <sub><i>A casual hello in the bar; the corner pop-up shuffles the wallpaper, switches to light mode, and opens Chrome through tool calls.</i></sub>
 
