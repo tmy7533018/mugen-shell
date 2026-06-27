@@ -6,6 +6,10 @@ Rectangle {
     property var theme
     property bool gradientEnabled: true
 
+    // Gate only on gradientEnabled: reading the surface's effective `visible`
+    // here forms a binding loop (it is opacity-driven under the Yura panel's mask).
+    readonly property bool gradientsAnimating: gradientEnabled
+
     readonly property color darkBase: Qt.rgba(20/255, 22/255, 26/255, 0.82)
     readonly property color darkBorderColor: Qt.rgba(0.35, 0.35, 0.40, 0.40)
 
@@ -172,7 +176,7 @@ Rectangle {
 
         SequentialAnimation on slidePosition {
             loops: Animation.Infinite
-            running: surface.visible && parent.visible
+            running: surface.gradientsAnimating
             NumberAnimation {
                 from: -0.3;
                 to: 0.5;
@@ -191,7 +195,7 @@ Rectangle {
 
         SequentialAnimation on dynamicOpacity {
             loops: Animation.Infinite
-            running: surface.visible && parent.visible
+            running: surface.gradientsAnimating
             PauseAnimation { duration: 500 }
             NumberAnimation { to: 1.0; duration: 1800; easing.type: Easing.InOutCubic }
             PauseAnimation { duration: 1200 }
@@ -259,7 +263,7 @@ Rectangle {
 
         SequentialAnimation on slidePosition {
             loops: Animation.Infinite
-            running: surface.visible && parent.visible
+            running: surface.gradientsAnimating
             NumberAnimation {
                 from: -0.1;
                 to: 0.4;
@@ -278,7 +282,7 @@ Rectangle {
 
         SequentialAnimation on dynamicOpacity {
             loops: Animation.Infinite
-            running: surface.visible && parent.visible
+            running: surface.gradientsAnimating
             PauseAnimation { duration: 1750 }
             NumberAnimation { to: 1.0; duration: 2000; easing.type: Easing.InOutCubic }
             PauseAnimation { duration: 1100 }
@@ -347,7 +351,7 @@ Rectangle {
 
         SequentialAnimation on slidePosition {
             loops: Animation.Infinite
-            running: surface.visible && parent.visible
+            running: surface.gradientsAnimating
             NumberAnimation {
                 from: 1.1;
                 to: 0.6;
@@ -366,7 +370,7 @@ Rectangle {
 
         SequentialAnimation on dynamicOpacity {
             loops: Animation.Infinite
-            running: surface.visible && parent.visible
+            running: surface.gradientsAnimating
             PauseAnimation { duration: 3000 }
             NumberAnimation { to: 1.0; duration: 2200; easing.type: Easing.InOutCubic }
             PauseAnimation { duration: 1300 }
