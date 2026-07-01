@@ -25,6 +25,13 @@
     "format": "ddd M/d"
   },
   "ai": {
-    "barModel": ""
+    "barModel": "",
+    "barThinking": false
+  },
+  "yura": {
+    "panelSide": "left",
+    "panelWidth": 700,
+    "panelHeight": 640,
+    "sidebarCollapsed": false
   }
 }

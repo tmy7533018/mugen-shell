@@ -326,9 +326,9 @@ QtObject {
                 let lines = outputData.trim().split("\n")
                 for (let line of lines) {
                     if (line.includes("Default Sink:")) {
-                        audioManager.defaultSinkName = line.split(":")[1].trim()
+                        audioManager.defaultSinkName = line.substring(line.indexOf(":") + 1).trim()
                     } else if (line.includes("Default Source:")) {
-                        audioManager.defaultSourceName = line.split(":")[1].trim()
+                        audioManager.defaultSourceName = line.substring(line.indexOf(":") + 1).trim()
                     }
                 }
                 if (!sinksProcess.running) sinksProcess.running = true

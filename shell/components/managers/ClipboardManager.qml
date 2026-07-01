@@ -25,7 +25,7 @@ QtObject {
     }
     
     function selectItem(id) {
-        selectProcess.command = ["bash", "-c", "cliphist decode " + id + " | wl-copy"]
+        selectProcess.command = ["bash", "-c", "cliphist decode \"$1\" | wl-copy", "bash", String(id)]
         selectProcess.running = true
     }
     

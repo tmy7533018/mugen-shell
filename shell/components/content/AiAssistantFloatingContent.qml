@@ -1223,9 +1223,30 @@ FocusScope {
             if (exitCode !== 0) return
             try {
                 let obj = JSON.parse(loadCurrentProcess.buf)
+                let sameConv = (root.currentConvId === (obj.id || 0))
                 root.currentConvId = obj.id || 0
                 let msgs = obj.messages || []
-                root.messages = msgs.map(m => ({ role: m.role, content: m.content }))
+                // Persisted history keeps only role/content; tool-call chips
+                // live in memory. On a same-conversation refresh (the post-turn
+                // SSE nudge) carry the chips over by matching assistant messages
+                // in order, so the reload doesn't wipe them.
+                let prevTools = []
+                if (sameConv) {
+                    for (let i = 0; i < root.messages.length; i++) {
+                        let pm = root.messages[i]
+                        if (pm.role === "assistant") {
+                            prevTools.push((pm.toolCalls && pm.toolCalls.length > 0) ? pm.toolCalls : null)
+                        }
+                    }
+                }
+                let ai = 0
+                root.messages = msgs.map(m => {
+                    if (m.role === "assistant") {
+                        let tc = prevTools[ai++]
+                        if (tc) return { role: m.role, content: m.content, toolCalls: tc }
+                    }
+                    return { role: m.role, content: m.content }
+                })
                 // Sync the dropdown to the conversation's bound model so the
                 // selector reflects what's actually being used.
                 if (root.currentConvId !== 0 && obj.model) {

@@ -380,8 +380,9 @@ QtObject {
             if (musicManager.activePlayer === "" || musicManager.seekingSuspended) return
             positionProcess.command = [
                 "bash", "-c",
-                "echo \"$(playerctl -p '" + musicManager.activePlayer + "' position 2>/dev/null || echo 0) "
-                + "$(playerctl -p '" + musicManager.activePlayer + "' metadata mpris:length 2>/dev/null || echo 0)\""
+                "echo \"$(playerctl -p \"$1\" position 2>/dev/null || echo 0) "
+                + "$(playerctl -p \"$1\" metadata mpris:length 2>/dev/null || echo 0)\"",
+                "bash", musicManager.activePlayer
             ]
             musicManager.updatePosition()
         }

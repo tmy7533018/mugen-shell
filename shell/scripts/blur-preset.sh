@@ -75,7 +75,12 @@ pick() {
         sel="$(printf '%s\n' "${P[@]}" | fzf --prompt='Blur preset> ')"
     else
         echo "available presets:"; nl -ba <(printf '%s\n' "${P[@]}")
-        read -rp 'number: ' n; sel="${P[$((n-1))]:-}"
+        read -rp 'number: ' n
+        if [[ "$n" =~ ^[0-9]+$ ]] && (( n >= 1 && n <= ${#P[@]} )); then
+            sel="${P[$((n-1))]}"
+        else
+            sel=""
+        fi
     fi
     [[ -n "${sel:-}" ]] || { echo "no selection" >&2; exit 1; }
     echo "$sel"

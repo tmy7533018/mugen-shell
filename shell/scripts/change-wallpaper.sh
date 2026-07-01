@@ -45,7 +45,7 @@ TRANS_SEC=1.0
 
 MPV_OPTS="no-config no-audio loop cache=yes profile=low-latency \
 vo=gpu-next gpu-context=wayland \
-hwdec=auto \\
+hwdec=auto \
 keep-open=yes \
 input-ipc-server=${MPV_SOCKET} \
 screenshot-format=png screenshot-high-bit-depth=no screenshot-png-compression=1"

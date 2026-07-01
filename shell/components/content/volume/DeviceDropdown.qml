@@ -191,10 +191,19 @@ Rectangle {
         anchors.right: parent.right
         anchors.rightMargin: dropdown.modeManager ? dropdown.modeManager.scale(3) : 3
         anchors.top: parent.top
-        anchors.topMargin: (dropdown.modeManager ? dropdown.modeManager.scale(8) : 8) + (dropdownFlickable.height - scrollbar.height) * (dropdownFlickable.contentY / (dropdownFlickable.contentHeight - dropdownFlickable.height))
+        anchors.topMargin: {
+            let base = dropdown.modeManager ? dropdown.modeManager.scale(8) : 8
+            let range = dropdownFlickable.contentHeight - dropdownFlickable.height
+            if (range <= 0) return base
+            return base + (dropdownFlickable.height - scrollbar.height) * (dropdownFlickable.contentY / range)
+        }
 
         width: dropdown.modeManager ? dropdown.modeManager.scale(3) : 3
-        height: Math.max(dropdown.modeManager ? dropdown.modeManager.scale(20) : 20, dropdownFlickable.height * (dropdownFlickable.height / dropdownFlickable.contentHeight))
+        height: {
+            let min = dropdown.modeManager ? dropdown.modeManager.scale(20) : 20
+            if (dropdownFlickable.contentHeight <= 0) return min
+            return Math.max(min, dropdownFlickable.height * (dropdownFlickable.height / dropdownFlickable.contentHeight))
+        }
         radius: dropdown.modeManager ? dropdown.modeManager.scale(1.5) : 1.5
 
         color: Qt.rgba(0.6, 0.6, 0.7, 0.5)

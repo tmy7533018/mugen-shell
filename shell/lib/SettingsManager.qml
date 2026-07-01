@@ -93,7 +93,7 @@ QtObject {
 
         saveSettingsProcess.command = [
             "bash", "-c",
-            "mkdir -p \"" + configDir + "\" && echo '" + jsonString + "' > \"" + userSettingsFile + "\""
+            "mkdir -p \"" + configDir + "\" && cat > \"" + userSettingsFile + "\" <<'JSON_EOF'\n" + jsonString + "\nJSON_EOF"
         ]
         saveSettingsProcess.running = true
     }

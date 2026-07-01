@@ -282,6 +282,14 @@ Rectangle {
 
                     signal clicked()
 
+                    onClicked: {
+                        if (root.wifiManager.isConnecting) return
+                        if (root.modelData && passwordInput.text.length > 0) {
+                            root.connectToNetwork(root.modelData.ssid, passwordInput.text)
+                            passwordInput.text = ""
+                        }
+                    }
+
                     Behavior on color {
                         ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
                     }
@@ -301,12 +309,7 @@ Rectangle {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             enabled: !root.wifiManager.isConnecting && root.modelData
-                            onClicked: {
-                                if (root.modelData && passwordInput.text.length > 0) {
-                                    root.connectToNetwork(root.modelData.ssid, passwordInput.text)
-                                    passwordInput.text = ""
-                                }
-                            }
+                            onClicked: connectButton.clicked()
                         }
                 }
 

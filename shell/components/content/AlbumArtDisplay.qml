@@ -35,7 +35,7 @@ Item {
         let base = color || defaultAccentColor()
         let targetColor = lightenColor(base, 0.4)
         extractedColor = targetColor
-        if (musicManager && musicManager.accentColor !== targetColor) {
+        if (musicManager && !Qt.colorEqual(musicManager.accentColor, targetColor)) {
             musicManager.accentColor = targetColor
         }
     }

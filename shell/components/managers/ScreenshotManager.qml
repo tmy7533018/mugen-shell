@@ -62,7 +62,10 @@ QtObject {
 
     function openScreenshot(filePath) {
         if (!filePath) return
-        openScreenshotProcess.command = ["hyprctl", "dispatch", "exec", "imv '" + filePath + "'"]
+        // hyprctl dispatch exec runs this through /bin/sh, so a filename with a
+        // quote must be escaped just like copyScreenshot does.
+        let escaped = filePath.replace(/'/g, "'\"'\"'")
+        openScreenshotProcess.command = ["hyprctl", "dispatch", "exec", "imv '" + escaped + "'"]
         openScreenshotProcess.running = true
     }
 

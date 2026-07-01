@@ -49,13 +49,19 @@ def main():
         s.connect(sock_path)
         print(f"connected:{sock_path}", file=sys.stderr, flush=True)
 
+        buf = ""
         while True:
             try:
                 data = s.recv(4096).decode('utf-8', errors='ignore')
                 if not data:
                     break
 
-                for line in data.strip().split('\n'):
+                # Only dispatch complete newline-terminated lines; keep any
+                # partial tail for the next recv so an event straddling a
+                # 4096-byte boundary isn't split into two broken halves.
+                buf += data
+                while '\n' in buf:
+                    line, buf = buf.split('\n', 1)
                     if not line or '>>' not in line:
                         continue
 
