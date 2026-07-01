@@ -9,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 )
 
 type Anthropic struct {
@@ -24,7 +23,7 @@ func NewAnthropic(apiKey string, models []string) *Anthropic {
 	}
 	return &Anthropic{
 		apiKey: apiKey,
-		http:   &http.Client{Timeout: 120 * time.Second},
+		http:   streamingHTTPClient(),
 		models: models,
 	}
 }
@@ -171,7 +170,7 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 
 	// tool_use blocks stream their args as input_json_delta — accumulate per
 	// content_block index until content_block_stop and assemble the call.

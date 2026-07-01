@@ -45,7 +45,14 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, _ *http.Request) {
 
 func (s *Server) handlePutConfig(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBody)
-	var cfg config.Config
+	// Decode over the existing config, not a zero value, so a partial body
+	// (a client toggling one field) patches rather than wiping every section
+	// it didn't send.
+	cfg, err := config.Load()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
 		http.Error(w, "invalid json: "+err.Error(), http.StatusBadRequest)
 		return

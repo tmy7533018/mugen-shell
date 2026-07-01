@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -232,6 +233,12 @@ func (r *Registry) rejectAppLaunch(args map[string]any) string {
 			aliasBin := filepath.Base(aliasTokens[0])
 			for _, a := range r.allowedApps {
 				if a == aliasBin {
+					// The resolved .desktop Exec is dispatched through /bin/sh
+					// too, so re-gate it — a crafted entry must not smuggle
+					// metacharacters past the check the typed cmd already passed.
+					if strings.ContainsAny(app.Exec, shellMetachars) {
+						return "error: the matched app's launch command contains shell metacharacters and was blocked for safety."
+					}
 					args["cmd"] = app.Exec
 					return ""
 				}
@@ -414,21 +421,36 @@ func sanitizeForLLM(s string) string {
 	return s
 }
 
-// expandTemplate substitutes "{{argName}}" / "{{scripts_dir}}" tokens. Any
-// remaining "{{...}}" tokens cause an error so a missing argument isn't
-// silently passed through to the underlying command.
+var placeholderRe = regexp.MustCompile(`\{\{(\w+)\}\}`)
+
+// expandTemplate substitutes "{{argName}}" / "{{scripts_dir}}" tokens in one
+// pass over the original template token: each placeholder is replaced by its
+// value, and the substituted values are never re-scanned. That way an argument
+// whose value happens to contain "{{...}}" is passed through literally instead
+// of being re-expanded from another argument or rejected as "unresolved". A
+// placeholder in the template with no matching argument is still an error, so a
+// missing argument isn't silently dropped.
 func expandTemplate(tmpl []string, args map[string]any, scriptsDir string) ([]string, error) {
 	out := make([]string, 0, len(tmpl))
 	for _, tok := range tmpl {
-		s := tok
-		if scriptsDir != "" {
-			s = strings.ReplaceAll(s, "{{scripts_dir}}", scriptsDir)
-		}
-		for key, v := range args {
-			s = strings.ReplaceAll(s, "{{"+key+"}}", fmt.Sprint(v))
-		}
-		if strings.Contains(s, "{{") && strings.Contains(s, "}}") {
-			return nil, fmt.Errorf("unresolved placeholder in token %q", tok)
+		var unresolved string
+		s := placeholderRe.ReplaceAllStringFunc(tok, func(m string) string {
+			key := m[2 : len(m)-2]
+			if key == "scripts_dir" {
+				if scriptsDir == "" {
+					unresolved = key
+					return m
+				}
+				return scriptsDir
+			}
+			if v, ok := args[key]; ok {
+				return fmt.Sprint(v)
+			}
+			unresolved = key
+			return m
+		})
+		if unresolved != "" {
+			return nil, fmt.Errorf("unresolved placeholder %q in token %q", unresolved, tok)
 		}
 		out = append(out, s)
 	}

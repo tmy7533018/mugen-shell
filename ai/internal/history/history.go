@@ -184,6 +184,43 @@ func (h *History) RemoveLast() {
 	_ = h.store.RemoveLastMessage(h.convID)
 }
 
+// AddAssistantTo persists an assistant reply to a specific conversation,
+// regardless of which one is currently loaded, so a long streaming turn lands
+// in the conversation it started on even if another request switched the
+// current pointer meanwhile. The in-memory cache is only touched when that
+// conversation is still the current one.
+func (h *History) AddAssistantTo(convID int64, content string) error {
+	if convID == 0 {
+		return nil
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if err := h.store.AppendMessage(convID, "assistant", content); err != nil {
+		return err
+	}
+	if convID == h.convID {
+		h.messages = append(h.messages, provider.Message{Role: "assistant", Content: content})
+		h.truncateLocked()
+	}
+	return nil
+}
+
+// RemoveLastFrom drops the most recent message of a specific conversation,
+// used to roll back a user message when the turn fails before any side effect.
+func (h *History) RemoveLastFrom(convID int64) {
+	if convID == 0 {
+		return
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if err := h.store.RemoveLastMessage(convID); err != nil {
+		return
+	}
+	if convID == h.convID && len(h.messages) > 0 {
+		h.messages = h.messages[:len(h.messages)-1]
+	}
+}
+
 func (h *History) Messages() []provider.Message {
 	h.mu.Lock()
 	defer h.mu.Unlock()

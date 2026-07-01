@@ -24,7 +24,7 @@ func NewGoogle(apiKey string, models []string) *Google {
 	}
 	return &Google{
 		apiKey: apiKey,
-		http:   &http.Client{Timeout: 120 * time.Second},
+		http:   streamingHTTPClient(),
 		models: models,
 	}
 }
@@ -159,7 +159,7 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 
 	var chunk struct {
 		Candidates []struct {

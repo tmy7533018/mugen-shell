@@ -76,6 +76,20 @@ func TestExpandTemplate(t *testing.T) {
 			scriptsDir: "",
 			wantErr:    true,
 		},
+		{
+			name:       "value containing another placeholder is not re-expanded",
+			tmpl:       []string{"--title={{title}}", "--date={{date}}"},
+			args:       map[string]any{"title": "{{date}}", "date": "2026-01-01"},
+			scriptsDir: "",
+			want:       []string{"--title={{date}}", "--date=2026-01-01"},
+		},
+		{
+			name:       "value with literal braces passes through, not rejected",
+			tmpl:       []string{"--title={{title}}"},
+			args:       map[string]any{"title": "meeting {{about}} stuff"},
+			scriptsDir: "",
+			want:       []string{"--title=meeting {{about}} stuff"},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

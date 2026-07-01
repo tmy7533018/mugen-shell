@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"time"
 )
 
 type OpenAI struct {
@@ -28,7 +27,7 @@ func NewOpenAI(baseURL, apiKey string, fixedModels []string) *OpenAI {
 		baseURL:     strings.TrimRight(baseURL, "/"),
 		apiKey:      apiKey,
 		fixedModels: fixedModels,
-		http:        &http.Client{Timeout: 120 * time.Second},
+		http:        streamingHTTPClient(),
 	}
 }
 
@@ -135,7 +134,7 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opt
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 
 	// Streaming tool calls arrive as deltas indexed by `index`; assemble
 	// per-index buffers until finish_reason fires.

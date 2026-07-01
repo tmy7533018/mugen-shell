@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/tmy7533018/mugen-ai/internal/history"
@@ -26,6 +29,11 @@ type Server struct {
 	mcp      *mcp.Manager
 	events   *eventBus
 	confirms *confirmRegistry
+
+	// chatSetupMu serializes the resolve-conversation → append-user-message
+	// window of /chat so two concurrent requests can't interleave on the
+	// shared history pointer and cross-file each other's messages.
+	chatSetupMu sync.Mutex
 }
 
 func New(registry *provider.Registry, hist *history.History, st *store.Store, t *tools.Registry, m *mcp.Manager) *Server {
@@ -69,20 +77,47 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("PUT /config", s.handlePutConfig)
 	mux.HandleFunc("POST /config/restart", s.handleRestart)
 
-	return corsMiddleware(mux)
+	return guardMiddleware(mux)
 }
 
-func corsMiddleware(next http.Handler) http.Handler {
+// guardMiddleware keeps the loopback-only API unreachable from a browser. It
+// refuses non-loopback Host headers (DNS-rebinding) and any request that
+// carries a non-local Origin — a webpage the user is visiting can otherwise
+// POST to 127.0.0.1 and drive tools. No wildcard CORS is emitted, so a
+// cross-origin page can't read responses either.
+func guardMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		if !isLoopbackHost(r.Host) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		if origin := r.Header.Get("Origin"); origin != "" && !isLoopbackOrigin(origin) {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func isLoopbackHost(host string) bool {
+	h := host
+	if i := strings.LastIndex(h, ":"); i >= 0 && !strings.Contains(h[i:], "]") {
+		h = h[:i]
+	}
+	h = strings.Trim(h, "[]")
+	return h == "127.0.0.1" || h == "localhost" || h == "::1"
+}
+
+func isLoopbackOrigin(origin string) bool {
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	return isLoopbackHost(u.Host)
 }
 
 type chatRequest struct {
@@ -97,6 +132,51 @@ type chatRequest struct {
 	Thinking *bool `json:"thinking,omitempty"`
 }
 
+// beginChatTurn resolves the conversation, model, and thinking flag and
+// appends the user message under chatSetupMu, then snapshots the message list.
+// Everything downstream works off the returned request-local copies, so a
+// concurrent /chat switching the shared current pointer can't retarget this
+// turn. A non-nil error carries the HTTP status to report.
+func (s *Server) beginChatTurn(req chatRequest) (convID int64, model string, thinking bool, msgs []provider.Message, status int, err error) {
+	s.chatSetupMu.Lock()
+	defer s.chatSetupMu.Unlock()
+
+	if err = s.history.Switch(req.ConversationID); err != nil {
+		return 0, "", false, nil, http.StatusBadRequest, err
+	}
+
+	// Bound model wins for existing conversations; new ones fall back
+	// req.Model → registry default.
+	model = s.history.ConvModel()
+	if model == "" {
+		model = req.Model
+	}
+	if model == "" {
+		model = s.registry.Model()
+	}
+	if model == "" {
+		return 0, "", false, nil, http.StatusServiceUnavailable, fmt.Errorf("no model configured")
+	}
+
+	// Resolve thinking: explicit request wins; otherwise inherit from the
+	// bound conversation (or false for a brand-new one).
+	thinking = s.history.ConvThinking()
+	if req.Thinking != nil {
+		thinking = *req.Thinking
+		if s.history.ConvID() != 0 {
+			if err = s.history.SetConvThinking(thinking); err != nil {
+				return 0, "", false, nil, http.StatusInternalServerError, err
+			}
+		}
+	}
+
+	if err = s.history.Add("user", req.Message, model, thinking); err != nil {
+		return 0, "", false, nil, http.StatusInternalServerError, err
+	}
+
+	return s.history.ConvID(), model, thinking, s.history.Messages(), 0, nil
+}
+
 func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBody)
 
@@ -106,46 +186,12 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 0 starts a fresh conversation, >0 appends to that one. Explicit per
-	// request so two open windows don't race on a shared current pointer.
-	if err := s.history.Switch(req.ConversationID); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	convID, model, thinking, msgs, status, err := s.beginChatTurn(req)
+	if err != nil {
+		http.Error(w, err.Error(), status)
 		return
 	}
 
-	// Bound model wins for existing conversations; new ones fall back
-	// req.Model → registry default.
-	model := s.history.ConvModel()
-	if model == "" {
-		model = req.Model
-	}
-	if model == "" {
-		model = s.registry.Model()
-	}
-	if model == "" {
-		http.Error(w, "no model configured", http.StatusServiceUnavailable)
-		return
-	}
-
-	// Resolve thinking: explicit request wins; otherwise inherit from the
-	// bound conversation (or false for a brand-new one).
-	thinking := s.history.ConvThinking()
-	if req.Thinking != nil {
-		thinking = *req.Thinking
-		if s.history.ConvID() != 0 {
-			if err := s.history.SetConvThinking(thinking); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		}
-	}
-
-	if err := s.history.Add("user", req.Message, model, thinking); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	convID := s.history.ConvID()
 	s.events.broadcast("conversations", nil)
 	s.events.broadcast("messages", map[string]any{"conversation_id": convID})
 
@@ -162,7 +208,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	// Up-front sync: rapid follow-up messages otherwise raced on the
 	// not-yet-loaded conversation id.
 	idData, _ := json.Marshal(map[string]any{
-		"conversation_id": s.history.ConvID(),
+		"conversation_id": convID,
 		"model":           model,
 	})
 	fmt.Fprintf(w, "data: %s\n\n", idData)
@@ -173,7 +219,6 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	const maxIterations = 5
 	tools := providerTools(s.tools.List())
 	opts := provider.ChatOptions{Tools: tools, Thinking: thinking}
-	msgs := s.history.Messages()
 
 	sendEvent := func(payload map[string]any) {
 		data, _ := json.Marshal(payload)
@@ -190,12 +235,12 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	persistOnError := func(errMsg string) {
 		if sideEffected {
 			if fullResponse != "" {
-				_ = s.history.Add("assistant", fullResponse, model, thinking)
+				_ = s.history.AddAssistantTo(convID, fullResponse)
 				s.events.broadcast("conversations", nil)
 				s.events.broadcast("messages", map[string]any{"conversation_id": convID})
 			}
 		} else {
-			s.history.RemoveLast()
+			s.history.RemoveLastFrom(convID)
 		}
 		sendEvent(map[string]any{"error": errMsg, "done": true})
 	}
@@ -224,7 +269,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 
 		if len(iterToolCalls) == 0 {
 			if fullResponse != "" {
-				_ = s.history.Add("assistant", fullResponse, model, thinking)
+				_ = s.history.AddAssistantTo(convID, fullResponse)
 				s.events.broadcast("conversations", nil)
 				s.events.broadcast("messages", map[string]any{"conversation_id": convID})
 			}
@@ -610,6 +655,12 @@ func (s *Server) handleToolCall(w http.ResponseWriter, r *http.Request) {
 	var req toolCallRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
 		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	// This debug path has no user in the loop, so it must not be a way around
+	// the confirmation gate — those tools are only runnable via /chat.
+	if s.tools.NeedsConfirm(req.Name) {
+		http.Error(w, "tool requires confirmation; invoke via /chat", http.StatusForbidden)
 		return
 	}
 	result, err := s.tools.Call(r.Context(), req.Name, req.Args)

@@ -4,7 +4,13 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 )
+
+// providerProbeTimeout bounds each provider's model-listing probe so a hung
+// backend (e.g. an Ollama daemon accepting connections but never replying)
+// can't stall model resolution for a chat routed to a different provider.
+const providerProbeTimeout = 5 * time.Second
 
 type Registry struct {
 	mu        sync.RWMutex
@@ -45,13 +51,21 @@ func (r *Registry) ChatWith(ctx context.Context, model string, messages []Messag
 func (r *Registry) Models(ctx context.Context) ([]string, error) {
 	var all []string
 	for _, p := range r.providers {
-		models, err := p.Models(ctx)
+		models, err := probeModels(ctx, p)
 		if err != nil {
 			continue
 		}
 		all = append(all, models...)
 	}
 	return all, nil
+}
+
+// probeModels lists a provider's models under a bounded timeout so one
+// unresponsive backend can't hang model resolution for the others.
+func probeModels(ctx context.Context, p Provider) ([]string, error) {
+	probeCtx, cancel := context.WithTimeout(ctx, providerProbeTimeout)
+	defer cancel()
+	return p.Models(probeCtx)
 }
 
 func (r *Registry) Ping(ctx context.Context) bool {
@@ -67,7 +81,7 @@ func (r *Registry) providerFor(ctx context.Context, model string) (Provider, err
 		return nil, fmt.Errorf("no model configured")
 	}
 	for _, p := range r.providers {
-		models, err := p.Models(ctx)
+		models, err := probeModels(ctx, p)
 		if err != nil {
 			continue
 		}

@@ -118,7 +118,7 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
-	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 
 	var toolCalls []ToolCall
 	for scanner.Scan() {

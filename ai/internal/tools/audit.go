@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"unicode/utf8"
 )
 
 type Auditor struct {
@@ -49,6 +50,10 @@ func (a *Auditor) Log(tool string, args map[string]any, result string, callErr e
 func truncate(s string, n int) string {
 	if len(s) <= n {
 		return s
+	}
+	// Back off to a rune boundary so the audit log stays valid UTF-8.
+	for n > 0 && !utf8.RuneStart(s[n]) {
+		n--
 	}
 	return s[:n] + "…"
 }
