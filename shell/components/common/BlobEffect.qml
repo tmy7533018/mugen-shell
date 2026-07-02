@@ -1,8 +1,13 @@
 import QtQuick
 
+// GPU blob: each layer is one ShaderEffect quad evaluating the wavering
+// edge analytically (assets/shaders/blob.frag), replacing the old Canvas
+// polygon that repainted + re-uploaded on a 150ms CPU timer. Public API is
+// unchanged; pointCount is kept for compatibility but no longer applies —
+// the GLSL edge is resolution-independent.
 Item {
     id: root
-    
+
     property color blobColor: Qt.rgba(0.65, 0.55, 0.85, 0.9)
     property int layers: 3
     property real waveAmplitude: 3.0
@@ -12,101 +17,46 @@ Item {
     property bool running: true
     property real edgeAlpha: 0.0
 
-    function getLayerOpacity(layerIndex) {
-        return baseOpacity - layerIndex * 0.12
+    // Shared clock in seconds; per-layer speed scales inside the shader.
+    // Restarting on visibility keeps hidden blobs truly idle (no uniform
+    // churn), matching the old timer's behaviour.
+    property real time: 0
+    NumberAnimation on time {
+        running: root.running && root.visible
+        loops: Animation.Infinite
+        from: 0
+        to: 3600
+        duration: 3600000
     }
-    
-    function getLayerAmplitude(layerIndex) {
-        return waveAmplitude + layerIndex * 3.0
-    }
-    
+
     Repeater {
         model: root.layers
-        
-        Item {
-            id: blobLayer
+
+        ShaderEffect {
             anchors.fill: parent
-            opacity: root.getLayerOpacity(index)
-            
-            Canvas {
-                id: blobCanvas
-                anchors.fill: parent
-                
-                property var offsets: []
-                property real layerWaveAmplitude: root.getLayerAmplitude(index)
-                
-                Component.onCompleted: {
-                    offsets = []
-                    for (let i = 0; i < root.pointCount; i++) {
-                        offsets.push(Math.random() * Math.PI * 2)
-                    }
-                    requestPaint()
-                }
-                
-                onPaint: {
-                    let ctx = getContext("2d")
-                    ctx.reset()
-                    
-                    let centerX = width / 2
-                    let centerY = height / 2
-                    let baseRadius = Math.max(15, Math.min(width, height) / 2 - layerWaveAmplitude * 2)
-                    
-                    ctx.beginPath()
-                    
-                    for (let i = 0; i <= root.pointCount; i++) {
-                        let angle = (i / root.pointCount) * Math.PI * 2
-                        let waveOffset = Math.sin(offsets[i % root.pointCount]) * layerWaveAmplitude
-                        let radius = baseRadius + waveOffset
-                        
-                        let x = centerX + Math.cos(angle) * radius
-                        let y = centerY + Math.sin(angle) * radius
-                        
-                        if (i === 0) {
-                            ctx.moveTo(x, y)
-                        } else {
-                            ctx.lineTo(x, y)
-                        }
-                    }
-                    
-                    ctx.closePath()
-                    
-                    let gradient = ctx.createRadialGradient(
-                        centerX, centerY, 0,
-                        centerX, centerY, baseRadius
-                    )
-                    gradient.addColorStop(0, Qt.rgba(
-                        root.blobColor.r,
-                        root.blobColor.g,
-                        root.blobColor.b,
-                        0.9 - index * 0.12
-                    ))
-                    gradient.addColorStop(1, Qt.rgba(
-                        root.blobColor.r,
-                        root.blobColor.g,
-                        root.blobColor.b,
-                        root.edgeAlpha
-                    ))
-                    
-                    ctx.fillStyle = gradient
-                    ctx.fill()
-                }
-                
-                Timer {
-                    interval: root.visible && root.running ? 150 : 1000
-                    running: root.running && root.visible && parent.visible
-                    repeat: true
-                    onTriggered: {
-                        if (!root.visible || !root.running) {
-                            return
-                        }
-                        for (let i = 0; i < root.pointCount; i++) {
-                            blobCanvas.offsets[i] += (root.animationSpeed + index * 0.15) * 2
-                        }
-                        blobCanvas.requestPaint()
-                    }
-                }
-            }
+            opacity: root.baseOpacity - index * 0.12
+            blending: true
+
+            readonly property real sizePx: Math.min(width, height)
+            readonly property real ampPx: root.waveAmplitude + index * 3.0
+
+            property color blobColor: root.blobColor
+            property real time: root.time
+            property real baseRadius: sizePx > 0 ? Math.max(15, sizePx / 2 - ampPx * 2) / sizePx : 0.25
+            property real amplitude: sizePx > 0 ? ampPx / sizePx : 0.02
+            property real centerAlpha: 0.9 - index * 0.12
+            property real edgeAlpha: root.edgeAlpha
+            // The Canvas advanced phases by (speed + idx*0.15)*2 per 150ms
+            // tick; 13.33 rad/s per unit keeps the same perceived tempo.
+            property real speed: (root.animationSpeed + index * 0.15) * 13.33
+            // Random per-instance phases replace the old per-vertex random
+            // offsets, so no two blobs ripple in sync.
+            property real phase1: Math.random() * 6.2832
+            property real phase2: Math.random() * 6.2832
+            property real phase3: Math.random() * 6.2832
+            property real aa: sizePx > 0 ? 1.5 / sizePx : 0.01
+
+            fragmentShader: Qt.resolvedUrl("../../assets/shaders/blob.frag.qsb")
         }
     }
 }
-
