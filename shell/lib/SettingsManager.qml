@@ -97,17 +97,21 @@ QtObject {
 
         let jsonString = JSON.stringify(settings, null, 2)
 
+        // Atomic write (tmp + rename): every shell process re-reads this file
+        // on change, and a reader hitting a truncate-in-progress used to see
+        // an empty file and clobber the user's settings with defaults.
         saveSettingsProcess.command = [
             "bash", "-c",
-            "mkdir -p \"" + configDir + "\" && cat > \"" + userSettingsFile + "\" <<'JSON_EOF'\n" + jsonString + "\nJSON_EOF"
+            "mkdir -p \"" + configDir + "\" && cat > \"" + userSettingsFile + ".tmp\" <<'JSON_EOF' && mv \"" + userSettingsFile + ".tmp\" \"" + userSettingsFile + "\"\n" + jsonString + "\nJSON_EOF"
         ]
         saveSettingsProcess.running = true
     }
 
     function resetToDefault() {
+        // Same atomic tmp + rename as saveSettings — cp truncates in place.
         resetProcess.command = [
             "bash", "-c",
-            "mkdir -p \"" + configDir + "\" && cp \"" + defaultSettingsFile + "\" \"" + userSettingsFile + "\""
+            "mkdir -p \"" + configDir + "\" && cp \"" + defaultSettingsFile + "\" \"" + userSettingsFile + ".tmp\" && mv \"" + userSettingsFile + ".tmp\" \"" + userSettingsFile + "\""
         ]
         resetProcess.running = true
     }
@@ -262,18 +266,41 @@ QtObject {
 
         onExited: (exitCode) => {
             if (exitCode === 0 && readSettingsProcess.output.trim().length > 0) {
+                settingsManager._loadRetries = 0
                 applySettingsFromJson(readSettingsProcess.output)
+            } else if (exitCode !== 0) {
+                // File genuinely missing: first run, seed it from defaults.
+                readDefaultSettingsProcess.seed = true
+                readDefaultSettingsProcess.running = true
+            } else if (settingsManager._loadRetries < 3) {
+                // Existing file read back empty — almost certainly raced a
+                // writer mid-save. Retry; never overwrite the user's file
+                // from this path.
+                settingsManager._loadRetries++
+                retryLoadTimer.restart()
             } else {
+                settingsManager._loadRetries = 0
+                readDefaultSettingsProcess.seed = false
                 readDefaultSettingsProcess.running = true
             }
             readSettingsProcess.output = ""
         }
     }
 
+    property int _loadRetries: 0
+
+    property Timer retryLoadTimer: Timer {
+        interval: 250
+        onTriggered: settingsManager.loadSettings()
+    }
+
     property Process readDefaultSettingsProcess: Process {
         command: ["cat", settingsManager.defaultSettingsFile]
         running: false
         property string output: ""
+        // Whether applying defaults may be written back to the user file.
+        // Only true for a genuinely missing file (first run).
+        property bool seed: true
 
         stdout: SplitParser {
             onRead: data => {
@@ -284,8 +311,7 @@ QtObject {
         onExited: (exitCode) => {
             if (exitCode === 0 && readDefaultSettingsProcess.output.trim().length > 0) {
                 applySettingsFromJson(readDefaultSettingsProcess.output)
-                // Copy defaults to user settings so future loads use the user file
-                saveSettings()
+                if (readDefaultSettingsProcess.seed) saveSettings()
             }
             readDefaultSettingsProcess.output = ""
         }
