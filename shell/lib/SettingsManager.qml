@@ -32,6 +32,9 @@ QtObject {
     property int yuraPanelWidth: 700
     property int yuraPanelHeight: 640
     property bool yuraSidebarCollapsed: false
+    property bool yuraIdleBreath: true
+    property int yuraAutoCollapseMin: 0  // auto-close the float after idle minutes; 0 = never
+    property string yuraTypingSpeed: "instant"  // "instant" | "fast" | "normal" | "slow"
 
     // Suppress save while we are applying values that just came in from disk
     // (either initial load or an external write detected by the file watcher).
@@ -85,7 +88,10 @@ QtObject {
                 "panelSide": yuraPanelSide,
                 "panelWidth": yuraPanelWidth,
                 "panelHeight": yuraPanelHeight,
-                "sidebarCollapsed": yuraSidebarCollapsed
+                "sidebarCollapsed": yuraSidebarCollapsed,
+                "idleBreath": yuraIdleBreath,
+                "autoCollapseMin": yuraAutoCollapseMin,
+                "typingSpeed": yuraTypingSpeed
             }
         }
 
@@ -188,6 +194,15 @@ QtObject {
                 }
                 if (settings.yura.sidebarCollapsed !== undefined) {
                     yuraSidebarCollapsed = settings.yura.sidebarCollapsed
+                }
+                if (settings.yura.idleBreath !== undefined) {
+                    yuraIdleBreath = settings.yura.idleBreath
+                }
+                if (settings.yura.autoCollapseMin !== undefined) {
+                    yuraAutoCollapseMin = settings.yura.autoCollapseMin
+                }
+                if (settings.yura.typingSpeed !== undefined) {
+                    yuraTypingSpeed = settings.yura.typingSpeed
                 }
             }
 

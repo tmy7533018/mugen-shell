@@ -32,6 +32,9 @@
     "panelSide": "left",
     "panelWidth": 700,
     "panelHeight": 640,
-    "sidebarCollapsed": false
+    "sidebarCollapsed": false,
+    "idleBreath": true,
+    "autoCollapseMin": 0,
+    "typingSpeed": "instant"
   }
 }

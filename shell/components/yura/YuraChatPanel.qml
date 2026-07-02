@@ -135,7 +135,10 @@ PanelWindow {
         // Passive — it monitors taps without stealing them from the input
         // field or buttons underneath.
         TapHandler {
-            onPressedChanged: if (pressed) chatWindow.grabWanted = true
+            onPressedChanged: if (pressed) {
+                chatWindow.grabWanted = true
+                idleCollapse.restart()
+            }
         }
 
         NumberAnimation {
@@ -338,6 +341,7 @@ PanelWindow {
                 idleBreathPeak: 1.20
                 idleBreathDuration: 1400
                 active: yuraState.expanded
+                breathEnabled: chatWindow.settingsManager ? chatWindow.settingsManager.yuraIdleBreath : true
             }
 
             MouseArea {
@@ -351,7 +355,10 @@ PanelWindow {
         MouseArea {
             anchors.fill: parent
             acceptedButtons: Qt.NoButton
+            hoverEnabled: true
             onWheel: (w) => w.accepted = false
+            // Mouse presence counts as activity for the idle auto-collapse.
+            onPositionChanged: idleCollapse.restart()
         }
 
         Item {
@@ -407,6 +414,17 @@ PanelWindow {
                 event.accepted = true
             }
         }
+    }
+
+    // Close the panel after idle minutes (Settings → Yura UI). Streaming
+    // pauses the countdown; taps and mouse movement inside restart it.
+    Timer {
+        id: idleCollapse
+        interval: Math.max(1, chatWindow.settingsManager ? chatWindow.settingsManager.yuraAutoCollapseMin : 0) * 60 * 1000
+        running: yuraState.expanded
+            && (chatWindow.settingsManager ? chatWindow.settingsManager.yuraAutoCollapseMin : 0) > 0
+            && !(contentLoader.item && contentLoader.item.streaming)
+        onTriggered: yuraState.close()
     }
 
     // "One orb" illusion: a stand-in orb flies from the bar spotlight's

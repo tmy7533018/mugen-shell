@@ -59,6 +59,43 @@ FocusScope {
     // { confirm_id, name, arguments }. Cleared the moment it is answered.
     property var pendingConfirm: null
 
+    // Typewriter reveal for the streaming reply. State lives here (not in
+    // the delegate) because each chunk reassigns `messages` and rebuilds
+    // the delegates. revealActive gates the substring so an old message is
+    // never re-revealed after a conversation switch.
+    readonly property string typingSpeed: settingsManager ? settingsManager.yuraTypingSpeed : "instant"
+    readonly property int revealStep: typingSpeed === "slow" ? 2 : typingSpeed === "normal" ? 6 : 16
+    property int streamRevealed: 0
+    property bool revealActive: false
+    readonly property string latestStreamContent: {
+        if (messages.length === 0) return ""
+        let m = messages[messages.length - 1]
+        return m.role === "assistant" ? (m.content || "") : ""
+    }
+
+    onStreamingChanged: {
+        if (streaming) {
+            streamRevealed = 0
+            revealActive = typingSpeed !== "instant"
+        }
+    }
+
+    Timer {
+        id: revealTimer
+        interval: 30
+        repeat: true
+        running: root.revealActive
+        onTriggered: {
+            if (root.streamRevealed < root.latestStreamContent.length) {
+                root.streamRevealed = Math.min(
+                    root.streamRevealed + root.revealStep,
+                    root.latestStreamContent.length)
+            } else if (!root.streaming) {
+                root.revealActive = false
+            }
+        }
+    }
+
     function appendMessage(role, content) {
         let copy = messages.slice()
         copy.push({ role: role, content: content })
@@ -681,8 +718,13 @@ FocusScope {
                     && isAssistant
                     && modelData.content === ""
                 readonly property bool showInlineOrb: isAssistant && isLatest
+                // While the typewriter is active the newest reply renders a
+                // revealed prefix instead of everything received so far.
+                readonly property string displayContent: (isAssistant && isLatest && root.revealActive)
+                    ? modelData.content.substring(0, root.streamRevealed)
+                    : modelData.content
                 readonly property var assistantBlocks: isAssistant && !isThinking
-                    ? root.parseBlocks(modelData.content)
+                    ? root.parseBlocks(displayContent)
                     : []
 
                 Column {
@@ -1224,6 +1266,7 @@ FocusScope {
             try {
                 let obj = JSON.parse(loadCurrentProcess.buf)
                 let sameConv = (root.currentConvId === (obj.id || 0))
+                if (!sameConv) root.revealActive = false
                 root.currentConvId = obj.id || 0
                 let msgs = obj.messages || []
                 // Persisted history keeps only role/content; tool-call chips

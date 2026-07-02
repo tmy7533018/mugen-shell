@@ -8,6 +8,7 @@ Item {
     property color orbColor: Qt.rgba(0.65, 0.55, 0.85, 0.9)
     property bool streaming: false
     property bool active: true
+    property bool breathEnabled: true
     property bool showHalo: true
     property real haloScale: 1.5
     property real haloOpacity: 0.5
@@ -45,11 +46,13 @@ Item {
             return
         }
         if (streaming) streamPulse.start()
-        else idleBreath.start()
+        else if (breathEnabled) idleBreath.start()
+        else pulseScale = 1.0
     }
 
     onActiveChanged: refresh()
     onStreamingChanged: refresh()
+    onBreathEnabledChanged: refresh()
     Component.onCompleted: refresh()
 
     transform: Scale {
