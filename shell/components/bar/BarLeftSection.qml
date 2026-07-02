@@ -155,7 +155,7 @@ RowLayout {
         id: timerPill
         Layout.alignment: Qt.AlignVCenter
         Layout.leftMargin: scaled(8)
-        Layout.preferredWidth: visible ? pillText.implicitWidth + scaled(22) + scaled(17) : 0
+        Layout.preferredWidth: visible ? pillText.implicitWidth + scaled(22) : 0
         Layout.preferredHeight: scaled(26)
         visible: root.timerManager && (root.timerManager.running || root.timerManager.alerting)
 
@@ -197,43 +197,22 @@ RowLayout {
             Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
         }
 
-        RowLayout {
+        Text {
+            id: pillText
             anchors.centerIn: parent
-            spacing: scaled(5)
-
-            // Miniature ember mirroring the timer state: flickers while
-            // running, freezes on pause, races when urgent or done.
-            Common.BlobEffect {
-                Layout.preferredWidth: scaled(12)
-                Layout.preferredHeight: scaled(12)
-                Layout.alignment: Qt.AlignVCenter
-                blobColor: timerPill.urgent || (root.timerManager && root.timerManager.alerting)
-                    ? Qt.rgba(0.95, 0.40, 0.45, 1)
-                    : (root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
-                layers: 1
-                waveAmplitude: 1.0
-                baseOpacity: 0.95
-                animationSpeed: timerPill.urgent || (root.timerManager && root.timerManager.alerting) ? 0.2 : 0.05
-                running: timerPill.visible && !(root.timerManager && root.timerManager.paused)
+            text: {
+                if (!root.timerManager) return "00:00"
+                if (root.timerManager.alerting) return "DONE"
+                return timerPill._formatRemaining(root.timerManager.remainingSec)
             }
+            color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
+            opacity: pillHover.containsMouse ? 1.0 : 0.6
+            font.pixelSize: root.typo ? scaled(root.typo.clockStyle.size * 0.78) : scaled(11)
+            font.weight: Font.Medium
+            font.family: root.typo ? root.typo.clockStyle.family : "M PLUS 2"
+            font.letterSpacing: 0.5
 
-            Text {
-                id: pillText
-                Layout.alignment: Qt.AlignVCenter
-                text: {
-                    if (!root.timerManager) return "00:00"
-                    if (root.timerManager.alerting) return "DONE"
-                    return timerPill._formatRemaining(root.timerManager.remainingSec)
-                }
-                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
-                opacity: pillHover.containsMouse ? 1.0 : 0.6
-                font.pixelSize: root.typo ? scaled(root.typo.clockStyle.size * 0.78) : scaled(11)
-                font.weight: Font.Medium
-                font.family: root.typo ? root.typo.clockStyle.family : "M PLUS 2"
-                font.letterSpacing: 0.5
-
-                Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
-            }
+            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
         }
 
         MouseArea {
