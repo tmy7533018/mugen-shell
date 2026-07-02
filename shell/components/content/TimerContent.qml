@@ -12,9 +12,9 @@ Item {
     required property var timerManager
 
     readonly property var requiredBarSize: ({
-        "height": modeManager.scale(190),
-        "leftMargin": modeManager.scale(740),
-        "rightMargin": modeManager.scale(740),
+        "height": modeManager.scale(188),
+        "leftMargin": modeManager.scale(860),
+        "rightMargin": modeManager.scale(860),
         "topMargin": modeManager.scale(6),
         "bottomMargin": modeManager.scale(6)
     })
@@ -86,11 +86,6 @@ Item {
             timerManager.start(sec)
             inputBuffer = ""
         }
-    }
-
-    function startPreset(seconds) {
-        inputBuffer = ""
-        if (timerManager) timerManager.start(seconds)
     }
 
     Timer {
@@ -203,7 +198,16 @@ Item {
             }
 
             if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                root.startFromInput()
+                if (root.hasInput) root.startFromInput()
+                else if (timerManager) timerManager.start(dial.minutes * 60)
+                event.accepted = true
+                return
+            }
+            if (event.key === Qt.Key_Up || event.key === Qt.Key_Down) {
+                root.inputBuffer = ""
+                const step = (event.modifiers & Qt.ShiftModifier) ? 5 : 1
+                dial.minutes = Math.max(1, Math.min(60,
+                    dial.minutes + (event.key === Qt.Key_Up ? step : -step)))
                 event.accepted = true
                 return
             }
@@ -236,7 +240,7 @@ Item {
         ColumnLayout {
             id: idleLayout
             anchors.centerIn: parent
-            spacing: modeManager.scale(14)
+            spacing: modeManager.scale(10)
             opacity: root.visualState === "idle" ? 1.0 : 0.0
             visible: opacity > 0.01
 
@@ -249,151 +253,226 @@ Item {
                 NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
             }
 
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                spacing: modeManager.scale(16)
 
-                // Unlit ember — brightens and stirs as a duration is typed.
-                Common.BlobEffect {
-                    Layout.preferredWidth: modeManager.scale(30)
-                    Layout.preferredHeight: modeManager.scale(30)
-                    Layout.alignment: Qt.AlignVCenter
-                    blobColor: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
-                    layers: 2
-                    waveAmplitude: 1.5
-                    baseOpacity: root.hasInput ? 0.85 : 0.4
-                    animationSpeed: root.hasInput ? 0.08 : 0.025
-                    running: idleLayout.visible
+                // Dial: scroll (or ↑↓ / drag the knob) sets minutes; click
+                // the center or press Enter to start. Typing digits still
+                // works — the center display switches to the typed buffer.
+                // Same 116px circle the running progress ring uses, so the
+                // dial you set becomes the ring that counts down.
+                Item {
+                    id: dial
+                    Layout.preferredWidth: modeManager.scale(116)
+                    Layout.preferredHeight: modeManager.scale(116)
+                    Layout.alignment: Qt.AlignHCenter
 
-                    Behavior on baseOpacity { NumberAnimation { duration: Theme.Motion.standard } }
-                }
+                    property int minutes: 10
+                    readonly property bool typing: root.inputBuffer.length > 0
+                    readonly property real fraction: typing
+                        ? Math.min(1, root.parseInputSeconds() / 3600)
+                        : minutes / 60
 
-                Text {
-                    id: bigDisplay
-                    Layout.alignment: Qt.AlignVCenter
-                    text: root.inputBuffer.length > 0 ? root.formatInputDisplay() : "M:SS"
-                    color: root.inputBuffer.length > 0
-                        ? (theme ? theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95))
-                        : (theme ? Qt.rgba(theme.textFaint.r, theme.textFaint.g, theme.textFaint.b, 0.45) : Qt.rgba(0.62, 0.62, 0.72, 0.45))
-                    font.pixelSize: modeManager.scale(34)
-                    font.weight: Font.Light
-                    font.family: "M PLUS 2"
-                    font.letterSpacing: modeManager.scale(2)
-
-                    Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-
-                    layer.enabled: root.hasInput
-                    layer.effect: Glow {
-                        samples: 20
-                        radius: modeManager.scale(8)
-                        spread: 0.3
-                        color: theme
-                            ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.40)
-                            : Qt.rgba(0.65, 0.55, 0.85, 0.40)
-                        transparentBorder: true
+                    function setFromAngle(mx, my) {
+                        let rel = Math.atan2(my - height / 2, mx - width / 2) + Math.PI / 2
+                        if (rel < 0) rel += Math.PI * 2
+                        root.inputBuffer = ""
+                        minutes = Math.max(1, Math.min(60, Math.round(rel / (Math.PI * 2) * 60)))
                     }
-                }
 
-                Rectangle {
-                    id: caret
-                    Layout.alignment: Qt.AlignVCenter
-                    Layout.preferredWidth: modeManager.scale(2)
-                    Layout.preferredHeight: modeManager.scale(28)
-                    color: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1)
-                    visible: focusScope.activeFocus && root.visualState === "idle"
+                    onFractionChanged: dialCanvas.requestPaint()
 
-                    SequentialAnimation on opacity {
-                        loops: Animation.Infinite
-                        running: caret.visible
-                        NumberAnimation { from: 1.0; to: 0.35; duration: 720; easing.type: Easing.InOutSine }
-                        NumberAnimation { from: 0.35; to: 1.0; duration: 720; easing.type: Easing.InOutSine }
-                    }
-                }
+                    Canvas {
+                        id: dialCanvas
+                        anchors.fill: parent
+                        antialiasing: true
 
-                Text {
-                    Layout.alignment: Qt.AlignVCenter
-                    Layout.leftMargin: modeManager.scale(4)
-                    text: "↵"
-                    color: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1)
-                    font.pixelSize: modeManager.scale(14)
-                    font.family: "M PLUS 2"
-                    opacity: root.hasInput ? 0.95 : 0.0
-                    visible: opacity > 0.01
+                        property color trackColor: theme
+                            ? Qt.rgba(theme.textFaint.r, theme.textFaint.g, theme.textFaint.b, 0.18)
+                            : Qt.rgba(0.62, 0.62, 0.72, 0.18)
+                        property color arcColor: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.95)
 
-                    Behavior on opacity { NumberAnimation { duration: Theme.Motion.micro } }
-                }
-            }
+                        onTrackColorChanged: requestPaint()
+                        onArcColorChanged: requestPaint()
 
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                spacing: modeManager.scale(8)
+                        onPaint: {
+                            const ctx = getContext("2d")
+                            ctx.reset()
+                            const cx = width / 2
+                            const cy = height / 2
+                            const r = Math.min(cx, cy) - modeManager.scale(6)
 
-                Repeater {
-                    model: [
-                        { label: "1m", seconds: 60 },
-                        { label: "5m", seconds: 300 },
-                        { label: "10m", seconds: 600 },
-                        { label: "25m", seconds: 1500 },
-                        { label: "60m", seconds: 3600 }
-                    ]
+                            ctx.beginPath()
+                            ctx.lineWidth = modeManager.scale(4)
+                            ctx.strokeStyle = trackColor
+                            ctx.arc(cx, cy, r, 0, Math.PI * 2)
+                            ctx.stroke()
 
-                    delegate: Rectangle {
-                        Layout.preferredWidth: modeManager.scale(68)
-                        Layout.preferredHeight: modeManager.scale(36)
-                        radius: height / 2
-                        property bool isSelected: root.parseInputSeconds() === modelData.seconds
-                        color: isSelected
-                            ? (theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.20) : Qt.rgba(0.65, 0.55, 0.85, 0.20))
-                            : (presetHover.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent")
-                        border.width: 1
-                        border.color: isSelected
-                            ? (theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.55) : Qt.rgba(0.65, 0.55, 0.85, 0.55))
-                            : (theme ? Qt.rgba(theme.textFaint.r, theme.textFaint.g, theme.textFaint.b, 0.30) : Qt.rgba(0.62, 0.62, 0.72, 0.30))
+                            if (dial.fraction > 0) {
+                                const end = -Math.PI / 2 + Math.PI * 2 * dial.fraction
+                                ctx.beginPath()
+                                ctx.lineWidth = modeManager.scale(4)
+                                ctx.lineCap = "round"
+                                ctx.strokeStyle = arcColor
+                                ctx.arc(cx, cy, r, -Math.PI / 2, end)
+                                ctx.stroke()
 
-                        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-                        Behavior on border.color { ColorAnimation { duration: Theme.Motion.micro } }
+                                ctx.fillStyle = theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 1, 1)
+                                ctx.beginPath()
+                                ctx.arc(cx + Math.cos(end) * r, cy + Math.sin(end) * r, modeManager.scale(5), 0, Math.PI * 2)
+                                ctx.fill()
+                            }
+                        }
 
-                        layer.enabled: isSelected || presetHover.containsMouse
+                        layer.enabled: true
                         layer.effect: Glow {
-                            samples: 20
-                            radius: modeManager.scale(8)
-                            spread: 0.4
+                            samples: 24
+                            radius: modeManager.scale(dialMouse.containsMouse ? 12 : 8)
+                            spread: 0.35
                             color: theme
-                                ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, isSelected ? 0.45 : 0.25)
-                                : Qt.rgba(0.65, 0.55, 0.85, isSelected ? 0.45 : 0.25)
+                                ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.45)
+                                : Qt.rgba(0.65, 0.55, 0.85, 0.45)
                             transparentBorder: true
 
-                            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                            Behavior on radius { NumberAnimation { duration: Theme.Motion.fast } }
+                        }
+                    }
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 0
+
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: dial.typing ? root.formatInputDisplay() : dial.minutes
+                            color: theme ? theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
+                            font.pixelSize: modeManager.scale(dial.typing ? 24 : 32)
+                            font.weight: Font.Light
+                            font.family: "M PLUS 2"
+
+                            layer.enabled: true
+                            layer.effect: Glow {
+                                samples: 20
+                                radius: modeManager.scale(7)
+                                spread: 0.3
+                                color: theme
+                                    ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.40)
+                                    : Qt.rgba(0.65, 0.55, 0.85, 0.40)
+                                transparentBorder: true
+                            }
                         }
 
                         Text {
-                            anchors.centerIn: parent
-                            text: modelData.label
-                            color: isSelected
-                                ? (theme ? theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95))
-                                : (theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.85))
-                            font.pixelSize: modeManager.scale(12)
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: "MIN"
+                            opacity: dial.typing ? 0.0 : 1.0
+
+                            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
+                            color: theme ? theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.65)
+                            font.pixelSize: modeManager.scale(8)
                             font.weight: Font.Medium
+                            font.family: "M PLUS 2"
+                            font.letterSpacing: 1.8
+                        }
+                    }
+
+                    MouseArea {
+                        id: dialMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+
+                        property bool dragged: false
+
+                        onWheel: (wheel) => {
+                            root.inputBuffer = ""
+                            const step = (wheel.modifiers & Qt.ShiftModifier) ? 5 : 1
+                            const dir = wheel.angleDelta.y > 0 ? 1 : -1
+                            dial.minutes = Math.max(1, Math.min(60, dial.minutes + dir * step))
+                        }
+                        onPressed: dragged = false
+                        onPositionChanged: (mouse) => {
+                            if (pressed) {
+                                dragged = true
+                                dial.setFromAngle(mouse.x, mouse.y)
+                            }
+                        }
+                        onClicked: {
+                            if (dialMouse.dragged) return
+                            if (root.hasInput) root.startFromInput()
+                            else if (timerManager) timerManager.start(dial.minutes * 60)
+                        }
+                    }
+                }
+
+                // Free-typed duration (the dial tops out at 60m): digits or
+                // m:ss, Enter starts. Just a mirror of the key handler's
+                // buffer — focus already lives on the mode's FocusScope.
+                Rectangle {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.preferredWidth: modeManager.scale(152)
+                    Layout.preferredHeight: modeManager.scale(30)
+                    radius: height / 2
+                    color: root.hasInput
+                        ? (theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.12) : Qt.rgba(0.65, 0.55, 0.85, 0.12))
+                        : "transparent"
+                    border.width: 1
+                    border.color: root.hasInput
+                        ? (theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.55) : Qt.rgba(0.65, 0.55, 0.85, 0.55))
+                        : (theme ? Qt.rgba(theme.textFaint.r, theme.textFaint.g, theme.textFaint.b, 0.25) : Qt.rgba(0.62, 0.62, 0.72, 0.25))
+
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                    Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
+
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: modeManager.scale(3)
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: root.inputBuffer.length > 0 ? root.formatInputDisplay() : "M:SS"
+                            color: root.inputBuffer.length > 0
+                                ? (theme ? theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95))
+                                : (theme ? Qt.rgba(theme.textFaint.r, theme.textFaint.g, theme.textFaint.b, 0.5) : Qt.rgba(0.62, 0.62, 0.72, 0.5))
+                            font.pixelSize: modeManager.scale(12)
                             font.family: "M PLUS 2"
                             font.letterSpacing: 0.5
                         }
 
-                        MouseArea {
-                            id: presetHover
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.startPreset(modelData.seconds)
+                        Rectangle {
+                            id: inputCaret
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: modeManager.scale(1.5)
+                            height: modeManager.scale(13)
+                            color: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1)
+                            visible: focusScope.activeFocus && root.visualState === "idle"
+
+                            SequentialAnimation on opacity {
+                                loops: Animation.Infinite
+                                running: inputCaret.visible
+                                NumberAnimation { from: 1.0; to: 0.35; duration: 720; easing.type: Easing.InOutSine }
+                                NumberAnimation { from: 0.35; to: 1.0; duration: 720; easing.type: Easing.InOutSine }
+                            }
+                        }
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "↵"
+                            color: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1)
+                            font.pixelSize: modeManager.scale(11)
+                            font.family: "M PLUS 2"
+                            opacity: root.hasInput ? 0.95 : 0.0
+                            visible: opacity > 0.01
+
+                            Behavior on opacity { NumberAnimation { duration: Theme.Motion.micro } }
                         }
                     }
                 }
-            }
+
         }
 
-        RowLayout {
+        ColumnLayout {
             id: runningLayout
             anchors.centerIn: parent
-            spacing: modeManager.scale(24)
+            spacing: modeManager.scale(10)
             opacity: root.visualState === "running" ? 1.0 : 0.0
             visible: opacity > 0.01
             onVisibleChanged: if (visible) ignitePop.restart()
@@ -411,7 +490,7 @@ Item {
                 id: ringWrap
                 Layout.preferredWidth: modeManager.scale(116)
                 Layout.preferredHeight: modeManager.scale(116)
-                Layout.alignment: Qt.AlignVCenter
+                Layout.alignment: Qt.AlignHCenter
 
                 // Ignition pop when the timer starts.
                 NumberAnimation {
@@ -556,25 +635,13 @@ Item {
                 }
             }
 
-            ColumnLayout {
-                Layout.alignment: Qt.AlignVCenter
-                spacing: modeManager.scale(14)
-
-                Text {
-                    text: (timerManager && timerManager.paused ? "PAUSED" : "RUNNING") + " · " + (timerManager ? root.durationLabel(timerManager.durationSec) : "")
-                    color: theme ? theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.85)
-                    font.pixelSize: modeManager.scale(11)
-                    font.weight: Font.Medium
-                    font.family: "M PLUS 2"
-                    font.letterSpacing: 1.5
-                }
-
-                RowLayout {
-                    spacing: modeManager.scale(8)
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: modeManager.scale(8)
 
                     Rectangle {
-                        Layout.preferredWidth: modeManager.scale(96)
-                        Layout.preferredHeight: modeManager.scale(34)
+                        Layout.preferredWidth: modeManager.scale(80)
+                        Layout.preferredHeight: modeManager.scale(30)
                         radius: height / 2
                         color: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, pauseHover.containsMouse ? 0.32 : 0.22) : Qt.rgba(0.65, 0.55, 0.85, 0.22)
                         border.width: 0
@@ -618,8 +685,8 @@ Item {
                     }
 
                     Rectangle {
-                        Layout.preferredWidth: modeManager.scale(76)
-                        Layout.preferredHeight: modeManager.scale(34)
+                        Layout.preferredWidth: modeManager.scale(64)
+                        Layout.preferredHeight: modeManager.scale(30)
                         radius: height / 2
                         color: stopHover.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
                         border.width: 1
@@ -645,14 +712,13 @@ Item {
                             onClicked: timerManager.cancel()
                         }
                     }
-                }
             }
         }
 
-        RowLayout {
+        ColumnLayout {
             id: alertingLayout
             anchors.centerIn: parent
-            spacing: modeManager.scale(24)
+            spacing: modeManager.scale(10)
             opacity: root.visualState === "alerting" ? 1.0 : 0.0
             visible: opacity > 0.01
 
@@ -663,7 +729,7 @@ Item {
             Item {
                 Layout.preferredWidth: modeManager.scale(116)
                 Layout.preferredHeight: modeManager.scale(116)
-                Layout.alignment: Qt.AlignVCenter
+                Layout.alignment: Qt.AlignHCenter
 
                 // Ripples radiating from the burst ember, staggered half a
                 // period apart (equal cycle lengths keep them from drifting).
@@ -734,31 +800,10 @@ Item {
                 }
             }
 
-            ColumnLayout {
-                Layout.alignment: Qt.AlignVCenter
-                spacing: modeManager.scale(12)
-
-                Text {
-                    text: "Timer finished"
-                    color: theme ? theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
-                    font.pixelSize: modeManager.scale(15)
-                    font.weight: Font.Medium
-                    font.family: "M PLUS 2"
-                    font.letterSpacing: 0.6
-                }
-
-                Text {
-                    text: "Press Space or Stop to dismiss"
-                    color: theme ? theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.65)
-                    font.pixelSize: modeManager.scale(11)
-                    font.family: "M PLUS 2"
-                    font.letterSpacing: 0.3
-                }
-
-                Rectangle {
-                    Layout.preferredWidth: modeManager.scale(110)
-                    Layout.preferredHeight: modeManager.scale(36)
-                    Layout.topMargin: modeManager.scale(2)
+            Rectangle {
+                    Layout.alignment: Qt.AlignHCenter
+                    Layout.preferredWidth: modeManager.scale(84)
+                    Layout.preferredHeight: modeManager.scale(30)
                     radius: height / 2
                     color: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, dismissHover.containsMouse ? 0.36 : 0.24) : Qt.rgba(0.65, 0.55, 0.85, 0.24)
                     border.width: 0
@@ -797,7 +842,6 @@ Item {
                         onClicked: timerManager.dismissAlert()
                     }
                 }
-            }
         }
 
     }
