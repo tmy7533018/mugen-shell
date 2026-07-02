@@ -48,7 +48,7 @@ Rectangle {
     }
 
     Behavior on height {
-        NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
     MouseArea {
@@ -121,7 +121,7 @@ Rectangle {
                 color: itemMouse.containsMouse
                     ? (section.theme ? section.theme.chipActiveBg : Qt.rgba(0.45, 0.45, 0.60, 0.25))
                     : "transparent"
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                 readonly property bool isSelected: section.settingsManager && section.settingsManager.barAiModel === modelData
 

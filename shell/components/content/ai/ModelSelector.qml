@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../../../lib" as Theme
 
 Item {
     id: selector
@@ -32,9 +33,9 @@ Item {
         opacity: selector.editable ? 1.0 : 0.6
 
         Behavior on color {
-            ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
+            ColorAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
         }
-        Behavior on opacity { NumberAnimation { duration: 200 } }
+        Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
 
         Text {
             id: modelLabel
@@ -51,7 +52,7 @@ Item {
                 : 0.85
 
             Behavior on opacity {
-                NumberAnimation { duration: 200 }
+                NumberAnimation { duration: Theme.Motion.fast }
             }
         }
 
@@ -104,7 +105,7 @@ Item {
                         : "transparent"
 
                     Behavior on color {
-                        ColorAnimation { duration: 150 }
+                        ColorAnimation { duration: Theme.Motion.micro }
                     }
 
                     Text {

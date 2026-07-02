@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../common" as Common
+import "../../lib" as Theme
 
 Item {
     id: button
@@ -44,7 +45,7 @@ Item {
         
         Behavior on opacity {
             NumberAnimation {
-                duration: 500
+                duration: Theme.Motion.slow
                 easing.type: Easing.OutCubic
             }
         }
@@ -63,21 +64,21 @@ Item {
             }
             NumberAnimation {
                 to: 1.0
-                duration: 400
+                duration: Theme.Motion.gentle
                 easing.type: Easing.InCubic
             }
-            PauseAnimation { duration: 200 }
+            PauseAnimation { duration: Theme.Motion.fast }
             NumberAnimation {
                 to: 1.15
-                duration: 400
+                duration: Theme.Motion.gentle
                 easing.type: Easing.OutCubic
             }
             NumberAnimation {
                 to: 1.0
-                duration: 400
+                duration: Theme.Motion.gentle
                 easing.type: Easing.InCubic
             }
-            PauseAnimation { duration: 800 }
+            PauseAnimation { duration: Theme.Motion.drift }
         }
         
         Common.BlobEffect {
@@ -182,21 +183,21 @@ Item {
 
         Behavior on scale {
             NumberAnimation {
-                duration: 600
+                duration: Theme.Motion.slow
                 easing.type: Easing.OutCubic
             }
         }
 
         Behavior on color {
             ColorAnimation {
-                duration: 400
+                duration: Theme.Motion.gentle
                 easing.type: Easing.OutCubic
             }
         }
 
         Behavior on anchors.verticalCenterOffset {
             NumberAnimation {
-                duration: 400
+                duration: Theme.Motion.gentle
                 easing.type: Easing.OutCubic
             }
         }
@@ -215,21 +216,21 @@ Item {
         
         Behavior on scale {
             NumberAnimation {
-                duration: 600
+                duration: Theme.Motion.slow
                 easing.type: Easing.OutCubic
             }
         }
         
         Behavior on color {
             ColorAnimation {
-                duration: 400
+                duration: Theme.Motion.gentle
                 easing.type: Easing.OutCubic
             }
         }
         
         Behavior on anchors.verticalCenterOffset {
             NumberAnimation {
-                duration: 400
+                duration: Theme.Motion.gentle
                 easing.type: Easing.OutCubic
             }
         }
@@ -251,7 +252,7 @@ Item {
         
         Behavior on opacity {
             NumberAnimation {
-                duration: 300
+                duration: Theme.Motion.standard
                 easing.type: Easing.OutCubic
             }
         }

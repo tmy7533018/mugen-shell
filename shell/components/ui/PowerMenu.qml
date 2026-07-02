@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import "../ui" as UI
+import "../../lib" as Theme
 
 Item {
     id: powerMenuRoot
@@ -51,7 +52,7 @@ Item {
         z: -1
 
         scale: mouseArea.pressed ? 0.9 : (mouseArea.containsMouse ? 1.3 : 1.0)
-        Behavior on scale { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
 
         Rectangle {
             id: waterMask
@@ -77,7 +78,7 @@ Item {
                 ? powerMenuRoot.batteryManager.percentage / 100.0
                 : 0
             Behavior on currentLevel {
-                NumberAnimation { duration: 800; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Theme.Motion.drift; easing.type: Easing.OutCubic }
             }
 
             Canvas {
@@ -148,10 +149,10 @@ Item {
         scale: mouseArea.pressed ? 0.9 : (mouseArea.containsMouse ? 1.3 : 1.0)
 
         Behavior on opacity {
-            NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
         }
         Behavior on scale {
-            NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic }
         }
     }
 
@@ -168,14 +169,14 @@ Item {
 
         Behavior on opacity {
             NumberAnimation {
-                duration: 400
+                duration: Theme.Motion.gentle
                 easing.type: Easing.OutCubic
             }
         }
 
         Behavior on scale {
             NumberAnimation {
-                duration: 600
+                duration: Theme.Motion.slow
                 easing.type: Easing.OutCubic
             }
         }
@@ -192,14 +193,14 @@ Item {
 
         Behavior on opacity {
             NumberAnimation {
-                duration: 400
+                duration: Theme.Motion.gentle
                 easing.type: Easing.OutCubic
             }
         }
 
         Behavior on scale {
             NumberAnimation {
-                duration: 600
+                duration: Theme.Motion.slow
                 easing.type: Easing.OutCubic
             }
         }

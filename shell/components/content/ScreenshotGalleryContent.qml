@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import "../common" as Common
 import "../ui" as UI
+import "../../lib" as Theme
 
 FocusScope {
     id: root
@@ -47,7 +48,7 @@ FocusScope {
                 to: ""
                 NumberAnimation {
                     property: "opacity"
-                    duration: 300
+                    duration: Theme.Motion.standard
                     easing.type: Easing.InOutQuad
                 }
             },
@@ -55,10 +56,10 @@ FocusScope {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 300 }
+                    PauseAnimation { duration: Theme.Motion.standard }
                     NumberAnimation {
                         property: "opacity"
-                        duration: 400
+                        duration: Theme.Motion.gentle
                         easing.type: Easing.InOutCubic
                     }
                 }
@@ -226,10 +227,10 @@ FocusScope {
                         opacity: isCurrent ? 1.0 : 0.7
                         
                         Behavior on scale {
-                            NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                            NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
                         }
                         Behavior on opacity {
-                            NumberAnimation { duration: 200 }
+                            NumberAnimation { duration: Theme.Motion.fast }
                         }
 
                         Image {
@@ -244,7 +245,7 @@ FocusScope {
                             
                             Behavior on opacity {
                                 NumberAnimation {
-                                    duration: 300
+                                    duration: Theme.Motion.standard
                                     easing.type: Easing.InOutCubic
                                 }
                             }

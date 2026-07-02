@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../common" as Common
+import "../../lib" as Theme
 
 Item {
     id: delegateRoot
@@ -151,7 +152,7 @@ Item {
 
                     Behavior on scale {
                         NumberAnimation {
-                            duration: 400
+                            duration: Theme.Motion.gentle
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -195,7 +196,7 @@ Item {
 
                     Behavior on scale {
                         NumberAnimation {
-                            duration: 400
+                            duration: Theme.Motion.gentle
                             easing.type: Easing.OutCubic
                         }
                     }

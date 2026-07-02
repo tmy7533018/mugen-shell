@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Hyprland
+import "../../../lib" as Theme
 
 Rectangle {
     id: section
@@ -17,7 +18,7 @@ Rectangle {
     border.width: 1
     border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
 
-    Behavior on color { ColorAnimation { duration: 150 } }
+    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
     function bump() {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
@@ -75,7 +76,7 @@ Rectangle {
             font.family: "M PLUS 2"
             opacity: linkArea.containsMouse ? 1.0 : 0.6
 
-            Behavior on opacity { NumberAnimation { duration: 150 } }
+            Behavior on opacity { NumberAnimation { duration: Theme.Motion.micro } }
         }
     }
 }

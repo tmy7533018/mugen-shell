@@ -4,6 +4,7 @@ import Qt5Compat.GraphicalEffects
 import Quickshell
 import "." as MusicUI
 import "../common" as Common
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -95,7 +96,7 @@ Item {
                 to: ""
                 NumberAnimation {
                     property: "opacity"
-                    duration: 300
+                    duration: Theme.Motion.standard
                     easing.type: Easing.OutCubic
                 }
             },
@@ -103,10 +104,10 @@ Item {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 300 }  // wait for bar expand animation
+                    PauseAnimation { duration: Theme.Motion.standard }  // wait for bar expand animation
                     NumberAnimation {
                         property: "opacity"
-                        duration: 400
+                        duration: Theme.Motion.gentle
                         easing.type: Easing.InOutCubic
                     }
                 }
@@ -233,7 +234,7 @@ Item {
                         height: modeManager.scale(3)
                         radius: height / 2
                         color: Qt.rgba(1, 1, 1, sliderArea.containsMouse || sliderArea.pressed ? 0.22 : 0.15)
-                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
                         Rectangle {
                             id: filled
@@ -255,7 +256,7 @@ Item {
 
                             Behavior on width {
                                 enabled: !sliderArea.pressed
-                                NumberAnimation { duration: 800; easing.type: Easing.OutCubic }
+                                NumberAnimation { duration: Theme.Motion.drift; easing.type: Easing.OutCubic }
                             }
                         }
                     }

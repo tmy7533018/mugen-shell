@@ -89,7 +89,7 @@ Rectangle {
     }
 
     Behavior on height {
-        NumberAnimation { duration: 280; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
     // Initial load: stats + the retention setting from config.
@@ -416,7 +416,7 @@ Rectangle {
                     border.color: presetChip.selected
                         ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95))
                         : Qt.rgba(1, 1, 1, 0.10)
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                     Text {
                         id: chipLabel
@@ -450,7 +450,7 @@ Rectangle {
             color: applyMouse.containsMouse
                 ? Qt.rgba(0.45, 0.65, 0.90, 0.45)
                 : Qt.rgba(0.45, 0.65, 0.90, 0.3)
-            Behavior on color { ColorAnimation { duration: 150 } }
+            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
             Text {
                 anchors.centerIn: parent
@@ -485,7 +485,7 @@ Rectangle {
                 color: exportMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.20)
                 border.width: 1
                 border.color: section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.12)
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                 Text {
                     anchors.centerIn: parent
@@ -513,7 +513,7 @@ Rectangle {
                 color: clearMouse.containsMouse ? Qt.rgba(0.85, 0.42, 0.42, 0.30) : Qt.rgba(0.85, 0.42, 0.42, 0.16)
                 border.width: 1
                 border.color: Qt.rgba(0.88, 0.50, 0.50, 0.40)
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                 Text {
                     anchors.centerIn: parent
@@ -575,7 +575,7 @@ Rectangle {
                         Layout.preferredHeight: 28
                         radius: 14
                         color: cancelMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                         Text {
                             anchors.centerIn: parent
@@ -601,7 +601,7 @@ Rectangle {
                         color: deleteMouse.containsMouse ? Qt.rgba(0.85, 0.42, 0.42, 0.55) : Qt.rgba(0.85, 0.42, 0.42, 0.34)
                         border.width: 1
                         border.color: Qt.rgba(0.88, 0.50, 0.50, 0.60)
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                         Text {
                             anchors.centerIn: parent
@@ -639,7 +639,7 @@ Rectangle {
                 font.family: "M PLUS 2"
                 opacity: section.statusText ? 0.85 : 0
                 elide: Text.ElideRight
-                Behavior on opacity { NumberAnimation { duration: 200 } }
+                Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
             }
 
             Rectangle {
@@ -647,7 +647,7 @@ Rectangle {
                 Layout.preferredHeight: 28
                 radius: 14
                 color: refreshMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                 Text {
                     anchors.centerIn: parent

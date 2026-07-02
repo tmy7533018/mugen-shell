@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../common" as Common
+import "../../lib" as Theme
 
 ColumnLayout {
     id: root
@@ -77,7 +78,7 @@ ColumnLayout {
             
             Behavior on x {
                 enabled: !titleText.needsScroll
-                NumberAnimation { duration: 300 }
+                NumberAnimation { duration: Theme.Motion.standard }
             }
             
             Component.onCompleted: {
@@ -131,7 +132,7 @@ ColumnLayout {
                 glowSamples: 9
                 enableGlow: true
                 
-                Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.InOutQuad } }
+                Behavior on opacity { NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.InOutQuad } }
             }
             
             Common.GlowText {
@@ -149,7 +150,7 @@ ColumnLayout {
                 glowSamples: 9
                 enableGlow: true
                 
-                Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.InOutQuad } }
+                Behavior on opacity { NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.InOutQuad } }
             }
             
             Common.GlowText {
@@ -167,7 +168,7 @@ ColumnLayout {
                 glowSamples: 9
                 enableGlow: true
                 
-                Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.InOutQuad } }
+                Behavior on opacity { NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.InOutQuad } }
             }
             
         }

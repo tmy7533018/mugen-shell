@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
 import "../ui" as UI
+import "../../lib" as Theme
 
 FocusScope {
     id: root
@@ -96,7 +97,7 @@ FocusScope {
                 to: ""
                 NumberAnimation {
                     property: "opacity"
-                    duration: 300
+                    duration: Theme.Motion.standard
                     easing.type: Easing.OutCubic
                 }
             },
@@ -104,10 +105,10 @@ FocusScope {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 300 }
+                    PauseAnimation { duration: Theme.Motion.standard }
                     NumberAnimation {
                         property: "opacity"
-                        duration: 400
+                        duration: Theme.Motion.gentle
                         easing.type: Easing.InOutCubic
                     }
                 }

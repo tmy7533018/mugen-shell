@@ -1,5 +1,6 @@
 import QtQuick
 import Qt5Compat.GraphicalEffects
+import "../../lib" as Theme
 
 Text {
     id: clockText
@@ -51,7 +52,7 @@ Text {
         
         Behavior on color {
             ColorAnimation {
-                duration: 300
+                duration: Theme.Motion.standard
                 easing.type: Easing.OutCubic
             }
         }
@@ -103,7 +104,7 @@ Text {
     
     Behavior on minuteScaleFactor {
         NumberAnimation {
-            duration: 600
+            duration: Theme.Motion.slow
             easing.type: Easing.OutCubic
         }
     }

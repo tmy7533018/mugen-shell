@@ -4,6 +4,7 @@ import Qt5Compat.GraphicalEffects
 import Quickshell.Io
 import "../ui" as UI
 import "../common" as Common
+import "../../lib" as Theme
 
 FocusScope {
     id: root
@@ -144,7 +145,7 @@ FocusScope {
                 to: ""
                 NumberAnimation {
                     property: "opacity"
-                    duration: 300
+                    duration: Theme.Motion.standard
                     easing.type: Easing.OutCubic
                 }
             },
@@ -152,10 +153,10 @@ FocusScope {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 300 }
+                    PauseAnimation { duration: Theme.Motion.standard }
                     NumberAnimation {
                         property: "opacity"
-                        duration: 400
+                        duration: Theme.Motion.gentle
                         easing.type: Easing.InOutCubic
                     }
                 }
@@ -224,14 +225,14 @@ FocusScope {
                             property: "opacity"
                             from: 0.0
                             to: 1.0
-                            duration: 400
+                            duration: Theme.Motion.gentle
                             easing.type: Easing.OutCubic
                         }
                         NumberAnimation {
                             property: "scale"
                             from: 0.9
                             to: 1.0
-                            duration: 400
+                            duration: Theme.Motion.gentle
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -239,7 +240,7 @@ FocusScope {
                     displaced: Transition {
                         NumberAnimation {
                             property: "y"
-                            duration: 300
+                            duration: Theme.Motion.standard
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -260,14 +261,14 @@ FocusScope {
                         
                         Behavior on color {
                             ColorAnimation {
-                                duration: 200
+                                duration: Theme.Motion.fast
                                 easing.type: Easing.OutCubic
                             }
                         }
                         
                         Behavior on radius {
                             NumberAnimation {
-                                duration: 250
+                                duration: Theme.Motion.fast
                                 easing.type: Easing.OutCubic
                             }
                         }

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import "../../../lib" as Theme
 
 Rectangle {
     id: section
@@ -71,7 +72,7 @@ Rectangle {
             ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95))
             : Qt.rgba(1, 1, 1, 0.10)
 
-        Behavior on color { ColorAnimation { duration: 150 } }
+        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
         Text {
             id: chipText
@@ -124,8 +125,8 @@ Rectangle {
                 border.color: breathPill.on
                     ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95))
                     : Qt.rgba(1, 1, 1, 0.10)
-                Behavior on color { ColorAnimation { duration: 180 } }
-                Behavior on border.color { ColorAnimation { duration: 180 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+                Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
 
                 Rectangle {
                     width: 18
@@ -134,7 +135,7 @@ Rectangle {
                     color: section.theme ? section.theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
                     y: 3
                     x: breathPill.on ? breathPill.width - width - 3 : 3
-                    Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                    Behavior on x { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
                 }
 
                 MouseArea {

@@ -6,6 +6,7 @@ import Quickshell.Io
 import "../common" as Common
 import "../ui" as UI
 import "./bluetooth" as Bluetooth
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -192,7 +193,7 @@ Item {
                 to: ""
                 NumberAnimation {
                     property: "opacity"
-                    duration: 300
+                    duration: Theme.Motion.standard
                     easing.type: Easing.OutCubic
                 }
             },
@@ -200,10 +201,10 @@ Item {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 300 }
+                    PauseAnimation { duration: Theme.Motion.standard }
                     NumberAnimation {
                         property: "opacity"
-                        duration: 400
+                        duration: Theme.Motion.gentle
                         easing.type: Easing.InOutCubic
                     }
                 }
@@ -248,7 +249,7 @@ Item {
                             : Qt.rgba(0.75, 0.45, 0.45, powerToggleArea.containsMouse ? 0.4 : 0.3)
 
                         Behavior on color {
-                            ColorAnimation { duration: 300; easing.type: Easing.OutCubic }
+                            ColorAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
                         }
 
                         UI.SvgIcon {
@@ -264,14 +265,14 @@ Item {
 
                             Behavior on opacity {
                                 NumberAnimation {
-                                    duration: 300
+                                    duration: Theme.Motion.standard
                                     easing.type: Easing.OutCubic
                                 }
                             }
 
                             Behavior on scale {
                                 NumberAnimation {
-                                    duration: 300
+                                    duration: Theme.Motion.standard
                                     easing.type: Easing.OutCubic
                                 }
                             }
@@ -281,13 +282,13 @@ Item {
                                     NumberAnimation {
                                         property: "opacity"
                                         to: 0
-                                        duration: 150
+                                        duration: Theme.Motion.micro
                                     }
                                     PropertyAction { property: "source" }
                                     NumberAnimation {
                                         property: "opacity"
                                         to: powerToggleArea.containsMouse ? 1.0 : 0.9
-                                        duration: 150
+                                        duration: Theme.Motion.micro
                                     }
                                 }
                             }
@@ -317,19 +318,19 @@ Item {
                         opacity: bluetoothManager.isPowered ? 1.0 : 0.0
 
                         Behavior on color {
-                            ColorAnimation { duration: 300; easing.type: Easing.OutCubic }
+                            ColorAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
                         }
 
                         Behavior on opacity {
                             NumberAnimation {
-                                duration: 400
+                                duration: Theme.Motion.gentle
                                 easing.type: Easing.OutCubic
                             }
                         }
 
                         Behavior on animatedWidth {
                             NumberAnimation {
-                                duration: 400
+                                duration: Theme.Motion.gentle
                                 easing.type: Easing.OutCubic
                             }
                         }
@@ -345,19 +346,19 @@ Item {
                             scale: scanArea.containsMouse ? 1.2 : 1.0
 
                             Behavior on color {
-                                ColorAnimation { duration: 300; easing.type: Easing.OutCubic }
+                                ColorAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
                             }
 
                             Behavior on opacity {
                                 NumberAnimation {
-                                    duration: 300
+                                    duration: Theme.Motion.standard
                                     easing.type: Easing.OutCubic
                                 }
                             }
 
                             Behavior on scale {
                                 NumberAnimation {
-                                    duration: 300
+                                    duration: Theme.Motion.standard
                                     easing.type: Easing.OutCubic
                                 }
                             }
@@ -368,14 +369,14 @@ Item {
                                         target: scanIcon
                                         property: "opacity"
                                         to: 0
-                                        duration: 150
+                                        duration: Theme.Motion.micro
                                     }
                                     PropertyAction { target: scanIcon; property: "source" }
                                     NumberAnimation {
                                         target: scanIcon
                                         property: "opacity"
                                         to: 1
-                                        duration: 150
+                                        duration: Theme.Motion.micro
                                     }
                                 }
                             }
@@ -405,7 +406,7 @@ Item {
                 opacity: bluetoothManager.isPowered ? 1.0 : 0.0
 
                 Behavior on opacity {
-                    NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
                 }
 
                 Rectangle {
@@ -417,7 +418,7 @@ Item {
                         : (theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.3))
 
                     Behavior on color {
-                        ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
+                        ColorAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
                     }
 
                     Text {
@@ -450,7 +451,7 @@ Item {
                         : (theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.3))
 
                     Behavior on color {
-                        ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
+                        ColorAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
                     }
 
                     Text {
@@ -494,7 +495,7 @@ Item {
 
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 400
+                            duration: Theme.Motion.gentle
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -514,7 +515,7 @@ Item {
 
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 400
+                            duration: Theme.Motion.gentle
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -529,14 +530,14 @@ Item {
                                     property: "opacity"
                                     from: 0.0
                                     to: 1.0
-                                    duration: 400
+                                    duration: Theme.Motion.gentle
                                     easing.type: Easing.OutCubic
                                 }
                                 NumberAnimation {
                                     property: "scale"
                                     from: 0.9
                                     to: 1.0
-                                    duration: 400
+                                    duration: Theme.Motion.gentle
                                     easing.type: Easing.OutCubic
                                 }
                             }
@@ -578,7 +579,7 @@ Item {
 
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 400
+                            duration: Theme.Motion.gentle
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -593,14 +594,14 @@ Item {
                                     property: "opacity"
                                     from: 0.0
                                     to: 1.0
-                                    duration: 400
+                                    duration: Theme.Motion.gentle
                                     easing.type: Easing.OutCubic
                                 }
                                 NumberAnimation {
                                     property: "scale"
                                     from: 0.9
                                     to: 1.0
-                                    duration: 400
+                                    duration: Theme.Motion.gentle
                                     easing.type: Easing.OutCubic
                                 }
                             }
@@ -637,7 +638,7 @@ Item {
 
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 400
+                            duration: Theme.Motion.gentle
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -655,7 +656,7 @@ Item {
 
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 400
+                            duration: Theme.Motion.gentle
                             easing.type: Easing.OutCubic
                         }
                     }

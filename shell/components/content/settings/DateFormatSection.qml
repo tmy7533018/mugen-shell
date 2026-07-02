@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import "../../../lib" as Theme
 
 Rectangle {
     id: section
@@ -74,7 +75,7 @@ Rectangle {
                     : (section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.18))
                 radius: 8
 
-                Behavior on border.color { ColorAnimation { duration: 200 } }
+                Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
 
                 TextInput {
                     id: formatInput

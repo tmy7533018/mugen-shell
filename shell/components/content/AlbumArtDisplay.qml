@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import "../ui" as UI
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -152,7 +153,7 @@ Item {
         z: 1
 
         Behavior on radius {
-            NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
         }
 
         scale: 1.0

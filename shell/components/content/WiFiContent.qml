@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import "../common" as Common
 import "../ui" as UI
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -175,7 +176,7 @@ Item {
                 to: ""
                 NumberAnimation {
                     property: "opacity"
-                    duration: 300
+                    duration: Theme.Motion.standard
                     easing.type: Easing.OutCubic
                 }
             },
@@ -183,10 +184,10 @@ Item {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 300 }
+                    PauseAnimation { duration: Theme.Motion.standard }
                     NumberAnimation {
                         property: "opacity"
-                        duration: 400
+                        duration: Theme.Motion.gentle
                         easing.type: Easing.InOutCubic
                     }
                 }
@@ -231,7 +232,7 @@ Item {
                             : Qt.rgba(0.75, 0.45, 0.45, powerToggleArea.containsMouse ? 0.4 : 0.3)
                         
                         Behavior on color {
-                            ColorAnimation { duration: 300; easing.type: Easing.OutCubic }
+                            ColorAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
                         }
                         
                         UI.SvgIcon {
@@ -247,14 +248,14 @@ Item {
                             
                             Behavior on opacity {
                                 NumberAnimation {
-                                    duration: 300
+                                    duration: Theme.Motion.standard
                                     easing.type: Easing.OutCubic
                                 }
                             }
                             
                             Behavior on scale {
                                 NumberAnimation {
-                                    duration: 300
+                                    duration: Theme.Motion.standard
                                     easing.type: Easing.OutCubic
                                 }
                             }
@@ -264,13 +265,13 @@ Item {
                                     NumberAnimation {
                                         property: "opacity"
                                         to: 0
-                                        duration: 150
+                                        duration: Theme.Motion.micro
                                     }
                                     PropertyAction { property: "source" }
                                     NumberAnimation {
                                         property: "opacity"
                                         to: powerToggleArea.containsMouse ? 1.0 : 0.9
-                                        duration: 150
+                                        duration: Theme.Motion.micro
                                     }
                                 }
                             }
@@ -301,19 +302,19 @@ Item {
                         visible: opacity > 0.01
                         
                         Behavior on color {
-                            ColorAnimation { duration: 300; easing.type: Easing.OutCubic }
+                            ColorAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
                         }
                         
                         Behavior on opacity {
                             NumberAnimation {
-                                duration: 400
+                                duration: Theme.Motion.gentle
                                 easing.type: Easing.OutCubic
                             }
                         }
                         
                         Behavior on animatedWidth {
                             NumberAnimation {
-                                duration: 400
+                                duration: Theme.Motion.gentle
                                 easing.type: Easing.OutCubic
                             }
                         }
@@ -329,19 +330,19 @@ Item {
                             scale: refreshArea.containsMouse ? 1.2 : 1.0
                             
                             Behavior on color {
-                                ColorAnimation { duration: 300; easing.type: Easing.OutCubic }
+                                ColorAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
                             }
                             
                             Behavior on opacity {
                                 NumberAnimation {
-                                    duration: 300
+                                    duration: Theme.Motion.standard
                                     easing.type: Easing.OutCubic
                                 }
                             }
                             
                             Behavior on scale {
                                 NumberAnimation {
-                                    duration: 300
+                                    duration: Theme.Motion.standard
                                     easing.type: Easing.OutCubic
                                 }
                             }
@@ -352,14 +353,14 @@ Item {
                                         target: refreshIcon
                                         property: "opacity"
                                         to: 0
-                                        duration: 150
+                                        duration: Theme.Motion.micro
                                     }
                                     PropertyAction { target: refreshIcon; property: "source" }
                                     NumberAnimation {
                                         target: refreshIcon
                                         property: "opacity"
                                         to: 1
-                                        duration: 150
+                                        duration: Theme.Motion.micro
                                     }
                                 }
                             }
@@ -410,7 +411,7 @@ Item {
                 
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: 400
+                        duration: Theme.Motion.gentle
                         easing.type: Easing.OutCubic
                     }
                 }
@@ -475,7 +476,7 @@ Item {
                     
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 400
+                            duration: Theme.Motion.gentle
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -499,7 +500,7 @@ Item {
                     
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 300
+                            duration: Theme.Motion.standard
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -514,14 +515,14 @@ Item {
                                     property: "opacity"
                                     from: 0.0
                                     to: 1.0
-                                    duration: 400
+                                    duration: Theme.Motion.gentle
                                     easing.type: Easing.OutCubic
                                 }
                                 NumberAnimation {
                                     property: "scale"
                                     from: 0.9
                                     to: 1.0
-                                    duration: 400
+                                    duration: Theme.Motion.gentle
                                     easing.type: Easing.OutCubic
                                 }
                             }
@@ -531,7 +532,7 @@ Item {
                     displaced: Transition {
                         NumberAnimation {
                             property: "y"
-                            duration: 300
+                            duration: Theme.Motion.standard
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -592,7 +593,7 @@ Item {
                     
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 300
+                            duration: Theme.Motion.standard
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -627,7 +628,7 @@ Item {
                                     NumberAnimation {
                                         from: 1.0
                                         to: 0.3
-                                        duration: 600
+                                        duration: Theme.Motion.slow
                                         easing.type: Easing.InOutSine
                                     }
                                     PauseAnimation { duration: (2 - index) * 200 }
@@ -649,7 +650,7 @@ Item {
                     
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 400
+                            duration: Theme.Motion.gentle
                             easing.type: Easing.OutCubic
                         }
                     }

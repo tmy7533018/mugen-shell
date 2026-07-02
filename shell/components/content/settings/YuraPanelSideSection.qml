@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import "../../../lib" as Theme
 
 Rectangle {
     id: section
@@ -65,8 +66,8 @@ Rectangle {
                     border.color: isSelected
                         ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))
                         : Qt.rgba(1, 1, 1, 0.10)
-                    Behavior on color { ColorAnimation { duration: 150 } }
-                    Behavior on border.color { ColorAnimation { duration: 150 } }
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                    Behavior on border.color { ColorAnimation { duration: Theme.Motion.micro } }
 
                     Text {
                         anchors.centerIn: parent

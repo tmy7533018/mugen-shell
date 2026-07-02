@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../../common" as Common
+import "../../../lib" as Theme
 
 Rectangle {
     id: dropdown
@@ -29,10 +30,10 @@ Rectangle {
     transformOrigin: Item.Top
 
     Behavior on opacity {
-        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
     }
     Behavior on scale {
-        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
     }
 
     Flickable {
@@ -95,7 +96,7 @@ Rectangle {
                         radius: dropdown.modeManager ? dropdown.modeManager.scale(6) : 6
 
                         Behavior on color {
-                            ColorAnimation { duration: 150 }
+                            ColorAnimation { duration: Theme.Motion.micro }
                         }
 
                         Text {
@@ -153,7 +154,7 @@ Rectangle {
                         radius: dropdown.modeManager ? dropdown.modeManager.scale(6) : 6
 
                         Behavior on color {
-                            ColorAnimation { duration: 150 }
+                            ColorAnimation { duration: Theme.Motion.micro }
                         }
 
                         Text {
@@ -212,7 +213,7 @@ Rectangle {
         opacity: dropdownFlickable.moving ? 0.8 : 0.4
 
         Behavior on opacity {
-            NumberAnimation { duration: 200 }
+            NumberAnimation { duration: Theme.Motion.fast }
         }
     }
 }

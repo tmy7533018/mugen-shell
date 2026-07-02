@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../../ui" as UI
+import "../../../lib" as Theme
 
 Item {
     id: bluetoothContainer
@@ -37,14 +38,14 @@ Item {
 
         Behavior on opacity {
             NumberAnimation {
-                duration: 400
+                duration: Theme.Motion.gentle
                 easing.type: Easing.OutCubic
             }
         }
 
         Behavior on scale {
             NumberAnimation {
-                duration: 600
+                duration: Theme.Motion.slow
                 easing.type: Easing.OutCubic
             }
         }

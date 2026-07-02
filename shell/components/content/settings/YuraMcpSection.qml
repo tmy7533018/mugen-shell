@@ -151,7 +151,7 @@ Rectangle {
     }
 
     Behavior on height {
-        NumberAnimation { duration: 280; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
     // Initial load: config (editable definitions) then status (runtime state).
@@ -457,7 +457,7 @@ Rectangle {
                             border.color: pill.on
                                 ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95))
                                 : Qt.rgba(1, 1, 1, 0.10)
-                            Behavior on color { ColorAnimation { duration: 180 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
                             Rectangle {
                                 width: 14
@@ -466,7 +466,7 @@ Rectangle {
                                 color: section.theme ? section.theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
                                 y: 3
                                 x: pill.on ? pill.width - width - 3 : 3
-                                Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                                Behavior on x { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
                             }
 
                             MouseArea {
@@ -486,7 +486,7 @@ Rectangle {
                             color: removeMouse.containsMouse
                                 ? Qt.rgba(0.85, 0.4, 0.4, 0.35)
                                 : Qt.rgba(0.85, 0.4, 0.4, 0.16)
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                             Text {
                                 anchors.centerIn: parent
@@ -550,7 +550,7 @@ Rectangle {
                             border.color: trustPill.on
                                 ? Qt.rgba(0.95, 0.74, 0.42, 0.95)
                                 : Qt.rgba(1, 1, 1, 0.10)
-                            Behavior on color { ColorAnimation { duration: 180 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
                             Rectangle {
                                 width: 12
@@ -559,7 +559,7 @@ Rectangle {
                                 color: section.theme ? section.theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
                                 y: 3
                                 x: trustPill.on ? trustPill.width - width - 3 : 3
-                                Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                                Behavior on x { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
                             }
 
                             MouseArea {
@@ -594,7 +594,7 @@ Rectangle {
             color: addMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.30) : Qt.rgba(0.55, 0.55, 0.65, 0.18)
             border.width: 1
             border.color: section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.12)
-            Behavior on color { ColorAnimation { duration: 150 } }
+            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
             Text {
                 anchors.centerIn: parent
@@ -668,7 +668,7 @@ Rectangle {
                             border.color: fieldInput.activeFocus
                                 ? (section.theme ? section.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
                                 : (section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.18))
-                            Behavior on border.color { ColorAnimation { duration: 180 } }
+                            Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
 
                             TextInput {
                                 id: fieldInput
@@ -723,7 +723,7 @@ Rectangle {
                     border.color: envInput.activeFocus
                         ? (section.theme ? section.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
                         : (section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.18))
-                    Behavior on border.color { ColorAnimation { duration: 180 } }
+                    Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
                     clip: true
 
                     ScrollView {
@@ -758,7 +758,7 @@ Rectangle {
                         Layout.preferredHeight: 26
                         radius: 13
                         color: cancelMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                         Text {
                             anchors.centerIn: parent
@@ -789,7 +789,7 @@ Rectangle {
                         Layout.preferredHeight: 26
                         radius: 13
                         color: addToListMouse.containsMouse ? Qt.rgba(0.45, 0.65, 0.90, 0.45) : Qt.rgba(0.45, 0.65, 0.90, 0.3)
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                         Text {
                             anchors.centerIn: parent
@@ -827,7 +827,7 @@ Rectangle {
                 font.family: "M PLUS 2"
                 opacity: section.statusText ? 0.85 : 0
                 elide: Text.ElideRight
-                Behavior on opacity { NumberAnimation { duration: 200 } }
+                Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
             }
 
             Rectangle {
@@ -835,7 +835,7 @@ Rectangle {
                 Layout.preferredHeight: 28
                 radius: 14
                 color: refreshMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                 Text {
                     anchors.centerIn: parent
@@ -862,7 +862,7 @@ Rectangle {
                 visible: section.dirty && !section.saving
                 radius: 14
                 color: revertMouse.containsMouse ? Qt.rgba(0.85, 0.55, 0.42, 0.32) : Qt.rgba(0.85, 0.55, 0.42, 0.18)
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                 Text {
                     anchors.centerIn: parent
@@ -888,7 +888,7 @@ Rectangle {
                 enabled: section.dirty && !section.saving
                 opacity: (section.dirty && !section.saving) ? 1.0 : 0.5
                 color: saveMouse.containsMouse ? Qt.rgba(0.45, 0.65, 0.90, 0.45) : Qt.rgba(0.45, 0.65, 0.90, 0.3)
-                Behavior on color { ColorAnimation { duration: 180 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
                 Text {
                     anchors.centerIn: parent

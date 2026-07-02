@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../../ui" as UI
+import "../../../lib" as Theme
 
 Item {
     id: volumeContainer
@@ -54,28 +55,28 @@ Item {
             PropertyAnimation {
                 target: volumeIconSvg
                 properties: "opacity,scale"
-                duration: 300
+                duration: Theme.Motion.standard
                 easing.type: Easing.OutCubic
             }
             PropertyAnimation {
                 target: volumeIcon
                 properties: "opacity,scale"
-                duration: 300
+                duration: Theme.Motion.standard
                 easing.type: Easing.OutCubic
             }
             SequentialAnimation {
-                PauseAnimation { duration: 150 }
+                PauseAnimation { duration: Theme.Motion.micro }
                 ParallelAnimation {
                     PropertyAnimation {
                         target: volumePercentText
                         property: "opacity"
-                        duration: 400
+                        duration: Theme.Motion.gentle
                         easing.type: Easing.OutCubic
                     }
                     PropertyAnimation {
                         target: volumePercentText
                         property: "scale"
-                        duration: 600
+                        duration: Theme.Motion.slow
                         easing.type: Easing.OutCubic
                     }
                 }
@@ -86,7 +87,7 @@ Item {
             PropertyAnimation {
                 targets: [volumeIconSvg, volumeIcon, volumePercentText]
                 properties: "opacity,scale"
-                duration: 300
+                duration: Theme.Motion.standard
                 easing.type: Easing.OutCubic
             }
         }
@@ -133,7 +134,7 @@ Item {
                 property: "opacity"
                 from: volumeIconSvg.opacity
                 to: 0
-                duration: 200
+                duration: Theme.Motion.fast
                 easing.type: Easing.InOutQuad
             }
             NumberAnimation {
@@ -141,7 +142,7 @@ Item {
                 property: "opacity"
                 from: volumeIcon.opacity
                 to: 0
-                duration: 200
+                duration: Theme.Motion.fast
                 easing.type: Easing.InOutQuad
             }
         }
@@ -192,7 +193,7 @@ Item {
                 property: "opacity"
                 from: 0
                 to: volumeContainer.state === "hovered" ? 0 : 0.6
-                duration: 200
+                duration: Theme.Motion.fast
                 easing.type: Easing.InOutQuad
             }
             NumberAnimation {
@@ -200,7 +201,7 @@ Item {
                 property: "opacity"
                 from: 0
                 to: volumeContainer.state === "hovered" ? 0 : 0.6
-                duration: 200
+                duration: Theme.Motion.fast
                 easing.type: Easing.InOutQuad
             }
         }
@@ -260,7 +261,7 @@ Item {
         font.kerning: volumeContainer.typo ? volumeContainer.typo.clockStyle.kerning : true
 
         Behavior on color {
-            ColorAnimation { duration: 400; easing.type: Easing.OutCubic }
+            ColorAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
         }
     }
 

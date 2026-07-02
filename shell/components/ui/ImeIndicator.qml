@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -29,7 +30,7 @@ Item {
     property real pulseScale: 1.0
     
     Behavior on hoverScale {
-        NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic }
     }
 
 
@@ -51,7 +52,7 @@ Item {
             target: root
             property: "pulseScale"
             to: 1.0
-            duration: 180
+            duration: Theme.Motion.fast
             easing.type: Easing.InCubic
         }
     }
@@ -97,7 +98,7 @@ Item {
         scale: root.hoverScale * root.pulseScale
 
         Behavior on opacity {
-            NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
         }
     }
 

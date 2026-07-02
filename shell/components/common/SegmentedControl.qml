@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -37,11 +38,11 @@ Item {
         visible: root.model.length > 0
         
         Behavior on x {
-            NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
         }
         
         Behavior on color {
-            ColorAnimation { duration: 200 }
+            ColorAnimation { duration: Theme.Motion.fast }
         }
     }
     
@@ -72,7 +73,7 @@ Item {
                     horizontalAlignment: Text.AlignHCenter
                     
                     Behavior on color {
-                        ColorAnimation { duration: 200 }
+                        ColorAnimation { duration: Theme.Motion.fast }
                     }
                 }
                 

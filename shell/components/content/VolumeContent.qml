@@ -5,6 +5,7 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import "../common" as Common
 import "./volume" as Volume
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -198,7 +199,7 @@ Item {
                 to: ""
                 NumberAnimation {
                     property: "opacity"
-                    duration: 300
+                    duration: Theme.Motion.standard
                     easing.type: Easing.InOutQuad
                 }
             },
@@ -206,10 +207,10 @@ Item {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 300 }
+                    PauseAnimation { duration: Theme.Motion.standard }
                     NumberAnimation {
                         property: "opacity"
-                        duration: 400
+                        duration: Theme.Motion.gentle
                         easing.type: Easing.InOutCubic
                     }
                 }
@@ -223,7 +224,7 @@ Item {
 
         Behavior on blobSize {
             NumberAnimation {
-                duration: 400
+                duration: Theme.Motion.gentle
                 easing.type: Easing.OutCubic
             }
         }
@@ -312,7 +313,7 @@ Item {
 
         Behavior on blobColor {
             ColorAnimation {
-                duration: 300
+                duration: Theme.Motion.standard
                 easing.type: Easing.InOutQuad
             }
         }
@@ -378,7 +379,7 @@ Item {
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: 400
+                    duration: Theme.Motion.gentle
                     easing.type: Easing.InOutQuad
                 }
             }
@@ -401,7 +402,7 @@ Item {
 
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: 400
+                        duration: Theme.Motion.gentle
                         easing.type: Easing.InOutQuad
                     }
                 }
@@ -595,10 +596,10 @@ Item {
                 glowSpread: 0.5
 
                 Behavior on opacity {
-                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
                 }
                 Behavior on scale {
-                    NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
                 }
             }
 
@@ -620,8 +621,8 @@ Item {
                 glowRadius: modeManager.scale(8)
                 glowSpread: 0.4
 
-                Behavior on color { ColorAnimation { duration: 150 } }
-                Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
                 MouseArea {
                     id: swapMouseArea
@@ -672,13 +673,13 @@ Item {
                 glowSpread: 0.4
 
                 Behavior on rotation {
-                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
                 }
                 Behavior on color {
-                    ColorAnimation { duration: 150 }
+                    ColorAnimation { duration: Theme.Motion.micro }
                 }
                 Behavior on opacity {
-                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
                 }
 
                 MouseArea {

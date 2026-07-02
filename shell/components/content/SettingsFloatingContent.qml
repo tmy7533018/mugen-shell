@@ -4,6 +4,7 @@ import QtQuick.Controls
 import Quickshell
 import "../ui" as UI
 import "./settings" as Settings
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -108,7 +109,7 @@ Item {
                                     ? Qt.rgba(1, 1, 1, 0.04)
                                     : "transparent")
 
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                             Text {
                                 anchors.left: parent.left

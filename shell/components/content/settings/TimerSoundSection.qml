@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Io
+import "../../../lib" as Theme
 
 Rectangle {
     id: section
@@ -73,7 +74,7 @@ Rectangle {
     }
 
     Behavior on height {
-        NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
     MouseArea {
@@ -153,7 +154,7 @@ Rectangle {
                     : "transparent")
 
             Behavior on color {
-                ColorAnimation { duration: 150 }
+                ColorAnimation { duration: Theme.Motion.micro }
             }
 
             Text {
@@ -228,7 +229,7 @@ Rectangle {
             font.family: "M PLUS 2"
             font.letterSpacing: 0.5
 
-            Behavior on color { ColorAnimation { duration: 150 } }
+            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
         }
 
         Process {

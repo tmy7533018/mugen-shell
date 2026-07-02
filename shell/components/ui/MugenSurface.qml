@@ -1,4 +1,5 @@
 import QtQuick
+import "../../lib" as Theme
 
 Rectangle {
     id: surface
@@ -152,12 +153,12 @@ Rectangle {
         color: surface.baseColor
 
         Behavior on color {
-            ColorAnimation { duration: 400; easing.type: Easing.InOutCubic }
+            ColorAnimation { duration: Theme.Motion.gentle; easing.type: Easing.InOutCubic }
         }
     }
 
     Behavior on borderColor {
-        ColorAnimation { duration: 400; easing.type: Easing.InOutCubic }
+        ColorAnimation { duration: Theme.Motion.gentle; easing.type: Easing.InOutCubic }
     }
 
     Rectangle {

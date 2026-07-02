@@ -4,6 +4,7 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
 import "../common" as Common
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -159,8 +160,8 @@ Item {
             }
         }
         ParallelAnimation {
-            NumberAnimation { target: root; property: "gridOpacity"; to: 1.0; duration: 280; easing.type: Easing.OutCubic }
-            NumberAnimation { target: root; property: "gridShift"; to: 0; duration: 280; easing.type: Easing.OutCubic }
+            NumberAnimation { target: root; property: "gridOpacity"; to: 1.0; duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
+            NumberAnimation { target: root; property: "gridShift"; to: 0; duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
         }
     }
 
@@ -417,8 +418,8 @@ Item {
                             glowRadius: 8
                             glowSpread: 0.4
 
-                            Behavior on color { ColorAnimation { duration: 150 } }
-                            Behavior on opacity { NumberAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                            Behavior on opacity { NumberAnimation { duration: Theme.Motion.micro } }
                         }
 
                         MouseArea {
@@ -465,8 +466,8 @@ Item {
                             glowRadius: 8
                             glowSpread: 0.4
 
-                            Behavior on color { ColorAnimation { duration: 150 } }
-                            Behavior on opacity { NumberAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                            Behavior on opacity { NumberAnimation { duration: Theme.Motion.micro } }
                         }
 
                         MouseArea {
@@ -574,8 +575,8 @@ Item {
                                     ? (theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
                                     : Qt.rgba(0.75, 0.75, 0.8, 0.5)
 
-                                Behavior on color { ColorAnimation { duration: 150 } }
-                                Behavior on border.color { ColorAnimation { duration: 150 } }
+                                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                                Behavior on border.color { ColorAnimation { duration: Theme.Motion.micro } }
                             }
 
                             Text {
@@ -662,7 +663,7 @@ Item {
                         font.family: "M PLUS 2"
                         font.letterSpacing: 0.3
 
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
                     }
 
                     MouseArea {
@@ -745,12 +746,12 @@ Item {
 
                                 ParallelAnimation {
                                     id: entryAnim
-                                    NumberAnimation { target: eventRow; property: "opacity"; from: 0; to: 1; duration: 280; easing.type: Easing.OutCubic }
-                                    NumberAnimation { target: eventRow; property: "entryShift"; from: -8; to: 0; duration: 280; easing.type: Easing.OutCubic }
+                                    NumberAnimation { target: eventRow; property: "opacity"; from: 0; to: 1; duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
+                                    NumberAnimation { target: eventRow; property: "entryShift"; from: -8; to: 0; duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
                                 }
 
-                                Behavior on color { ColorAnimation { duration: 150 } }
-                                Behavior on border.color { ColorAnimation { duration: 150 } }
+                                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                                Behavior on border.color { ColorAnimation { duration: Theme.Motion.micro } }
 
                                 MouseArea {
                                     id: rowHover
@@ -808,7 +809,7 @@ Item {
                                             opacity: deleteHover.containsMouse ? 1 : 0.55
                                             font.pixelSize: 12
 
-                                            Behavior on opacity { NumberAnimation { duration: 150 } }
+                                            Behavior on opacity { NumberAnimation { duration: Theme.Motion.micro } }
                                         }
 
                                         MouseArea {
@@ -855,8 +856,8 @@ Item {
                         : Qt.rgba(1, 1, 1, 0.10)
                     radius: 10
 
-                    Behavior on color { ColorAnimation { duration: 200 } }
-                    Behavior on border.color { ColorAnimation { duration: 200 } }
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+                    Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
 
                     TextInput {
                         id: titleInput
@@ -906,9 +907,9 @@ Item {
                         radius: 10
                         opacity: root.formAllDay ? 0.4 : 1
 
-                        Behavior on color { ColorAnimation { duration: 200 } }
-                        Behavior on border.color { ColorAnimation { duration: 200 } }
-                        Behavior on opacity { NumberAnimation { duration: 200 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+                        Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
+                        Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
 
                         TextInput {
                             id: timeInput
@@ -965,8 +966,8 @@ Item {
                             : Qt.rgba(1, 1, 1, 0.10)
                         radius: 10
 
-                        Behavior on color { ColorAnimation { duration: 200 } }
-                        Behavior on border.color { ColorAnimation { duration: 200 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+                        Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
 
                         Text {
                             anchors.centerIn: parent
@@ -979,7 +980,7 @@ Item {
                             font.family: "M PLUS 2"
                             font.letterSpacing: 0.5
 
-                            Behavior on color { ColorAnimation { duration: 200 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
                         }
 
                         MouseArea {
@@ -1004,7 +1005,7 @@ Item {
                             : Qt.rgba(0.65, 0.55, 0.85, addHover.containsMouse ? 0.42 : 0.30)
                         border.width: 0
 
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                         Text {
                             anchors.centerIn: parent

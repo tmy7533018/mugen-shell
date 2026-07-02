@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import "../../ui" as UI
+import "../../../lib" as Theme
 
 Rectangle {
     id: deviceItem
@@ -28,8 +29,8 @@ Rectangle {
         ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.5)
         : Qt.rgba(0.65, 0.55, 0.85, 0.5)
 
-    Behavior on radius { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-    Behavior on border.width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+    Behavior on radius { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
+    Behavior on border.width { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
     layer.enabled: true
     layer.effect: Glow {
@@ -41,7 +42,7 @@ Rectangle {
     }
 
     Behavior on color {
-        ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
+        ColorAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
     }
 
     RowLayout {
@@ -64,13 +65,13 @@ Rectangle {
                     NumberAnimation {
                         property: "opacity"
                         to: 0
-                        duration: 150
+                        duration: Theme.Motion.micro
                     }
                     PropertyAction { property: "source" }
                     NumberAnimation {
                         property: "opacity"
                         to: 0.8
-                        duration: 150
+                        duration: Theme.Motion.micro
                     }
                 }
             }
@@ -113,7 +114,7 @@ Rectangle {
             }
 
             Behavior on color {
-                ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
+                ColorAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
             }
 
             Text {

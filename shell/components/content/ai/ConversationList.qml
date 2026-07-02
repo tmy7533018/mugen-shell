@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import "../../ui" as UI
 import "../../common" as Common
+import "../../../lib" as Theme
 
 FocusScope {
     id: root
@@ -86,7 +87,7 @@ FocusScope {
                     color: toggleMouse.containsMouse
                         ? (root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                         : (root.theme ? root.theme.textSecondary : Qt.rgba(0.78, 0.78, 0.88, 0.85))
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
                 }
 
                 MouseArea {
@@ -109,7 +110,7 @@ FocusScope {
             border.color: Qt.rgba(0.55, 0.55, 0.75, 0.15)
             border.width: 1
 
-            Behavior on color { ColorAnimation { duration: 200; easing.type: Easing.OutCubic } }
+            Behavior on color { ColorAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
             RowLayout {
                 anchors.fill: parent
@@ -180,7 +181,7 @@ FocusScope {
                         ? (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.18) : Qt.rgba(0.65, 0.55, 0.85, 0.18))
                         : (rowMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.75, 0.10) : "transparent")
 
-                    Behavior on color { ColorAnimation { duration: 180 } }
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
                     ColumnLayout {
                         id: rowCol
@@ -230,7 +231,7 @@ FocusScope {
                         opacity: rowMouse.containsMouse || deleteMouse.containsMouse ? 1.0 : 0.0
                         z: 1
 
-                        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                        Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
                         UI.SvgIcon {
                             anchors.centerIn: parent
@@ -240,7 +241,7 @@ FocusScope {
                             color: deleteMouse.containsMouse
                                 ? Qt.rgba(0.95, 0.55, 0.65, 1.0)
                                 : (root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.7))
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
                         }
 
                         MouseArea {

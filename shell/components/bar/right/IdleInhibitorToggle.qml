@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../../common" as Common
+import "../../../lib" as Theme
 
 Common.IconButton {
     id: idleToggleButton
@@ -90,7 +91,7 @@ Common.IconButton {
             property: "isBlinking"
             value: true
         }
-        PauseAnimation { duration: 150 }
+        PauseAnimation { duration: Theme.Motion.micro }
         PropertyAction {
             target: idleToggleButton
             property: "isBlinking"
@@ -106,7 +107,7 @@ Common.IconButton {
             property: "isBlinking"
             value: true
         }
-        PauseAnimation { duration: 150 }
+        PauseAnimation { duration: Theme.Motion.micro }
         PropertyAction {
             target: idleToggleButton
             property: "isBlinking"
@@ -118,7 +119,7 @@ Common.IconButton {
             property: "isBlinking"
             value: true
         }
-        PauseAnimation { duration: 150 }
+        PauseAnimation { duration: Theme.Motion.micro }
         PropertyAction {
             target: idleToggleButton
             property: "isBlinking"

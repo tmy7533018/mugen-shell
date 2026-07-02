@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import "../../../lib" as Theme
 
 Rectangle {
     id: section
@@ -66,8 +67,8 @@ Rectangle {
                     ? Qt.rgba(0.95, 0.55, 0.65, 0.85)
                     : Qt.rgba(0.95, 0.55, 0.65, 0.45)
 
-                Behavior on color { ColorAnimation { duration: 200 } }
-                Behavior on border.color { ColorAnimation { duration: 200 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+                Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
 
                 Text {
                     id: resetText

@@ -1,5 +1,6 @@
 import QtQuick
 import "../../common" as Common
+import "../../../lib" as Theme
 
 Item {
     id: bubbleRoot
@@ -79,11 +80,11 @@ Item {
                 opacity: bubbleHover.containsMouse ? 1.0 : 0.0
 
                 Behavior on opacity {
-                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
                 }
 
                 Behavior on color {
-                    ColorAnimation { duration: 150 }
+                    ColorAnimation { duration: Theme.Motion.micro }
                 }
 
                 Text {
@@ -155,8 +156,8 @@ Item {
                     border.width: 1
                     opacity: chip.pending ? 0.7 : 1.0
 
-                    Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-                    Behavior on color { ColorAnimation { duration: 250 } }
+                    Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
                     Text {
                         id: chipText

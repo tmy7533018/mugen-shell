@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import "../common" as Common
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -88,13 +89,13 @@ Item {
             Transition {
                 from: "visible"
                 to: ""
-                NumberAnimation { property: "opacity"; duration: 250; easing.type: Easing.InOutQuad }
+                NumberAnimation { property: "opacity"; duration: Theme.Motion.fast; easing.type: Easing.InOutQuad }
             },
             Transition {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 250 }
+                    PauseAnimation { duration: Theme.Motion.fast }
                     NumberAnimation { property: "opacity"; duration: 350; easing.type: Easing.InOutCubic }
                 }
             }
@@ -121,7 +122,7 @@ Item {
                     height: width
 
                     property real animatedIntensity: root.currentBrightness / 100
-                    Behavior on animatedIntensity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                    Behavior on animatedIntensity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
                     onAnimatedIntensityChanged: requestPaint()
                     onWidthChanged: requestPaint()
@@ -190,7 +191,7 @@ Item {
                         height: modeManager.scale(3)
                         radius: height / 2
                         color: Qt.rgba(1, 1, 1, sliderMouse.containsMouse || sliderMouse.pressed ? 0.22 : 0.15)
-                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
                         Rectangle {
                             id: filled
@@ -212,7 +213,7 @@ Item {
 
                             Behavior on width {
                                 enabled: !sliderMouse.pressed
-                                NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                                NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
                             }
                         }
                     }

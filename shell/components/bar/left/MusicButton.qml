@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../../common" as Common
+import "../../../lib" as Theme
 
 Item {
     id: musicButtonWrapper
@@ -50,7 +51,7 @@ Item {
 
     Behavior on implicitWidth {
         NumberAnimation {
-            duration: 420;
+            duration: Theme.Motion.gentle;
             easing.type: Easing.OutCubic
         }
     }
@@ -61,7 +62,7 @@ Item {
         opacity: (!musicButtonWrapper.isPlaying || visualizerHoverHandler.hovered) ? 1.0 : 0.0
 
         Behavior on opacity {
-            NumberAnimation { duration: 420; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
         }
 
         Common.IconButton {
@@ -77,7 +78,7 @@ Item {
             letterSpacing: musicButtonWrapper.typo ? musicButtonWrapper.typo.clockStyle.letterSpacing : 0
 
             Behavior on iconColor {
-                ColorAnimation { duration: 600; easing.type: Easing.InOutCubic }
+                ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic }
             }
 
             onClicked: {
@@ -103,11 +104,11 @@ Item {
             : 0.0
 
         Behavior on opacity {
-            NumberAnimation { duration: 420; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
         }
 
         Behavior on barColor {
-            ColorAnimation { duration: 600; easing.type: Easing.InOutCubic }
+            ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic }
         }
     }
 

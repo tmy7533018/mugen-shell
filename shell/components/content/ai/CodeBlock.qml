@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import "../../ui" as UI
+import "../../../lib" as Theme
 
 Item {
     id: root
@@ -62,7 +63,7 @@ Item {
                     height: modeManager.scale(22)
                     opacity: hoverArea.containsMouse || copyMouse.containsMouse || container.justCopied ? 1.0 : 0.55
 
-                    Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                    Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
                     UI.SvgIcon {
                         anchors.centerIn: parent
@@ -74,7 +75,7 @@ Item {
                             : (copyMouse.containsMouse
                                 ? (root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                                 : (root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.7)))
-                        Behavior on color { ColorAnimation { duration: 180 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
                         layer.enabled: copyMouse.containsMouse || container.justCopied
                         layer.effect: Glow {

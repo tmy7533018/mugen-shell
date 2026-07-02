@@ -2,6 +2,7 @@ import QtQuick
 import Qt5Compat.GraphicalEffects
 import "../common" as Common
 import "../ui" as UI
+import "../../lib" as Theme
 
 Item {
     id: button
@@ -105,7 +106,7 @@ Item {
         visible: button.iconSource !== ""
         scale: mouseArea.containsMouse ? button.hoverScale : 1.0
 
-        Behavior on scale { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
         Behavior on color { ColorAnimation { duration: 350; easing.type: Easing.OutCubic } }
     }
 
@@ -117,7 +118,7 @@ Item {
         visible: button.iconSource === "" && button.icon !== ""
         scale: mouseArea.containsMouse ? button.hoverScale : 1.0
 
-        Behavior on scale { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
         Behavior on color { ColorAnimation { duration: 350; easing.type: Easing.OutCubic } }
     }
 

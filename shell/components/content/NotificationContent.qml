@@ -6,6 +6,7 @@ import Quickshell.Io
 import "../notification" as NotificationComponents
 import "../ui" as UI
 import "../common" as Common
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -338,7 +339,7 @@ Item {
                 to: ""
                 NumberAnimation {
                     property: "opacity"
-                    duration: 300
+                    duration: Theme.Motion.standard
                     easing.type: Easing.OutCubic
                 }
             },
@@ -346,10 +347,10 @@ Item {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 300 }
+                    PauseAnimation { duration: Theme.Motion.standard }
                     NumberAnimation {
                         property: "opacity"
-                        duration: 400
+                        duration: Theme.Motion.gentle
                         easing.type: Easing.InOutCubic
                     }
                 }
@@ -393,7 +394,7 @@ Item {
                     
                     Behavior on color {
                         ColorAnimation {
-                            duration: 300
+                            duration: Theme.Motion.standard
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -416,21 +417,21 @@ Item {
                         
                         Behavior on color {
                             ColorAnimation {
-                                duration: 300
+                                duration: Theme.Motion.standard
                                 easing.type: Easing.OutCubic
                             }
                         }
                         
                         Behavior on opacity {
                             NumberAnimation {
-                                duration: 300
+                                duration: Theme.Motion.standard
                                 easing.type: Easing.OutCubic
                             }
                         }
                         
                         Behavior on scale {
                             NumberAnimation {
-                                duration: 300
+                                duration: Theme.Motion.standard
                                 easing.type: Easing.OutCubic
                             }
                         }
@@ -463,21 +464,21 @@ Item {
                     
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 300
+                            duration: Theme.Motion.standard
                             easing.type: Easing.OutCubic
                         }
                     }
                     
                     Behavior on animatedWidth {
                         NumberAnimation {
-                            duration: 300
+                            duration: Theme.Motion.standard
                             easing.type: Easing.OutCubic
                         }
                     }
                     
                     Behavior on color {
                         ColorAnimation {
-                            duration: 300
+                            duration: Theme.Motion.standard
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -493,7 +494,7 @@ Item {
                         
                         Behavior on color {
                             ColorAnimation {
-                                duration: 300
+                                duration: Theme.Motion.standard
                                 easing.type: Easing.OutCubic
                             }
                         }
@@ -553,19 +554,19 @@ Item {
                             NumberAnimation {
                                 properties: "y"
                                 from: -60
-                                duration: 400
+                                duration: Theme.Motion.gentle
                                 easing.type: Easing.OutCubic
                             }
                             NumberAnimation {
                                 properties: "opacity"
                                 from: 0.0
-                                duration: 400
+                                duration: Theme.Motion.gentle
                                 easing.type: Easing.OutCubic
                             }
                             NumberAnimation {
                                 properties: "scale"
                                 from: 0.95
-                                duration: 400
+                                duration: Theme.Motion.gentle
                                 easing.type: Easing.OutBack
                             }
                         }
@@ -584,7 +585,7 @@ Item {
                     displaced: Transition {
                         NumberAnimation {
                             properties: "y"
-                            duration: 400
+                            duration: Theme.Motion.gentle
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -623,7 +624,7 @@ Item {
                     
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 300
+                            duration: Theme.Motion.standard
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -658,7 +659,7 @@ Item {
                             NumberAnimation {
                                 from: 6
                                 to: 0
-                                duration: 800
+                                duration: Theme.Motion.drift
                                 easing.type: Easing.InOutSine
                             }
                         }
@@ -693,7 +694,7 @@ Item {
                                 NumberAnimation {
                                     from: 0.9
                                     to: 0.6
-                                    duration: 800
+                                    duration: Theme.Motion.drift
                                     easing.type: Easing.InOutSine
                                 }
                             }

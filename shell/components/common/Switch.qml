@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import "../../lib" as Theme
 
 Rectangle {
     id: root
@@ -21,11 +22,11 @@ Rectangle {
         : (theme ? Qt.rgba(theme.textFaint.r, theme.textFaint.g, theme.textFaint.b, 0.3) : Qt.rgba(0.62, 0.62, 0.72, 0.3))
     
     Behavior on color {
-        ColorAnimation { duration: 250; easing.type: Easing.OutCubic }
+        ColorAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
     }
     
     Behavior on border.color {
-        ColorAnimation { duration: 250; easing.type: Easing.OutCubic }
+        ColorAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
     }
     
     Rectangle {
@@ -52,16 +53,16 @@ Rectangle {
             opacity: checked ? 1.0 : 0.0
             
             Behavior on opacity {
-                NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
             }
         }
         
         Behavior on x {
-            NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
         }
         
         Behavior on color {
-            ColorAnimation { duration: 250; easing.type: Easing.OutCubic }
+            ColorAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
         }
     }
     

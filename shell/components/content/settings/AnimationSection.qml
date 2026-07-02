@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import "../../../lib" as Theme
 
 Rectangle {
     id: section
@@ -66,7 +67,7 @@ Rectangle {
     }
 
     Behavior on height {
-        NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
     ColumnLayout {
@@ -122,11 +123,11 @@ Rectangle {
             opacity: section.isExpanded ? 1.0 : 0.0
 
             Behavior on Layout.preferredHeight {
-                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
             }
 
             Behavior on opacity {
-                NumberAnimation { duration: 200 }
+                NumberAnimation { duration: Theme.Motion.fast }
             }
 
             ListView {
@@ -173,7 +174,7 @@ Rectangle {
                     border.color: section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
 
                     Behavior on color {
-                        ColorAnimation { duration: 150 }
+                        ColorAnimation { duration: Theme.Motion.micro }
                     }
 
                     Text {

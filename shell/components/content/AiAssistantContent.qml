@@ -378,8 +378,8 @@ FocusScope {
                             id: breathAnim
                             loops: Animation.Infinite
                             running: root.isThinking
-                            NumberAnimation { to: 0.45; duration: Theme.Motion.drift; easing.type: Easing.InOutSine }
-                            NumberAnimation { to: 1.0; duration: Theme.Motion.drift; easing.type: Easing.InOutSine }
+                            NumberAnimation { to: 0.45; duration: 900; easing.type: Easing.InOutSine }
+                            NumberAnimation { to: 1.0; duration: 900; easing.type: Easing.InOutSine }
                         }
                         Connections {
                             target: breathAnim

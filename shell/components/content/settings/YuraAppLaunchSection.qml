@@ -109,7 +109,7 @@ Rectangle {
     }
 
     Behavior on height {
-        NumberAnimation { duration: 280; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
     Process {
@@ -330,7 +330,7 @@ Rectangle {
                 Layout.alignment: Qt.AlignTop
                 radius: 12
                 color: allOnMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                 Text {
                     anchors.centerIn: parent
@@ -355,7 +355,7 @@ Rectangle {
                 Layout.alignment: Qt.AlignTop
                 radius: 12
                 color: allOffMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                 Text {
                     anchors.centerIn: parent
@@ -384,7 +384,7 @@ Rectangle {
             border.color: filterInput.activeFocus
                 ? (section.theme ? section.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
                 : (section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.18))
-            Behavior on border.color { ColorAnimation { duration: 180 } }
+            Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
 
             TextInput {
                 id: filterInput
@@ -487,7 +487,7 @@ Rectangle {
                             border.color: pill.on
                                 ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95))
                                 : Qt.rgba(1, 1, 1, 0.10)
-                            Behavior on color { ColorAnimation { duration: 180 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
                             Rectangle {
                                 width: 14
@@ -496,7 +496,7 @@ Rectangle {
                                 color: section.theme ? section.theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
                                 y: 3
                                 x: pill.on ? pill.width - width - 3 : 3
-                                Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                                Behavior on x { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
                             }
                         }
                     }
@@ -525,7 +525,7 @@ Rectangle {
                 font.family: "M PLUS 2"
                 opacity: section.statusText ? 0.85 : 0
                 elide: Text.ElideRight
-                Behavior on opacity { NumberAnimation { duration: 200 } }
+                Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
             }
 
             Rectangle {
@@ -535,7 +535,7 @@ Rectangle {
                 enabled: !section.saving
                 color: saveMouse.containsMouse ? Qt.rgba(0.45, 0.65, 0.90, 0.45) : Qt.rgba(0.45, 0.65, 0.90, 0.3)
                 opacity: section.saving ? 0.5 : 1.0
-                Behavior on color { ColorAnimation { duration: 180 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
                 Text {
                     anchors.centerIn: parent

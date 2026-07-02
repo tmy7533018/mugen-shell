@@ -59,7 +59,7 @@ Rectangle {
     }
 
     Behavior on height {
-        NumberAnimation { duration: 280; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
     Component.onCompleted: refresh()

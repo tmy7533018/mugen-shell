@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
+import "../../lib" as Theme
 
 Item {
     id: workspacesRoot
@@ -140,7 +141,7 @@ Item {
         Behavior on currentX {
             NumberAnimation {
                 id: moveAnimation
-                duration: 700
+                duration: Theme.Motion.slow
                 easing.type: Easing.OutBack
                 easing.overshoot: 1.2
 
@@ -169,14 +170,14 @@ Item {
                 target: activeSmokeContainer
                 property: "brightnessBoost"
                 to: 1.0
-                duration: 150
+                duration: Theme.Motion.micro
                 easing.type: Easing.OutCubic
             }
             NumberAnimation {
                 target: activeSmokeContainer
                 property: "brightnessBoost"
                 to: 0.0
-                duration: 600
+                duration: Theme.Motion.slow
                 easing.type: Easing.InOutCubic
             }
         }
@@ -189,7 +190,7 @@ Item {
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: 400
+                    duration: Theme.Motion.gentle
                     easing.type: Easing.InOutCubic
                 }
             }
@@ -343,7 +344,7 @@ Item {
 
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: 200
+                        duration: Theme.Motion.fast
                         easing.type: Easing.InOutQuad
                     }
                 }
@@ -405,7 +406,7 @@ Item {
                     property: "layerScale"
                     from: blobLayer.layerScale
                     to: 0.50
-                    duration: 200
+                    duration: Theme.Motion.fast
                     easing.type: Easing.InCubic
                 }
 
@@ -599,7 +600,7 @@ Item {
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: 800
+                    duration: Theme.Motion.drift
                     easing.type: Easing.InOutCubic
                 }
             }

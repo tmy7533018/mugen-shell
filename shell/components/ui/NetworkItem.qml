@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import "../ui" as UI
+import "../../lib" as Theme
 
 Rectangle {
     id: root
@@ -40,7 +41,7 @@ Rectangle {
         : Qt.rgba(0.65, 0.55, 0.85, 0.5)
 
     Behavior on border.width {
-        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
     }
 
     layer.enabled: true
@@ -54,7 +55,7 @@ Rectangle {
 
     Behavior on targetHeight {
         NumberAnimation {
-            duration: 300
+            duration: Theme.Motion.standard
             easing.type: Easing.OutCubic
         }
     }
@@ -82,13 +83,13 @@ Rectangle {
 
     Behavior on radius {
         NumberAnimation {
-            duration: 300
+            duration: Theme.Motion.standard
             easing.type: Easing.OutCubic
         }
     }
 
     Behavior on color {
-        ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
+        ColorAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
     }
 
     ColumnLayout {
@@ -150,14 +151,14 @@ Rectangle {
 
                     Behavior on rotation {
                         NumberAnimation {
-                            duration: 300
+                            duration: Theme.Motion.standard
                             easing.type: Easing.OutCubic
                         }
                     }
 
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 200
+                            duration: Theme.Motion.fast
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -185,7 +186,7 @@ Rectangle {
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: 300
+                    duration: Theme.Motion.standard
                     easing.type: Easing.OutCubic
                 }
             }
@@ -254,7 +255,7 @@ Rectangle {
                                 opacity: showPasswordMouseArea.containsMouse ? 1.0 : 0.6
 
                                 Behavior on opacity {
-                                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                                    NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
                                 }
                             }
 
@@ -291,7 +292,7 @@ Rectangle {
                     }
 
                     Behavior on color {
-                        ColorAnimation { duration: 200; easing.type: Easing.OutCubic }
+                        ColorAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
                     }
 
                     Text {

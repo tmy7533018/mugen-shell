@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../../ui" as UI
+import "../../../lib" as Theme
 
 Item {
     id: notificationIconContainer
@@ -148,10 +149,10 @@ Item {
         }
 
         Behavior on opacity {
-            NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
         }
         Behavior on hoverScale {
-            NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
         }
     }
 

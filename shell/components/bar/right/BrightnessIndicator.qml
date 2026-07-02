@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import "../../../lib" as Theme
 
 Item {
     id: brightnessContainer
@@ -32,7 +33,7 @@ Item {
     ]
 
     transitions: Transition {
-        PropertyAnimation { properties: "opacity,scale"; duration: 300; easing.type: Easing.OutCubic }
+        PropertyAnimation { properties: "opacity,scale"; duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
     Canvas {
@@ -42,7 +43,7 @@ Item {
         height: scaled(20)
 
         property real animatedIntensity: brightnessManager ? brightnessManager.brightness / 100 : 0
-        Behavior on animatedIntensity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+        Behavior on animatedIntensity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
         onAnimatedIntensityChanged: requestPaint()
         onWidthChanged: requestPaint()

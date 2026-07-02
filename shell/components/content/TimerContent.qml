@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -136,7 +137,7 @@ Item {
         transform: Translate {
             id: focusScopeTranslate
             y: focusScope.opacity > 0.5 ? 0 : modeManager.scale(8)
-            Behavior on y { NumberAnimation { duration: 360; easing.type: Easing.OutCubic } }
+            Behavior on y { NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic } }
         }
 
         states: [
@@ -152,14 +153,14 @@ Item {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 200 }
-                    NumberAnimation { property: "opacity"; duration: 320; easing.type: Easing.OutCubic }
+                    PauseAnimation { duration: Theme.Motion.fast }
+                    NumberAnimation { property: "opacity"; duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
                 }
             },
             Transition {
                 from: "visible"
                 to: ""
-                NumberAnimation { property: "opacity"; duration: 200; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "opacity"; duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
             }
         ]
 
@@ -240,11 +241,11 @@ Item {
 
             transform: Translate {
                 y: idleLayout.opacity > 0.5 ? 0 : -modeManager.scale(6)
-                Behavior on y { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
+                Behavior on y { NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic } }
             }
 
             Behavior on opacity {
-                NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
             }
 
             RowLayout {
@@ -288,8 +289,8 @@ Item {
                         : (theme ? Qt.rgba(theme.textFaint.r, theme.textFaint.g, theme.textFaint.b, 0.30) : Qt.rgba(0.62, 0.62, 0.72, 0.30))
                     radius: modeManager.scale(10)
 
-                    Behavior on color { ColorAnimation { duration: 150 } }
-                    Behavior on border.color { ColorAnimation { duration: 200 } }
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                    Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
 
                     layer.enabled: inputField.isFocused
                     layer.effect: Glow {
@@ -349,8 +350,8 @@ Item {
                         font.family: "M PLUS 2"
                         opacity: root.hasInput ? 0.95 : 0.4
 
-                        Behavior on color { ColorAnimation { duration: 200 } }
-                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+                        Behavior on opacity { NumberAnimation { duration: Theme.Motion.micro } }
 
                         layer.enabled: root.hasInput
                         layer.effect: Glow {
@@ -400,8 +401,8 @@ Item {
                             ? (theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.55) : Qt.rgba(0.65, 0.55, 0.85, 0.55))
                             : (theme ? Qt.rgba(theme.textFaint.r, theme.textFaint.g, theme.textFaint.b, 0.30) : Qt.rgba(0.62, 0.62, 0.72, 0.30))
 
-                        Behavior on color { ColorAnimation { duration: 150 } }
-                        Behavior on border.color { ColorAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                        Behavior on border.color { ColorAnimation { duration: Theme.Motion.micro } }
 
                         layer.enabled: isSelected || presetHover.containsMouse
                         layer.effect: Glow {
@@ -413,7 +414,7 @@ Item {
                                 : Qt.rgba(0.65, 0.55, 0.85, isSelected ? 0.45 : 0.25)
                             transparentBorder: true
 
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
                         }
 
                         Text {
@@ -449,11 +450,11 @@ Item {
 
             transform: Translate {
                 y: runningLayout.opacity > 0.5 ? 0 : modeManager.scale(6)
-                Behavior on y { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
+                Behavior on y { NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic } }
             }
 
             Behavior on opacity {
-                NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
             }
 
             Item {
@@ -521,7 +522,7 @@ Item {
                                 : (theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.55) : Qt.rgba(0.65, 0.55, 0.85, 0.55)))
                         transparentBorder: true
 
-                        Behavior on color { ColorAnimation { duration: 300 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.standard } }
                     }
                 }
 
@@ -541,7 +542,7 @@ Item {
                         font.family: "M PLUS 2"
                         font.letterSpacing: 1
 
-                        Behavior on color { ColorAnimation { duration: 300 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.standard } }
 
                         SequentialAnimation on scale {
                             loops: Animation.Infinite
@@ -563,7 +564,7 @@ Item {
                                     : Qt.rgba(0.65, 0.55, 0.85, 0.45))
                             transparentBorder: true
 
-                            Behavior on color { ColorAnimation { duration: 300 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.standard } }
                         }
                     }
 
@@ -602,7 +603,7 @@ Item {
                         color: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, pauseHover.containsMouse ? 0.32 : 0.22) : Qt.rgba(0.65, 0.55, 0.85, 0.22)
                         border.width: 0
 
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                         layer.enabled: true
                         layer.effect: Glow {
@@ -614,8 +615,8 @@ Item {
                                 : Qt.rgba(0.65, 0.55, 0.85, pauseHover.containsMouse ? 0.55 : 0.30)
                             transparentBorder: true
 
-                            Behavior on color { ColorAnimation { duration: 200 } }
-                            Behavior on radius { NumberAnimation { duration: 200 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+                            Behavior on radius { NumberAnimation { duration: Theme.Motion.fast } }
                         }
 
                         Text {
@@ -648,7 +649,7 @@ Item {
                         border.width: 1
                         border.color: theme ? Qt.rgba(theme.textFaint.r, theme.textFaint.g, theme.textFaint.b, 0.35) : Qt.rgba(0.62, 0.62, 0.72, 0.35)
 
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                         Text {
                             anchors.centerIn: parent
@@ -680,7 +681,7 @@ Item {
             visible: opacity > 0.01
 
             Behavior on opacity {
-                NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
             }
 
             Item {
@@ -768,7 +769,7 @@ Item {
                     color: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, dismissHover.containsMouse ? 0.36 : 0.24) : Qt.rgba(0.65, 0.55, 0.85, 0.24)
                     border.width: 0
 
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                     layer.enabled: true
                     layer.effect: Glow {
@@ -780,8 +781,8 @@ Item {
                             : Qt.rgba(0.65, 0.55, 0.85, dismissHover.containsMouse ? 0.6 : 0.40)
                         transparentBorder: true
 
-                        Behavior on radius { NumberAnimation { duration: 200 } }
-                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on radius { NumberAnimation { duration: Theme.Motion.fast } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
                     }
 
                     Text {

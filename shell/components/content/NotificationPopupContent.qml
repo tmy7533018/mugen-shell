@@ -105,7 +105,7 @@ Item {
                 to: ""
                 NumberAnimation {
                     property: "opacity"
-                    duration: 300
+                    duration: Theme.Motion.standard
                     easing.type: Easing.OutCubic
                 }
             },
@@ -113,10 +113,10 @@ Item {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 300 }
+                    PauseAnimation { duration: Theme.Motion.standard }
                     NumberAnimation {
                         property: "opacity"
-                        duration: 400
+                        duration: Theme.Motion.gentle
                         easing.type: Easing.InOutCubic
                     }
                 }
@@ -241,7 +241,7 @@ Item {
                         color: Qt.rgba(0.95, 0.55, 0.65, closeArea.containsMouse ? 1.0 : 0.6)
                         font.pixelSize: modeManager.scale(18)
                         font.weight: Font.Medium
-                        Behavior on color { ColorAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
                     }
 
                     MouseArea {

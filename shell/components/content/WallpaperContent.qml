@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell.Io
 import "../common" as Common
+import "../../lib" as Theme
 
 FocusScope {
     id: root
@@ -284,8 +285,8 @@ FocusScope {
                         scale: cellRoot.isCurrent ? 1.0 : 0.75
                         opacity: cellRoot.isCurrent ? 1.0 : 0.7
 
-                        Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-                        Behavior on opacity { NumberAnimation { duration: 200 } }
+                        Behavior on scale { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
+                        Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
 
                         Rectangle {
                             anchors.fill: parent

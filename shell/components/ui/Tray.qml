@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Services.SystemTray
+import "../../lib" as Theme
 
 RowLayout {
     id: root
@@ -48,10 +49,10 @@ RowLayout {
             visible: opacity > 0.01
 
             Behavior on Layout.preferredWidth {
-                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
             }
             Behavior on opacity {
-                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
             }
 
             Image {
@@ -64,8 +65,8 @@ RowLayout {
                 opacity: trayMouse.containsMouse ? 1.0 : 0.75
                 scale: trayMouse.containsMouse ? 1.3 : 1.0
 
-                Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
-                Behavior on scale { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+                Behavior on opacity { NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic } }
+                Behavior on scale { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
             }
 
             MouseArea {
@@ -116,10 +117,10 @@ RowLayout {
             scale: chevronMouse.containsMouse ? 1.3 : 1.0
 
             Behavior on opacity {
-                NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
             }
             Behavior on scale {
-                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic }
             }
         }
 

@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell
 import "../ui" as UI
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -191,14 +192,14 @@ Item {
             Transition {
                 from: "visible"
                 to: ""
-                NumberAnimation { property: "opacity"; duration: 300; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "opacity"; duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
             },
             Transition {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 300 }
-                    NumberAnimation { property: "opacity"; duration: 400; easing.type: Easing.InOutCubic }
+                    PauseAnimation { duration: Theme.Motion.standard }
+                    NumberAnimation { property: "opacity"; duration: Theme.Motion.gentle; easing.type: Easing.InOutCubic }
                 }
             }
         ]
@@ -265,7 +266,7 @@ Item {
                                         ? Qt.rgba(1, 1, 1, 0.04)
                                         : "transparent")
 
-                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                                 Text {
                                     anchors.left: parent.left

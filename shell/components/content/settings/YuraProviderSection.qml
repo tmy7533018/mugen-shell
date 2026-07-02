@@ -40,7 +40,7 @@ Rectangle {
     }
 
     Behavior on height {
-        NumberAnimation { duration: 280; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
     Process {
@@ -267,7 +267,7 @@ Rectangle {
             color: refreshMouse.containsMouse
                 ? Qt.rgba(0.55, 0.55, 0.65, 0.32)
                 : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-            Behavior on color { ColorAnimation { duration: 180 } }
+            Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
             Text {
                 anchors.centerIn: parent

@@ -80,7 +80,7 @@ Rectangle {
     
     Behavior on radius {
         NumberAnimation {
-            duration: 250
+            duration: Theme.Motion.fast
             easing.type: Easing.OutCubic
         }
     }
@@ -91,7 +91,7 @@ Rectangle {
         NumberAnimation {
             from: 1.0
             to: 0.8
-            duration: 300
+            duration: Theme.Motion.standard
             easing.type: Easing.InCubic
         }
     }
@@ -102,7 +102,7 @@ Rectangle {
         NumberAnimation {
             from: 1.0
             to: 0.0
-            duration: 300
+            duration: Theme.Motion.standard
             easing.type: Easing.InCubic
         }
     }
@@ -245,8 +245,8 @@ Rectangle {
                 radius: 12
                 z: 3
 
-                Behavior on color { ColorAnimation { duration: 150 } }
-                Behavior on border.color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                Behavior on border.color { ColorAnimation { duration: Theme.Motion.micro } }
 
                 Text {
                     id: openText
@@ -282,8 +282,8 @@ Rectangle {
                 radius: 12
                 z: 3
 
-                Behavior on color { ColorAnimation { duration: 150 } }
-                Behavior on border.color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                Behavior on border.color { ColorAnimation { duration: Theme.Motion.micro } }
 
                 Text {
                     id: dismissText
@@ -297,7 +297,7 @@ Rectangle {
                     font.family: "M PLUS 2"
                     font.letterSpacing: 0.3
 
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
                 }
 
                 MouseArea {
@@ -322,7 +322,7 @@ Rectangle {
     transitions: [
         Transition {
             ColorAnimation {
-                duration: 200
+                duration: Theme.Motion.fast
                 easing.type: Easing.OutCubic
             }
         }
