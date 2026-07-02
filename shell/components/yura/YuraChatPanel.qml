@@ -87,6 +87,10 @@ PanelWindow {
 
     property bool _sizeReady: false
 
+    // A fresh yura-shell can't be mid-stream; clear any glow left stale on
+    // the bar if the previous process died while streaming.
+    Component.onCompleted: Hyprland.dispatch("exec qs -c mugen-shell ipc call yura set_thinking false")
+
     function syncScreenSize() {
         if (chatWindow.width <= 0 || chatWindow.height <= 0) return
         yuraState.screenWidth = chatWindow.width

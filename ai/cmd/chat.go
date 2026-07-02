@@ -3,12 +3,14 @@ package cmd
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/tmy7533018/mugen-ai/internal/provider"
+	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
 
 var chatCmd = &cobra.Command{
@@ -80,17 +82,14 @@ func runChat(_ *cobra.Command, _ []string) error {
 			}
 		}
 
-		var fullResponse string
-		err := rt.Registry.Chat(context.Background(), msgs, provider.ChatOptions{}, func(chunk provider.ChatChunk) error {
-			fmt.Print(chunk.Content)
-			fullResponse += chunk.Content
-			return nil
-		})
+		fullResponse, err := runChatTurn(rt, scanner, msgs)
 		fmt.Println()
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			rt.History.RemoveLast()
+			if fullResponse == "" {
+				rt.History.RemoveLast()
+			}
 			continue
 		}
 
@@ -98,4 +97,86 @@ func runChat(_ *cobra.Command, _ []string) error {
 	}
 
 	return nil
+}
+
+// runChatTurn streams one turn including the tool-call loop — the terminal
+// twin of the server's handleChat. Confirm-gated tools prompt on stdin.
+func runChatTurn(rt *runtimeContext, scanner *bufio.Scanner, msgs []provider.Message) (string, error) {
+	const maxIterations = 5
+	opts := provider.ChatOptions{Tools: cliProviderTools(rt.Tools.List())}
+	ctx := context.Background()
+
+	var fullResponse string
+	for iteration := 0; iteration < maxIterations; iteration++ {
+		var iterContent string
+		var iterToolCalls []provider.ToolCall
+
+		err := rt.Registry.Chat(ctx, msgs, opts, func(chunk provider.ChatChunk) error {
+			fmt.Print(chunk.Content)
+			iterContent += chunk.Content
+			fullResponse += chunk.Content
+			if chunk.Done {
+				iterToolCalls = chunk.ToolCalls
+			}
+			return nil
+		})
+		if err != nil {
+			return fullResponse, err
+		}
+		if len(iterToolCalls) == 0 {
+			return fullResponse, nil
+		}
+
+		msgs = append(msgs, provider.Message{
+			Role:      "assistant",
+			Content:   iterContent,
+			ToolCalls: iterToolCalls,
+		})
+
+		for _, tc := range iterToolCalls {
+			var result string
+			if rt.Tools.NeedsConfirm(tc.Name) && !cliConfirm(scanner, tc) {
+				result = "error: the user declined this action. Do not retry it; acknowledge their choice and move on."
+				rt.Tools.Audit(tc.Name, tc.Arguments, result, nil)
+			} else {
+				res, callErr := rt.Tools.Call(ctx, tc.Name, tc.Arguments)
+				result = res
+				if callErr != nil {
+					result = fmt.Sprintf("error: %v (output: %s)", callErr, res)
+				}
+				fmt.Printf("\n[tool %s]\n", tc.Name)
+			}
+			msgs = append(msgs, provider.Message{
+				Role:       "tool",
+				ToolCallID: tc.ID,
+				ToolName:   tc.Name,
+				Content:    result,
+			})
+		}
+	}
+	return fullResponse, fmt.Errorf("max tool iterations exceeded")
+}
+
+// cliConfirm is the terminal stand-in for the GUI approval dialog; EOF or
+// anything but y counts as a denial, mirroring the server's deny-by-default.
+func cliConfirm(scanner *bufio.Scanner, tc provider.ToolCall) bool {
+	args, _ := json.Marshal(tc.Arguments)
+	fmt.Printf("\n[confirm] %s %s — approve? [y/N]: ", tc.Name, args)
+	if !scanner.Scan() {
+		return false
+	}
+	answer := strings.ToLower(strings.TrimSpace(scanner.Text()))
+	return answer == "y" || answer == "yes"
+}
+
+func cliProviderTools(in []tools.Tool) []provider.Tool {
+	out := make([]provider.Tool, len(in))
+	for i, t := range in {
+		out[i] = provider.Tool{
+			Name:        t.Name,
+			Description: t.Description,
+			Parameters:  t.Parameters,
+		}
+	}
+	return out
 }

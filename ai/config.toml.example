@@ -16,7 +16,7 @@
   # don't drift to 俺/僕 in Japanese.
   name = "Yura"
   tone = "calm"        # any descriptor: calm / friendly / formal / playful / …
-  language = "en"      # ISO 639-1 code; passed straight through to the model
+  language = ""        # empty = Auto (mirror the user's language); or an ISO 639-1 code to pin one
   system_prompt = "You are a helpful desktop assistant. Be concise."
 
 [shell]
@@ -34,6 +34,14 @@
 [provider.ollama]
   # Local Ollama server. No API key needed.
   host = "http://localhost:11434"
+  # Context window requested per chat. Ollama's own default (4k) is smaller
+  # than the tools + system prompt + history footprint and truncates the
+  # overflow silently; Ollama clamps this to the model's maximum. Larger
+  # windows cost VRAM — drop it if `ollama ps` shows a CPU/GPU split.
+  num_ctx = 16384
+  # Keep the model loaded between chats ("30m", "1h", "-1" = forever).
+  # Ollama's 5m default makes the first reply after idle pay a cold load.
+  keep_alive = "30m"
 
 # [provider.google]
 #   # Requires GEMINI_API_KEY (or GOOGLE_API_KEY). Legacy single-string
@@ -50,6 +58,8 @@
 # [provider.anthropic]
 #   # Requires ANTHROPIC_API_KEY. Omit `models` to default to claude-haiku-4-5.
 #   models = ["claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-7"]
+#   max_tokens = 2048        # reply cap per turn
+#   thinking_budget = 1024   # extended-thinking budget when thinking is on
 
 # [tools.app_launch]
 #   # Strict allowlist for the app_launch tool: Yura can only launch
@@ -70,6 +80,10 @@
 #   # mugen-ai startup. 0 (default) keeps every conversation forever. Edit
 #   # via Settings → AI / Yura → Conversation history.
 #   retain_days = 0
+#   # Cap the estimated token footprint of the history sent per turn
+#   # (oldest messages drop first), leaving context-window room for tools
+#   # and the system prompt. 0 disables the token cap. Default: 8000.
+#   max_context_tokens = 8000
 
 # [context]
 #   # Inject a live desktop-state snapshot (active window, playing media,
@@ -79,6 +93,15 @@
 #   # Categories hidden via [tools].disabled_categories are excluded from
 #   # the snapshot too. Default: on.
 #   desktop_state = true
+#   # Set false to keep the snapshot (window titles, media names) from
+#   # being sent to non-Ollama (cloud) providers. Default: true.
+#   desktop_state_remote = true
+
+# [weather]
+#   # Default location for the weather_get tool (Open-Meteo, no API key).
+#   # Yura can still ask about any place by name; this is the fallback for
+#   # "what's the weather?" with no place given.
+#   place = "Tokyo"
 
 # External Model Context Protocol servers. Each [mcp.servers.<name>] block
 # is spawned as a subprocess at startup; its tools are merged into Yura's

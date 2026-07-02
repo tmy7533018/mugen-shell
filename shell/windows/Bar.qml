@@ -244,7 +244,19 @@ PanelWindow {
 
     IpcHandler {
         target: "yura"
-        function set_thinking(on: bool): void { barWindow.yuraFloatThinking = on }
+        function set_thinking(on: bool): void {
+            barWindow.yuraFloatThinking = on
+            if (on) yuraThinkingFailsafe.restart()
+            else yuraThinkingFailsafe.stop()
+        }
+    }
+
+    // If yura-shell dies mid-stream its clearing IPC never arrives; drop the
+    // icon glow after a generous ceiling instead of animating forever.
+    Timer {
+        id: yuraThinkingFailsafe
+        interval: 15 * 60 * 1000
+        onTriggered: barWindow.yuraFloatThinking = false
     }
 
     Managers.WallpaperManager { id: wallpaperManager }
