@@ -70,6 +70,15 @@
 #   # via Settings → AI / Yura → Conversation history.
 #   retain_days = 0
 
+# [context]
+#   # Inject a live desktop-state snapshot (active window, playing media,
+#   # volume, unread notifications, running timer, today's events, theme)
+#   # into every chat turn as a transient system message, so Yura knows
+#   # what's on screen right now. Never stored in conversation history.
+#   # Categories hidden via [tools].disabled_categories are excluded from
+#   # the snapshot too. Default: on.
+#   desktop_state = true
+
 # External Model Context Protocol servers. Each [mcp.servers.<name>] block
 # is spawned as a subprocess at startup; its tools are merged into Yura's
 # tool set under a "<name>__<tool>" prefix (e.g. memory__read_graph). The

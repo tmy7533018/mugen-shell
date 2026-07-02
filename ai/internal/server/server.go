@@ -30,21 +30,26 @@ type Server struct {
 	events   *eventBus
 	confirms *confirmRegistry
 
+	// desktopCtx injects a live desktop-state snapshot into each chat turn
+	// (config [context].desktop_state).
+	desktopCtx bool
+
 	// chatSetupMu serializes the resolve-conversation → append-user-message
 	// window of /chat so two concurrent requests can't interleave on the
 	// shared history pointer and cross-file each other's messages.
 	chatSetupMu sync.Mutex
 }
 
-func New(registry *provider.Registry, hist *history.History, st *store.Store, t *tools.Registry, m *mcp.Manager) *Server {
+func New(registry *provider.Registry, hist *history.History, st *store.Store, t *tools.Registry, m *mcp.Manager, desktopCtx bool) *Server {
 	return &Server{
-		registry: registry,
-		history:  hist,
-		store:    st,
-		tools:    t,
-		mcp:      m,
-		events:   newEventBus(),
-		confirms: newConfirmRegistry(),
+		registry:   registry,
+		history:    hist,
+		store:      st,
+		tools:      t,
+		mcp:        m,
+		events:     newEventBus(),
+		confirms:   newConfirmRegistry(),
+		desktopCtx: desktopCtx,
 	}
 }
 
@@ -213,6 +218,20 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	})
 	fmt.Fprintf(w, "data: %s\n\n", idData)
 	flusher.Flush()
+
+	// Desktop-state snapshot rides in as a transient system message just
+	// before the newest user message: it is never persisted, so stale
+	// snapshots don't pile up in history, and the earlier message prefix
+	// stays byte-stable for providers' prompt caches. Gathered after the
+	// sync event above so a slow shell IPC can't delay the UI's stream
+	// setup.
+	if s.desktopCtx && len(msgs) > 0 {
+		if blk := s.tools.DesktopContext(r.Context()); blk != "" {
+			userMsg := msgs[len(msgs)-1]
+			msgs = append(msgs[:len(msgs)-1:len(msgs)-1],
+				provider.Message{Role: "system", Content: blk}, userMsg)
+		}
+	}
 
 	// Tool calls / results stay in-memory only — history persists just the
 	// concatenated assistant text.

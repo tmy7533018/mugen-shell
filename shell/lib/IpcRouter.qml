@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
+import Quickshell.Wayland
 
 // External tool entry point for the MCP layer in mugen-ai. Each target maps
 // 1:1 to a tool group exposed to the LLM. Keep handlers thin — defer to the
@@ -76,6 +77,28 @@ Item {
 
         function previous(): void {
             ipcRouter.musicPlayerManager.previous()
+        }
+
+        function now_playing(): string {
+            let m = ipcRouter.musicPlayerManager
+            if (!m.isAvailable) return JSON.stringify({ available: false })
+            return JSON.stringify({
+                available: true,
+                status: m.status,
+                title: m.title,
+                artist: m.artist,
+                player: m.activePlayer
+            })
+        }
+    }
+
+    IpcHandler {
+        target: "window"
+
+        function active(): string {
+            let t = ToplevelManager.activeToplevel
+            if (!t) return JSON.stringify({})
+            return JSON.stringify({ app_id: t.appId, title: t.title })
         }
     }
 

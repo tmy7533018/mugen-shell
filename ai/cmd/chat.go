@@ -65,8 +65,19 @@ func runChat(_ *cobra.Command, _ []string) error {
 			continue
 		}
 
+		msgs := rt.History.Messages()
+		// Same transient desktop-state injection as the HTTP server: in
+		// front of the newest user message, never persisted.
+		if rt.Cfg.Context.DesktopState && len(msgs) > 0 {
+			if blk := rt.Tools.DesktopContext(context.Background()); blk != "" {
+				userMsg := msgs[len(msgs)-1]
+				msgs = append(msgs[:len(msgs)-1:len(msgs)-1],
+					provider.Message{Role: "system", Content: blk}, userMsg)
+			}
+		}
+
 		var fullResponse string
-		err := rt.Registry.Chat(context.Background(), rt.History.Messages(), provider.ChatOptions{}, func(chunk provider.ChatChunk) error {
+		err := rt.Registry.Chat(context.Background(), msgs, provider.ChatOptions{}, func(chunk provider.ChatChunk) error {
 			fmt.Print(chunk.Content)
 			fullResponse += chunk.Content
 			return nil

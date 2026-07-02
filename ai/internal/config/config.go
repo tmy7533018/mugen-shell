@@ -14,6 +14,16 @@ type Config struct {
 	Tools       Tools       `toml:"tools" json:"tools"`
 	MCP         MCP         `toml:"mcp" json:"mcp"`
 	History     History     `toml:"history" json:"history"`
+	Context     Context     `toml:"context" json:"context"`
+}
+
+// Context controls extra, non-conversation information injected into chat
+// turns. DesktopState adds a transient system message with a live snapshot
+// of the desktop (active window, playing media, volume, notifications,
+// timer, today's events) — never persisted to history, so old snapshots
+// don't accumulate. Fields whose tool category is disabled are omitted.
+type Context struct {
+	DesktopState bool `toml:"desktop_state" json:"desktop_state"`
 }
 
 // History controls retention of stored conversations. RetainDays > 0 prunes,
@@ -120,7 +130,8 @@ func Default() Config {
 		Provider: Provider{
 			Ollama: Ollama{Host: "http://localhost:11434"},
 		},
-		Shell: Shell{QsConfig: "mugen-shell"},
+		Shell:   Shell{QsConfig: "mugen-shell"},
+		Context: Context{DesktopState: true},
 	}
 }
 
