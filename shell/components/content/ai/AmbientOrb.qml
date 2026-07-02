@@ -1,5 +1,6 @@
 import QtQuick
 import Qt5Compat.GraphicalEffects
+import "../../../lib" as Theme
 import "../../common" as Common
 
 Item {
@@ -77,7 +78,7 @@ Item {
         edgeAlpha: root.haloEdgeAlpha
         running: root.active && root.showHalo
 
-        Behavior on baseOpacity { NumberAnimation { duration: 600; easing.type: Easing.InOutCubic } }
+        Behavior on baseOpacity { NumberAnimation { duration: Theme.Motion.slow; easing.type: Theme.Motion.easeMove } }
     }
 
     Common.BlobEffect {

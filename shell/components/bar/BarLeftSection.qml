@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
+import "../../lib" as Theme
 import "../ui" as UI
 import "../common" as Common
 import "../content/ai" as Ai
@@ -90,10 +91,10 @@ RowLayout {
                 scale: clockMouseArea.containsMouse ? 1.15 : 1.0
 
                 Behavior on opacity {
-                    NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
                 }
                 Behavior on scale {
-                    NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic }
                 }
             }
 
@@ -129,10 +130,10 @@ RowLayout {
                 scale: dateMouseArea.containsMouse ? 1.15 : 1.0
 
                 Behavior on opacity {
-                    NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
                 }
                 Behavior on scale {
-                    NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic }
                 }
             }
 
@@ -191,9 +192,9 @@ RowLayout {
                 : Qt.rgba(accent.r, accent.g, accent.b, root.timerManager && root.timerManager.paused ? 0.30 : 0.50)
             opacity: root.timerManager && root.timerManager.paused ? 0.65 : 1.0
 
-            Behavior on color { ColorAnimation { duration: 200 } }
-            Behavior on border.color { ColorAnimation { duration: 200 } }
-            Behavior on opacity { NumberAnimation { duration: 200 } }
+            Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+            Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
+            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
         }
 
         Text {
@@ -211,7 +212,7 @@ RowLayout {
             font.family: root.typo ? root.typo.clockStyle.family : "M PLUS 2"
             font.letterSpacing: 0.5
 
-            Behavior on opacity { NumberAnimation { duration: 200 } }
+            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
         }
 
         MouseArea {
@@ -314,15 +315,15 @@ RowLayout {
             scale: aiMouseArea.containsMouse ? 1.3 : 1.0
 
             Behavior on color {
-                ColorAnimation { duration: 400; easing.type: Easing.OutCubic }
+                ColorAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
             }
 
             Behavior on opacity {
-                NumberAnimation { duration: 400; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
             }
 
             Behavior on scale {
-                NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic }
             }
         }
 

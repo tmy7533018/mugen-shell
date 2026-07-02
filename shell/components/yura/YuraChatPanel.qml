@@ -3,6 +3,7 @@ import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import "../../lib" as Theme
 import "../content" as Content
 import "../content/ai" as Ai
 import "../ui" as UI
@@ -146,7 +147,7 @@ PanelWindow {
             target: chatBox
             property: "x"
             to: yuraState.panelRestX
-            duration: 850
+            duration: Theme.Motion.drift
             easing.type: Easing.InOutCubic
         }
         NumberAnimation {
@@ -154,7 +155,7 @@ PanelWindow {
             target: chatBox
             property: "x"
             to: yuraState.panelHiddenX
-            duration: 850
+            duration: Theme.Motion.drift
             easing.type: Easing.InOutCubic
         }
         NumberAnimation {
@@ -162,7 +163,7 @@ PanelWindow {
             target: chatBox
             property: "opacity"
             to: 1.0
-            duration: 700
+            duration: Theme.Motion.slow
             easing.type: Easing.InOutCubic
         }
         NumberAnimation {
@@ -170,7 +171,7 @@ PanelWindow {
             target: chatBox
             property: "opacity"
             to: 0
-            duration: 700
+            duration: Theme.Motion.slow
             easing.type: Easing.InOutCubic
         }
 
@@ -287,13 +288,13 @@ PanelWindow {
 
             SequentialAnimation {
                 id: orbOpenAnim
-                PauseAnimation { duration: 250 }
-                NumberAnimation { target: orb; property: "expandGate"; to: 1.0; duration: 900; easing.type: Easing.InOutSine }
+                PauseAnimation { duration: Theme.Motion.fast }
+                NumberAnimation { target: orb; property: "expandGate"; to: 1.0; duration: Theme.Motion.drift; easing.type: Easing.InOutSine }
             }
 
             NumberAnimation {
                 id: orbCloseAnim
-                target: orb; property: "expandGate"; to: 0; duration: 750; easing.type: Easing.OutCubic
+                target: orb; property: "expandGate"; to: 0; duration: Theme.Motion.drift; easing.type: Easing.OutCubic
             }
 
             Connections {
@@ -318,7 +319,7 @@ PanelWindow {
             }
 
             opacity: (yuraState.aiDropdownOpen || chatWindow.flying) ? 0 : 1
-            Behavior on opacity { NumberAnimation { duration: 320; easing.type: Easing.InOutCubic } }
+            Behavior on opacity { NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.InOutCubic } }
 
             scale: 0.4 + expandGate * 0.6
             transformOrigin: Item.Center
@@ -326,10 +327,10 @@ PanelWindow {
             smooth: true
             antialiasing: true
 
-            Behavior on x { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
-            Behavior on y { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
-            Behavior on width { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
-            Behavior on height { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+            Behavior on x { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
+            Behavior on y { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
+            Behavior on width { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
+            Behavior on height { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
 
             Ai.AmbientOrb {
                 anchors.fill: parent
@@ -465,13 +466,13 @@ PanelWindow {
         // Different x/y easings bend the path slightly so the flight reads
         // as organic rather than a straight interpolation.
         ParallelAnimation {
-            NumberAnimation { target: flyOrb; property: "px"; from: 0; to: 1; duration: 800; easing.type: Easing.InOutCubic }
-            NumberAnimation { target: flyOrb; property: "py"; from: 0; to: 1; duration: 800; easing.type: Easing.InOutSine }
+            NumberAnimation { target: flyOrb; property: "px"; from: 0; to: 1; duration: Theme.Motion.drift; easing.type: Easing.InOutCubic }
+            NumberAnimation { target: flyOrb; property: "py"; from: 0; to: 1; duration: Theme.Motion.drift; easing.type: Easing.InOutSine }
         }
         // Reveal the real orb (320ms opacity Behavior) under the fading
         // stand-in; identical geometry makes the swap invisible.
         ScriptAction { script: chatWindow.flying = false }
-        NumberAnimation { target: flyOrb; property: "opacity"; from: 1; to: 0; duration: 320; easing.type: Easing.InOutCubic }
+        NumberAnimation { target: flyOrb; property: "opacity"; from: 1; to: 0; duration: Theme.Motion.standard; easing.type: Easing.InOutCubic }
         ScriptAction { script: { flyOrb.shown = false; flyOrb.opacity = 1 } }
     }
 

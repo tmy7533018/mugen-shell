@@ -137,7 +137,7 @@ PanelWindow {
 
     Behavior on implicitHeight {
         NumberAnimation {
-            duration: settingsManager.animationDurationMultiplier === 0 ? 0 : 1000 * settingsManager.animationDurationMultiplier
+            duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
             easing.type: Easing.OutExpo
         }
     }
@@ -314,21 +314,21 @@ PanelWindow {
 
         Behavior on anchors.bottomMargin {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : 1000 * settingsManager.animationDurationMultiplier
+                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
                 easing.type: Easing.OutExpo
             }
         }
 
         Behavior on anchors.leftMargin {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : 1000 * settingsManager.animationDurationMultiplier
+                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
                 easing.type: Easing.OutExpo
             }
         }
 
         Behavior on anchors.rightMargin {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : 1000 * settingsManager.animationDurationMultiplier
+                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
                 easing.type: Easing.OutExpo
             }
         }
@@ -337,7 +337,7 @@ PanelWindow {
 
         Behavior on opacity {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : 300 * settingsManager.animationDurationMultiplier
+                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.standard * settingsManager.animationDurationMultiplier
                 easing.type: Easing.OutCubic
             }
         }
@@ -358,21 +358,21 @@ PanelWindow {
 
         Behavior on anchors.bottomMargin {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : 1000 * settingsManager.animationDurationMultiplier
+                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
                 easing.type: Easing.OutExpo
             }
         }
 
         Behavior on anchors.leftMargin {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : 1000 * settingsManager.animationDurationMultiplier
+                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
                 easing.type: Easing.OutExpo
             }
         }
 
         Behavior on anchors.rightMargin {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : 1000 * settingsManager.animationDurationMultiplier
+                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
                 easing.type: Easing.OutExpo
             }
         }
@@ -429,11 +429,11 @@ PanelWindow {
                 to: "visible"
                 SequentialAnimation {
                     PauseAnimation {
-                        duration: contentRow.isFirstShow ? 0 : (settingsManager.animationDurationMultiplier === 0 ? 0 : 370 * settingsManager.animationDurationMultiplier)
+                        duration: contentRow.isFirstShow ? 0 : (settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.gentle * settingsManager.animationDurationMultiplier)
                     }
                     NumberAnimation {
                         property: "opacity"
-                        duration: contentRow.isFirstShow ? 0 : (settingsManager.animationDurationMultiplier === 0 ? 0 : 400 * settingsManager.animationDurationMultiplier)
+                        duration: contentRow.isFirstShow ? 0 : (settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.gentle * settingsManager.animationDurationMultiplier)
                         easing.type: Easing.InOutCubic
                     }
                     ScriptAction {

@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Io
+import "../../lib" as Theme
 import "../ui" as UI
 import "../common" as Common
 import "./ai" as Ai
@@ -426,7 +427,7 @@ FocusScope {
         conversations: root.conversations
         currentId: root.currentConvId
 
-        Behavior on width { NumberAnimation { duration: 240; easing.type: Easing.InOutCubic } }
+        Behavior on width { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.InOutCubic } }
 
         onNewChatRequested: root.newChat()
         onConversationSelected: id => root.selectConversation(id)
@@ -446,7 +447,7 @@ FocusScope {
         opacity: root.sidebarCollapsed ? 1.0 : 0.0
         visible: opacity > 0
 
-        Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
         UI.SvgIcon {
             anchors.centerIn: parent
@@ -456,7 +457,7 @@ FocusScope {
             color: expandMouse.containsMouse
                 ? (root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                 : (root.theme ? root.theme.textSecondary : Qt.rgba(0.78, 0.78, 0.88, 0.85))
-            Behavior on color { ColorAnimation { duration: 150 } }
+            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
         }
 
         MouseArea {
@@ -531,8 +532,8 @@ FocusScope {
             border.color: thinkingPill.on
                 ? (root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95))
                 : Qt.rgba(1, 1, 1, 0.12)
-            Behavior on color { ColorAnimation { duration: 180 } }
-            Behavior on border.color { ColorAnimation { duration: 180 } }
+            Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+            Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
 
             Text {
                 anchors.centerIn: parent
@@ -542,7 +543,7 @@ FocusScope {
                 font.family: "M PLUS 2"
                 font.weight: Font.Medium
                 opacity: thinkingPill.on ? 1.0 : 0.7
-                Behavior on opacity { NumberAnimation { duration: 180 } }
+                Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
             }
 
             MouseArea {
@@ -610,15 +611,15 @@ FocusScope {
 
         Behavior on x {
             enabled: root.showInternalOrb && !chatList.moving && !chatList.flicking
-            NumberAnimation { duration: 900; easing.type: Easing.InOutCubic }
+            NumberAnimation { duration: Theme.Motion.drift; easing.type: Easing.InOutCubic }
         }
         Behavior on y {
             enabled: root.showInternalOrb && !chatList.moving && !chatList.flicking
-            NumberAnimation { duration: 900; easing.type: Easing.InOutCubic }
+            NumberAnimation { duration: Theme.Motion.drift; easing.type: Easing.InOutCubic }
         }
         Behavior on width {
             enabled: root.showInternalOrb
-            NumberAnimation { duration: 900; easing.type: Easing.InOutCubic }
+            NumberAnimation { duration: Theme.Motion.drift; easing.type: Easing.InOutCubic }
         }
 
         Ai.AmbientOrb {
@@ -644,7 +645,7 @@ FocusScope {
         opacity: root.isEmpty && root.aiAvailable && root.hasModel ? 1.0 : 0.0
         visible: opacity > 0
 
-        Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.InOutCubic } }
+        Behavior on opacity { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
 
         ColumnLayout {
             anchors.horizontalCenter: parent.horizontalCenter
@@ -684,7 +685,7 @@ FocusScope {
         opacity: !root.isEmpty ? 1.0 : 0.0
         visible: opacity > 0
 
-        Behavior on opacity { NumberAnimation { duration: 500; easing.type: Easing.InOutCubic } }
+        Behavior on opacity { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
 
         ListView {
             id: chatList
@@ -819,7 +820,7 @@ FocusScope {
                 ? (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.85) : Qt.rgba(0.65, 0.55, 0.85, 0.85))
                 : Qt.rgba(0.5, 0.5, 0.65, 0.25)
 
-            Behavior on color { ColorAnimation { duration: 250 } }
+            Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
             layer.enabled: inputField.activeFocus
             layer.effect: Glow {
@@ -880,7 +881,7 @@ FocusScope {
             height: modeManager.scale(34)
             opacity: (root.streaming || inputField.text.trim().length > 0) ? 1.0 : 0.35
 
-            Behavior on opacity { NumberAnimation { duration: 200 } }
+            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
 
             Rectangle {
                 anchors.centerIn: parent
@@ -891,7 +892,7 @@ FocusScope {
                     ? (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.32) : Qt.rgba(0.65, 0.55, 0.85, 0.32))
                     : (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.18) : Qt.rgba(0.65, 0.55, 0.85, 0.18))
 
-                Behavior on color { ColorAnimation { duration: 200 } }
+                Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
             }
 
             Text {
@@ -934,7 +935,7 @@ FocusScope {
         z: 6
         visible: root.pendingConfirm !== null
         opacity: visible ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
         radius: modeManager.scale(16)
         color: root.theme ? root.theme.surfaceInsetSubtle : Qt.rgba(0.07, 0.06, 0.11, 0.97)
@@ -1074,7 +1075,7 @@ FocusScope {
                     color: denyMouse.containsMouse ? Qt.rgba(0.85, 0.42, 0.42, 0.30) : Qt.rgba(0.85, 0.42, 0.42, 0.15)
                     border.width: 1
                     border.color: Qt.rgba(0.88, 0.50, 0.50, 0.45)
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                     Text {
                         anchors.centerIn: parent
@@ -1102,7 +1103,7 @@ FocusScope {
                         : (root.theme ? Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.34) : Qt.rgba(0.65, 0.55, 0.85, 0.34))
                     border.width: 1
                     border.color: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
-                    Behavior on color { ColorAnimation { duration: 150 } }
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                     Text {
                         anchors.centerIn: parent

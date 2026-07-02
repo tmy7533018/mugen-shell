@@ -4,6 +4,7 @@ import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
+import "../../lib" as Theme
 import "../ui" as UI
 import "../common" as Common
 import "./ai" as Ai
@@ -172,14 +173,14 @@ FocusScope {
                 from: ""
                 to: "visible"
                 SequentialAnimation {
-                    PauseAnimation { duration: 200 }
-                    NumberAnimation { property: "opacity"; duration: 300; easing.type: Easing.InOutCubic }
+                    PauseAnimation { duration: Theme.Motion.fast }
+                    NumberAnimation { property: "opacity"; duration: Theme.Motion.standard; easing.type: Easing.InOutCubic }
                 }
             },
             Transition {
                 from: "visible"
                 to: ""
-                NumberAnimation { property: "opacity"; duration: 200; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "opacity"; duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
             }
         ]
 
@@ -210,7 +211,7 @@ FocusScope {
                     idleBreathPeak: 1.14
                     idleBreathDuration: 950
 
-                    Behavior on haloOpacity { NumberAnimation { duration: 220 } }
+                    Behavior on haloOpacity { NumberAnimation { duration: Theme.Motion.fast } }
                 }
 
                 MouseArea {
@@ -245,7 +246,7 @@ FocusScope {
                     : Qt.rgba(0.55, 0.55, 0.75, 0.18)
                 border.width: 1
 
-                Behavior on border.color { ColorAnimation { duration: 200 } }
+                Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
 
                 TextInput {
                     id: inputField
@@ -370,15 +371,15 @@ FocusScope {
                         glowRadius: 8
                         glowSpread: 0.35
 
-                        Behavior on color { ColorAnimation { duration: 200 } }
-                        Behavior on font.letterSpacing { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+                        Behavior on font.letterSpacing { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
                         SequentialAnimation on opacity {
                             id: breathAnim
                             loops: Animation.Infinite
                             running: root.isThinking
-                            NumberAnimation { to: 0.45; duration: 900; easing.type: Easing.InOutSine }
-                            NumberAnimation { to: 1.0; duration: 900; easing.type: Easing.InOutSine }
+                            NumberAnimation { to: 0.45; duration: Theme.Motion.drift; easing.type: Easing.InOutSine }
+                            NumberAnimation { to: 1.0; duration: Theme.Motion.drift; easing.type: Easing.InOutSine }
                         }
                         Connections {
                             target: breathAnim
@@ -401,7 +402,7 @@ FocusScope {
                         : ((root.streaming || inputField.text.trim().length > 0) ? 1.0 : 0.4)
                     visible: opacity > 0
 
-                    Behavior on opacity { NumberAnimation { duration: 200 } }
+                    Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
 
                     Rectangle {
                         anchors.fill: parent
@@ -410,7 +411,7 @@ FocusScope {
                             ? (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4))
                             : (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.22) : Qt.rgba(0.65, 0.55, 0.85, 0.22))
 
-                        Behavior on color { ColorAnimation { duration: 200 } }
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
                     }
 
                     Text {
@@ -512,7 +513,7 @@ FocusScope {
                             color: denyMouse.containsMouse ? Qt.rgba(0.85, 0.42, 0.42, 0.32) : Qt.rgba(0.85, 0.42, 0.42, 0.16)
                             border.width: 1
                             border.color: Qt.rgba(0.88, 0.50, 0.50, 0.45)
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                             Text {
                                 anchors.centerIn: parent
@@ -541,7 +542,7 @@ FocusScope {
                                 : (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.32) : Qt.rgba(0.65, 0.55, 0.85, 0.32))
                             border.width: 1
                             border.color: root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
                             Text {
                                 anchors.centerIn: parent

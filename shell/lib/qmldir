@@ -1,0 +1,11 @@
+singleton Motion 1.0 Motion.qml
+AiBackend 1.0 AiBackend.qml
+Colors 1.0 Colors.qml
+IconProvider 1.0 IconProvider.qml
+IconResolver 1.0 IconResolver.qml
+IpcRouter 1.0 IpcRouter.qml
+ModeManager 1.0 ModeManager.qml
+SettingsManager 1.0 SettingsManager.qml
+TimerManager 1.0 TimerManager.qml
+Typography 1.0 Typography.qml
+YuraState 1.0 YuraState.qml
