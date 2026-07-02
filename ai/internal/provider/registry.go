@@ -48,6 +48,17 @@ func (r *Registry) ChatWith(ctx context.Context, model string, messages []Messag
 	return p.Chat(ctx, model, messages, opts, fn)
 }
 
+// ProviderNameFor reports which provider serves the model ("ollama",
+// "anthropic", …), or "" when none claims it. Lets callers make
+// local-vs-cloud decisions (e.g. desktop-state privacy gating).
+func (r *Registry) ProviderNameFor(ctx context.Context, model string) string {
+	p, err := r.providerFor(ctx, model)
+	if err != nil {
+		return ""
+	}
+	return p.Name()
+}
+
 func (r *Registry) Models(ctx context.Context) ([]string, error) {
 	var all []string
 	for _, p := range r.providers {

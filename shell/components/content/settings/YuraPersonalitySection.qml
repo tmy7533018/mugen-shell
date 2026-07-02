@@ -35,6 +35,7 @@ Rectangle {
 
     readonly property var toneOptions: ["calm", "friendly", "formal"]
     readonly property var languageOptions: [
+        { code: "", name: "Auto — match the user's language" },
         { code: "ja", name: "Japanese (日本語)" },
         { code: "en", name: "English" },
         { code: "zh", name: "Chinese (中文)" },
@@ -443,15 +444,13 @@ Rectangle {
                         anchors.leftMargin: 10
                         anchors.verticalCenter: parent.verticalCenter
                         text: {
-                            if (!section.formLanguage) return "(select)"
+                            if (!section.formLanguage) return "Auto — match the user's language"
                             let opt = section.languageOptions.find(l => l.code === section.formLanguage)
                             return opt ? section.formLanguage + " — " + opt.name : section.formLanguage
                         }
                         color: section.theme ? section.theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.9)
                         font.pixelSize: 11
                         font.family: "M PLUS 2"
-                        font.italic: !section.formLanguage
-                        opacity: section.formLanguage ? 1.0 : 0.6
                     }
 
                     Text {
@@ -552,7 +551,7 @@ Rectangle {
                                     anchors.left: parent.left
                                     anchors.leftMargin: 8
                                     anchors.verticalCenter: parent.verticalCenter
-                                    text: modelData.code + " — " + modelData.name
+                                    text: (modelData.code ? modelData.code + " — " : "") + modelData.name
                                     color: section.theme ? section.theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.9)
                                     font.pixelSize: 10
                                     font.family: "M PLUS 2"

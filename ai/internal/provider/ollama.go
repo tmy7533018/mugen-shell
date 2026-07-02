@@ -13,12 +13,14 @@ import (
 )
 
 type Ollama struct {
-	host string
-	http *http.Client
+	host      string
+	numCtx    int
+	keepAlive string
+	http      *http.Client
 }
 
-func NewOllama(host string) *Ollama {
-	return &Ollama{host: host, http: &http.Client{}}
+func NewOllama(host string, numCtx int, keepAlive string) *Ollama {
+	return &Ollama{host: host, numCtx: numCtx, keepAlive: keepAlive, http: &http.Client{}}
 }
 
 func (o *Ollama) Name() string { return "ollama" }
@@ -81,6 +83,17 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 	}
 	if tw := toolsAsOpenAI(opts.Tools); len(tw) > 0 {
 		payload["tools"] = tw
+	}
+	// Ollama's own num_ctx default (4k) is smaller than our tools + system
+	// prompt + history footprint and it truncates the overflow silently, so
+	// always request an explicit window. Ollama clamps to the model's max.
+	if o.numCtx > 0 {
+		payload["options"] = map[string]any{"num_ctx": o.numCtx}
+	}
+	// Keep the model resident between chats; the default 5m unload makes
+	// the first reply after an idle stretch pay a multi-second cold load.
+	if o.keepAlive != "" {
+		payload["keep_alive"] = o.keepAlive
 	}
 
 	body, err := json.Marshal(payload)

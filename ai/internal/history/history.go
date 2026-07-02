@@ -19,14 +19,25 @@ type History struct {
 	messages     []provider.Message
 	system       string
 	max          int
+	maxTokens    int
 }
 
-func New(s *store.Store, systemPrompt string) (*History, error) {
-	h := &History{store: s, system: systemPrompt, max: defaultMaxMessages}
+// New builds the history layer. maxTokens caps the estimated token footprint
+// of the messages sent per turn (0 = no token cap); the message-count cap
+// applies regardless.
+func New(s *store.Store, systemPrompt string, maxTokens int) (*History, error) {
+	h := &History{store: s, system: systemPrompt, max: defaultMaxMessages, maxTokens: maxTokens}
 	if err := h.loadCurrent(); err != nil {
 		return nil, fmt.Errorf("load current conversation: %w", err)
 	}
 	return h, nil
+}
+
+// estimateTokens is a deliberately conservative cross-language guess
+// (~1 token per 3 bytes): English runs ~4 bytes/token, Japanese ~3, so
+// overshooting keeps us safely inside the model's real window.
+func estimateTokens(s string) int {
+	return len(s)/3 + 1
 }
 
 func (h *History) loadCurrent() error {
@@ -64,9 +75,6 @@ func (h *History) switchLocked(id int64) error {
 	if err != nil {
 		return err
 	}
-	if h.max > 0 && len(msgs) > h.max {
-		msgs = msgs[len(msgs)-h.max:]
-	}
 	h.convID = id
 	if conv != nil {
 		h.convModel = conv.Model
@@ -79,6 +87,7 @@ func (h *History) switchLocked(id int64) error {
 	for _, m := range msgs {
 		h.messages = append(h.messages, provider.Message{Role: m.Role, Content: m.Content})
 	}
+	h.truncateLocked()
 	return nil
 }
 
@@ -298,8 +307,24 @@ func (h *History) DeleteAll() error {
 }
 
 func (h *History) truncateLocked() {
-	if h.max <= 0 || len(h.messages) <= h.max {
+	if h.max > 0 && len(h.messages) > h.max {
+		h.messages = h.messages[len(h.messages)-h.max:]
+	}
+	if h.maxTokens <= 0 {
 		return
 	}
-	h.messages = h.messages[len(h.messages)-h.max:]
+	total := 0
+	for i := range h.messages {
+		total += estimateTokens(h.messages[i].Content)
+	}
+	// Keep at least the trailing exchange so a single oversized message
+	// can't empty the conversation.
+	drop := 0
+	for total > h.maxTokens && drop < len(h.messages)-2 {
+		total -= estimateTokens(h.messages[drop].Content)
+		drop++
+	}
+	if drop > 0 {
+		h.messages = h.messages[drop:]
+	}
 }

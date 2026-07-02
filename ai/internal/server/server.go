@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tmy7533018/mugen-ai/internal/config"
 	"github.com/tmy7533018/mugen-ai/internal/history"
 	"github.com/tmy7533018/mugen-ai/internal/mcp"
 	"github.com/tmy7533018/mugen-ai/internal/provider"
@@ -30,9 +31,9 @@ type Server struct {
 	events   *eventBus
 	confirms *confirmRegistry
 
-	// desktopCtx injects a live desktop-state snapshot into each chat turn
-	// (config [context].desktop_state).
-	desktopCtx bool
+	// ctxCfg gates the live desktop-state snapshot injected into chat turns
+	// (config [context]).
+	ctxCfg config.Context
 
 	// chatSetupMu serializes the resolve-conversation → append-user-message
 	// window of /chat so two concurrent requests can't interleave on the
@@ -40,16 +41,16 @@ type Server struct {
 	chatSetupMu sync.Mutex
 }
 
-func New(registry *provider.Registry, hist *history.History, st *store.Store, t *tools.Registry, m *mcp.Manager, desktopCtx bool) *Server {
+func New(registry *provider.Registry, hist *history.History, st *store.Store, t *tools.Registry, m *mcp.Manager, ctxCfg config.Context) *Server {
 	return &Server{
-		registry:   registry,
-		history:    hist,
-		store:      st,
-		tools:      t,
-		mcp:        m,
-		events:     newEventBus(),
-		confirms:   newConfirmRegistry(),
-		desktopCtx: desktopCtx,
+		registry: registry,
+		history:  hist,
+		store:    st,
+		tools:    t,
+		mcp:      m,
+		events:   newEventBus(),
+		confirms: newConfirmRegistry(),
+		ctxCfg:   ctxCfg,
 	}
 }
 
@@ -234,8 +235,9 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	// snapshots don't pile up in history, and the earlier message prefix
 	// stays byte-stable for providers' prompt caches. Gathered after the
 	// sync event above so a slow shell IPC can't delay the UI's stream
-	// setup.
-	if s.desktopCtx && len(msgs) > 0 {
+	// setup. Cloud providers only see it when desktop_state_remote allows.
+	if s.ctxCfg.DesktopState && len(msgs) > 0 &&
+		(s.ctxCfg.DesktopStateRemote || s.registry.ProviderNameFor(r.Context(), model) == "ollama") {
 		if blk := s.tools.DesktopContext(r.Context()); blk != "" {
 			userMsg := msgs[len(msgs)-1]
 			msgs = append(msgs[:len(msgs)-1:len(msgs)-1],

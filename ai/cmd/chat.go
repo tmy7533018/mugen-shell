@@ -71,7 +71,8 @@ func runChat(_ *cobra.Command, _ []string) error {
 		if blk := rt.Tools.MemoryBlock(); blk != "" && len(msgs) > 0 && msgs[0].Role == "system" {
 			msgs[0].Content += "\n\n" + blk
 		}
-		if rt.Cfg.Context.DesktopState && len(msgs) > 0 {
+		if rt.Cfg.Context.DesktopState && len(msgs) > 0 &&
+			(rt.Cfg.Context.DesktopStateRemote || rt.Registry.ProviderNameFor(context.Background(), rt.Registry.Model()) == "ollama") {
 			if blk := rt.Tools.DesktopContext(context.Background()); blk != "" {
 				userMsg := msgs[len(msgs)-1]
 				msgs = append(msgs[:len(msgs)-1:len(msgs)-1],

@@ -111,7 +111,7 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		}
 	}
 
-	hist, err := history.New(st, system)
+	hist, err := history.New(st, system, cfg.History.MaxContextTokens)
 	if err != nil {
 		st.Close()
 		return nil, fmt.Errorf("init history: %w", err)
@@ -203,7 +203,7 @@ func resolveScriptsDir(configured string) string {
 
 func buildRegistry(cfg config.Config, model string) *provider.Registry {
 	providers := []provider.Provider{
-		provider.NewOllama(cfg.Provider.Ollama.Host),
+		provider.NewOllama(cfg.Provider.Ollama.Host, cfg.Provider.Ollama.NumCtx, cfg.Provider.Ollama.KeepAlive),
 	}
 	googleModels := cfg.Provider.Google.Models
 	if len(googleModels) == 0 && cfg.Provider.Google.Model != "" {
@@ -231,6 +231,8 @@ func buildRegistry(cfg config.Config, model string) *provider.Registry {
 		providers = append(providers, provider.NewAnthropic(
 			anthropicKey,
 			cfg.Provider.Anthropic.Models,
+			cfg.Provider.Anthropic.MaxTokens,
+			cfg.Provider.Anthropic.ThinkingBudget,
 		))
 	}
 	return provider.NewRegistry(model, providers...)
@@ -262,6 +264,10 @@ func assemblePersona(p config.Personality) string {
 	}
 	if p.Language != "" {
 		lines = append(lines, fmt.Sprintf("Respond in %s.", p.Language))
+	} else {
+		// Auto: mirror the user. Stated explicitly because small local
+		// models drift to English/Chinese without an anchor.
+		lines = append(lines, "Respond in the language the user writes in.")
 	}
 	header := strings.Join(lines, "\n")
 	if p.SystemPrompt == "" {

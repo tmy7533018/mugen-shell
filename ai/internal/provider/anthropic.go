@@ -12,19 +12,29 @@ import (
 )
 
 type Anthropic struct {
-	apiKey string
-	http   *http.Client
-	models []string
+	apiKey         string
+	http           *http.Client
+	models         []string
+	maxTokens      int
+	thinkingBudget int
 }
 
-func NewAnthropic(apiKey string, models []string) *Anthropic {
+func NewAnthropic(apiKey string, models []string, maxTokens, thinkingBudget int) *Anthropic {
 	if len(models) == 0 {
 		models = []string{"claude-haiku-4-5"}
 	}
+	if maxTokens <= 0 {
+		maxTokens = 2048
+	}
+	if thinkingBudget <= 0 {
+		thinkingBudget = 1024
+	}
 	return &Anthropic{
-		apiKey: apiKey,
-		http:   streamingHTTPClient(),
-		models: models,
+		apiKey:         apiKey,
+		http:           streamingHTTPClient(),
+		models:         models,
+		maxTokens:      maxTokens,
+		thinkingBudget: thinkingBudget,
 	}
 }
 
@@ -107,11 +117,11 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		})
 	}
 
-	maxTokens := 2048
-	if opts.Thinking {
+	maxTokens := a.maxTokens
+	if opts.Thinking && maxTokens < a.thinkingBudget+2048 {
 		// budget_tokens must be < max_tokens; bump the ceiling so the model
-		// still has room to answer after spending up to 1k tokens reasoning.
-		maxTokens = 4096
+		// still has room to answer after spending the reasoning budget.
+		maxTokens = a.thinkingBudget + 2048
 	}
 	payload := map[string]any{
 		"model":      model,
@@ -120,12 +130,19 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		"stream":     true,
 	}
 	if system != "" {
-		payload["system"] = system
+		// Block form so the system prompt (persona + long-term memories,
+		// both stable across turns) gets its own cache breakpoint on top
+		// of the tools one below.
+		payload["system"] = []map[string]any{{
+			"type":          "text",
+			"text":          system,
+			"cache_control": map[string]any{"type": "ephemeral"},
+		}}
 	}
 	if opts.Thinking {
 		payload["thinking"] = map[string]any{
 			"type":          "enabled",
-			"budget_tokens": 1024,
+			"budget_tokens": a.thinkingBudget,
 		}
 	}
 	if len(toolsPayload) > 0 {

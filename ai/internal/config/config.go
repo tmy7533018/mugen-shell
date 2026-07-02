@@ -22,8 +22,11 @@ type Config struct {
 // of the desktop (active window, playing media, volume, notifications,
 // timer, today's events) — never persisted to history, so old snapshots
 // don't accumulate. Fields whose tool category is disabled are omitted.
+// DesktopStateRemote extends that to non-Ollama (cloud) providers; turn it
+// off to keep window titles and media names from leaving the machine.
 type Context struct {
-	DesktopState bool `toml:"desktop_state" json:"desktop_state"`
+	DesktopState       bool `toml:"desktop_state" json:"desktop_state"`
+	DesktopStateRemote bool `toml:"desktop_state_remote" json:"desktop_state_remote"`
 }
 
 // History controls retention of stored conversations. RetainDays > 0 prunes,
@@ -31,6 +34,11 @@ type Context struct {
 // 0 keeps everything.
 type History struct {
 	RetainDays int `toml:"retain_days" json:"retain_days"`
+	// MaxContextTokens caps the estimated token footprint of the history
+	// sent per turn (oldest messages drop first), leaving context-window
+	// room for tools, system prompt, and the response. 0 disables the cap
+	// (the 100-message limit still applies).
+	MaxContextTokens int `toml:"max_context_tokens" json:"max_context_tokens"`
 }
 
 // MCP configures external Model Context Protocol servers whose tools are
@@ -99,13 +107,25 @@ type Provider struct {
 }
 
 // Anthropic lists the Claude models to expose. Empty → defaults to
-// claude-haiku-4-5 (cheap, fast, tool-capable).
+// claude-haiku-4-5 (cheap, fast, tool-capable). MaxTokens caps each reply
+// (0 → 2048); ThinkingBudget is the extended-thinking token budget when the
+// conversation has thinking on (0 → 1024).
 type Anthropic struct {
-	Models []string `toml:"models" json:"models"`
+	Models         []string `toml:"models" json:"models"`
+	MaxTokens      int      `toml:"max_tokens" json:"max_tokens"`
+	ThinkingBudget int      `toml:"thinking_budget" json:"thinking_budget"`
 }
 
 type Ollama struct {
 	Host string `toml:"host" json:"host"`
+	// NumCtx is the context window requested on every chat call. Ollama's
+	// own default (4k) is smaller than the tools + system prompt + history
+	// footprint and overflow is truncated silently, so mugen-ai always asks
+	// for an explicit window. Ollama clamps it to the model's maximum.
+	NumCtx int `toml:"num_ctx" json:"num_ctx"`
+	// KeepAlive keeps the model loaded between chats ("30m", "1h", "-1" for
+	// forever). Empty falls back to Ollama's default (5m unload).
+	KeepAlive string `toml:"keep_alive" json:"keep_alive"`
 }
 
 // Google reads from Models (plural). Legacy single-string Model is kept as
@@ -128,10 +148,11 @@ func Default() Config {
 			SystemPrompt: "You are a helpful desktop assistant. Be concise.",
 		},
 		Provider: Provider{
-			Ollama: Ollama{Host: "http://localhost:11434"},
+			Ollama: Ollama{Host: "http://localhost:11434", NumCtx: 16384, KeepAlive: "30m"},
 		},
 		Shell:   Shell{QsConfig: "mugen-shell"},
-		Context: Context{DesktopState: true},
+		Context: Context{DesktopState: true, DesktopStateRemote: true},
+		History: History{MaxContextTokens: 8000},
 	}
 }
 
