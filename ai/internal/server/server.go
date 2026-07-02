@@ -201,6 +201,9 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), status)
 		return
 	}
+	// [system, user] and nothing else = this turn opened the conversation;
+	// its close is when the LLM title gets generated.
+	isFirstExchange := len(msgs) == 2
 
 	// Long-term memories ride inside the system message: they change
 	// rarely, so provider prompt caches stay warm across turns.
@@ -303,6 +306,9 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 				_ = s.history.AddAssistantTo(convID, fullResponse)
 				s.events.broadcast("conversations", nil)
 				s.events.broadcast("messages", map[string]any{"conversation_id": convID})
+				if isFirstExchange {
+					go s.generateTitle(convID, model, req.Message, fullResponse)
+				}
 			}
 			sendEvent(map[string]any{"done": true})
 			return
@@ -354,6 +360,48 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	persistOnError("max tool iterations exceeded")
+}
+
+// generateTitle asks the conversation's model for a short title once the
+// first exchange completes. Best-effort and async: any failure keeps the
+// fallback title (the first message's prefix).
+func (s *Server) generateTitle(convID int64, model, userMsg, reply string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	prompt := "Write a title for this conversation: 2-5 words, in the same language as the exchange. Reply with ONLY the title — no quotes, no trailing punctuation.\n\nUser: " +
+		firstN(userMsg, 400) + "\nAssistant: " + firstN(reply, 400)
+	var title string
+	err := s.registry.ChatWith(ctx, model, []provider.Message{{Role: "user", Content: prompt}},
+		provider.ChatOptions{}, func(c provider.ChatChunk) error {
+			title += c.Content
+			return nil
+		})
+	if err != nil {
+		return
+	}
+	// Some local models leak a reasoning block despite think=false.
+	if i := strings.Index(title, "</think>"); i >= 0 {
+		title = title[i+len("</think>"):]
+	}
+	if i := strings.IndexByte(title, '\n'); i >= 0 {
+		title = title[:i]
+	}
+	title = strings.Trim(strings.TrimSpace(title), `"'「」『』.。`)
+	if title == "" {
+		return
+	}
+	if err := s.store.UpdateConversationTitle(convID, store.DeriveTitle(title)); err == nil {
+		s.events.broadcast("conversations", nil)
+	}
+}
+
+func firstN(s string, n int) string {
+	rs := []rune(s)
+	if len(rs) <= n {
+		return s
+	}
+	return string(rs[:n]) + "…"
 }
 
 // awaitConfirm streams a tool_confirm event for tc and blocks until the user

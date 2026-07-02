@@ -25,7 +25,7 @@ func (r *Registry) AttachMemory(st *store.Store) {
 	r.memStore = st
 	r.tools = append(r.tools,
 		Tool{
-			Name: "memory_save",
+			Name:        "memory_save",
 			Description: "Save one durable fact about the user to long-term memory (preference, standing instruction, recurring context). Persists across conversations. Returns the new memory id.",
 			Parameters: map[string]any{
 				"type": "object",
@@ -46,8 +46,15 @@ func (r *Registry) AttachMemory(st *store.Store) {
 				if len([]rune(content)) > maxMemoryLen {
 					return "error: content is too long — condense it to one sentence.", nil
 				}
-				if n, err := st.CountMemories(); err == nil && n >= maxMemories {
-					return fmt.Sprintf("error: memory is full (%d entries). Ask the user which memories to prune (memory_list shows them), then memory_delete before saving new ones.", n), nil
+				if mems, err := st.ListMemories(); err == nil {
+					if len(mems) >= maxMemories {
+						return fmt.Sprintf("error: memory is full (%d entries). Ask the user which memories to prune (memory_list shows them), then memory_delete before saving new ones.", len(mems)), nil
+					}
+					for _, m := range mems {
+						if strings.EqualFold(strings.TrimSpace(m.Content), content) {
+							return fmt.Sprintf("already saved as memory #%d — no duplicate created", m.ID), nil
+						}
+					}
 				}
 				id, err := st.AddMemory(content)
 				if err != nil {
