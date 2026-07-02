@@ -16,10 +16,15 @@ type Registry struct {
 	mu        sync.RWMutex
 	providers []Provider
 	model     string
+	// routeCache memoises a resolved model→provider so /chat doesn't
+	// re-probe every backend (an HTTP round-trip each) twice per turn.
+	// A model's owning provider doesn't change at runtime, so entries
+	// never need invalidation.
+	routeCache map[string]Provider
 }
 
 func NewRegistry(model string, providers ...Provider) *Registry {
-	return &Registry{model: model, providers: providers}
+	return &Registry{model: model, providers: providers, routeCache: map[string]Provider{}}
 }
 
 func (r *Registry) SetModel(model string) {
@@ -91,6 +96,12 @@ func (r *Registry) providerFor(ctx context.Context, model string) (Provider, err
 	if model == "" {
 		return nil, fmt.Errorf("no model configured")
 	}
+	r.mu.RLock()
+	cached := r.routeCache[model]
+	r.mu.RUnlock()
+	if cached != nil {
+		return cached, nil
+	}
 	for _, p := range r.providers {
 		models, err := probeModels(ctx, p)
 		if err != nil {
@@ -98,6 +109,9 @@ func (r *Registry) providerFor(ctx context.Context, model string) (Provider, err
 		}
 		for _, m := range models {
 			if m == model {
+				r.mu.Lock()
+				r.routeCache[model] = p
+				r.mu.Unlock()
 				return p, nil
 			}
 		}

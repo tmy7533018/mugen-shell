@@ -18,6 +18,11 @@ FocusScope {
     property var settingsManager
     property bool showInternalOrb: true
 
+    // Emitted on any user interaction (typing, sending) so a host can treat
+    // keyboard-only use as activity — the auto-collapse timer otherwise only
+    // sees taps and pointer motion and closes the panel mid-compose.
+    signal userActivity()
+
     property real orbEmptyScale: 0.28
     property real orbActiveBase: 36
     property real orbEmptyYRatio: 0.18
@@ -848,6 +853,7 @@ FocusScope {
             inputMethodHints: Qt.ImhNone
 
             Keys.onPressed: (event) => {
+                root.userActivity()
                 if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                     let txt = inputField.text.trim()
                     if (txt.length > 0 && !root.streaming) {

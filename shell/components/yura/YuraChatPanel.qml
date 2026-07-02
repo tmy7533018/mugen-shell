@@ -234,6 +234,8 @@ PanelWindow {
                 orbEmptyScale: 0.48
                 orbEmptyYRatio: 0.10
 
+                onUserActivity: idleCollapse.restart()
+
                 Component.onCompleted: {
                     if (chatWindow.settingsManager) {
                         sidebarCollapsed = chatWindow.settingsManager.yuraSidebarCollapsed

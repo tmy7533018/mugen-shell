@@ -310,21 +310,29 @@ func (h *History) truncateLocked() {
 	if h.max > 0 && len(h.messages) > h.max {
 		h.messages = h.messages[len(h.messages)-h.max:]
 	}
-	if h.maxTokens <= 0 {
-		return
+	if h.maxTokens > 0 {
+		total := 0
+		for i := range h.messages {
+			total += estimateTokens(h.messages[i].Content)
+		}
+		// Keep at least the trailing exchange so a single oversized message
+		// can't empty the conversation.
+		drop := 0
+		for total > h.maxTokens && drop < len(h.messages)-2 {
+			total -= estimateTokens(h.messages[drop].Content)
+			drop++
+		}
+		if drop > 0 {
+			h.messages = h.messages[drop:]
+		}
 	}
-	total := 0
-	for i := range h.messages {
-		total += estimateTokens(h.messages[i].Content)
+	// Anthropic rejects a list that opens with an assistant message; after
+	// any trimming, make a user message lead.
+	lead := 0
+	for lead < len(h.messages)-1 && h.messages[lead].Role != "user" {
+		lead++
 	}
-	// Keep at least the trailing exchange so a single oversized message
-	// can't empty the conversation.
-	drop := 0
-	for total > h.maxTokens && drop < len(h.messages)-2 {
-		total -= estimateTokens(h.messages[drop].Content)
-		drop++
-	}
-	if drop > 0 {
-		h.messages = h.messages[drop:]
+	if lead > 0 {
+		h.messages = h.messages[lead:]
 	}
 }

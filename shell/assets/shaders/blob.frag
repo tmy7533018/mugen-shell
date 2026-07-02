@@ -1,9 +1,8 @@
 #version 440
 
-// Wavering blob: analytic polar wobble replacing the old per-vertex Canvas
-// polygon. Three sine bands at coprime angular frequencies with independent
-// drift rates give the organic, non-repeating edge; the radial alpha
-// gradient runs to baseRadius exactly like the Canvas gradient did.
+// Wavering blob: analytic polar wobble. Three sine bands at coprime angular
+// frequencies with independent drift rates give the organic, non-repeating
+// edge; the radial alpha gradient runs to baseRadius.
 
 layout(location = 0) in vec2 qt_TexCoord0;
 layout(location = 0) out vec4 fragColor;

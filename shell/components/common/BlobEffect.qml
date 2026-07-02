@@ -1,10 +1,9 @@
 import QtQuick
 
 // GPU blob: each layer is one ShaderEffect quad evaluating the wavering
-// edge analytically (assets/shaders/blob.frag), replacing the old Canvas
-// polygon that repainted + re-uploaded on a 150ms CPU timer. Public API is
-// unchanged; pointCount is kept for compatibility but no longer applies —
-// the GLSL edge is resolution-independent.
+// edge analytically (assets/shaders/blob.frag). pointCount is accepted but
+// unused — the GLSL edge is resolution-independent — so existing callers
+// that still set it keep working.
 Item {
     id: root
 
@@ -48,11 +47,9 @@ Item {
             property real amplitude: sizePx > 0 ? ampPx / sizePx : 0.02
             property real centerAlpha: 0.9 - index * 0.12
             property real edgeAlpha: root.edgeAlpha
-            // The Canvas advanced phases by (speed + idx*0.15)*2 per 150ms
-            // tick; 13.33 rad/s per unit keeps the same perceived tempo.
+            // 13.33 rad/s per animationSpeed unit; inner layers drift faster.
             property real speed: (root.animationSpeed + index * 0.15) * 13.33
-            // Random per-instance phases replace the old per-vertex random
-            // offsets, so no two blobs ripple in sync.
+            // Random per-instance phases so no two blobs ripple in sync.
             property real phase1: Math.random() * 6.2832
             property real phase2: Math.random() * 6.2832
             property real phase3: Math.random() * 6.2832

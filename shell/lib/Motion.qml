@@ -5,11 +5,6 @@ import QtQuick
 // scale and an easing from these roles, so unrelated modules move with the
 // same rhythm. Looping ambience (orb breathing, cava pulses) is identity,
 // not transition — those keep their own literal timings.
-//
-// Migration map for legacy literals:
-//   150            → micro      180/200/250 → fast
-//   280/300/320    → standard   360/400/420 → gentle
-//   500/600/700/720→ slow       800/850/900 → drift
 QtObject {
     readonly property int instant: 0
     // Color / opacity ticks: hover tint, focus borders.

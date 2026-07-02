@@ -87,8 +87,12 @@ func runChat(_ *cobra.Command, _ []string) error {
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			// Persist whatever already streamed; dropping only the user
+			// message would leave two consecutive user turns in history.
 			if fullResponse == "" {
 				rt.History.RemoveLast()
+			} else {
+				_ = rt.History.Add("assistant", fullResponse, rt.Registry.Model(), false)
 			}
 			continue
 		}

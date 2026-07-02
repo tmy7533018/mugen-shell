@@ -26,7 +26,8 @@ func NewAnthropic(apiKey string, models []string, maxTokens, thinkingBudget int)
 	if maxTokens <= 0 {
 		maxTokens = 2048
 	}
-	if thinkingBudget <= 0 {
+	// The API rejects budgets under 1024 tokens.
+	if thinkingBudget < 1024 {
 		thinkingBudget = 1024
 	}
 	return &Anthropic{
@@ -56,15 +57,15 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		return fmt.Errorf("ANTHROPIC_API_KEY is not set")
 	}
 
-	var system string
+	var systemBlocks []map[string]any
 	msgs := make([]map[string]any, 0, len(messages))
 
 	for _, m := range messages {
 		if m.Role == "system" {
-			if system != "" {
-				system += "\n\n"
-			}
-			system += m.Content
+			systemBlocks = append(systemBlocks, map[string]any{
+				"type": "text",
+				"text": m.Content,
+			})
 			continue
 		}
 		if m.Role == "tool" {
@@ -129,15 +130,13 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		"max_tokens": maxTokens,
 		"stream":     true,
 	}
-	if system != "" {
-		// Block form so the system prompt (persona + long-term memories,
-		// both stable across turns) gets its own cache breakpoint on top
-		// of the tools one below.
-		payload["system"] = []map[string]any{{
-			"type":          "text",
-			"text":          system,
-			"cache_control": map[string]any{"type": "ephemeral"},
-		}}
+	if len(systemBlocks) > 0 {
+		// One block per system message: the first (persona + long-term
+		// memories, stable across turns) carries the cache breakpoint;
+		// later blocks (the per-turn desktop snapshot) sit after it so
+		// their churn can't invalidate the cached prefix.
+		systemBlocks[0]["cache_control"] = map[string]any{"type": "ephemeral"}
+		payload["system"] = systemBlocks
 	}
 	if opts.Thinking {
 		payload["thinking"] = map[string]any{

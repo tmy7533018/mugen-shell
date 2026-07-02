@@ -99,10 +99,12 @@ QtObject {
 
         // Atomic write (tmp + rename): every shell process re-reads this file
         // on change, and a reader hitting a truncate-in-progress used to see
-        // an empty file and clobber the user's settings with defaults.
+        // an empty file and clobber the user's settings with defaults. The
+        // tmp name carries $$ so two shell processes saving at once can't
+        // interleave into the same scratch file.
         saveSettingsProcess.command = [
             "bash", "-c",
-            "mkdir -p \"" + configDir + "\" && cat > \"" + userSettingsFile + ".tmp\" <<'JSON_EOF' && mv \"" + userSettingsFile + ".tmp\" \"" + userSettingsFile + "\"\n" + jsonString + "\nJSON_EOF"
+            "mkdir -p \"" + configDir + "\" && tmp=\"" + userSettingsFile + ".$$.tmp\" && cat > \"$tmp\" <<'JSON_EOF' && mv \"$tmp\" \"" + userSettingsFile + "\"\n" + jsonString + "\nJSON_EOF"
         ]
         saveSettingsProcess.running = true
     }
@@ -111,7 +113,7 @@ QtObject {
         // Same atomic tmp + rename as saveSettings — cp truncates in place.
         resetProcess.command = [
             "bash", "-c",
-            "mkdir -p \"" + configDir + "\" && cp \"" + defaultSettingsFile + "\" \"" + userSettingsFile + ".tmp\" && mv \"" + userSettingsFile + ".tmp\" \"" + userSettingsFile + "\""
+            "mkdir -p \"" + configDir + "\" && tmp=\"" + userSettingsFile + ".$$.tmp\" && cp \"" + defaultSettingsFile + "\" \"$tmp\" && mv \"$tmp\" \"" + userSettingsFile + "\""
         ]
         resetProcess.running = true
     }
