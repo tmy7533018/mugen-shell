@@ -37,7 +37,8 @@ Rectangle {
         { id: "timer",        label: "Timer",         desc: "Countdown timer" },
         { id: "calendar",     label: "Calendar",      desc: "Events: add / list / delete" },
         { id: "panel",        label: "Panels",        desc: "Open / close mugen-shell panels" },
-        { id: "app",          label: "App launcher",  desc: "Launch apps (gated by allowlist)" }
+        { id: "app",          label: "App launcher",  desc: "Launch apps (gated by allowlist)" },
+        { id: "memory",       label: "Memory",        desc: "Long-term memory (off hides saved facts too)" }
     ]
 
     readonly property int expandedHeight: 64 + contentColumn.implicitHeight + 16

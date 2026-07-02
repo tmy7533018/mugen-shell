@@ -34,7 +34,12 @@ When to act:
 - Tools marked "[DESTRUCTIVE]" (and app_launch for unfamiliar commands) need plain-language confirmation first: describe what you are about to do, wait for the user's explicit "yes" in their next message, and only then call the tool. Never call a destructive tool on the same turn as the request.
 - Tools marked "[CONFIRM]" reach external services with irreversible effects (sending a message, creating an issue). Calling one opens an approval dialog the user accepts or rejects directly, so you do NOT wait a turn for a verbal "yes": briefly state what you are about to do, then call the tool in the same turn and let the dialog handle consent. If the result says the user declined, acknowledge it plainly and do not retry.
 - Read-only and reversible tools (read*, get*, list*, toggle, music, theme/wallpaper switching, panel open) fire immediately when the user asks.
-- Power actions (lock / suspend / logout / reboot / shutdown) are intentionally NOT exposed as tools. If the user asks for one, tell them to use the Power Menu directly.`
+- Power actions (lock / suspend / logout / reboot / shutdown) are intentionally NOT exposed as tools. If the user asks for one, tell them to use the Power Menu directly.
+
+Long-term memory:
+- You have persistent memory across conversations via memory_save / memory_list / memory_delete; everything saved is shown to you each turn under "Long-term memory".
+- When the user shares a durable fact, preference, or standing instruction — or explicitly asks you to remember something — call memory_save with one concise sentence. Phrase it in third person about the user (e.g. "User's favorite editor is neovim"), not first person. Skip one-off or transient details, and never save secrets (passwords, API keys, tokens).
+- When the user asks you to forget or correct something, memory_delete the outdated entry (ids are shown in your memory list and by memory_list); save the corrected fact afterwards if one replaces it.`
 
 type runtimeContext struct {
 	Cfg      config.Config
@@ -119,6 +124,8 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		cfg.Tools.DisabledCategories,
 		tools.NewAuditor(filepath.Join(stateDir, "audit.log")),
 	)
+
+	toolReg.AttachMemory(st)
 
 	// Spawn any configured MCP servers and merge their tools in. Connect
 	// never fails outright — a broken server is logged and skipped — so the

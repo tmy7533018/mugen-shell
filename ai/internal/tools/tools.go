@@ -17,6 +17,7 @@ import (
 
 	"github.com/tmy7533018/mugen-ai/internal/apps"
 	"github.com/tmy7533018/mugen-ai/internal/mcp"
+	"github.com/tmy7533018/mugen-ai/internal/store"
 )
 
 type Tool struct {
@@ -44,10 +45,14 @@ type Tool struct {
 
 	// kind selects the dispatch path. Empty is a built-in tool, routed by
 	// cmdTemplate (cmd) or `qs ipc call` (ipc); "mcp" routes to an external
-	// MCP server via mcpServer/mcpTool.
+	// MCP server via mcpServer/mcpTool; "native" calls fn in-process.
 	kind      string
 	mcpServer string // configured server name, for kind=="mcp"
 	mcpTool   string // un-prefixed tool name on that server
+
+	// fn is the in-process implementation for kind=="native" tools (memory
+	// CRUD etc. that talk straight to the store, no subprocess).
+	fn func(ctx context.Context, args map[string]any) (string, error)
 
 	// needsConfirm gates a tool behind an explicit, out-of-band user
 	// approval before the chat loop may run it — set for destructive MCP
@@ -64,6 +69,7 @@ type Registry struct {
 	auditor      *Auditor
 	apps         *apps.Resolver
 	mcp          *mcp.Manager
+	memStore     *store.Store
 	tools        []Tool
 	mu           sync.RWMutex
 
@@ -338,6 +344,18 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 		// Manager.Call re-dials transparently if the server has crashed
 		// since startup, so a one-off crash self-heals on next use.
 		out, err := r.mcp.Call(ctx, t.mcpServer, t.mcpTool, args)
+		res := strings.TrimSpace(out)
+		r.auditor.Log(name, args, res, err)
+		if err != nil {
+			return "", fmt.Errorf("%s failed: %w", name, err)
+		}
+		return sanitizeForLLM(res), nil
+	}
+
+	// Native tools run in-process; same category / audit / sanitize gates,
+	// only the dispatch differs.
+	if t.kind == "native" {
+		out, err := t.fn(ctx, args)
 		res := strings.TrimSpace(out)
 		r.auditor.Log(name, args, res, err)
 		if err != nil {

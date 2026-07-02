@@ -32,6 +32,14 @@ type Message struct {
 	Content string `json:"content"`
 }
 
+// Memory is one durable fact Yura saved about the user; the full list is
+// injected into the system prompt each turn.
+type Memory struct {
+	ID        int64  `json:"id"`
+	Content   string `json:"content"`
+	CreatedAt int64  `json:"created_at"`
+}
+
 type Store struct {
 	db   *sql.DB
 	path string
@@ -77,6 +85,11 @@ func (s *Store) migrate() error {
 			key TEXT PRIMARY KEY,
 			value TEXT NOT NULL
 		)`,
+		`CREATE TABLE IF NOT EXISTS memories (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			content TEXT NOT NULL,
+			created_at INTEGER NOT NULL
+		)`,
 	}
 	for _, stmt := range stmts {
 		if _, err := s.db.Exec(stmt); err != nil {
@@ -119,6 +132,55 @@ func (s *Store) ensureColumn(table, column, decl string) error {
 }
 
 func nowUnix() int64 { return time.Now().Unix() }
+
+func (s *Store) AddMemory(content string) (int64, error) {
+	res, err := s.db.Exec(`INSERT INTO memories (content, created_at) VALUES (?, ?)`, content, nowUnix())
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+func (s *Store) ListMemories() ([]Memory, error) {
+	rows, err := s.db.Query(`SELECT id, content, created_at FROM memories ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Memory
+	for rows.Next() {
+		var m Memory
+		if err := rows.Scan(&m.ID, &m.Content, &m.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) CountMemories() (int, error) {
+	var n int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM memories`).Scan(&n)
+	return n, err
+}
+
+// DeleteMemory reports whether a row with that id existed.
+func (s *Store) DeleteMemory(id int64) (bool, error) {
+	res, err := s.db.Exec(`DELETE FROM memories WHERE id = ?`, id)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
+func (s *Store) DeleteAllMemories() (int64, error) {
+	res, err := s.db.Exec(`DELETE FROM memories`)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
 
 func (s *Store) ListConversations() ([]Conversation, error) {
 	rows, err := s.db.Query(`SELECT id, title, model, thinking, created_at, updated_at FROM conversations ORDER BY updated_at DESC`)

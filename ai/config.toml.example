@@ -60,8 +60,9 @@
 #
 # [tools]
 #   # Categories of tools to hide from Yura (audio / music / brightness /
-#   # theme / wallpaper / notification / timer / calendar / panel / app).
-#   # Edit via Settings → AI / Yura → Tool categories.
+#   # theme / wallpaper / notification / timer / calendar / panel / app /
+#   # memory). Edit via Settings → AI / Yura → Tool categories. Disabling
+#   # "memory" also stops saved memories from being shown to the model.
 #   disabled_categories = []
 
 # [history]

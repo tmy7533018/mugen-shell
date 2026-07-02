@@ -78,6 +78,10 @@ func (s *Server) Routes() http.Handler {
 
 	mux.HandleFunc("GET /mcp/servers", s.handleListMCPServers)
 
+	mux.HandleFunc("GET /memories", s.handleListMemories)
+	mux.HandleFunc("DELETE /memories", s.handleClearMemories)
+	mux.HandleFunc("DELETE /memories/{id}", s.handleDeleteMemory)
+
 	mux.HandleFunc("GET /config", s.handleGetConfig)
 	mux.HandleFunc("PUT /config", s.handlePutConfig)
 	mux.HandleFunc("POST /config/restart", s.handleRestart)
@@ -195,6 +199,12 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), status)
 		return
+	}
+
+	// Long-term memories ride inside the system message: they change
+	// rarely, so provider prompt caches stay warm across turns.
+	if blk := s.tools.MemoryBlock(); blk != "" && len(msgs) > 0 && msgs[0].Role == "system" {
+		msgs[0].Content += "\n\n" + blk
 	}
 
 	s.events.broadcast("conversations", nil)
