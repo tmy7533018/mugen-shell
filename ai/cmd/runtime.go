@@ -126,6 +126,7 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 	)
 
 	toolReg.AttachMemory(st)
+	toolReg.AttachWeather(cfg.Weather.Place)
 
 	// Spawn any configured MCP servers and merge their tools in. Connect
 	// never fails outright — a broken server is logged and skipped — so the

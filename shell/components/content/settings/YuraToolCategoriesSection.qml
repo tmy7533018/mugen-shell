@@ -38,7 +38,8 @@ Rectangle {
         { id: "calendar",     label: "Calendar",      desc: "Events: add / list / delete" },
         { id: "panel",        label: "Panels",        desc: "Open / close mugen-shell panels" },
         { id: "app",          label: "App launcher",  desc: "Launch apps (gated by allowlist)" },
-        { id: "memory",       label: "Memory",        desc: "Long-term memory (off hides saved facts too)" }
+        { id: "memory",       label: "Memory",        desc: "Long-term memory (off hides saved facts too)" },
+        { id: "weather",      label: "Weather",       desc: "Current weather & forecast (Open-Meteo)" }
     ]
 
     readonly property int expandedHeight: 64 + contentColumn.implicitHeight + 16

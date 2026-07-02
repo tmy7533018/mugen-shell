@@ -15,6 +15,13 @@ type Config struct {
 	MCP         MCP         `toml:"mcp" json:"mcp"`
 	History     History     `toml:"history" json:"history"`
 	Context     Context     `toml:"context" json:"context"`
+	Weather     Weather     `toml:"weather" json:"weather"`
+}
+
+// Weather configures the weather_get tool (Open-Meteo, no API key). Place
+// is the default location used when the user doesn't name one.
+type Weather struct {
+	Place string `toml:"place" json:"place"`
 }
 
 // Context controls extra, non-conversation information injected into chat
