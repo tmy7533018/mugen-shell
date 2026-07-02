@@ -237,6 +237,16 @@ PanelWindow {
         timerManager: timerManager
     }
 
+    // Float Yura runs as a separate quickshell process; it mirrors its
+    // streaming state here so the bar's assistant icon can animate while
+    // she thinks. Not an LLM tool — shell-internal only.
+    property bool yuraFloatThinking: false
+
+    IpcHandler {
+        target: "yura"
+        function set_thinking(on: bool): void { barWindow.yuraFloatThinking = on }
+    }
+
     Managers.WallpaperManager { id: wallpaperManager }
 
     Managers.IdleInhibitorManager { id: idleInhibitorManager }
@@ -437,6 +447,8 @@ PanelWindow {
             cavaManager: cavaManager
             settingsManager: settingsManager
             timerManager: timerManager
+            aiThinking: (aiAssistantLoader.item ? aiAssistantLoader.item.streaming : false)
+                || barWindow.yuraFloatThinking
         }
 
         Item { Layout.fillWidth: true }

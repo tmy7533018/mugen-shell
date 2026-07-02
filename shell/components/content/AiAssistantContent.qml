@@ -220,8 +220,14 @@ FocusScope {
                     cursorShape: Qt.PointingHandCursor
                     enabled: !root.isStandalone
                     onClicked: {
+                        // Capture screen coords before closeAllModes starts
+                        // shrinking the bar. The bar window sits at the screen
+                        // origin and the yura window ignores exclusion zones,
+                        // so window coords map 1:1 between the two.
+                        const p = orbSlot.mapToItem(null, 0, 0)
                         modeManager.closeAllModes()
-                        Hyprland.dispatch("exec qs -p ~/.config/quickshell/mugen-shell/yura-shell.qml ipc call yura toggle")
+                        Hyprland.dispatch("exec qs -p ~/.config/quickshell/mugen-shell/yura-shell.qml ipc call yura toggleFrom "
+                            + Math.round(p.x) + " " + Math.round(p.y) + " " + Math.round(orbSlot.width))
                     }
                 }
             }

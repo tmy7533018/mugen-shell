@@ -48,7 +48,10 @@ PanelWindow {
         right: true
     }
 
-    exclusiveZone: 0
+    // Ignore other zones (not just reserve none): the window must start at
+    // the true screen origin so bar-relative fly coordinates line up, and
+    // must not shift when the bar hides under fullscreen.
+    exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Top
     // OnDemand only lets a click focus the panel; the HyprlandFocusGrab
     // below is what actually holds the keyboard while the panel is in use,
@@ -64,6 +67,10 @@ PanelWindow {
     // clicked window without closing the panel, so it still works as a
     // docked sidebar you click in and out of.
     property bool grabWanted: false
+
+    // True while the stand-in orb is flying in from the bar; hides the real
+    // panel orb until the crossfade.
+    property bool flying: false
 
     HyprlandFocusGrab {
         windows: [chatWindow]
@@ -287,8 +294,15 @@ PanelWindow {
                 function onExpandedChanged() {
                     if (yuraState.expanded) {
                         orbCloseAnim.stop()
-                        orb.expandGate = 0
-                        orbOpenAnim.restart()
+                        if (yuraState.flyFromX >= 0) {
+                            // Flight open: the stand-in orb performs the
+                            // entrance, so the real one waits fully grown.
+                            orbOpenAnim.stop()
+                            orb.expandGate = 1.0
+                        } else {
+                            orb.expandGate = 0
+                            orbOpenAnim.restart()
+                        }
                     } else {
                         orbOpenAnim.stop()
                         orbCloseAnim.restart()
@@ -296,7 +310,7 @@ PanelWindow {
                 }
             }
 
-            opacity: yuraState.aiDropdownOpen ? 0 : 1
+            opacity: (yuraState.aiDropdownOpen || chatWindow.flying) ? 0 : 1
             Behavior on opacity { NumberAnimation { duration: 320; easing.type: Easing.InOutCubic } }
 
             scale: 0.4 + expandGate * 0.6
@@ -388,6 +402,84 @@ PanelWindow {
                 yuraState.close()
                 event.accepted = true
             }
+        }
+    }
+
+    // "One orb" illusion: a stand-in orb flies from the bar spotlight's
+    // position to the panel orb's spot, then crossfades into the real one.
+    // Progress-driven bindings (not to:-captured coords) keep the target
+    // live while the async content loader settles the real orb position.
+    Item {
+        id: flyOrb
+
+        property bool shown: false
+        property real px: 0
+        property real py: 0
+
+        readonly property real targetX: yuraState.panelRestX + yuraState.orbX
+        readonly property real targetY: yuraState.panelRestY + yuraState.orbY
+
+        x: yuraState.flyFromX + (targetX - yuraState.flyFromX) * px
+        y: yuraState.flyFromY + (targetY - yuraState.flyFromY) * py
+        width: yuraState.flyFromSize + (yuraState.orbSize - yuraState.flyFromSize) * px
+        height: width
+        visible: shown
+        z: 10
+
+        Ai.AmbientOrb {
+            anchors.fill: parent
+            orbColor: chatWindow.theme ? chatWindow.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+            showHalo: false
+            coreOpacity: 0.6
+            corePointCount: 48
+            coreWaveAmplitude: 0.5
+            active: flyOrb.shown
+        }
+    }
+
+    SequentialAnimation {
+        id: flyAnim
+
+        // Different x/y easings bend the path slightly so the flight reads
+        // as organic rather than a straight interpolation.
+        ParallelAnimation {
+            NumberAnimation { target: flyOrb; property: "px"; from: 0; to: 1; duration: 800; easing.type: Easing.InOutCubic }
+            NumberAnimation { target: flyOrb; property: "py"; from: 0; to: 1; duration: 800; easing.type: Easing.InOutSine }
+        }
+        // Reveal the real orb (320ms opacity Behavior) under the fading
+        // stand-in; identical geometry makes the swap invisible.
+        ScriptAction { script: chatWindow.flying = false }
+        NumberAnimation { target: flyOrb; property: "opacity"; from: 1; to: 0; duration: 320; easing.type: Easing.InOutCubic }
+        ScriptAction { script: { flyOrb.shown = false; flyOrb.opacity = 1 } }
+    }
+
+    Connections {
+        target: yuraState
+        function onFlyRequested() {
+            flyAnim.stop()
+            flyOrb.opacity = 1
+            flyOrb.shown = true
+            chatWindow.flying = true
+            flyAnim.restart()
+        }
+        function onExpandedChanged() {
+            if (!yuraState.expanded && chatWindow.flying) {
+                flyAnim.stop()
+                flyOrb.shown = false
+                flyOrb.opacity = 1
+                chatWindow.flying = false
+            }
+        }
+    }
+
+    // Mirror the float's streaming state to the main shell over IPC so the
+    // bar's assistant icon can animate while Yura thinks (separate process).
+    Connections {
+        target: contentLoader.item
+        ignoreUnknownSignals: true
+        function onStreamingChanged() {
+            Hyprland.dispatch("exec qs -c mugen-shell ipc call yura set_thinking "
+                + (contentLoader.item.streaming ? "true" : "false"))
         }
     }
 }

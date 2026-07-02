@@ -5,6 +5,7 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import "../ui" as UI
 import "../common" as Common
+import "../content/ai" as Ai
 import "./left" as Left
 
 RowLayout {
@@ -23,6 +24,7 @@ RowLayout {
     property var cavaManager
     property var settingsManager
     property var timerManager
+    property bool aiThinking: false
 
     function scaled(val) {
         if (modeManager) return modeManager.scale(val)
@@ -280,15 +282,40 @@ RowLayout {
         Layout.leftMargin: 0
         Layout.rightMargin: 0
 
+        // Pulsing glow behind the icon while Yura is thinking (bar spotlight
+        // stream or the float panel, reported over IPC).
+        Ai.AmbientOrb {
+            anchors.centerIn: parent
+            width: scaled(26)
+            height: scaled(26)
+            orbColor: root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+            streaming: true
+            haloScale: 1.7
+            haloOpacity: 0.55
+            coreOpacity: 0.35
+            corePointCount: 32
+            coreWaveAmplitude: 0.8
+            haloPointCount: 24
+            haloWaveAmplitude: 1.2
+            active: root.aiThinking
+            visible: root.aiThinking
+        }
+
         UI.SvgIcon {
             id: aiIconSvg
             anchors.centerIn: parent
             width: scaled(24)
             height: scaled(24)
             source: root.icons ? root.icons.aiSvg : ""
-            color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-            opacity: aiMouseArea.containsMouse ? 1.0 : 0.6
+            color: root.aiThinking
+                ? (root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9))
+                : (root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
+            opacity: (aiMouseArea.containsMouse || root.aiThinking) ? 1.0 : 0.6
             scale: aiMouseArea.containsMouse ? 1.3 : 1.0
+
+            Behavior on color {
+                ColorAnimation { duration: 400; easing.type: Easing.OutCubic }
+            }
 
             Behavior on opacity {
                 NumberAnimation { duration: 400; easing.type: Easing.OutCubic }

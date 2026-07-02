@@ -34,5 +34,8 @@ ShellRoot {
         function toggle() { yuraState.toggle() }
         function open()   { yuraState.open() }
         function close()  { yuraState.close() }
+        // Called by the bar spotlight orb with its screen position, so the
+        // panel orb can fly in from there ("one orb" illusion).
+        function toggleFrom(x: int, y: int, size: int) { yuraState.toggleFrom(x, y, size) }
     }
 }

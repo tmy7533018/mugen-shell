@@ -30,6 +30,13 @@ QtObject {
     property real aiOrbY: -1
     property real aiOrbSize: -1
 
+    // Screen position the bar spotlight orb was launched from; -1 = plain
+    // open with no flight animation.
+    property real flyFromX: -1
+    property real flyFromY: -1
+    property real flyFromSize: -1
+    signal flyRequested()
+
     readonly property real orbExpandedSize: aiOrbSize > 0
         ? aiOrbSize
         : Math.min(mainPaneWidth, mainPaneHeight) * 0.28
@@ -57,7 +64,23 @@ QtObject {
     readonly property real panelY: panelRestY
     readonly property real panelOpacity: expanded ? 1.0 : 0.0
 
-    function toggle() { expanded = !expanded }
-    function open()   { expanded = true }
+    function toggle() { expanded ? close() : open() }
+    function open() {
+        flyFromX = -1
+        flyFromY = -1
+        flyFromSize = -1
+        expanded = true
+    }
     function close()  { expanded = false }
+
+    // Fly coords are set before expanded so onExpandedChanged handlers can
+    // tell a flight open from a plain one.
+    function toggleFrom(x, y, size) {
+        if (expanded) { close(); return }
+        flyFromX = x
+        flyFromY = y
+        flyFromSize = size
+        expanded = true
+        flyRequested()
+    }
 }
