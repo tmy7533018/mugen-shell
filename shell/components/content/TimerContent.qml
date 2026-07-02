@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import "../../lib" as Theme
+import "../common" as Common
 
 Item {
     id: root
@@ -250,128 +251,76 @@ Item {
 
             RowLayout {
                 Layout.alignment: Qt.AlignHCenter
-                Layout.preferredWidth: modeManager.scale(322)
-                spacing: modeManager.scale(10)
+                spacing: modeManager.scale(16)
 
-                Text {
-                    text: "TIMER"
-                    color: theme ? theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.75)
-                    font.pixelSize: modeManager.scale(12)
-                    font.weight: Font.Medium
-                    font.family: "M PLUS 2"
-                    font.letterSpacing: 1.5
+                // Unlit ember — brightens and stirs as a duration is typed.
+                Common.BlobEffect {
+                    Layout.preferredWidth: modeManager.scale(30)
+                    Layout.preferredHeight: modeManager.scale(30)
+                    Layout.alignment: Qt.AlignVCenter
+                    blobColor: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+                    layers: 2
+                    waveAmplitude: 1.5
+                    baseOpacity: root.hasInput ? 0.85 : 0.4
+                    animationSpeed: root.hasInput ? 0.08 : 0.025
+                    running: idleLayout.visible
 
-                    layer.enabled: true
-                    layer.effect: Glow {
-                        samples: 16
-                        radius: modeManager.scale(5)
-                        spread: 0.30
-                        color: theme
-                            ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.25)
-                            : Qt.rgba(0.65, 0.55, 0.85, 0.25)
-                        transparentBorder: true
-                    }
+                    Behavior on baseOpacity { NumberAnimation { duration: Theme.Motion.standard } }
                 }
 
-                Item { Layout.fillWidth: true }
+                Text {
+                    id: bigDisplay
+                    Layout.alignment: Qt.AlignVCenter
+                    text: root.inputBuffer.length > 0 ? root.formatInputDisplay() : "M:SS"
+                    color: root.inputBuffer.length > 0
+                        ? (theme ? theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95))
+                        : (theme ? Qt.rgba(theme.textFaint.r, theme.textFaint.g, theme.textFaint.b, 0.45) : Qt.rgba(0.62, 0.62, 0.72, 0.45))
+                    font.pixelSize: modeManager.scale(34)
+                    font.weight: Font.Light
+                    font.family: "M PLUS 2"
+                    font.letterSpacing: modeManager.scale(2)
 
-                Rectangle {
-                    id: inputField
-                    Layout.preferredWidth: modeManager.scale(150)
-                    Layout.preferredHeight: modeManager.scale(34)
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
-                    readonly property bool isFocused: focusScope.activeFocus && root.visualState === "idle"
-
-                    color: inputHover.containsMouse ? Qt.rgba(1, 1, 1, 0.04) : "transparent"
-                    border.width: 1
-                    border.color: inputField.isFocused
-                        ? (theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.6) : Qt.rgba(0.65, 0.55, 0.85, 0.6))
-                        : (theme ? Qt.rgba(theme.textFaint.r, theme.textFaint.g, theme.textFaint.b, 0.30) : Qt.rgba(0.62, 0.62, 0.72, 0.30))
-                    radius: modeManager.scale(10)
-
-                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-                    Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
-
-                    layer.enabled: inputField.isFocused
+                    layer.enabled: root.hasInput
                     layer.effect: Glow {
                         samples: 20
-                        radius: modeManager.scale(7)
-                        spread: 0.30
+                        radius: modeManager.scale(8)
+                        spread: 0.3
                         color: theme
                             ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.40)
                             : Qt.rgba(0.65, 0.55, 0.85, 0.40)
                         transparentBorder: true
                     }
+                }
 
-                    Row {
-                        anchors.left: parent.left
-                        anchors.leftMargin: modeManager.scale(12)
-                        anchors.verticalCenter: parent.verticalCenter
-                        spacing: modeManager.scale(2)
+                Rectangle {
+                    id: caret
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.preferredWidth: modeManager.scale(2)
+                    Layout.preferredHeight: modeManager.scale(28)
+                    color: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1)
+                    visible: focusScope.activeFocus && root.visualState === "idle"
 
-                        Text {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: root.inputBuffer.length > 0 ? root.formatInputDisplay() : "M:SS"
-                            color: root.inputBuffer.length > 0
-                                ? (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.95))
-                                : (theme ? theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.55))
-                            font.pixelSize: modeManager.scale(13)
-                            font.family: "M PLUS 2"
-                            font.letterSpacing: 0.5
-                        }
-
-                        Rectangle {
-                            id: caret
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: modeManager.scale(1.5)
-                            height: modeManager.scale(15)
-                            color: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1)
-                            visible: inputField.isFocused
-
-                            SequentialAnimation on opacity {
-                                loops: Animation.Infinite
-                                running: caret.visible
-                                NumberAnimation { from: 1.0; to: 0.35; duration: 720; easing.type: Easing.InOutSine }
-                                NumberAnimation { from: 0.35; to: 1.0; duration: 720; easing.type: Easing.InOutSine }
-                            }
-                        }
+                    SequentialAnimation on opacity {
+                        loops: Animation.Infinite
+                        running: caret.visible
+                        NumberAnimation { from: 1.0; to: 0.35; duration: 720; easing.type: Easing.InOutSine }
+                        NumberAnimation { from: 0.35; to: 1.0; duration: 720; easing.type: Easing.InOutSine }
                     }
+                }
 
-                    Text {
-                        id: enterHint
-                        anchors.right: parent.right
-                        anchors.rightMargin: modeManager.scale(10)
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "↵"
-                        color: root.hasInput
-                            ? (theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
-                            : (theme ? theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.55))
-                        font.pixelSize: modeManager.scale(12)
-                        font.family: "M PLUS 2"
-                        opacity: root.hasInput ? 0.95 : 0.4
+                Text {
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.leftMargin: modeManager.scale(4)
+                    text: "↵"
+                    color: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1)
+                    font.pixelSize: modeManager.scale(14)
+                    font.family: "M PLUS 2"
+                    opacity: root.hasInput ? 0.95 : 0.0
+                    visible: opacity > 0.01
 
-                        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-                        Behavior on opacity { NumberAnimation { duration: Theme.Motion.micro } }
-
-                        layer.enabled: root.hasInput
-                        layer.effect: Glow {
-                            samples: 16
-                            radius: modeManager.scale(6)
-                            spread: 0.4
-                            color: theme
-                                ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.60)
-                                : Qt.rgba(0.65, 0.55, 0.85, 0.60)
-                            transparentBorder: true
-                        }
-                    }
-
-                    MouseArea {
-                        id: inputHover
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.IBeamCursor
-                        onClicked: focusScope.forceActiveFocus()
-                    }
+                    Behavior on opacity { NumberAnimation { duration: Theme.Motion.micro } }
                 }
             }
 
@@ -389,9 +338,9 @@ Item {
                     ]
 
                     delegate: Rectangle {
-                        Layout.preferredWidth: modeManager.scale(58)
-                        Layout.preferredHeight: modeManager.scale(32)
-                        radius: modeManager.scale(10)
+                        Layout.preferredWidth: modeManager.scale(68)
+                        Layout.preferredHeight: modeManager.scale(36)
+                        radius: height / 2
                         property bool isSelected: root.parseInputSeconds() === modelData.seconds
                         color: isSelected
                             ? (theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.20) : Qt.rgba(0.65, 0.55, 0.85, 0.20))
@@ -447,6 +396,7 @@ Item {
             spacing: modeManager.scale(24)
             opacity: root.visualState === "running" ? 1.0 : 0.0
             visible: opacity > 0.01
+            onVisibleChanged: if (visible) ignitePop.restart()
 
             transform: Translate {
                 y: runningLayout.opacity > 0.5 ? 0 : modeManager.scale(6)
@@ -458,9 +408,21 @@ Item {
             }
 
             Item {
+                id: ringWrap
                 Layout.preferredWidth: modeManager.scale(116)
                 Layout.preferredHeight: modeManager.scale(116)
                 Layout.alignment: Qt.AlignVCenter
+
+                // Ignition pop when the timer starts.
+                NumberAnimation {
+                    id: ignitePop
+                    target: ringWrap
+                    property: "scale"
+                    from: 0.72
+                    to: 1.0
+                    duration: Theme.Motion.slow
+                    easing.type: Theme.Motion.easeSpring
+                }
 
                 Canvas {
                     id: ring
@@ -524,6 +486,20 @@ Item {
 
                         Behavior on color { ColorAnimation { duration: Theme.Motion.standard } }
                     }
+                }
+
+                // The lit ember: flickers faster as time runs down, freezes
+                // while paused, turns urgent-red with the ring.
+                Common.BlobEffect {
+                    anchors.centerIn: parent
+                    width: modeManager.scale(72)
+                    height: modeManager.scale(72)
+                    blobColor: ring.progressColor
+                    layers: 2
+                    waveAmplitude: 2.5
+                    baseOpacity: 0.4
+                    animationSpeed: root.isUrgent ? 0.22 : 0.04 + 0.10 * (1 - ring.progress)
+                    running: runningLayout.visible && !(timerManager && timerManager.paused)
                 }
 
                 Column {
@@ -599,7 +575,7 @@ Item {
                     Rectangle {
                         Layout.preferredWidth: modeManager.scale(96)
                         Layout.preferredHeight: modeManager.scale(34)
-                        radius: modeManager.scale(11)
+                        radius: height / 2
                         color: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, pauseHover.containsMouse ? 0.32 : 0.22) : Qt.rgba(0.65, 0.55, 0.85, 0.22)
                         border.width: 0
 
@@ -644,7 +620,7 @@ Item {
                     Rectangle {
                         Layout.preferredWidth: modeManager.scale(76)
                         Layout.preferredHeight: modeManager.scale(34)
-                        radius: modeManager.scale(11)
+                        radius: height / 2
                         color: stopHover.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
                         border.width: 1
                         border.color: theme ? Qt.rgba(theme.textFaint.r, theme.textFaint.g, theme.textFaint.b, 0.35) : Qt.rgba(0.62, 0.62, 0.72, 0.35)
@@ -689,33 +665,51 @@ Item {
                 Layout.preferredHeight: modeManager.scale(116)
                 Layout.alignment: Qt.AlignVCenter
 
-                Rectangle {
-                    id: alertRing
+                // Ripples radiating from the burst ember, staggered half a
+                // period apart (equal cycle lengths keep them from drifting).
+                Repeater {
+                    model: 2
+
+                    Rectangle {
+                        id: ripple
+                        required property int index
+                        anchors.centerIn: parent
+                        width: modeManager.scale(86)
+                        height: width
+                        radius: width / 2
+                        color: "transparent"
+                        border.width: modeManager.scale(2)
+                        border.color: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.95)
+                        opacity: 0
+                        scale: 0.8
+
+                        SequentialAnimation {
+                            running: alertingLayout.visible
+                            loops: Animation.Infinite
+                            PauseAnimation { duration: ripple.index * 700 }
+                            ParallelAnimation {
+                                NumberAnimation { target: ripple; property: "scale"; from: 0.8; to: 1.5; duration: 1400; easing.type: Easing.OutCubic }
+                                SequentialAnimation {
+                                    NumberAnimation { target: ripple; property: "opacity"; from: 0; to: 0.55; duration: 200 }
+                                    NumberAnimation { target: ripple; property: "opacity"; to: 0; duration: 1200; easing.type: Easing.OutCubic }
+                                }
+                            }
+                            PauseAnimation { duration: (1 - ripple.index) * 700 }
+                        }
+                    }
+                }
+
+                // Burst ember at full agitation.
+                Common.BlobEffect {
                     anchors.centerIn: parent
-                    width: modeManager.scale(110)
-                    height: modeManager.scale(110)
-                    radius: width / 2
-                    color: "transparent"
-                    border.width: modeManager.scale(4)
-                    border.color: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.95)
-
-                    SequentialAnimation on scale {
-                        loops: Animation.Infinite
-                        running: alertingLayout.visible
-                        NumberAnimation { from: 1.0; to: 1.06; duration: 700; easing.type: Easing.InOutSine }
-                        NumberAnimation { from: 1.06; to: 1.0; duration: 700; easing.type: Easing.InOutSine }
-                    }
-
-                    layer.enabled: true
-                    layer.effect: Glow {
-                        samples: 28
-                        radius: modeManager.scale(14)
-                        spread: 0.45
-                        color: theme
-                            ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.65)
-                            : Qt.rgba(0.65, 0.55, 0.85, 0.65)
-                        transparentBorder: true
-                    }
+                    width: modeManager.scale(84)
+                    height: modeManager.scale(84)
+                    blobColor: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+                    layers: 2
+                    waveAmplitude: 3.5
+                    baseOpacity: 0.75
+                    animationSpeed: 0.16
+                    running: alertingLayout.visible
                 }
 
                 Text {
@@ -765,7 +759,7 @@ Item {
                     Layout.preferredWidth: modeManager.scale(110)
                     Layout.preferredHeight: modeManager.scale(36)
                     Layout.topMargin: modeManager.scale(2)
-                    radius: modeManager.scale(12)
+                    radius: height / 2
                     color: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, dismissHover.containsMouse ? 0.36 : 0.24) : Qt.rgba(0.65, 0.55, 0.85, 0.24)
                     border.width: 0
 

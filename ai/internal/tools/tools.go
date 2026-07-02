@@ -794,6 +794,13 @@ func builtin() []Tool {
 			function:    "cancel",
 		},
 		{
+			Name:        "timer_dismiss",
+			Description: "Silence a finished, ringing timer.",
+			Parameters:  emptyParams(),
+			target:      "timer",
+			function:    "dismiss",
+		},
+		{
 			Name:        "timer_get",
 			Description: "Read timer state as JSON: { running, paused, duration_sec, remaining_sec, alerting }.",
 			Parameters:  emptyParams(),

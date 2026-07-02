@@ -230,6 +230,14 @@ Item {
             return "cancelled"
         }
 
+        function dismiss(): string {
+            if (!ipcRouter.timerManager.alerting) {
+                return "error: timer is not ringing"
+            }
+            ipcRouter.timerManager.dismissAlert()
+            return "dismissed"
+        }
+
         function get(): string {
             // JSON so the model can pick out whichever field it needs.
             return JSON.stringify({

@@ -42,7 +42,9 @@ Item {
 
             property color blobColor: root.blobColor
             property real time: root.time
-            property real baseRadius: sizePx > 0 ? Math.max(15, sizePx / 2 - ampPx * 2) / sizePx : 0.25
+            // Floor is proportional (was a fixed 15px in the Canvas days,
+            // which overflowed blobs smaller than ~34px).
+            property real baseRadius: sizePx > 0 ? Math.max(sizePx * 0.25, sizePx / 2 - ampPx * 2) / sizePx : 0.25
             property real amplitude: sizePx > 0 ? ampPx / sizePx : 0.02
             property real centerAlpha: 0.9 - index * 0.12
             property real edgeAlpha: root.edgeAlpha
