@@ -23,6 +23,7 @@ FocusScope {
     })
 
     property var apps: []
+    property string lastAppsJson: ""
     property var filteredApps: []
     property var runningApps: []
     property bool appsLoaded: false
@@ -58,6 +59,17 @@ FocusScope {
             "d=\"${XDG_STATE_HOME:-$HOME/.local/state}/mugen-shell\"; mkdir -p \"$d\" && printf '%s' '" + escaped + "' > \"$d/launcher.json\""
         ]
         saveFavoritesProcess.running = true
+    }
+
+    function launchExec(execCmd, inTerminal) {
+        if (!execCmd) return
+        Hyprland.dispatch("exec " + (inTerminal ? "kitty " + execCmd : execCmd))
+        modeManager.closeAllModes()
+    }
+
+    function launchApp(app) {
+        if (!app) return
+        launchExec(app.exec || "", app.terminal === true)
     }
 
     function openContextMenu(app, px, py) {
@@ -123,11 +135,12 @@ FocusScope {
     function loadApps() {
         if (appsLoaded) {
             filterApps()
-            return
-        }
-
-        if (!isLoading) {
+        } else if (!isLoading) {
             isLoading = true
+        }
+        // always re-run in the background so installs/removals show up
+        // without a shell restart; the model is only swapped when it changed
+        if (!appsProcess.running) {
             appsProcess.running = true
         }
     }
@@ -230,7 +243,9 @@ FocusScope {
     }
 
     function filterApps() {
-        if (searchText === "") {
+        // trim: a trailing space would fail the substring tiers and drop real hits
+        let search = searchText.trim().toLowerCase()
+        if (search === "") {
             let favs = []
             let rest = []
             for (let i = 0; i < apps.length; i++) {
@@ -243,7 +258,6 @@ FocusScope {
             filteredApps = favs.concat(rest)
             return
         }
-        let search = searchText.toLowerCase()
         let scored = []
         for (let i = 0; i < apps.length; i++) {
             let s = scoreApp(apps[i], search)
@@ -310,13 +324,14 @@ FocusScope {
 
         onExited: () => {
             try {
-                if (!appsProcess.output || appsProcess.output.trim().length === 0) {
+                let out = appsProcess.output || ""
+                if (out.trim().length === 0 || out === root.lastAppsJson) {
                     root.isLoading = false
                     appsProcess.output = ""
                     return
                 }
 
-                let parsed = JSON.parse(appsProcess.output)
+                let parsed = JSON.parse(out)
 
                 if (!Array.isArray(parsed)) {
                     root.isLoading = false
@@ -324,6 +339,7 @@ FocusScope {
                     return
                 }
 
+                root.lastAppsJson = out
                 root.apps = parsed
                 root.appsLoaded = true
                 root.isLoading = false
@@ -540,10 +556,7 @@ FocusScope {
                 }
 
                 onRequestLaunchApp: (app) => {
-                    if (app && app.exec) {
-                        Hyprland.dispatch("exec " + app.exec)
-                        modeManager.closeAllModes()
-                    }
+                    root.launchApp(app)
                 }
             }
 
@@ -585,11 +598,7 @@ FocusScope {
                     }
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                         if (currentIndex >= 0 && root.filteredApps[currentIndex]) {
-                            let app = root.filteredApps[currentIndex]
-                            if (app && app.exec) {
-                                Hyprland.dispatch("exec " + app.exec)
-                                modeManager.closeAllModes()
-                            }
+                            root.launchApp(root.filteredApps[currentIndex])
                         }
                         event.accepted = true
                     } else if (event.key === Qt.Key_Escape) {
@@ -706,10 +715,7 @@ FocusScope {
                         isFavorite: root.isFavorite(delegateWrapper.wrapperModelData ? delegateWrapper.wrapperModelData.exec : "")
 
                         onLaunchApp: (app) => {
-                            if (app && app.exec) {
-                                Hyprland.dispatch("exec " + app.exec)
-                                modeManager.closeAllModes()
-                            }
+                            root.launchApp(app)
                         }
 
                         onResetAutoCloseTimer: () => {
@@ -774,17 +780,12 @@ FocusScope {
             }
 
             onLaunchRequested: (app) => {
-                if (app && app.exec) {
-                    Hyprland.dispatch("exec " + app.exec)
-                    modeManager.closeAllModes()
-                }
+                root.launchApp(app)
             }
 
             onActionRequested: (app, actionExec) => {
-                if (actionExec) {
-                    Hyprland.dispatch("exec " + actionExec)
-                    modeManager.closeAllModes()
-                }
+                // Terminal= applies to the whole entry, actions included
+                root.launchExec(actionExec, app && app.terminal === true)
             }
 
             onFavoriteToggled: (app) => {

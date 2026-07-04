@@ -30,8 +30,8 @@ CACHE_DIR = os.path.join(
     os.environ.get("XDG_CACHE_HOME", os.path.join(os.path.expanduser("~"), ".cache")),
     "mugen-shell"
 )
-CACHE_JSON = os.path.join(CACHE_DIR, "apps_v3.json")
-CACHE_SIG = os.path.join(CACHE_DIR, "apps_v3.sha256")
+CACHE_JSON = os.path.join(CACHE_DIR, "apps_v4.json")
+CACHE_SIG = os.path.join(CACHE_DIR, "apps_v4.sha256")
 
 
 def ensure_cache_dir() -> None:
@@ -469,7 +469,8 @@ def collect_apps() -> list[dict]:
     seen = set()
 
     for app in Gio.AppInfo.get_all():
-        if app.get_nodisplay() or app.get_is_hidden():
+        # covers NoDisplay/Hidden plus OnlyShowIn/NotShowIn vs XDG_CURRENT_DESKTOP
+        if not app.should_show():
             continue
 
         name = app.get_display_name() or app.get_name()
@@ -533,6 +534,7 @@ def collect_apps() -> list[dict]:
             "wmClassAliases": wm_class_aliases,
             "desktopFile": desktop_file_path,
             "actions": read_desktop_file_actions(app, desktop_file_path),
+            "terminal": (app.get_string("Terminal") or "").lower() == "true",
         })
 
     return apps
