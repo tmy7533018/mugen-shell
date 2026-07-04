@@ -59,7 +59,7 @@ Item {
                 { keys: "←→↑↓ / hjkl", desc: "Navigate grid" },
                 { keys: "Tab", desc: "Cycle apps" },
                 { keys: "Enter", desc: "Launch app" },
-                { keys: "Right-click", desc: "Toggle favorite" }
+                { keys: "Right-click / Menu", desc: "Context menu" }
             ]}
         ]},
         { id: "media", label: "Media", sections: [

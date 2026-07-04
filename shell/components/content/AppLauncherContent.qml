@@ -60,6 +60,58 @@ FocusScope {
         saveFavoritesProcess.running = true
     }
 
+    function openContextMenu(app, px, py) {
+        if (!app) return
+        contextMenu.openFor(app, isFavorite(app.exec || ""))
+        contextMenu.x = Math.max(0, Math.min(px, launcherLayer.width - contextMenu.width))
+        contextMenu.y = Math.max(0, Math.min(py, launcherLayer.height - contextMenu.height))
+        modeManager.bump()
+    }
+
+    function startUninstall(app) {
+        if (!app) return
+        let steamMatch = (app.exec || "").match(/steam:\/\/rungameid\/(\d+)/)
+        if (steamMatch) {
+            Quickshell.execDetached(["steam", "steam://uninstall/" + steamMatch[1]])
+            modeManager.closeAllModes()
+            return
+        }
+        let df = app.desktopFile || ""
+        if (df === "") return
+        // terminal route on purpose: the user sees exactly what gets removed
+        // (deps included) and confirms in the package manager itself
+        let holdTail = "; echo; printf 'Press Enter to close...'; read _"
+        if (df.indexOf("flatpak/exports/share/applications/") !== -1) {
+            let appId = df.split("/").pop().replace(/\.desktop$/, "")
+            Quickshell.execDetached([
+                "kitty", "--title", "Uninstall " + app.name, "sh", "-c",
+                "flatpak uninstall \"$1\"" + holdTail, "sh", appId
+            ])
+        } else {
+            // user-local .desktop copies often point at packaged binaries, so try
+            // the Exec target's owner before giving up; interpreters are excluded
+            // so an "env FOO=1 app" line can never resolve to coreutils
+            let execFirst = (app.exec || "").split(" ")[0]
+            let execBase = execFirst.split("/").pop()
+            if (execFirst[0] !== "/" || ["env", "sh", "bash", "zsh", "python", "python3"].indexOf(execBase) !== -1) {
+                execFirst = ""
+            }
+            Quickshell.execDetached([
+                "kitty", "--title", "Uninstall " + app.name, "sh", "-c",
+                "pkg=$(pacman -Qoq -- \"$1\" 2>/dev/null); "
+                    + "if [ -z \"$pkg\" ] && [ -n \"$2\" ]; then "
+                    + "pkg=$(pacman -Qoq -- \"$(realpath \"$2\" 2>/dev/null || printf %s \"$2\")\" 2>/dev/null); fi; "
+                    + "if [ -n \"$pkg\" ]; then echo \"Owning package: $pkg\"; echo; sudo pacman -R \"$pkg\"; "
+                    + "else echo 'No package owns this app — it looks manually installed.'; "
+                    + "echo \"  Entry: $1\"; "
+                    + "if [ -n \"$2\" ]; then echo \"  Exec:  $2\"; fi; "
+                    + "echo 'Remove those files manually to uninstall it.'; fi" + holdTail,
+                "sh", df, execFirst
+            ])
+        }
+        modeManager.closeAllModes()
+    }
+
     function preloadApps() {
         if (!appsLoaded && !isLoading) {
             isLoading = true
@@ -359,6 +411,7 @@ FocusScope {
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
+            contextMenu.shown = false
             if (modeManager.isMode("launcher")) {
                 root.loadApps()
                 root.loadRunningApps()
@@ -578,6 +631,20 @@ FocusScope {
                             positionViewAtIndex(currentIndex, GridView.Visible)
                         }
                         event.accepted = true
+                    } else if (event.key === Qt.Key_Menu
+                               || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
+                        if (currentIndex >= 0 && root.filteredApps[currentIndex]) {
+                            let item = appGrid.itemAtIndex(currentIndex)
+                            let px = launcherLayer.width / 2
+                            let py = launcherLayer.height / 2
+                            if (item) {
+                                let p = item.mapToItem(launcherLayer, item.width * 0.7, item.height * 0.7)
+                                px = p.x
+                                py = p.y
+                            }
+                            root.openContextMenu(root.filteredApps[currentIndex], px, py)
+                        }
+                        event.accepted = true
                     } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
                         if (event.modifiers & Qt.ShiftModifier || event.key === Qt.Key_Backtab) {
                             if (currentIndex > 0) {
@@ -649,8 +716,9 @@ FocusScope {
                             modeManager.bump()
                         }
 
-                        onToggleFavorite: (execKey) => {
-                            root.toggleFavorite(execKey)
+                        onContextMenuRequested: (app, px, py) => {
+                            let p = delegateItem.mapToItem(launcherLayer, px, py)
+                            root.openContextMenu(app, p.x, p.y)
                         }
 
                         onEntered: {
@@ -669,13 +737,71 @@ FocusScope {
                 text: {
                     if (root.isLoading) return "Loading..."
                     if (root.searchText === "" && Object.keys(root.favoritesSet).length === 0) {
-                        return "Right-click to favorite"
+                        return "Right-click for options"
                     }
                     return root.filteredApps.length + " apps"
                 }
                 color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
                 font.pixelSize: root.typo ? root.typo.sizeSmall : 11
                 opacity: 0.7
+            }
+        }
+
+        MouseArea {
+            id: menuDismissArea
+            anchors.fill: parent
+            z: 40
+            enabled: contextMenu.shown
+            visible: enabled
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+            onClicked: contextMenu.dismiss()
+            // keep the grid from scrolling away under the open menu
+            onWheel: (wheel) => { wheel.accepted = true }
+            onPositionChanged: modeManager.bump()
+        }
+
+        UI.AppContextMenu {
+            id: contextMenu
+            z: 50
+            theme: root.theme
+            typo: root.typo
+
+            onDismissed: {
+                if (modeManager.isMode("launcher")) {
+                    appGrid.forceActiveFocus()
+                }
+            }
+
+            onLaunchRequested: (app) => {
+                if (app && app.exec) {
+                    Hyprland.dispatch("exec " + app.exec)
+                    modeManager.closeAllModes()
+                }
+            }
+
+            onActionRequested: (app, actionExec) => {
+                if (actionExec) {
+                    Hyprland.dispatch("exec " + actionExec)
+                    modeManager.closeAllModes()
+                }
+            }
+
+            onFavoriteToggled: (app) => {
+                if (app) root.toggleFavorite(app.exec || "")
+            }
+
+            onOpenLocationRequested: (app) => {
+                let df = app ? (app.desktopFile || "") : ""
+                let dir = df.substring(0, df.lastIndexOf("/"))
+                if (dir.length > 0) {
+                    Quickshell.execDetached(["xdg-open", dir])
+                    modeManager.closeAllModes()
+                }
+            }
+
+            onUninstallRequested: (app) => {
+                root.startUninstall(app)
             }
         }
     }

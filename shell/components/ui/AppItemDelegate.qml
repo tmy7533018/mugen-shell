@@ -19,7 +19,7 @@ Item {
     signal launchApp(var app)
     signal resetAutoCloseTimer()
     signal entered()
-    signal toggleFavorite(string execKey)
+    signal contextMenuRequested(var app, real posX, real posY)
 
     width: GridView.view ? GridView.view.cellWidth : 100
     height: GridView.view ? GridView.view.cellHeight : 100
@@ -239,7 +239,8 @@ Item {
             onClicked: (mouse) => {
                 if (!delegateRoot.currentData) return
                 if (mouse.button === Qt.RightButton) {
-                    delegateRoot.toggleFavorite(delegateRoot.currentData.exec || "")
+                    let p = appMouseArea.mapToItem(delegateRoot, mouse.x, mouse.y)
+                    delegateRoot.contextMenuRequested(delegateRoot.currentData, p.x, p.y)
                 } else {
                     delegateRoot.launchApp(delegateRoot.currentData)
                 }
