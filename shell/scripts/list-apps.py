@@ -30,8 +30,8 @@ CACHE_DIR = os.path.join(
     os.environ.get("XDG_CACHE_HOME", os.path.join(os.path.expanduser("~"), ".cache")),
     "mugen-shell"
 )
-CACHE_JSON = os.path.join(CACHE_DIR, "apps_v2.json")
-CACHE_SIG = os.path.join(CACHE_DIR, "apps_v2.sha256")
+CACHE_JSON = os.path.join(CACHE_DIR, "apps_v3.json")
+CACHE_SIG = os.path.join(CACHE_DIR, "apps_v3.sha256")
 
 
 def ensure_cache_dir() -> None:
@@ -132,6 +132,42 @@ def read_desktop_file_keywords(desktop_file_path: str) -> str:
     except Exception:
         pass
     return ""
+
+
+def read_desktop_action_exec(desktop_file_path: str, action_id: str) -> str:
+    target = f"[desktop action {action_id.lower()}]"
+    try:
+        in_section = False
+        with open(desktop_file_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("["):
+                    in_section = line.lower() == target
+                    continue
+                if in_section and line.startswith("Exec="):
+                    return sanitize_exec(line[5:].strip())
+    except Exception:
+        pass
+    return ""
+
+
+def read_desktop_file_actions(app, desktop_file_path: str) -> list[dict]:
+    # Gio exposes action names but not their Exec lines, so read those directly.
+    actions = []
+    if not desktop_file_path or not isinstance(app, Gio.DesktopAppInfo):
+        return actions
+    try:
+        for action_id in app.list_actions():
+            exec_cmd = read_desktop_action_exec(desktop_file_path, action_id)
+            if not exec_cmd:
+                continue
+            actions.append({
+                "name": app.get_action_name(action_id) or action_id,
+                "exec": exec_cmd,
+            })
+    except Exception:
+        pass
+    return actions
 
 
 def extract_steam_app_id(exec_cmd: str) -> str:
@@ -495,6 +531,8 @@ def collect_apps() -> list[dict]:
             "keywords": keywords,
             "wmClass": wm_class,
             "wmClassAliases": wm_class_aliases,
+            "desktopFile": desktop_file_path,
+            "actions": read_desktop_file_actions(app, desktop_file_path),
         })
 
     return apps
