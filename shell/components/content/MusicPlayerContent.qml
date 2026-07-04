@@ -222,7 +222,10 @@ Item {
                     Layout.preferredHeight: modeManager.scale(14)
                     visible: root.musicManager && root.musicManager.isAvailable
 
-                    readonly property real ratio: (root.musicManager && root.musicManager.duration > 0)
+                    // browser players (firefox/zen) report no usable position/length,
+                    // so the bar falls back to a non-seekable indeterminate mode
+                    readonly property bool seekable: root.musicManager && root.musicManager.duration > 0
+                    readonly property real ratio: seekable
                         ? Math.max(0, Math.min(1, root.musicManager.position / root.musicManager.duration))
                         : 0
 
@@ -233,11 +236,12 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         height: modeManager.scale(3)
                         radius: height / 2
-                        color: Qt.rgba(1, 1, 1, sliderArea.containsMouse || sliderArea.pressed ? 0.22 : 0.15)
+                        color: Qt.rgba(1, 1, 1, progressSlider.seekable && (sliderArea.containsMouse || sliderArea.pressed) ? 0.22 : 0.15)
                         Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
                         Rectangle {
                             id: filled
+                            visible: progressSlider.seekable
                             anchors.left: parent.left
                             anchors.top: parent.top
                             anchors.bottom: parent.bottom
@@ -259,6 +263,41 @@ Item {
                                 NumberAnimation { duration: Theme.Motion.drift; easing.type: Easing.OutCubic }
                             }
                         }
+
+                        Rectangle {
+                            id: indeterminateGlow
+                            visible: !progressSlider.seekable && root.musicManager && root.musicManager.isPlaying
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: parent.width * 0.28
+                            radius: parent.radius
+                            color: Qt.rgba(albumArtDisplay.extractedColor.r, albumArtDisplay.extractedColor.g, albumArtDisplay.extractedColor.b, 0.45)
+
+                            layer.enabled: true
+                            layer.effect: Glow {
+                                samples: 32
+                                radius: 14
+                                spread: 0.5
+                                color: Qt.rgba(albumArtDisplay.extractedColor.r, albumArtDisplay.extractedColor.g, albumArtDisplay.extractedColor.b, 0.45)
+                                transparentBorder: true
+                            }
+
+                            SequentialAnimation on x {
+                                running: indeterminateGlow.visible
+                                loops: Animation.Infinite
+                                NumberAnimation {
+                                    from: 0
+                                    to: track.width - indeterminateGlow.width
+                                    duration: 2600
+                                    easing.type: Easing.InOutSine
+                                }
+                                NumberAnimation {
+                                    to: 0
+                                    duration: 2600
+                                    easing.type: Easing.InOutSine
+                                }
+                            }
+                        }
                     }
 
                     MouseArea {
@@ -266,7 +305,7 @@ Item {
                         anchors.fill: parent
                         anchors.margins: -modeManager.scale(6)
                         hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
+                        cursorShape: progressSlider.seekable ? Qt.PointingHandCursor : Qt.ArrowCursor
 
                         function seekFromX(x) {
                             if (!root.musicManager || root.musicManager.duration <= 0) return
@@ -277,8 +316,10 @@ Item {
 
                         onPressed: (mouse) => {
                             if (!root.musicManager) return
-                            root.musicManager.seekingSuspended = true
-                            seekFromX(mouse.x + sliderArea.x)
+                            if (progressSlider.seekable) {
+                                root.musicManager.seekingSuspended = true
+                                seekFromX(mouse.x + sliderArea.x)
+                            }
                             root.resetAutoCloseTimer()
                         }
                         onPositionChanged: (mouse) => {
