@@ -840,7 +840,7 @@ FocusScope {
         TextInput {
             id: inputField
             anchors.left: parent.left
-            anchors.right: sendIcon.left
+            anchors.right: micIcon.left
             anchors.rightMargin: modeManager.scale(12)
             anchors.verticalCenter: parent.verticalCenter
             color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
@@ -876,6 +876,54 @@ FocusScope {
                 visible: parent.text.length === 0
                     && parent.preeditText.length === 0
                     && !parent.inputMethodComposing
+            }
+        }
+
+        // Push-to-talk: pokes the voice daemon (SIGUSR1) so it starts
+        // capturing immediately, no wake word needed.
+        Item {
+            id: micIcon
+            anchors.right: sendIcon.left
+            anchors.rightMargin: modeManager.scale(6)
+            anchors.verticalCenter: parent.verticalCenter
+            width: modeManager.scale(34)
+            height: modeManager.scale(34)
+            visible: !root.settingsManager || root.settingsManager.voiceEnabled
+            opacity: micMouse.containsMouse ? 1.0 : 0.5
+
+            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: parent.width
+                height: parent.height
+                radius: width / 2
+                color: micMouse.containsMouse
+                    ? (root.theme ? Qt.rgba(root.theme.glowSecondary.r, root.theme.glowSecondary.g, root.theme.glowSecondary.b, 0.32) : Qt.rgba(0.55, 0.75, 0.85, 0.32))
+                    : "transparent"
+
+                Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+            }
+
+            UI.SvgIcon {
+                anchors.centerIn: parent
+                width: modeManager.scale(18)
+                height: modeManager.scale(18)
+                source: root.icons ? root.icons.micSvg : ""
+                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
+            }
+
+            MouseArea {
+                id: micMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    root.userActivity()
+                    // main only — the default broadcast would SIGUSR1 the
+                    // whisper-server child too, which dies on it.
+                    Quickshell.execDetached(["systemctl", "--user", "kill", "-s", "SIGUSR1", "--kill-whom=main", "yura-voice.service"])
+                }
             }
         }
 

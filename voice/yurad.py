@@ -41,6 +41,25 @@ TTS_SPEED = float(os.environ.get("YURA_VOICE_SPEED", "1.0"))
 # Name of a bundled openWakeWord model, or a path to a custom .onnx.
 WAKEWORD = os.environ.get("YURA_WAKEWORD", "hey_jarvis")
 WAKE_THRESHOLD = float(os.environ.get("YURA_WAKE_THRESHOLD", "0.5"))
+YURA_SHELL_QML = os.path.expanduser(
+    "~/.config/quickshell/mugen-shell/yura-shell.qml")
+# Live knobs (voice.enabled, voice.wakeOpens) come from the shell's
+# settings.json so the Settings GUI controls the daemon without a restart.
+SETTINGS_FILE = os.path.expanduser("~/.config/mugen-shell/settings.json")
+
+_settings_cache: tuple[float, dict] = (0.0, {})
+
+
+def voice_settings() -> dict:
+    global _settings_cache
+    try:
+        mtime = os.path.getmtime(SETTINGS_FILE)
+        if mtime != _settings_cache[0]:
+            with open(SETTINGS_FILE) as f:
+                _settings_cache = (mtime, json.load(f).get("voice", {}))
+    except Exception:
+        pass  # keep last good values; defaults apply on first failure
+    return _settings_cache[1]
 
 SR = 16000
 CHUNK = 1280                      # 80 ms, what openWakeWord expects
@@ -74,6 +93,17 @@ def set_thinking(on: bool) -> None:
 
 def set_listening(on: bool) -> None:
     shell_ipc("yura", "set_listening", "true" if on else "false")
+
+
+def open_panel() -> None:
+    # yura-shell is a separate quickshell process, addressed by -p (same
+    # pattern the bar uses for toggleFrom).
+    try:
+        subprocess.run(
+            ["qs", "-p", YURA_SHELL_QML, "ipc", "call", "yura", "open"],
+            capture_output=True, timeout=3)
+    except Exception:
+        pass
 
 
 def beep(freq: float, dur: float = 0.12, vol: float = 0.2) -> None:
@@ -292,6 +322,8 @@ class Daemon:
         self.vad = SileroVAD()
         self.chat = Chat()
         self.running = True
+        # SIGUSR1 (the panel's mic button) starts a turn without a wake word.
+        self.trigger = threading.Event()
 
     def _on_audio(self, indata, frames, t, status):
         if status:
@@ -342,6 +374,11 @@ class Daemon:
     def _handle_turn(self) -> None:
         beep(880)
         set_listening(True)
+        opens = voice_settings().get("wakeOpens", "panel")
+        if opens == "panel":
+            open_panel()
+        elif opens == "bar":
+            shell_ipc("panel", "open", "ai")
         log("listen", "capturing...")
         frames = self._capture_utterance()
         set_listening(False)
@@ -351,7 +388,14 @@ class Daemon:
             return
 
         log("stt", f"{sum(f.size for f in frames) / SR:.1f}s of audio")
-        text = transcribe(frames_to_wav(frames))
+        wav = frames_to_wav(frames)
+        try:
+            text = transcribe(wav)
+        except requests.ConnectionError:
+            # whisper-server died (crash or stray signal); bring it back.
+            log("whisper", "gone, respawning")
+            self.whisper_proc = ensure_whisper_server()
+            text = transcribe(wav)
         if not re.search(r"[ぁ-んァ-ヶ一-龠a-zA-Z0-9]", text):
             log("stt", f"discarded: {text!r}")
             beep(440)
@@ -368,32 +412,57 @@ class Daemon:
             speak(reply)
 
     def run(self) -> None:
-        whisper_proc = ensure_whisper_server()
+        self.whisper_proc = ensure_whisper_server()
         log("wake", f"model={self.wake_name} threshold={WAKE_THRESHOLD}")
         try:
-            with sd.InputStream(samplerate=SR, channels=1, dtype="int16",
-                                blocksize=CHUNK, callback=self._on_audio):
-                log("ready", "say the wake word")
-                while self.running:
-                    frame = self.audio_q.get()
+            while self.running:
+                if not voice_settings().get("enabled", True):
+                    time.sleep(2)
+                    continue
+                self._listen_session()
+        finally:
+            if self.whisper_proc:
+                self.whisper_proc.terminate()
+
+    def _listen_session(self) -> None:
+        """Hold the mic until voice input gets switched off in settings."""
+        with sd.InputStream(samplerate=SR, channels=1, dtype="int16",
+                            blocksize=CHUNK, callback=self._on_audio):
+            log("ready", "say the wake word")
+            last_check = time.time()
+            while self.running:
+                try:
+                    frame = self.audio_q.get(timeout=1)
+                except queue.Empty:
+                    frame = None
+                if self.trigger.is_set():
+                    self.trigger.clear()
+                    log("wake", "push-to-talk")
+                elif frame is None:
+                    continue
+                else:
                     score = self.wake.predict(frame)[self.wake_name]
                     if score < WAKE_THRESHOLD:
+                        if time.time() - last_check > 2:
+                            last_check = time.time()
+                            if not voice_settings().get("enabled", True):
+                                log("voice", "disabled, releasing mic")
+                                return
                         continue
                     log("wake", f"score={score:.2f}")
+                try:
+                    self._handle_turn()
+                except Exception as e:
+                    log("error", str(e))
+                    beep(330, 0.3)
                     try:
-                        self._handle_turn()
-                    except Exception as e:
-                        log("error", str(e))
-                        beep(330, 0.3)
-                        try:
-                            speak("ごめんね、エラーで返事できなかった。")
-                        except Exception:
-                            pass
-                    self.wake.reset()
-                    self._drain()
-        finally:
-            if whisper_proc:
-                whisper_proc.terminate()
+                        speak("ごめんね、エラーで返事できなかった。")
+                    except Exception:
+                        pass
+                self.wake.reset()
+                self._drain()
+                # A button press that landed mid-turn shouldn't queue another.
+                self.trigger.clear()
 
 
 def main() -> None:
@@ -405,6 +474,7 @@ def main() -> None:
 
     signal.signal(signal.SIGINT, stop)
     signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGUSR1, lambda *_: daemon.trigger.set())
     daemon.run()
 
 

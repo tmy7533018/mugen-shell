@@ -30,7 +30,7 @@ Item {
         { id: "appearance", label: "Appearance",   types: ["theme", "gradient", "blur", "animation", "dateFormat"] },
         { id: "sound",      label: "Sound",        types: ["notificationSound", "timerSound"] },
         { id: "timer",      label: "Timer & Lock", types: ["timer", "lockTimer"] },
-        { id: "ai",         label: "AI / Yura",    types: ["yuraPersonality", "yuraProvider", "yuraMcp", "aiBarModel", "yuraThinking", "yuraToolCategories", "yuraAppLaunch", "yuraPanelSide", "yuraUi", "yuraMemory", "yuraHistory"] },
+        { id: "ai",         label: "AI / Yura",    types: ["yuraPersonality", "yuraProvider", "yuraMcp", "aiBarModel", "yuraThinking", "yuraToolCategories", "yuraAppLaunch", "yuraPanelSide", "yuraUi", "voice", "yuraMemory", "yuraHistory"] },
         { id: "system",     label: "System",       types: ["battery", "shortcuts"] },
         { id: "reset",      label: "Reset",        types: ["reset"], danger: true }
     ]
@@ -185,6 +185,7 @@ Item {
                                 case "yuraToolCategories": return yuraToolCategoriesSection
                                 case "yuraAppLaunch":     return yuraAppLaunchSection
                                 case "yuraUi":            return yuraUiSection
+                                case "voice":             return voiceSection
                                 case "yuraMemory":        return yuraMemorySection
                                 case "yuraHistory":       return yuraHistorySection
                                 case "shortcuts":         return shortcutsSection
@@ -314,6 +315,11 @@ Item {
         modeManager: root.modeManager
     }}
     Component { id: yuraUiSection; Settings.YuraUiSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: voiceSection; Settings.VoiceSection {
         theme: root.theme
         modeManager: root.modeManager
         settingsManager: root.settingsManager

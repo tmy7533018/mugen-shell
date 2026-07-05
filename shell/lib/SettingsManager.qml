@@ -36,6 +36,10 @@ QtObject {
     property int yuraAutoCollapseMin: 0  // auto-close the float after idle minutes; 0 = never
     property string yuraTypingSpeed: "instant"  // "instant" | "fast" | "normal" | "slow"
 
+    // Voice input (yurad reads these straight from settings.json).
+    property bool voiceEnabled: true
+    property string voiceWakeOpens: "panel"  // "panel" | "bar" | "none"
+
     // Suppress save while we are applying values that just came in from disk
     // (either initial load or an external write detected by the file watcher).
     property bool _applyingExternal: false
@@ -92,6 +96,10 @@ QtObject {
                 "idleBreath": yuraIdleBreath,
                 "autoCollapseMin": yuraAutoCollapseMin,
                 "typingSpeed": yuraTypingSpeed
+            },
+            "voice": {
+                "enabled": voiceEnabled,
+                "wakeOpens": voiceWakeOpens
             }
         }
 
@@ -209,6 +217,15 @@ QtObject {
                 }
                 if (settings.yura.typingSpeed !== undefined) {
                     yuraTypingSpeed = settings.yura.typingSpeed
+                }
+            }
+
+            if (settings.voice) {
+                if (settings.voice.enabled !== undefined) {
+                    voiceEnabled = settings.voice.enabled
+                }
+                if (settings.voice.wakeOpens !== undefined) {
+                    voiceWakeOpens = settings.voice.wakeOpens
                 }
             }
 
