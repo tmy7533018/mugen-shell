@@ -180,11 +180,18 @@ Item {
 
         function set(path: string): string {
             // Models sometimes invent paths; reject anything outside the
-            // enumerated list so the error flows back into the tool loop
-            // instead of change-wallpaper.sh failing silently.
+            // wallpaper dir so the error flows back into the tool loop.
+            // Membership in the enumerated list is NOT required: the list
+            // refreshes only on startup/picker-open, so a just-added file
+            // would be spuriously rejected — in-dir misses apply anyway
+            // and trigger a rescan for the next list call.
             const known = ipcRouter.wallpaperManager.wallpapers || []
-            if (known.indexOf(path) === -1)
-                return "error: unknown wallpaper path; use one returned by wallpaper list"
+            if (known.indexOf(path) === -1) {
+                const dir = ipcRouter.wallpaperManager.wallpaperDir + "/"
+                if (!path.startsWith(dir) || path.includes(".."))
+                    return "error: unknown wallpaper path; use one returned by wallpaper list"
+                ipcRouter.wallpaperManager.loadWallpapers()
+            }
             ipcRouter.wallpaperManager.setWallpaper(path)
             return path
         }

@@ -850,7 +850,9 @@ FocusScope {
         TextInput {
             id: inputField
             anchors.left: parent.left
-            anchors.right: micIcon.left
+            // Invisible items keep their geometry, so skip the mic slot
+            // when voice input is switched off.
+            anchors.right: micIcon.visible ? micIcon.left : sendIcon.left
             anchors.rightMargin: modeManager.scale(12)
             anchors.verticalCenter: parent.verticalCenter
             color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)

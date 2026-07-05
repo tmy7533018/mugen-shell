@@ -15,7 +15,6 @@ import queue
 import re
 import signal
 import subprocess
-import sys
 import threading
 import time
 import wave
@@ -25,7 +24,6 @@ import requests
 import sounddevice as sd
 from openwakeword.model import Model as WakeModel
 
-# CONFIG ---------------------------------------------------------------
 AI_URL = f"http://127.0.0.1:{os.environ.get('MUGEN_AI_PORT', '11435')}"
 WHISPER_URL = os.environ.get("YURA_WHISPER_URL", "http://127.0.0.1:8178")
 WHISPER_BIN = os.environ.get(
@@ -77,14 +75,20 @@ def log(tag: str, msg: str = "") -> None:
         print(f"{time.strftime('%H:%M:%S')} [{tag:<10}] {msg}", flush=True)
 
 
-# Shell feedback: best-effort, the pipeline must survive without the shell.
+# Shell feedback: best-effort and fire-and-forget — the pipeline must
+# survive without the shell, and an inline qs client launch is slow enough
+# to delay capture start and put audible gaps between spoken sentences.
+def _ipc_async(cmd: list[str]) -> None:
+    def run():
+        try:
+            subprocess.run(cmd, capture_output=True, timeout=3)
+        except Exception:
+            pass
+    threading.Thread(target=run, daemon=True).start()
+
+
 def shell_ipc(*args: str) -> None:
-    try:
-        subprocess.run(
-            ["qs", "-c", "mugen-shell", "ipc", "call", *args],
-            capture_output=True, timeout=3)
-    except Exception:
-        pass
+    _ipc_async(["qs", "-c", "mugen-shell", "ipc", "call", *args])
 
 
 def shell_ipc_read(*args: str) -> str:
@@ -111,12 +115,7 @@ def set_listening(on: bool) -> None:
 def yura_ipc(*args: str) -> None:
     # yura-shell is a separate quickshell process, addressed by -p (same
     # pattern the bar uses for toggleFrom).
-    try:
-        subprocess.run(
-            ["qs", "-p", YURA_SHELL_QML, "ipc", "call", "yura", *args],
-            capture_output=True, timeout=3)
-    except Exception:
-        pass
+    _ipc_async(["qs", "-p", YURA_SHELL_QML, "ipc", "call", "yura", *args])
 
 
 def open_panel() -> None:
@@ -311,25 +310,46 @@ def speak(text: str, on_sentence=None, should_stop=None) -> None:
         return
     # One-ahead synthesis pipeline: synth sentence N+1 while N plays.
     q: queue.Queue[tuple[str, bytes] | None] = queue.Queue(maxsize=2)
+    # Set once the consumer stops draining, so the producer never parks
+    # forever on a full queue (one leaked thread per cancelled reply).
+    done = threading.Event()
+
+    def put(item) -> bool:
+        while not done.is_set():
+            try:
+                q.put(item, timeout=0.2)
+                return True
+            except queue.Full:
+                continue
+        return False
 
     def producer():
         try:
             for s in sentences:
-                q.put((s, synthesize(s)))
+                if done.is_set() or not put((s, synthesize(s))):
+                    return
         except Exception as e:
             log("tts", f"synthesis failed: {e}")
         finally:
-            q.put(None)
+            put(None)
 
     threading.Thread(target=producer, daemon=True).start()
-    while (item := q.get()) is not None:
-        if should_stop and should_stop():
-            log("tts", "stopped")
-            break
-        sentence, wav = item
-        if on_sentence:
-            on_sentence(sentence)
-        play_wav(wav)
+    try:
+        while (item := q.get()) is not None:
+            if should_stop and should_stop():
+                log("tts", "stopped")
+                break
+            sentence, wav = item
+            if on_sentence:
+                on_sentence(sentence)
+            play_wav(wav)
+    finally:
+        done.set()
+        while not q.empty():
+            try:
+                q.get_nowait()
+            except queue.Empty:
+                break
 
 
 class Daemon:
@@ -377,6 +397,11 @@ class Daemon:
         silence_run = 0.0
         started = time.time()
         frame_s = CHUNK / SR
+        # The confirmation beep rides the first frames of capture; a pure
+        # tone can cross the VAD threshold on lucky frame alignment, so
+        # onset detection holds until it has passed (frames still preroll).
+        beep_guard = int(0.25 / frame_s)
+        seen = 0
 
         while self.running:
             if self.cancel.is_set():
@@ -384,11 +409,12 @@ class Daemon:
                 return None
             frame = self.audio_q.get()
             p = self.vad.prob(frame)
+            seen += 1
             if not speech_started:
                 preroll.append(frame)
                 if len(preroll) > int(PREROLL_S / frame_s):
                     preroll.pop(0)
-                if p >= VAD_THRESHOLD:
+                if p >= VAD_THRESHOLD and seen > beep_guard:
                     speech_started = True
                     frames = preroll[:]
                 elif time.time() - started > LISTEN_TIMEOUT_S:
@@ -406,21 +432,23 @@ class Daemon:
         self.cancel.clear()
         beep(880)
         set_listening(True)
-        # The mic button means the user already has a Yura surface in front
-        # of them — only wake-word turns open one.
-        if not from_button:
-            opens = voice_settings().get("wakeOpens", "panel")
-            if opens == "panel":
-                open_panel()
-            elif opens == "bar":
-                shell_ipc("panel", "open", "ai")
-        # Later turns already know the conversation; land the panel on it
-        # before the transcript arrives (first turn does this in Chat._ask).
-        if self.chat.conversation_id:
-            yura_ipc("show_conversation", str(self.chat.conversation_id))
-        log("listen", "capturing...")
-        frames = self._capture_utterance()
-        set_listening(False)
+        try:
+            # The mic button means the user already has a Yura surface in
+            # front of them — only wake-word turns open one.
+            if not from_button:
+                opens = voice_settings().get("wakeOpens", "panel")
+                if opens == "panel":
+                    open_panel()
+                elif opens == "bar":
+                    shell_ipc("panel", "open", "ai")
+            # Later turns already know the conversation; land the panel on
+            # it before the transcript arrives (first turn: Chat._ask).
+            if self.chat.conversation_id:
+                yura_ipc("show_conversation", str(self.chat.conversation_id))
+            log("listen", "capturing...")
+            frames = self._capture_utterance()
+        finally:
+            set_listening(False)
         if not frames:
             log("listen", "no speech, back to idle")
             beep(440)
@@ -430,10 +458,13 @@ class Daemon:
         wav = frames_to_wav(frames)
         try:
             text = transcribe(wav)
-        except requests.ConnectionError:
-            # whisper-server died (crash or stray signal); bring it back.
+        except requests.RequestException:
+            # whisper-server died or wedged mid-request (mid-body death is
+            # ChunkedEncodingError, not ConnectionError); bring it back.
             log("whisper", "gone, respawning")
-            self.whisper_proc = ensure_whisper_server()
+            proc = ensure_whisper_server()
+            if proc:
+                self.whisper_proc = proc
             text = transcribe(wav)
         if not re.search(r"[ぁ-んァ-ヶ一-龠a-zA-Z0-9]", text):
             log("stt", f"discarded: {text!r}")
