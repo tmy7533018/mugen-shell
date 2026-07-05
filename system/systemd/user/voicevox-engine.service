@@ -1,0 +1,10 @@
+[Unit]
+Description=VOICEVOX engine (TTS for Yura voice)
+
+[Service]
+ExecStart=%h/.nix-profile/bin/voicevox-engine --host 127.0.0.1 --port 50021
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

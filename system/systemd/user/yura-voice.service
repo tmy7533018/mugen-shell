@@ -1,0 +1,15 @@
+[Unit]
+Description=Yura voice input daemon (wake word -> STT -> chat -> TTS)
+# Needs the compositor for qs IPC and PipeWire for the mic.
+After=graphical-session.target voicevox-engine.service mugen-ai.service
+Wants=voicevox-engine.service
+PartOf=graphical-session.target
+
+[Service]
+WorkingDirectory=%h/mugen-shell/voice
+ExecStart=%h/mugen-shell/voice/.venv/bin/python %h/mugen-shell/voice/yurad.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target
