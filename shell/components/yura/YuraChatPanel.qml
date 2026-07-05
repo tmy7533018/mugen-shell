@@ -17,6 +17,10 @@ PanelWindow {
     required property var aiBackend
     required property var settingsManager
 
+    function showConversation(convId) {
+        if (contentLoader.item) contentLoader.item.showConversation(convId)
+    }
+
     color: "transparent"
 
     visible: false

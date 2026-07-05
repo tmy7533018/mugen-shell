@@ -115,6 +115,22 @@ FocusScope {
         // Backend auto-creates a conversation on the first user message.
     }
 
+    // Voice mirroring (IPC from yurad): transcript sits in the input field
+    // while Yura thinks, then the reply grows sentence-by-sentence in sync
+    // with the spoken audio and parks like a typed turn's response.
+    function showVoiceInput(text) {
+        responseDisplay = ""
+        displayingResponse = false
+        inputField.text = text
+    }
+
+    function showVoiceReply(text) {
+        responseDisplay = text
+        inputField.text = responseDisplay.replace(/\s*\n+\s*/g, " ")
+        inputField.cursorPosition = 0
+        displayingResponse = true
+    }
+
     Connections {
         target: modeManager
         function onCurrentModeChanged() {

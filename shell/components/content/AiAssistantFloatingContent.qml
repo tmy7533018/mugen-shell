@@ -240,6 +240,14 @@ FocusScope {
         loadCurrentProcess.running = true
     }
 
+    // Voice daemon: point the panel at the voice conversation so its turns
+    // render through the normal events pipeline.
+    function showConversation(convId) {
+        if (streaming || !convId || convId === currentConvId) return
+        selectConvProcess.payload = String(convId)
+        selectConvProcess.running = true
+    }
+
     Process {
         id: eventsSubscriber
         running: true
@@ -889,7 +897,10 @@ FocusScope {
             width: modeManager.scale(34)
             height: modeManager.scale(34)
             visible: !root.settingsManager || root.settingsManager.voiceEnabled
-            opacity: micMouse.containsMouse ? 1.0 : 0.5
+            // HoverHandler, not MouseArea hover: containsMouse misses leave
+            // events on Wayland when the click reflows the UI, leaving the
+            // button lit forever.
+            opacity: micHover.hovered ? 1.0 : 0.5
 
             Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
 
@@ -898,7 +909,7 @@ FocusScope {
                 width: parent.width
                 height: parent.height
                 radius: width / 2
-                color: micMouse.containsMouse
+                color: micHover.hovered
                     ? (root.theme ? Qt.rgba(root.theme.glowSecondary.r, root.theme.glowSecondary.g, root.theme.glowSecondary.b, 0.32) : Qt.rgba(0.55, 0.75, 0.85, 0.32))
                     : "transparent"
 
@@ -913,11 +924,14 @@ FocusScope {
                 color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
             }
 
+            HoverHandler {
+                id: micHover
+                cursorShape: Qt.PointingHandCursor
+            }
+
             MouseArea {
                 id: micMouse
                 anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
                 onClicked: {
                     root.userActivity()
                     // main only — the default broadcast would SIGUSR1 the

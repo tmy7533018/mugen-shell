@@ -95,15 +95,19 @@ def set_listening(on: bool) -> None:
     shell_ipc("yura", "set_listening", "true" if on else "false")
 
 
-def open_panel() -> None:
+def yura_ipc(*args: str) -> None:
     # yura-shell is a separate quickshell process, addressed by -p (same
     # pattern the bar uses for toggleFrom).
     try:
         subprocess.run(
-            ["qs", "-p", YURA_SHELL_QML, "ipc", "call", "yura", "open"],
+            ["qs", "-p", YURA_SHELL_QML, "ipc", "call", "yura", *args],
             capture_output=True, timeout=3)
     except Exception:
         pass
+
+
+def open_panel() -> None:
+    yura_ipc("open")
 
 
 def beep(freq: float, dur: float = 0.12, vol: float = 0.2) -> None:
@@ -223,10 +227,13 @@ class Chat:
                 ev = json.loads(line[6:])
                 if "conversation_id" in ev and not self.conversation_id:
                     self.conversation_id = ev["conversation_id"]
-                    # Select it so opening the Yura panel shows this exchange.
+                    # Select it AND steer the panel there — selection alone
+                    # is not broadcast, so an open panel would keep showing
+                    # whatever conversation it had before.
                     requests.post(
                         f"{AI_URL}/conversations/{self.conversation_id}/select",
                         timeout=3)
+                    yura_ipc("show_conversation", str(self.conversation_id))
                 if "content" in ev:
                     parts.append(ev["content"])
                 if "tool_confirm" in ev:
@@ -285,24 +292,27 @@ def play_wav(data: bytes) -> None:
     sd.wait()
 
 
-def speak(text: str) -> None:
+def speak(text: str, on_sentence=None) -> None:
     sentences = split_sentences(clean_for_speech(text))
     if not sentences:
         return
     # One-ahead synthesis pipeline: synth sentence N+1 while N plays.
-    q: queue.Queue[bytes | None] = queue.Queue(maxsize=2)
+    q: queue.Queue[tuple[str, bytes] | None] = queue.Queue(maxsize=2)
 
     def producer():
         try:
             for s in sentences:
-                q.put(synthesize(s))
+                q.put((s, synthesize(s)))
         except Exception as e:
             log("tts", f"synthesis failed: {e}")
         finally:
             q.put(None)
 
     threading.Thread(target=producer, daemon=True).start()
-    while (wav := q.get()) is not None:
+    while (item := q.get()) is not None:
+        sentence, wav = item
+        if on_sentence:
+            on_sentence(sentence)
         play_wav(wav)
 
 
@@ -371,14 +381,23 @@ class Daemon:
                 break
         return frames
 
-    def _handle_turn(self) -> None:
+    def _handle_turn(self, from_button: bool = False) -> None:
         beep(880)
         set_listening(True)
-        opens = voice_settings().get("wakeOpens", "panel")
-        if opens == "panel":
-            open_panel()
-        elif opens == "bar":
-            shell_ipc("panel", "open", "ai")
+        # The mic button means the user already has a Yura surface in front
+        # of them — only wake-word turns open one.
+        mirror_bar = False
+        if not from_button:
+            opens = voice_settings().get("wakeOpens", "panel")
+            if opens == "panel":
+                open_panel()
+            elif opens == "bar":
+                shell_ipc("panel", "open", "ai")
+                mirror_bar = True
+        # Later turns already know the conversation; land the panel on it
+        # before the transcript arrives (first turn does this in Chat._ask).
+        if self.chat.conversation_id:
+            yura_ipc("show_conversation", str(self.chat.conversation_id))
         log("listen", "capturing...")
         frames = self._capture_utterance()
         set_listening(False)
@@ -401,6 +420,8 @@ class Daemon:
             beep(440)
             return
         log("stt", text)
+        if mirror_bar:
+            shell_ipc("yura", "voice_input", text)
 
         set_thinking(True)
         try:
@@ -409,7 +430,14 @@ class Daemon:
             set_thinking(False)
         log("yura", reply[:120].replace("\n", " "))
         if reply:
-            speak(reply)
+            on_sentence = None
+            if mirror_bar:
+                spoken: list[str] = []
+
+                def on_sentence(s: str) -> None:
+                    spoken.append(s)
+                    shell_ipc("yura", "voice_reply", "".join(spoken))
+            speak(reply, on_sentence)
 
     def run(self) -> None:
         self.whisper_proc = ensure_whisper_server()
@@ -435,8 +463,10 @@ class Daemon:
                     frame = self.audio_q.get(timeout=1)
                 except queue.Empty:
                     frame = None
+                from_button = False
                 if self.trigger.is_set():
                     self.trigger.clear()
+                    from_button = True
                     log("wake", "push-to-talk")
                 elif frame is None:
                     continue
@@ -451,7 +481,7 @@ class Daemon:
                         continue
                     log("wake", f"score={score:.2f}")
                 try:
-                    self._handle_turn()
+                    self._handle_turn(from_button)
                 except Exception as e:
                     log("error", str(e))
                     beep(330, 0.3)

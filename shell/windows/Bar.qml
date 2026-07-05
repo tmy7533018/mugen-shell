@@ -257,6 +257,15 @@ PanelWindow {
             if (on) yuraListeningFailsafe.restart()
             else yuraListeningFailsafe.stop()
         }
+        // Voice turns run in the daemon, not the bar's own chat process;
+        // these mirror the transcript / spoken reply into the Spotlight
+        // pill so a voice exchange reads like a typed one.
+        function voice_input(text: string): void {
+            if (aiAssistantLoader.item) aiAssistantLoader.item.showVoiceInput(text)
+        }
+        function voice_reply(text: string): void {
+            if (aiAssistantLoader.item) aiAssistantLoader.item.showVoiceReply(text)
+        }
     }
 
     // If yura-shell dies mid-stream its clearing IPC never arrives; drop the

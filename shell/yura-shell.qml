@@ -22,6 +22,7 @@ ShellRoot {
     }
 
     Yura.YuraChatPanel {
+        id: chatPanel
         yuraState: yuraState
         theme: themeColors
         icons: icons
@@ -37,5 +38,7 @@ ShellRoot {
         // Called by the bar spotlight orb with its screen position, so the
         // panel orb can fly in from there ("one orb" illusion).
         function toggleFrom(x: int, y: int, size: int) { yuraState.toggleFrom(x, y, size) }
+        // Voice daemon: land the panel on the voice conversation.
+        function show_conversation(id: int) { chatPanel.showConversation(id) }
     }
 }
