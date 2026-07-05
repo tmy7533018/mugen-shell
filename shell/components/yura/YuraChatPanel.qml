@@ -21,6 +21,21 @@ PanelWindow {
         if (contentLoader.item) contentLoader.item.showConversation(convId)
     }
 
+    property bool voiceListening: false
+
+    function setVoiceListening(on) {
+        voiceListening = on
+        if (on) voiceListeningFailsafe.restart()
+        else voiceListeningFailsafe.stop()
+    }
+
+    // If yurad dies mid-capture its clearing IPC never arrives.
+    Timer {
+        id: voiceListeningFailsafe
+        interval: 60 * 1000
+        onTriggered: chatWindow.voiceListening = false
+    }
+
     color: "transparent"
 
     visible: false
@@ -235,6 +250,7 @@ PanelWindow {
                 aiBackend: chatWindow.aiBackend
                 settingsManager: chatWindow.settingsManager
                 showInternalOrb: false
+                voiceListening: chatWindow.voiceListening
                 orbEmptyScale: 0.48
                 orbEmptyYRatio: 0.10
 

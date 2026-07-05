@@ -40,5 +40,7 @@ ShellRoot {
         function toggleFrom(x: int, y: int, size: int) { yuraState.toggleFrom(x, y, size) }
         // Voice daemon: land the panel on the voice conversation.
         function show_conversation(id: int) { chatPanel.showConversation(id) }
+        // Voice daemon capture state; flips the mic button into a cancel button.
+        function set_listening(on: bool) { chatPanel.setVoiceListening(on) }
     }
 }

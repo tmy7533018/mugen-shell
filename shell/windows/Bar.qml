@@ -599,6 +599,7 @@ PanelWindow {
             icons: aiAssistantLoader.iconsRef
             settingsManager: aiAssistantLoader.settingsManagerRef
             aiBackend: aiAssistantLoader.aiBackendRef
+            voiceListening: barWindow.yuraListening
         }
     }
 

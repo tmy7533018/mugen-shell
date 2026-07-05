@@ -87,12 +87,25 @@ def shell_ipc(*args: str) -> None:
         pass
 
 
+def shell_ipc_read(*args: str) -> str:
+    try:
+        r = subprocess.run(
+            ["qs", "-c", "mugen-shell", "ipc", "call", *args],
+            capture_output=True, text=True, timeout=3)
+        return r.stdout.strip()
+    except Exception:
+        return ""
+
+
 def set_thinking(on: bool) -> None:
     shell_ipc("yura", "set_thinking", "true" if on else "false")
 
 
 def set_listening(on: bool) -> None:
-    shell_ipc("yura", "set_listening", "true" if on else "false")
+    flag = "true" if on else "false"
+    shell_ipc("yura", "set_listening", flag)
+    # The panel's mic button flips to a cancel button while listening.
+    yura_ipc("set_listening", flag)
 
 
 def yura_ipc(*args: str) -> None:
@@ -292,7 +305,7 @@ def play_wav(data: bytes) -> None:
     sd.wait()
 
 
-def speak(text: str, on_sentence=None) -> None:
+def speak(text: str, on_sentence=None, should_stop=None) -> None:
     sentences = split_sentences(clean_for_speech(text))
     if not sentences:
         return
@@ -310,6 +323,9 @@ def speak(text: str, on_sentence=None) -> None:
 
     threading.Thread(target=producer, daemon=True).start()
     while (item := q.get()) is not None:
+        if should_stop and should_stop():
+            log("tts", "stopped")
+            break
         sentence, wav = item
         if on_sentence:
             on_sentence(sentence)
@@ -332,8 +348,10 @@ class Daemon:
         self.vad = SileroVAD()
         self.chat = Chat()
         self.running = True
-        # SIGUSR1 (the panel's mic button) starts a turn without a wake word.
+        # SIGUSR1 (the panel's mic button) starts a turn without a wake word;
+        # SIGUSR2 cancels the capture (or stops speech at a sentence break).
         self.trigger = threading.Event()
+        self.cancel = threading.Event()
 
     def _on_audio(self, indata, frames, t, status):
         if status:
@@ -361,6 +379,9 @@ class Daemon:
         frame_s = CHUNK / SR
 
         while self.running:
+            if self.cancel.is_set():
+                log("listen", "cancelled")
+                return None
             frame = self.audio_q.get()
             p = self.vad.prob(frame)
             if not speech_started:
@@ -382,18 +403,17 @@ class Daemon:
         return frames
 
     def _handle_turn(self, from_button: bool = False) -> None:
+        self.cancel.clear()
         beep(880)
         set_listening(True)
         # The mic button means the user already has a Yura surface in front
         # of them — only wake-word turns open one.
-        mirror_bar = False
         if not from_button:
             opens = voice_settings().get("wakeOpens", "panel")
             if opens == "panel":
                 open_panel()
             elif opens == "bar":
                 shell_ipc("panel", "open", "ai")
-                mirror_bar = True
         # Later turns already know the conversation; land the panel on it
         # before the transcript arrives (first turn does this in Chat._ask).
         if self.chat.conversation_id:
@@ -420,6 +440,9 @@ class Daemon:
             beep(440)
             return
         log("stt", text)
+        # Mirror into the Spotlight pill whenever it's on screen, however
+        # the turn started (wake word, panel button, or the bar's own).
+        mirror_bar = shell_ipc_read("panel", "current") == "ai"
         if mirror_bar:
             shell_ipc("yura", "voice_input", text)
 
@@ -437,7 +460,8 @@ class Daemon:
                 def on_sentence(s: str) -> None:
                     spoken.append(s)
                     shell_ipc("yura", "voice_reply", "".join(spoken))
-            speak(reply, on_sentence)
+            speak(reply, on_sentence,
+                  should_stop=self.cancel.is_set)
 
     def run(self) -> None:
         self.whisper_proc = ensure_whisper_server()
@@ -505,6 +529,7 @@ def main() -> None:
     signal.signal(signal.SIGINT, stop)
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGUSR1, lambda *_: daemon.trigger.set())
+    signal.signal(signal.SIGUSR2, lambda *_: daemon.cancel.set())
     daemon.run()
 
 

@@ -17,6 +17,8 @@ FocusScope {
     property var aiBackend
     property var settingsManager
     property bool showInternalOrb: true
+    // Daemon capture state (over IPC); the mic button becomes a cancel button.
+    property bool voiceListening: false
 
     // Emitted on any user interaction (typing, sending) so a host can treat
     // keyboard-only use as activity — the auto-collapse timer otherwise only
@@ -900,7 +902,7 @@ FocusScope {
             // HoverHandler, not MouseArea hover: containsMouse misses leave
             // events on Wayland when the click reflows the UI, leaving the
             // button lit forever.
-            opacity: micHover.hovered ? 1.0 : 0.5
+            opacity: (root.voiceListening || micHover.hovered) ? 1.0 : 0.5
 
             Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
 
@@ -909,7 +911,7 @@ FocusScope {
                 width: parent.width
                 height: parent.height
                 radius: width / 2
-                color: micHover.hovered
+                color: (root.voiceListening || micHover.hovered)
                     ? (root.theme ? Qt.rgba(root.theme.glowSecondary.r, root.theme.glowSecondary.g, root.theme.glowSecondary.b, 0.32) : Qt.rgba(0.55, 0.75, 0.85, 0.32))
                     : "transparent"
 
@@ -922,6 +924,16 @@ FocusScope {
                 height: modeManager.scale(18)
                 source: root.icons ? root.icons.micSvg : ""
                 color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                visible: !root.voiceListening
+            }
+
+            Text {
+                anchors.centerIn: parent
+                text: "✕"
+                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                font.pixelSize: modeManager.scale(14)
+                font.family: "M PLUS 2"
+                visible: root.voiceListening
             }
 
             HoverHandler {
@@ -934,9 +946,11 @@ FocusScope {
                 anchors.fill: parent
                 onClicked: {
                     root.userActivity()
-                    // main only — the default broadcast would SIGUSR1 the
+                    // main only — the default broadcast would signal the
                     // whisper-server child too, which dies on it.
-                    Quickshell.execDetached(["systemctl", "--user", "kill", "-s", "SIGUSR1", "--kill-whom=main", "yura-voice.service"])
+                    Quickshell.execDetached(["systemctl", "--user", "kill",
+                        "-s", root.voiceListening ? "SIGUSR2" : "SIGUSR1",
+                        "--kill-whom=main", "yura-voice.service"])
                 }
             }
         }

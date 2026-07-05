@@ -18,6 +18,8 @@ FocusScope {
     property var settingsManager
     property var aiBackend
     property bool isStandalone: false
+    // Daemon capture state (over IPC); the mic button becomes a cancel button.
+    property bool voiceListening: false
 
     // Fallback used when no AiBackend is wired (e.g. legacy embedding paths).
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://127.0.0.1:11435"
@@ -267,7 +269,7 @@ FocusScope {
                 TextInput {
                     id: inputField
                     anchors.left: parent.left
-                    anchors.right: sendIcon.left
+                    anchors.right: micIcon.left
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.leftMargin: modeManager.scale(20)
                     anchors.rightMargin: modeManager.scale(8)
@@ -402,6 +404,64 @@ FocusScope {
                             function onRunningChanged() {
                                 if (!breathAnim.running) placeholderText.opacity = 1.0
                             }
+                        }
+                    }
+                }
+
+                // Same push-to-talk / cancel control as the float panel.
+                Item {
+                    id: micIcon
+                    anchors.right: sendIcon.left
+                    anchors.rightMargin: modeManager.scale(4)
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: modeManager.scale(28)
+                    height: modeManager.scale(28)
+                    visible: !root.settingsManager || root.settingsManager.voiceEnabled
+                    opacity: (root.voiceListening || micHover.hovered) ? 1.0 : 0.5
+
+                    Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: width / 2
+                        color: (root.voiceListening || micHover.hovered)
+                            ? (root.theme ? Qt.rgba(root.theme.glowSecondary.r, root.theme.glowSecondary.g, root.theme.glowSecondary.b, 0.32) : Qt.rgba(0.55, 0.75, 0.85, 0.32))
+                            : "transparent"
+
+                        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+                    }
+
+                    UI.SvgIcon {
+                        anchors.centerIn: parent
+                        width: modeManager.scale(15)
+                        height: modeManager.scale(15)
+                        source: root.icons ? root.icons.micSvg : ""
+                        color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                        visible: !root.voiceListening
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "✕"
+                        color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                        font.pixelSize: modeManager.scale(12)
+                        font.family: "M PLUS 2"
+                        visible: root.voiceListening
+                    }
+
+                    HoverHandler {
+                        id: micHover
+                        cursorShape: Qt.PointingHandCursor
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: {
+                            // main only — the broadcast default would signal
+                            // the whisper-server child too, which dies on it.
+                            Quickshell.execDetached(["systemctl", "--user", "kill",
+                                "-s", root.voiceListening ? "SIGUSR2" : "SIGUSR1",
+                                "--kill-whom=main", "yura-voice.service"])
                         }
                     }
                 }

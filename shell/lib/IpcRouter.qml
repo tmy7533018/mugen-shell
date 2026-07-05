@@ -128,6 +128,10 @@ Item {
             // via their own toggle (call open() again or press ESC in them).
             ipcRouter.modeManager.closeAllModes()
         }
+
+        function current(): string {
+            return ipcRouter.modeManager.currentMode
+        }
     }
 
     IpcHandler {
