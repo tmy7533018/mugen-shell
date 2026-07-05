@@ -242,12 +242,20 @@ PanelWindow {
     // she thinks. Not an LLM tool — shell-internal only.
     property bool yuraFloatThinking: false
 
+    // Voice daemon (yurad) reports wake-word capture the same way.
+    property bool yuraListening: false
+
     IpcHandler {
         target: "yura"
         function set_thinking(on: bool): void {
             barWindow.yuraFloatThinking = on
             if (on) yuraThinkingFailsafe.restart()
             else yuraThinkingFailsafe.stop()
+        }
+        function set_listening(on: bool): void {
+            barWindow.yuraListening = on
+            if (on) yuraListeningFailsafe.restart()
+            else yuraListeningFailsafe.stop()
         }
     }
 
@@ -257,6 +265,13 @@ PanelWindow {
         id: yuraThinkingFailsafe
         interval: 15 * 60 * 1000
         onTriggered: barWindow.yuraFloatThinking = false
+    }
+
+    // Capture is seconds-long; anything past a minute means yurad died.
+    Timer {
+        id: yuraListeningFailsafe
+        interval: 60 * 1000
+        onTriggered: barWindow.yuraListening = false
     }
 
     Managers.WallpaperManager { id: wallpaperManager }
@@ -461,6 +476,7 @@ PanelWindow {
             timerManager: timerManager
             aiThinking: (aiAssistantLoader.item ? aiAssistantLoader.item.streaming : false)
                 || barWindow.yuraFloatThinking
+            aiListening: barWindow.yuraListening
         }
 
         Item { Layout.fillWidth: true }
