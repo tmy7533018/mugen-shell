@@ -675,6 +675,13 @@ func builtin() []Tool {
 			argOrder: []string{"path"},
 		},
 		{
+			Name:        "wallpaper_random",
+			Description: "Switch to a random wallpaper. Returns the chosen path. Use this whenever the user asks for a random or surprise wallpaper.",
+			Parameters:  emptyParams(),
+			target:      "wallpaper",
+			function:    "random",
+		},
+		{
 			Name:        "wallpaper_current",
 			Description: "Read current wallpaper path.",
 			Parameters:  emptyParams(),

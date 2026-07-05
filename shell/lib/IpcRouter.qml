@@ -175,12 +175,31 @@ Item {
         target: "wallpaper"
 
         function set(path: string): string {
+            // Models sometimes invent paths; reject anything outside the
+            // enumerated list so the error flows back into the tool loop
+            // instead of change-wallpaper.sh failing silently.
+            const known = ipcRouter.wallpaperManager.wallpapers || []
+            if (known.indexOf(path) === -1)
+                return "error: unknown wallpaper path; use one returned by wallpaper list"
             ipcRouter.wallpaperManager.setWallpaper(path)
             return path
         }
 
         function current(): string {
             return ipcRouter.wallpaperManager.currentWallpaperPath
+        }
+
+        function random(): string {
+            const known = ipcRouter.wallpaperManager.wallpapers || []
+            if (known.length === 0)
+                return "error: no wallpapers found"
+            // Avoid picking the current one so "random" always visibly changes.
+            const current = ipcRouter.wallpaperManager.currentWallpaperPath
+            let pick = known[Math.floor(Math.random() * known.length)]
+            if (known.length > 1 && pick === current)
+                pick = known[(known.indexOf(pick) + 1) % known.length]
+            ipcRouter.wallpaperManager.setWallpaper(pick)
+            return pick
         }
 
         function list(): string {
