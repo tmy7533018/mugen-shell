@@ -397,10 +397,10 @@ mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp
    .venv/bin/pip install onnxruntime numpy scipy scikit-learn tqdm requests sounddevice
    ```
 2. **whisper.cpp** をローカルビルドして、サーババイナリを `~/.local/src/whisper.cpp/build/bin/whisper-server`、モデルを `~/.local/share/whisper/ggml-large-v3-turbo.bin` に配置 (`YURA_WHISPER_BIN` / `YURA_WHISPER_MODEL` で上書き可)。サーバの起動と監視はデーモンがやります。
-3. **VOICEVOX engine** を `127.0.0.1:50021` で待受。同梱の `voicevox-engine.service` は nixpkgs の `voicevox-engine` が `~/.nix-profile/bin` にある前提なので、他の入れ方をした場合は `ExecStart` を調整してください。
+3. **VOICEVOX engine** を `127.0.0.1:50021` で待受。同梱の `voicevox-engine.service` は nixpkgs の `voicevox-engine` が `~/.nix-profile/bin` にある前提なので、他の入れ方をした場合は `ExecStart` を調整してください。オプションで [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine)(VOICEVOX 互換 API で、Style-BERT-VITS2 のずっと自然な声が使えるエンジン)を `~/.local/opt/aivisspeech-engine` に展開すると (ポート `10101`、`aivisspeech-engine.service` 同梱)、同じピッカーに `Aivis:` として並びます。
 4. **systemd unit**:
    ```bash
-   ln -s ~/mugen-shell/system/systemd/user/{yura-voice,voicevox-engine}.service ~/.config/systemd/user/
+   ln -s ~/mugen-shell/system/systemd/user/{yura-voice,voicevox-engine,aivisspeech-engine}.service ~/.config/systemd/user/
    systemctl --user daemon-reload
    systemctl --user enable --now yura-voice.service
    ```
@@ -416,7 +416,7 @@ mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp
 - **Wake word**: `YURA_WAKEWORD` 未設定ならデーモンは openWakeWord 同梱の英語モデル `hey_jarvis` を使います。同梱の `hey_yura.onnx` は日本語発音チューニングなので、他のアクセント向けには `voice/train/` で再訓練を。
 - **返答の言語**: Settings → AI / Yura → Personality の language で指定します。
 
-環境変数ノブ (unit か drop-in で設定): `YURA_WAKEWORD` (カスタムモデルのパス。デフォルト `hey_jarvis`)、`YURA_WAKE_THRESHOLD` (自作モデル用に `0.7` を設定済み)、`YURA_WAKE_PATIENCE` (閾値を連続で超えるべきフレーム数。デフォルト `2`)、`YURA_VOICEVOX_SPEAKER` (デフォルト `14`)、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`。
+環境変数ノブ (unit か drop-in で設定): `YURA_WAKEWORD` (カスタムモデルのパス。デフォルト `hey_jarvis`)、`YURA_WAKE_THRESHOLD` (自作モデル用に `0.7` を設定済み)、`YURA_WAKE_PATIENCE` (閾値を連続で超えるべきフレーム数。デフォルト `2`)、`YURA_VOICEVOX_SPEAKER` (デフォルト `14`)、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。
 
 **ヘッドホンじゃなくてスピーカー派?** メディア音声がマイクに入ると、誤起動の原因になる上に本物の呼びかけも埋もれます。PipeWire の WebRTC エコーキャンセルで両方解決できます — デフォルト sink の再生内容をマイク入力から差し引くので、再生中でも wake word が通ります。`~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` に以下を置いて (`target.object` は `wpctl inspect` で調べた自分のマイクの `node.name` に)、PipeWire を再起動後、`wpctl set-default <id>` で新しいソースをデフォルト入力にします:
 

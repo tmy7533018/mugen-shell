@@ -396,10 +396,10 @@ The default stack is Japanese-first but not Japanese-only (see *Other languages*
    .venv/bin/pip install onnxruntime numpy scipy scikit-learn tqdm requests sounddevice
    ```
 2. **whisper.cpp** built locally, with the server binary at `~/.local/src/whisper.cpp/build/bin/whisper-server` and a model at `~/.local/share/whisper/ggml-large-v3-turbo.bin` (override via `YURA_WHISPER_BIN` / `YURA_WHISPER_MODEL`). The daemon spawns and supervises the server itself.
-3. **VOICEVOX engine** answering on `127.0.0.1:50021`. The shipped `voicevox-engine.service` expects the nixpkgs `voicevox-engine` on `~/.nix-profile/bin`; adjust `ExecStart` for other install methods.
+3. **VOICEVOX engine** answering on `127.0.0.1:50021`. The shipped `voicevox-engine.service` expects the nixpkgs `voicevox-engine` on `~/.nix-profile/bin`; adjust `ExecStart` for other install methods. Optionally add [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine) — a VOICEVOX-compatible engine with much more natural Style-BERT-VITS2 voices — extracted to `~/.local/opt/aivisspeech-engine` (port `10101`, `aivisspeech-engine.service` ships alongside); its voices join the same picker as `Aivis:` entries.
 4. **systemd units**:
    ```bash
-   ln -s ~/mugen-shell/system/systemd/user/{yura-voice,voicevox-engine}.service ~/.config/systemd/user/
+   ln -s ~/mugen-shell/system/systemd/user/{yura-voice,voicevox-engine,aivisspeech-engine}.service ~/.config/systemd/user/
    systemctl --user daemon-reload
    systemctl --user enable --now yura-voice.service
    ```
@@ -415,7 +415,7 @@ Only the reply voice is engine-specific; everything else is multilingual already
 - **Wake word**: with `YURA_WAKEWORD` unset, the daemon uses openWakeWord's bundled English `hey_jarvis`. The shipped `hey_yura.onnx` is tuned for Japanese pronunciation; retrain via `voice/train/` for other accents.
 - **Replies**: set the assistant's language under Settings → AI / Yura → Personality.
 
-Environment knobs, set in the unit or a drop-in: `YURA_WAKEWORD` (path to a custom model; default `hey_jarvis`), `YURA_WAKE_THRESHOLD` (ships at `0.7` for the custom model), `YURA_WAKE_PATIENCE` (consecutive frames over the threshold; default `2`), `YURA_VOICEVOX_SPEAKER` (default `14`), `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`.
+Environment knobs, set in the unit or a drop-in: `YURA_WAKEWORD` (path to a custom model; default `hey_jarvis`), `YURA_WAKE_THRESHOLD` (ships at `0.7` for the custom model), `YURA_WAKE_PATIENCE` (consecutive frames over the threshold; default `2`), `YURA_VOICEVOX_SPEAKER` (default `14`), `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`, `YURA_AIVIS_URL`.
 
 **Speakers instead of headphones?** Media audio reaching the mic both causes false wakes and drowns out real ones. PipeWire's WebRTC echo cancellation solves both — it subtracts whatever the default sink is playing from the mic, so the wake word works even mid-playback. Drop this into `~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` (set `target.object` to your mic's `node.name` from `wpctl inspect`), restart PipeWire, then make the new source the default input with `wpctl set-default <id>`:
 

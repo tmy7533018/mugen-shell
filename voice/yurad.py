@@ -34,6 +34,8 @@ WHISPER_MODEL = os.environ.get(
     os.path.expanduser("~/.local/share/whisper/ggml-large-v3-turbo.bin"))
 STT_LANG = os.environ.get("YURA_VOICE_LANG", "ja")
 VOICEVOX_URL = os.environ.get("YURA_VOICEVOX_URL", "http://127.0.0.1:50021")
+# AivisSpeech speaks the same audio_query/synthesis API, just elsewhere.
+AIVIS_URL = os.environ.get("YURA_AIVIS_URL", "http://127.0.0.1:10101")
 VOICEVOX_SPEAKER = int(os.environ.get("YURA_VOICEVOX_SPEAKER", "14"))
 TTS_SPEED = float(os.environ.get("YURA_VOICE_SPEED", "1.0"))
 # Piper is the non-Japanese TTS path; voices are bare names resolved here.
@@ -325,12 +327,12 @@ def join_spoken(parts: list[str]) -> str:
     return out
 
 
-def synth_voicevox(speaker: int, sentence: str, speed: float) -> bytes:
-    q = requests.post(f"{VOICEVOX_URL}/audio_query",
+def synth_voicevox(base_url: str, speaker: int, sentence: str, speed: float) -> bytes:
+    q = requests.post(f"{base_url}/audio_query",
                       params={"text": sentence, "speaker": speaker},
                       timeout=10).json()
     q["speedScale"] = speed
-    r = requests.post(f"{VOICEVOX_URL}/synthesis",
+    r = requests.post(f"{base_url}/synthesis",
                       params={"speaker": speaker}, json=q, timeout=60)
     r.raise_for_status()
     return r.content
@@ -359,10 +361,11 @@ def synthesize(sentence: str) -> bytes:
     engine, _, voice = str(vs.get("tts", "")).partition(":")
     if engine == "piper" and voice:
         return synth_piper(voice, sentence, speed)
-    if engine == "voicevox" and voice:
-        return synth_voicevox(int(voice), sentence, speed)
-    return synth_voicevox(int(vs.get("speaker", VOICEVOX_SPEAKER)),
-                          sentence, speed)
+    if engine == "aivis" and voice:
+        return synth_voicevox(AIVIS_URL, int(voice), sentence, speed)
+    speaker = (int(voice) if engine == "voicevox" and voice
+               else int(vs.get("speaker", VOICEVOX_SPEAKER)))
+    return synth_voicevox(VOICEVOX_URL, speaker, sentence, speed)
 
 
 def play_wav(data: bytes) -> None:

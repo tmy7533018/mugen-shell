@@ -23,8 +23,9 @@ Rectangle {
     // One list, two engines: the picked value carries the engine prefix
     // ("voicevox:<style-id>" | "piper:<voice>"), matching voice.tts.
     property var voicevoxVoices: []
+    property var aivisVoices: []
     property var piperVoices: []
-    readonly property var voices: [...voicevoxVoices, ...piperVoices]
+    readonly property var voices: [...aivisVoices, ...voicevoxVoices, ...piperVoices]
     property bool voiceExpanded: false
 
     function voiceLabel() {
@@ -49,10 +50,13 @@ Rectangle {
                 + 'pw-play "$w"'
         } else {
             const enc = encodeURIComponent("こんにちは、ユラだよ。この声はどうかな")
+            const base = engine === "aivis"
+                ? 'vv="${YURA_AIVIS_URL:-http://127.0.0.1:10101}"; '
+                : 'vv="${YURA_VOICEVOX_URL:-http://127.0.0.1:50021}"; '
             script = 'q=$(mktemp); w=$(mktemp --suffix=.wav); trap \'rm -f "$q" "$w"\' EXIT; '
-                + 'vv="${YURA_VOICEVOX_URL:-http://127.0.0.1:50021}"; '
+                + base
                 + 'curl -s -m 5 -X POST "$vv/audio_query?text=' + enc + '&speaker=' + voice + '" -o "$q" && '
-                + 'curl -s -m 15 -X POST "$vv/synthesis?speaker=' + voice + '" -H "Content-Type: application/json" -d @"$q" -o "$w" && '
+                + 'curl -s -m 20 -X POST "$vv/synthesis?speaker=' + voice + '" -H "Content-Type: application/json" -d @"$q" -o "$w" && '
                 + 'pw-play "$w"'
         }
         previewProc.running = false
@@ -90,6 +94,30 @@ Rectangle {
     }
 
     Process {
+        id: aivisProc
+        running: false
+        property string buf: ""
+        command: ["bash", "-c", "curl -sS --max-time 2 \"${YURA_AIVIS_URL:-http://127.0.0.1:10101}/speakers\""]
+
+        stdout: SplitParser { onRead: data => { aivisProc.buf += data } }
+        onRunningChanged: { if (running) buf = "" }
+
+        onExited: (exitCode) => {
+            if (exitCode !== 0) return
+            try {
+                let list = []
+                for (const sp of JSON.parse(aivisProc.buf)) {
+                    for (const st of sp.styles) {
+                        list.push({ label: "Aivis: " + sp.name + " (" + st.name + ")",
+                                    value: "aivis:" + st.id })
+                    }
+                }
+                section.aivisVoices = list
+            } catch (e) {}
+        }
+    }
+
+    Process {
         id: piperProc
         running: false
         property string buf: ""
@@ -114,6 +142,7 @@ Rectangle {
 
     Component.onCompleted: {
         speakersProc.running = true
+        aivisProc.running = true
         piperProc.running = true
     }
 
