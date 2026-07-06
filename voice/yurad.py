@@ -74,6 +74,7 @@ SILENCE_END_S = 0.9               # this much trailing silence ends a turn
 MAX_UTTERANCE_S = 15.0
 LISTEN_TIMEOUT_S = 6.0            # wake with no speech -> give up
 FOLLOWUP_TIMEOUT_S = 4.0          # post-reply window before returning to idle
+CONV_IDLE_ROTATE_S = float(os.environ.get("YURA_CONV_IDLE_ROTATE", "3600"))
 VAD_THRESHOLD = 0.35              # silero speech probability
 
 log_lock = threading.Lock()
@@ -224,14 +225,20 @@ def transcribe(wav: bytes) -> str:
 
 
 class Chat:
-    """Keeps one mugen-ai conversation for the whole voice session."""
+    """Keeps one mugen-ai conversation, rotated after an idle gap."""
 
     def __init__(self):
         self.conversation_id = 0
+        self.last_turn = 0.0
 
     def ask(self, text: str) -> str:
+        # An hour of silence usually means a new topic; a fresh conversation
+        # keeps per-turn context small. Long-term memory bridges the cut.
+        if self.conversation_id and time.time() - self.last_turn > CONV_IDLE_ROTATE_S:
+            log("chat", "idle gap, rotating to a new conversation")
+            self.conversation_id = 0
         try:
-            return self._ask(text)
+            reply = self._ask(text)
         except requests.HTTPError as e:
             # 400 with a bound id = the conversation was deleted from the
             # panel behind our back; start a fresh one instead of dying.
@@ -239,8 +246,11 @@ class Chat:
                     and e.response.status_code == 400):
                 log("chat", "conversation gone, starting a new one")
                 self.conversation_id = 0
-                return self._ask(text)
-            raise
+                reply = self._ask(text)
+            else:
+                raise
+        self.last_turn = time.time()
+        return reply
 
     def _ask(self, text: str) -> str:
         parts: list[str] = []
