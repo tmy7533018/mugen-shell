@@ -38,6 +38,10 @@ VOICEVOX_URL = os.environ.get("YURA_VOICEVOX_URL", "http://127.0.0.1:50021")
 AIVIS_URL = os.environ.get("YURA_AIVIS_URL", "http://127.0.0.1:10101")
 VOICEVOX_SPEAKER = int(os.environ.get("YURA_VOICEVOX_SPEAKER", "14"))
 TTS_SPEED = float(os.environ.get("YURA_VOICE_SPEED", "1.0"))
+# Engines master at very different loudness (Aivis ~8 dB hotter than
+# VOICEVOX); every spoken clip is RMS-normalized to this target so a
+# voice change never changes the room volume.
+TTS_TARGET_DBFS = float(os.environ.get("YURA_TTS_TARGET_DBFS", "-23"))
 # Piper is the non-Japanese TTS path; voices are bare names resolved here.
 PIPER_BIN = os.environ.get("YURA_PIPER_BIN", "piper")
 PIPER_VOICES_DIR = os.path.expanduser(
@@ -372,6 +376,13 @@ def play_wav(data: bytes) -> None:
     with wave.open(io.BytesIO(data), "rb") as w:
         sr = w.getframerate()
         audio = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
+    x = audio.astype(np.float32) / 32768.0
+    rms = float(np.sqrt(np.mean(x * x)))
+    if rms > 1e-4:
+        # Attenuation is free; boost is capped so quiet styles (whisper
+        # voices) don't get their noise floor dragged up.
+        gain = min(10 ** (TTS_TARGET_DBFS / 20) / rms, 3.0)
+        audio = (np.clip(x * gain, -1.0, 1.0) * 32767).astype(np.int16)
     sd.play(audio, sr)
     sd.wait()
 

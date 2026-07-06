@@ -37,7 +37,11 @@ Rectangle {
     }
 
     // Same env fallbacks as yurad (YURA_PIPER_BIN / YURA_PIPER_VOICES /
-    // YURA_VOICEVOX_URL) so the preview follows a relocated engine.
+    // YURA_VOICEVOX_URL) so the preview follows a relocated engine, and the
+    // same -23 loudness target so previews match what yurad will play.
+    readonly property string playNormalized:
+        'n=$(mktemp --suffix=.wav); ffmpeg -hide_banner -loglevel error -y -i "$w" -af loudnorm=I=-23:TP=-2 "$n" && pw-play "$n"; rm -f "$n"'
+
     function preview(value) {
         const engine = value.split(":")[0]
         const voice = value.slice(engine.length + 1)
@@ -47,7 +51,7 @@ Rectangle {
             script = 'w=$(mktemp --suffix=.wav); trap \'rm -f "$w"\' EXIT; '
                 + 'echo "Hi! I\'m Yura. How does this voice sound?" | '
                 + '"${YURA_PIPER_BIN:-piper}" --model "${YURA_PIPER_VOICES:-$HOME/.local/share/piper/voices}/' + voice + '.onnx" --output_file "$w" && '
-                + 'pw-play "$w"'
+                + playNormalized
         } else {
             const enc = encodeURIComponent("こんにちは、ユラだよ。この声はどうかな")
             const base = engine === "aivis"
@@ -57,7 +61,7 @@ Rectangle {
                 + base
                 + 'curl -s -m 5 -X POST "$vv/audio_query?text=' + enc + '&speaker=' + voice + '" -o "$q" && '
                 + 'curl -s -m 20 -X POST "$vv/synthesis?speaker=' + voice + '" -H "Content-Type: application/json" -d @"$q" -o "$w" && '
-                + 'pw-play "$w"'
+                + playNormalized
         }
         previewProc.running = false
         previewProc.command = ["bash", "-c", script]
