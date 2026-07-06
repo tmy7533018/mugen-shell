@@ -34,6 +34,10 @@ mugen-shell/
 │   ├── cmd/                  # CLI subcommands (chat, serve)
 │   ├── internal/             # Provider registry, server (HTTP + SSE /events), history, ...
 │   └── contrib/systemd/      # systemd user unit
+├── voice/                    # Yura voice input daemon (optional; see Voice input)
+│   ├── yurad.py              # wake word -> VAD -> whisper.cpp -> /chat -> VOICEVOX
+│   ├── models/               # custom "Hey Yura" openWakeWord model
+│   └── train/                # wake word training pipeline (VOICEVOX-based)
 ├── system/                   # Dotfiles for the surrounding tools
 │   ├── hypr/                 # Hyprland (configs/, scripts/, hyprland.conf, ...)
 │   │   └── configs/          # autostart.conf / ime.conf / keybinds.conf / ...
@@ -41,6 +45,7 @@ mugen-shell/
 │   ├── fastfetch/            # System info display
 │   ├── matugen/              # Material You color generation + templates
 │   ├── cava/                 # Audio visualizer (themes + GLSL shaders)
+│   ├── systemd/user/         # User units (yura-voice, voicevox-engine, event notifier)
 │   └── starship.toml         # Starship prompt
 ├── nix/
 │   └── home-manager.nix      # home-manager module (Arch + Nix path)
@@ -370,6 +375,42 @@ systemctl --user restart mugen-ai.service
 | POST | `/config/restart` | Bounce the systemd unit so changes from `/config` take effect. Requires the service to be managed by systemd. |
 
 For terminal use: `mugen-ai chat`.
+
+---
+
+## Voice input (optional)
+
+Yura can also be driven hands-free: say **"Hey Yura"**, speak, and the reply is read aloud.
+
+```
+mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp → mugen-ai /chat → VOICEVOX
+```
+
+This path is Japanese-first (STT defaults to `ja`, TTS is VOICEVOX) and is **not covered by the Nix flake or `make install` yet** — it expects a manual setup on top of a running mugen-ai:
+
+1. **Python venv** for the daemon (Python 3.14 has no tflite wheel, so openwakeword is installed `--no-deps` and runs its ONNX path; the pinned runtime deps are listed in `voice/requirements.txt`):
+   ```bash
+   cd ~/mugen-shell/voice
+   python -m venv .venv
+   .venv/bin/pip install --no-deps openwakeword==0.6.0
+   .venv/bin/pip install onnxruntime numpy scipy scikit-learn tqdm requests sounddevice
+   ```
+2. **whisper.cpp** built locally, with the server binary at `~/.local/src/whisper.cpp/build/bin/whisper-server` and a model at `~/.local/share/whisper/ggml-large-v3-turbo.bin` (override via `YURA_WHISPER_BIN` / `YURA_WHISPER_MODEL`). The daemon spawns and supervises the server itself.
+3. **VOICEVOX engine** answering on `127.0.0.1:50021`. The shipped `voicevox-engine.service` expects the nixpkgs `voicevox-engine` on `~/.nix-profile/bin`; adjust `ExecStart` for other install methods.
+4. **systemd units**:
+   ```bash
+   ln -s ~/mugen-shell/system/systemd/user/{yura-voice,voicevox-engine}.service ~/.config/systemd/user/
+   systemctl --user daemon-reload
+   systemctl --user enable --now yura-voice.service
+   ```
+
+Runtime control lives in **Settings → Voice input**: an enable toggle (off releases the microphone; picked up live, no restart needed) and a wake-open target (panel / bar / none). Both Yura UIs get a push-to-talk mic button — it works even with the wake word disabled — which flips into a cancel control while listening.
+
+Environment knobs, set in the unit or a drop-in: `YURA_WAKEWORD` (path to a custom model; default `hey_jarvis`), `YURA_WAKE_THRESHOLD` (ships at `0.7` for the custom model), `YURA_VOICEVOX_SPEAKER` (default `14`), `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`.
+
+### Wake word model
+
+`voice/models/hey_yura.onnx` is a custom openWakeWord model trained on VOICEVOX-synthesized Japanese pronunciations of "Hey Yura" (127 speaker styles, ~9,600 clips), so it fits Japanese-accented speech much better than the stock English models. Held-out recall@0.7 is 0.91 with 2.8% false positives on deliberately similar phrases. The full pipeline — clip generation, augmentation, training, verification — lives in [`voice/train/`](voice/train/README.md) and runs locally (ROCm GPU supported).
 
 ---
 

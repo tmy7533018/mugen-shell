@@ -58,6 +58,7 @@ Set up alongside mugen-shell via NixOS, Arch + Nix, or `make install`; see [SETU
 - Streaming responses with a stop button and an IME-aware input placeholder.
 - Personality (name, tone, language, system prompt) is editable in the Settings GUI. Save & Apply writes the config and restarts the backend.
 - Per-conversation Thinking toggle. Routes through each provider's reasoning channel (qwen3 think, Claude extended thinking, Gemini thinkingConfig, OpenAI reasoning_effort), with a silent fallback for unsupported models.
+- Voice input (optional). Say **"Hey Yura"** — a custom openWakeWord model trained on VOICEVOX-generated Japanese speech — then talk: whisper.cpp transcribes, the reply flows through the same conversation stack and is spoken aloud sentence-by-sentence via VOICEVOX, mirrored live into the bar and panel. Both UIs add a push-to-talk mic button that flips into a cancel control while listening. Setup in [SETUP.md → Voice input](SETUP.md#voice-input-optional).
 - Strict-by-default app launch allowlist. Until an app is enabled in the picker, Yura cannot launch anything. Shell metacharacters (`; | & $` etc.) are always rejected.
 - Per-category tool toggles (audio, music, brightness, theme, wallpaper, notifications, timer, calendar, panels, app launcher).
 - External [MCP](https://modelcontextprotocol.io) server support. Configured servers have their tools merged into the same gated set, with live connection status shown in Settings.
@@ -112,7 +113,7 @@ Provider API keys, the config file layout, and the HTTP API are documented in [S
 - WiFi, Bluetooth, and IME management
 - Battery indicator (optional water-level fill inside the power menu icon) and a collapsible system tray
 - App launcher, idle inhibitor toggle, screenshot capture with clipboard copy, screenshot gallery, power menu
-- Standalone Settings window for theme, blur, animations, notification and timer sounds, lock timer, date format, plus the Yura tab (personality, providers, bar model, thinking, tool categories, allowed apps, panel side)
+- Standalone Settings window for theme, blur, animations, notification and timer sounds, lock timer, date format, plus the Yura tab (personality, providers, bar model, thinking, tool categories, allowed apps, panel side) and a Voice input section (daemon toggle, wake-open target)
 
 ---
 

@@ -34,6 +34,10 @@ mugen-shell/
 │   ├── cmd/                  # CLI サブコマンド (chat、serve)
 │   ├── internal/             # プロバイダレジストリ、サーバ (HTTP + SSE /events)、履歴など
 │   └── contrib/systemd/      # systemd user unit
+├── voice/                    # Yura 音声入力デーモン (オプション。音声入力の節を参照)
+│   ├── yurad.py              # wake word -> VAD -> whisper.cpp -> /chat -> VOICEVOX
+│   ├── models/               # 自作「Hey Yura」openWakeWord モデル
+│   └── train/                # wake word 訓練パイプライン (VOICEVOX ベース)
 ├── system/                   # 周辺ツール用 dotfiles
 │   ├── hypr/                 # Hyprland (configs/、scripts/、hyprland.conf など)
 │   │   └── configs/          # autostart.conf / ime.conf / keybinds.conf など
@@ -41,6 +45,7 @@ mugen-shell/
 │   ├── fastfetch/            # システム情報表示
 │   ├── matugen/              # Material You カラー生成 + テンプレート
 │   ├── cava/                 # 音声ビジュアライザ (テーマ + GLSL シェーダ)
+│   ├── systemd/user/         # user unit (yura-voice、voicevox-engine、event notifier)
 │   └── starship.toml         # Starship prompt
 ├── nix/
 │   └── home-manager.nix      # home-manager モジュール (Arch + Nix 経路)
@@ -371,6 +376,42 @@ systemctl --user restart mugen-ai.service
 | POST | `/config/restart` | systemd unit を再起動して `/config` での変更を反映します。サービスが systemd 管理であることが前提です。 |
 
 ターミナル用途は `mugen-ai chat`。
+
+---
+
+## 音声入力 (オプション)
+
+Yura はハンズフリーでも操作できます。**「Hey Yura」**と呼びかけて話すと、返答が読み上げられます。
+
+```
+mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp → mugen-ai /chat → VOICEVOX
+```
+
+日本語ファースト構成です (STT のデフォルトは `ja`、TTS は VOICEVOX)。**Nix flake / `make install` にはまだ含まれていません** — mugen-ai が動いている前提で、手動セットアップになります:
+
+1. **デーモン用の Python venv** (Python 3.14 には tflite の wheel が無いので、openwakeword は `--no-deps` で入れて ONNX 経路で動かします。ピン留めしたランタイム依存は `voice/requirements.txt` にあります):
+   ```bash
+   cd ~/mugen-shell/voice
+   python -m venv .venv
+   .venv/bin/pip install --no-deps openwakeword==0.6.0
+   .venv/bin/pip install onnxruntime numpy scipy scikit-learn tqdm requests sounddevice
+   ```
+2. **whisper.cpp** をローカルビルドして、サーババイナリを `~/.local/src/whisper.cpp/build/bin/whisper-server`、モデルを `~/.local/share/whisper/ggml-large-v3-turbo.bin` に配置 (`YURA_WHISPER_BIN` / `YURA_WHISPER_MODEL` で上書き可)。サーバの起動と監視はデーモンがやります。
+3. **VOICEVOX engine** を `127.0.0.1:50021` で待受。同梱の `voicevox-engine.service` は nixpkgs の `voicevox-engine` が `~/.nix-profile/bin` にある前提なので、他の入れ方をした場合は `ExecStart` を調整してください。
+4. **systemd unit**:
+   ```bash
+   ln -s ~/mugen-shell/system/systemd/user/{yura-voice,voicevox-engine}.service ~/.config/systemd/user/
+   systemctl --user daemon-reload
+   systemctl --user enable --now yura-voice.service
+   ```
+
+実行中の制御は **Settings → Voice input** から: 有効トグル (OFF でマイクを解放。再起動なしで即反映) と、wake word で開く先 (panel / bar / none)。両方の Yura UI に push-to-talk のマイクボタンが付き (wake word 無効でも使えます)、listening 中はキャンセルボタンに変わります。
+
+環境変数ノブ (unit か drop-in で設定): `YURA_WAKEWORD` (カスタムモデルのパス。デフォルト `hey_jarvis`)、`YURA_WAKE_THRESHOLD` (自作モデル用に `0.7` を設定済み)、`YURA_VOICEVOX_SPEAKER` (デフォルト `14`)、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`。
+
+### wake word モデル
+
+`voice/models/hey_yura.onnx` は、VOICEVOX で合成した「Hey Yura」の日本語発音 (127 スピーカースタイル、約 9,600 クリップ) で訓練した自作 openWakeWord モデルです。既製の英語モデルより日本語アクセントにずっと良く合います。held-out での recall@0.7 は 0.91、わざと似せたフレーズへの誤反応は 2.8%。クリップ生成〜augmentation〜訓練〜検証のパイプライン一式は [`voice/train/`](voice/train/README.md) にあり、ローカルで回せます (ROCm GPU 対応)。
 
 ---
 
