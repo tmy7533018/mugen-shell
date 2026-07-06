@@ -404,7 +404,7 @@ The default stack is Japanese-first but not Japanese-only (see *Other languages*
    systemctl --user enable --now yura-voice.service
    ```
 
-Runtime control lives in **Settings → Voice input**: an enable toggle (off releases the microphone; picked up live, no restart needed), a wake-open target (panel / bar / none), a voice picker with per-voice preview, a speech-speed selector, and a speech-recognition language (Auto / JA / EN). Voice, speed, and language apply from the next utterance — the daemon watches `settings.json`. Both Yura UIs get a push-to-talk mic button — it works even with the wake word disabled — which flips into a cancel control while listening.
+Runtime control lives in **Settings → Voice input**: an enable toggle (off releases the microphone; picked up live, no restart needed), a follow-up toggle (after a reply the mic stays open a few seconds for the next utterance — no wake word needed; silence returns to idle), a wake-open target (panel / bar / none), a voice picker with per-voice preview, a speech-speed selector, and a speech-recognition language (Auto / JA / EN). Voice, speed, and language apply from the next utterance — the daemon watches `settings.json`. Both Yura UIs get a push-to-talk mic button — it works even with the wake word disabled — which flips into a cancel control while listening.
 
 ### Other languages
 

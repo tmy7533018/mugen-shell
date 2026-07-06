@@ -43,6 +43,7 @@ QtObject {
     property real voiceSpeed: 1.0
     property string voiceTts: "voicevox:14"  // "voicevox:<id>" | "piper:<voice>"
     property string voiceSttLang: "ja"  // whisper language, "auto" allowed
+    property bool voiceFollowUp: true  // keep listening after replies
 
     // Suppress save while we are applying values that just came in from disk
     // (either initial load or an external write detected by the file watcher).
@@ -107,7 +108,8 @@ QtObject {
                 "speaker": voiceSpeaker,
                 "speed": voiceSpeed,
                 "tts": voiceTts,
-                "sttLang": voiceSttLang
+                "sttLang": voiceSttLang,
+                "followUp": voiceFollowUp
             }
         }
 
@@ -248,6 +250,9 @@ QtObject {
                 }
                 if (settings.voice.sttLang !== undefined) {
                     voiceSttLang = settings.voice.sttLang
+                }
+                if (settings.voice.followUp !== undefined) {
+                    voiceFollowUp = settings.voice.followUp
                 }
             }
 

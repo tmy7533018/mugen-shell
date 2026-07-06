@@ -73,6 +73,7 @@ PREROLL_S = 0.4                   # audio kept from before speech onset
 SILENCE_END_S = 0.9               # this much trailing silence ends a turn
 MAX_UTTERANCE_S = 15.0
 LISTEN_TIMEOUT_S = 6.0            # wake with no speech -> give up
+FOLLOWUP_TIMEOUT_S = 4.0          # post-reply window before returning to idle
 VAD_THRESHOLD = 0.35              # silero speech probability
 
 log_lock = threading.Lock()
@@ -456,7 +457,7 @@ class Daemon:
             except queue.Empty:
                 break
 
-    def _capture_utterance(self) -> list[np.ndarray] | None:
+    def _capture_utterance(self, timeout: float = LISTEN_TIMEOUT_S) -> list[np.ndarray] | None:
         """Collect frames until trailing silence. None = no speech at all."""
         self.vad.reset()
         frames: list[np.ndarray] = []
@@ -485,7 +486,7 @@ class Daemon:
                 if p >= VAD_THRESHOLD and seen > beep_guard:
                     speech_started = True
                     frames = preroll[:]
-                elif time.time() - started > LISTEN_TIMEOUT_S:
+                elif time.time() - started > timeout:
                     return None
                 continue
             frames.append(frame)
@@ -498,12 +499,28 @@ class Daemon:
 
     def _handle_turn(self, from_button: bool = False) -> None:
         self.cancel.clear()
-        beep(880)
+        # Follow-up mode: after a spoken reply, keep listening without the
+        # wake word so the exchange flows like a conversation. Silence,
+        # cancel, or an empty turn drops back to idle.
+        first = True
+        while self.running and not self.cancel.is_set():
+            spoke = self._one_turn(open_surface=first and not from_button,
+                                   follow_up=not first)
+            if not spoke or not voice_settings().get("followUp", True):
+                break
+            first = False
+            # TTS ran for a while; stale mic backlog (echo residue, room
+            # noise) must not become the follow-up utterance.
+            self._drain()
+
+    def _one_turn(self, open_surface: bool, follow_up: bool) -> bool:
+        """One capture -> STT -> chat -> TTS round; True keeps the floor open."""
+        beep(660 if follow_up else 880)
         set_listening(True)
         try:
             # The mic button means the user already has a Yura surface in
-            # front of them — only wake-word turns open one.
-            if not from_button:
+            # front of them — only first wake-word turns open one.
+            if open_surface:
                 opens = voice_settings().get("wakeOpens", "panel")
                 if opens == "panel":
                     open_panel()
@@ -513,14 +530,15 @@ class Daemon:
             # it before the transcript arrives (first turn: Chat._ask).
             if self.chat.conversation_id:
                 yura_ipc("show_conversation", str(self.chat.conversation_id))
-            log("listen", "capturing...")
-            frames = self._capture_utterance()
+            log("listen", "capturing..." + (" (follow-up)" if follow_up else ""))
+            frames = self._capture_utterance(
+                timeout=FOLLOWUP_TIMEOUT_S if follow_up else LISTEN_TIMEOUT_S)
         finally:
             set_listening(False)
         if not frames:
             log("listen", "no speech, back to idle")
             beep(440)
-            return
+            return False
 
         log("stt", f"{sum(f.size for f in frames) / SR:.1f}s of audio")
         wav = frames_to_wav(frames)
@@ -541,7 +559,7 @@ class Daemon:
             if not re.search(r"[ぁ-んァ-ヶ一-龠a-zA-Z0-9]", text):
                 log("stt", f"discarded: {text!r}")
                 beep(440)
-                return
+                return False
             log("stt", text)
             # Mirror into the Spotlight pill whenever it's on screen, however
             # the turn started (wake word, panel button, or the bar's own).
@@ -551,16 +569,18 @@ class Daemon:
             reply = self.chat.ask(text)
         finally:
             set_thinking(False)
+        if not reply:
+            return False
         log("yura", reply[:120].replace("\n", " "))
-        if reply:
-            on_sentence = None
-            if mirror_bar:
-                spoken: list[str] = []
+        on_sentence = None
+        if mirror_bar:
+            spoken: list[str] = []
 
-                def on_sentence(s: str) -> None:
-                    spoken.append(s)
-                    shell_ipc("yura", "voice_reply", join_spoken(spoken))
-            speak_guarded(reply, on_sentence, should_stop=self.cancel.is_set)
+            def on_sentence(s: str) -> None:
+                spoken.append(s)
+                shell_ipc("yura", "voice_reply", join_spoken(spoken))
+        speak_guarded(reply, on_sentence, should_stop=self.cancel.is_set)
+        return not self.cancel.is_set()
 
     def run(self) -> None:
         self.whisper_proc = ensure_whisper_server()
