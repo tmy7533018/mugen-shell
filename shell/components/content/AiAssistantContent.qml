@@ -34,6 +34,10 @@ FocusScope {
     })
 
     property bool streaming: false
+    // True while the input pill holds an unsent user draft (or a voice
+    // transcript mid-turn) — parked responses don't count. Bar.qml blocks
+    // the auto-close timer on this so closing never eats unsent text.
+    readonly property bool hasDraft: inputField.text.length > 0 && !displayingResponse
     property bool aiAvailable: false
     property bool hasModel: false
     property bool healthChecked: false

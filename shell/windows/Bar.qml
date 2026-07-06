@@ -112,11 +112,15 @@ PanelWindow {
 
     property alias notificationManager: notificationManager
 
-    // Auto-close any open mode after idle. AI is exempt — users read streamed
-    // responses without moving the cursor, so it relies on ESC / click-outside.
+    // Auto-close any open mode after idle. AI only counts down while the
+    // conversation is quiet — no streamed reply, no unsent draft, no voice
+    // turn — so the countdown starts fresh once the exchange finishes.
+    readonly property bool aiQuiet: !yuraListening
+        && (!aiAssistantLoader.item
+            || (!aiAssistantLoader.item.streaming && !aiAssistantLoader.item.hasDraft))
     readonly property bool autoCloseEligible: !modeManager.isMode("normal")
-        && !modeManager.isMode("ai")
         && settingsManager.autoCloseTimerInterval > 0
+        && (!modeManager.isMode("ai") || aiQuiet)
 
     Timer {
         id: autoCloseTimer
