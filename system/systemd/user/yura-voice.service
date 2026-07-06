@@ -9,8 +9,10 @@ PartOf=graphical-session.target
 WorkingDirectory=%h/mugen-shell/voice
 # Custom model trained in voice/train; scores saturate near 1.0 on true
 # positives, so 0.7 trims borderline false wakes at ~no recall cost.
+# Media false-wake defense is the echo-cancelled default source
+# (pipewire.conf.d/99-yura-echo-cancel.conf) plus YURA_WAKE_PATIENCE.
 Environment=YURA_WAKEWORD=%h/mugen-shell/voice/models/hey_yura.onnx
-Environment=YURA_WAKE_THRESHOLD=0.85
+Environment=YURA_WAKE_THRESHOLD=0.7
 ExecStart=%h/mugen-shell/voice/.venv/bin/python %h/mugen-shell/voice/yurad.py
 Restart=on-failure
 RestartSec=3
