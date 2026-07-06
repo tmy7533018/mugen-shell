@@ -303,6 +303,17 @@ def split_sentences(text: str) -> list[str]:
     return out
 
 
+def join_spoken(parts: list[str]) -> str:
+    # Latin sentences need back the space that split_sentences consumed;
+    # Japanese keeps running flush.
+    out = ""
+    for p in parts:
+        if out and out[-1] in ".!?":
+            out += " "
+        out += p
+    return out
+
+
 def synth_voicevox(speaker: int, sentence: str, speed: float) -> bytes:
     q = requests.post(f"{VOICEVOX_URL}/audio_query",
                       params={"text": sentence, "speaker": speaker},
@@ -332,7 +343,8 @@ def synthesize(sentence: str) -> bytes:
     # voice.tts is "voicevox:<style-id>" or "piper:<voice-name>"; the voice
     # choice carries the engine, no separate engine setting.
     vs = voice_settings()
-    speed = float(vs.get("speed", TTS_SPEED))
+    # Clamp so a hand-edited settings.json can't zero the length_scale divisor.
+    speed = min(max(float(vs.get("speed", TTS_SPEED)), 0.5), 2.0)
     engine, _, voice = str(vs.get("tts", "")).partition(":")
     if engine == "piper" and voice:
         return synth_piper(voice, sentence, speed)
@@ -396,6 +408,16 @@ def speak(text: str, on_sentence=None, should_stop=None) -> None:
                 q.get_nowait()
             except queue.Empty:
                 break
+
+
+def speak_guarded(text: str, on_sentence=None, should_stop=None) -> None:
+    # Every audible reply must raise yuraSpeaking (the bar holds auto-close
+    # on it), including the error apology.
+    set_speaking(True)
+    try:
+        speak(text, on_sentence, should_stop=should_stop)
+    finally:
+        set_speaking(False)
 
 
 class Daemon:
@@ -502,29 +524,30 @@ class Daemon:
 
         log("stt", f"{sum(f.size for f in frames) / SR:.1f}s of audio")
         wav = frames_to_wav(frames)
-        try:
-            text = transcribe(wav)
-        except requests.RequestException:
-            # whisper-server died or wedged mid-request (mid-body death is
-            # ChunkedEncodingError, not ConnectionError); bring it back.
-            log("whisper", "gone, respawning")
-            proc = ensure_whisper_server()
-            if proc:
-                self.whisper_proc = proc
-            text = transcribe(wav)
-        if not re.search(r"[ぁ-んァ-ヶ一-龠a-zA-Z0-9]", text):
-            log("stt", f"discarded: {text!r}")
-            beep(440)
-            return
-        log("stt", text)
-        # Mirror into the Spotlight pill whenever it's on screen, however
-        # the turn started (wake word, panel button, or the bar's own).
-        mirror_bar = shell_ipc_read("panel", "current") == "ai"
-        if mirror_bar:
-            shell_ipc("yura", "voice_input", text)
-
+        # Thinking spans STT too: a whisper respawn can outlast the bar's
+        # auto-close interval, which would otherwise fire in this gap.
         set_thinking(True)
         try:
+            try:
+                text = transcribe(wav)
+            except requests.RequestException:
+                # whisper-server died or wedged mid-request (mid-body death is
+                # ChunkedEncodingError, not ConnectionError); bring it back.
+                log("whisper", "gone, respawning")
+                proc = ensure_whisper_server()
+                if proc:
+                    self.whisper_proc = proc
+                text = transcribe(wav)
+            if not re.search(r"[ぁ-んァ-ヶ一-龠a-zA-Z0-9]", text):
+                log("stt", f"discarded: {text!r}")
+                beep(440)
+                return
+            log("stt", text)
+            # Mirror into the Spotlight pill whenever it's on screen, however
+            # the turn started (wake word, panel button, or the bar's own).
+            mirror_bar = shell_ipc_read("panel", "current") == "ai"
+            if mirror_bar:
+                shell_ipc("yura", "voice_input", text)
             reply = self.chat.ask(text)
         finally:
             set_thinking(False)
@@ -536,13 +559,8 @@ class Daemon:
 
                 def on_sentence(s: str) -> None:
                     spoken.append(s)
-                    shell_ipc("yura", "voice_reply", "".join(spoken))
-            set_speaking(True)
-            try:
-                speak(reply, on_sentence,
-                      should_stop=self.cancel.is_set)
-            finally:
-                set_speaking(False)
+                    shell_ipc("yura", "voice_reply", join_spoken(spoken))
+            speak_guarded(reply, on_sentence, should_stop=self.cancel.is_set)
 
     def run(self) -> None:
         self.whisper_proc = ensure_whisper_server()
@@ -597,7 +615,7 @@ class Daemon:
                     log("error", str(e))
                     beep(330, 0.3)
                     try:
-                        speak("ごめんね、エラーで返事できなかった。")
+                        speak_guarded("ごめんね、エラーで返事できなかった。")
                     except Exception:
                         pass
                 self.wake.reset()

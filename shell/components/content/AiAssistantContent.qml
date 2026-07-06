@@ -37,7 +37,7 @@ FocusScope {
     // True while the input pill holds an unsent user draft (or a voice
     // transcript mid-turn) — parked responses don't count. Bar.qml blocks
     // the auto-close timer on this so closing never eats unsent text.
-    readonly property bool hasDraft: inputField.text.length > 0 && !displayingResponse
+    readonly property bool hasDraft: inputField.text.trim().length > 0 && !displayingResponse
     property bool aiAvailable: false
     property bool hasModel: false
     property bool healthChecked: false
@@ -304,6 +304,9 @@ FocusScope {
                         }
 
                         if (root.displayingResponse) {
+                            // Scrolling a parked reply is reading, not idleness:
+                            // keep the auto-close countdown from firing mid-read.
+                            modeManager.bump()
                             let pos = inputField.cursorPosition
                             let len = inputField.text.length
                             if (event.key === Qt.Key_Left) {

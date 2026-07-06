@@ -35,20 +35,24 @@ Rectangle {
         return tts !== "" ? tts : "voicevox:14"
     }
 
+    // Same env fallbacks as yurad (YURA_PIPER_BIN / YURA_PIPER_VOICES /
+    // YURA_VOICEVOX_URL) so the preview follows a relocated engine.
     function preview(value) {
         const engine = value.split(":")[0]
         const voice = value.slice(engine.length + 1)
         let script
         if (engine === "piper") {
+            if (!/^[A-Za-z0-9._+-]+$/.test(voice)) return
             script = 'w=$(mktemp --suffix=.wav); trap \'rm -f "$w"\' EXIT; '
-                + `echo "Hi! I'm Yura. How does this voice sound?" | `
-                + `piper --model "$HOME/.local/share/piper/voices/${voice}.onnx" --output_file "$w" && `
+                + 'echo "Hi! I\'m Yura. How does this voice sound?" | '
+                + '"${YURA_PIPER_BIN:-piper}" --model "${YURA_PIPER_VOICES:-$HOME/.local/share/piper/voices}/' + voice + '.onnx" --output_file "$w" && '
                 + 'pw-play "$w"'
         } else {
             const enc = encodeURIComponent("こんにちは、ユラだよ。この声はどうかな")
             script = 'q=$(mktemp); w=$(mktemp --suffix=.wav); trap \'rm -f "$q" "$w"\' EXIT; '
-                + `curl -s -m 5 -X POST "http://127.0.0.1:50021/audio_query?text=${enc}&speaker=${voice}" -o "$q" && `
-                + `curl -s -m 15 -X POST "http://127.0.0.1:50021/synthesis?speaker=${voice}" -H "Content-Type: application/json" -d @"$q" -o "$w" && `
+                + 'vv="${YURA_VOICEVOX_URL:-http://127.0.0.1:50021}"; '
+                + 'curl -s -m 5 -X POST "$vv/audio_query?text=' + enc + '&speaker=' + voice + '" -o "$q" && '
+                + 'curl -s -m 15 -X POST "$vv/synthesis?speaker=' + voice + '" -H "Content-Type: application/json" -d @"$q" -o "$w" && '
                 + 'pw-play "$w"'
         }
         previewProc.running = false
@@ -65,7 +69,7 @@ Rectangle {
         id: speakersProc
         running: false
         property string buf: ""
-        command: ["curl", "-sS", "--max-time", "2", "http://127.0.0.1:50021/speakers"]
+        command: ["bash", "-c", "curl -sS --max-time 2 \"${YURA_VOICEVOX_URL:-http://127.0.0.1:50021}/speakers\""]
 
         stdout: SplitParser { onRead: data => { speakersProc.buf += data } }
         onRunningChanged: { if (running) buf = "" }
@@ -89,7 +93,7 @@ Rectangle {
         id: piperProc
         running: false
         property string buf: ""
-        command: ["bash", "-c", "ls -1 $HOME/.local/share/piper/voices/*.onnx 2>/dev/null"]
+        command: ["bash", "-c", "ls -1 \"${YURA_PIPER_VOICES:-$HOME/.local/share/piper/voices}\"/*.onnx 2>/dev/null"]
 
         stdout: SplitParser { onRead: data => { piperProc.buf += data + "\n" } }
         onRunningChanged: { if (running) buf = "" }
@@ -100,6 +104,8 @@ Rectangle {
                 const f = line.trim()
                 if (!f.endsWith(".onnx")) continue
                 const name = f.split("/").pop().replace(/\.onnx$/, "")
+                // Names feed the preview's bash line; refuse shell metachars.
+                if (!/^[A-Za-z0-9._+-]+$/.test(name)) continue
                 list.push({ label: "Piper: " + name, value: "piper:" + name })
             }
             section.piperVoices = list
@@ -359,11 +365,6 @@ Rectangle {
                     onClicked: {
                         if (!section.settingsManager) return
                         section.settingsManager.voiceTts = modelData.value
-                        // Keep the legacy key in sync while a VOICEVOX voice
-                        // is picked, so older yurad builds keep working.
-                        if (modelData.value.startsWith("voicevox:")) {
-                            section.settingsManager.voiceSpeaker = parseInt(modelData.value.slice(9))
-                        }
                         section.save()
                     }
                 }
