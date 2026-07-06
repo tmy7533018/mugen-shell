@@ -224,8 +224,9 @@ Item {
                         font.pixelSize: modeManager.scale(11)
                         font.family: "M PLUS 2"
                         elide: Text.ElideRight
-                        wrapMode: Text.WordWrap
-                        maximumLineCount: 2
+                        // Title + one body line is all the 70px pill can fit;
+                        // two wrapped lines spill past the rounded bottom edge.
+                        maximumLineCount: 1
                         visible: text.length > 0
                     }
                 }
