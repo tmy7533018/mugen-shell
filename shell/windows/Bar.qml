@@ -115,7 +115,9 @@ PanelWindow {
     // Auto-close any open mode after idle. AI only counts down while the
     // conversation is quiet — no streamed reply, no unsent draft, no voice
     // turn — so the countdown starts fresh once the exchange finishes.
-    readonly property bool aiQuiet: !yuraListening
+    // yuraFloatThinking covers the voice turn's LLM phase and float-driven
+    // streams mirrored into the pill; yuraSpeaking covers TTS playback.
+    readonly property bool aiQuiet: !yuraListening && !yuraSpeaking && !yuraFloatThinking
         && (!aiAssistantLoader.item
             || (!aiAssistantLoader.item.streaming && !aiAssistantLoader.item.hasDraft))
     readonly property bool autoCloseEligible: !modeManager.isMode("normal")
@@ -249,6 +251,9 @@ PanelWindow {
     // Voice daemon (yurad) reports wake-word capture the same way.
     property bool yuraListening: false
 
+    // And the spoken-reply playback, so auto-close waits for the read-out.
+    property bool yuraSpeaking: false
+
     IpcHandler {
         target: "yura"
         function set_thinking(on: bool): void {
@@ -260,6 +265,11 @@ PanelWindow {
             barWindow.yuraListening = on
             if (on) yuraListeningFailsafe.restart()
             else yuraListeningFailsafe.stop()
+        }
+        function set_speaking(on: bool): void {
+            barWindow.yuraSpeaking = on
+            if (on) yuraSpeakingFailsafe.restart()
+            else yuraSpeakingFailsafe.stop()
         }
         // Voice turns run in the daemon, not the bar's own chat process;
         // these mirror the transcript / spoken reply into the Spotlight
@@ -285,6 +295,13 @@ PanelWindow {
         id: yuraListeningFailsafe
         interval: 60 * 1000
         onTriggered: barWindow.yuraListening = false
+    }
+
+    // A spoken reply runs minutes at most; past that yurad died mid-turn.
+    Timer {
+        id: yuraSpeakingFailsafe
+        interval: 10 * 60 * 1000
+        onTriggered: barWindow.yuraSpeaking = false
     }
 
     Managers.WallpaperManager { id: wallpaperManager }

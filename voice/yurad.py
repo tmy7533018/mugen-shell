@@ -120,6 +120,11 @@ def set_listening(on: bool) -> None:
     yura_ipc("set_listening", flag)
 
 
+def set_speaking(on: bool) -> None:
+    # The bar holds its auto-close while the spoken reply is playing.
+    shell_ipc("yura", "set_speaking", "true" if on else "false")
+
+
 def yura_ipc(*args: str) -> None:
     # yura-shell is a separate quickshell process, addressed by -p (same
     # pattern the bar uses for toggleFrom).
@@ -532,8 +537,12 @@ class Daemon:
                 def on_sentence(s: str) -> None:
                     spoken.append(s)
                     shell_ipc("yura", "voice_reply", "".join(spoken))
-            speak(reply, on_sentence,
-                  should_stop=self.cancel.is_set)
+            set_speaking(True)
+            try:
+                speak(reply, on_sentence,
+                      should_stop=self.cancel.is_set)
+            finally:
+                set_speaking(False)
 
     def run(self) -> None:
         self.whisper_proc = ensure_whisper_server()
