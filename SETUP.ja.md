@@ -402,7 +402,8 @@ mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp
    ```bash
    ln -s ~/mugen-shell/system/systemd/user/{yura-voice,voicevox-engine,aivisspeech-engine}.service ~/.config/systemd/user/
    systemctl --user daemon-reload
-   systemctl --user enable --now yura-voice.service
+   # 使う声の TTS エンジンだけ enable する
+   systemctl --user enable --now voicevox-engine.service yura-voice.service
    ```
 
 実行中の制御は **Settings → Voice input** から: 有効トグル (OFF でマイクを解放。再起動なしで即反映)、連続会話トグル (返答のあと数秒マイクを開けたままにして、wake word 無しで次の発話を聞く。無音なら idle へ)、wake word で開く先 (panel / bar / none)、試聴ボタン付きのボイスピッカー、話速セレクタ、音声認識の言語 (Auto / JA / EN)。声・話速・言語は次の発話から反映されます (デーモンが `settings.json` を監視)。両方の Yura UI に push-to-talk のマイクボタンが付き (wake word 無効でも使えます)、listening 中はキャンセルボタンに変わります。

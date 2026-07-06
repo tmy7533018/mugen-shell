@@ -1,8 +1,8 @@
 [Unit]
 Description=Yura voice input daemon (wake word -> STT -> chat -> TTS)
-# Needs the compositor for qs IPC and PipeWire for the mic.
+# Needs the compositor for qs IPC and PipeWire for the mic. TTS engines
+# are enabled independently — run whichever ones your voices use.
 After=graphical-session.target voicevox-engine.service aivisspeech-engine.service mugen-ai.service
-Wants=voicevox-engine.service aivisspeech-engine.service
 PartOf=graphical-session.target
 
 [Service]
