@@ -239,14 +239,26 @@ class Chat:
 
     def __init__(self):
         self.conversation_id = 0
+        self.model = ""  # what the bound conversation was seeded with
         self.last_turn = 0.0
+
+    def reset(self) -> None:
+        self.conversation_id = 0
+        self.model = ""
 
     def ask(self, text: str) -> str:
         # An hour of silence usually means a new topic; a fresh conversation
         # keeps per-turn context small. Long-term memory bridges the cut.
         if self.conversation_id and time.time() - self.last_turn > CONV_IDLE_ROTATE_S:
             log("chat", "idle gap, rotating to a new conversation")
-            self.conversation_id = 0
+            self.reset()
+        # The bound model always wins on the backend, so a mid-conversation
+        # change of the bar model knob would silently not apply; changing
+        # models reads as "new head, new conversation".
+        want = _settings().get("ai", {}).get("barModel", "")
+        if self.conversation_id and want and self.model and want != self.model:
+            log("chat", f"model changed to {want}, rotating conversation")
+            self.reset()
         try:
             reply = self._ask(text)
         except requests.HTTPError as e:
@@ -281,6 +293,8 @@ class Chat:
                 if not line or not line.startswith("data: "):
                     continue
                 ev = json.loads(line[6:])
+                if "conversation_id" in ev and "model" in ev:
+                    self.model = ev["model"]
                 if "conversation_id" in ev and not self.conversation_id:
                     self.conversation_id = ev["conversation_id"]
                     # Select it AND steer the panel there — selection alone
@@ -473,7 +487,10 @@ class Daemon:
         self.running = True
         # SIGUSR1 (the panel's mic button) starts a turn without a wake word;
         # SIGUSR2 cancels the capture (or stops speech at a sentence break).
+        # SIGRTMIN+1 is the mic button on an empty chat: same as SIGUSR1 but
+        # into a fresh conversation instead of the running voice thread.
         self.trigger = threading.Event()
+        self.trigger_fresh = threading.Event()
         self.cancel = threading.Event()
 
     def _on_audio(self, indata, frames, t, status):
@@ -642,7 +659,13 @@ class Daemon:
                 except queue.Empty:
                     frame = None
                 from_button = False
-                if self.trigger.is_set():
+                if self.trigger_fresh.is_set():
+                    self.trigger_fresh.clear()
+                    self.trigger.clear()
+                    from_button = True
+                    self.chat.reset()
+                    log("wake", "push-to-talk (new chat)")
+                elif self.trigger.is_set():
                     self.trigger.clear()
                     from_button = True
                     log("wake", "push-to-talk")
@@ -689,6 +712,7 @@ def main() -> None:
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGUSR1, lambda *_: daemon.trigger.set())
     signal.signal(signal.SIGUSR2, lambda *_: daemon.cancel.set())
+    signal.signal(signal.SIGRTMIN + 1, lambda *_: daemon.trigger_fresh.set())
     daemon.run()
 
 
