@@ -234,7 +234,7 @@ Yura (バー行が `Super + Y`、コーナーポップアップが `Super + Shif
 
 - **Personality**: 名前、トーン、言語、システムプロンプト。Save & Apply で `~/.config/mugen-ai/config.toml` を書き出して、systemd unit を再起動します。同じ行に escape hatch が 2 つ: **Edit toml** で `$EDITOR` でファイルを開けて、**Restart AI** で手書き編集後にサービスを再起動できます。
 - **Providers**: 読み取り専用のステータスカード。どの API キーが入っているか、各プロバイダの host or base_url、モデル一覧を表示します。Refresh で取り直し。
-- **Bar Yura model**: バー行が使うモデルを固定します。デフォルトのままにしておけば、コーナーポップアップで直近に選んだモデルに追従します。
+- **Bar Yura model**: バー行と音声ターンが使うモデルを固定します (両者は Spotlight を共有しているため同じ knob です)。デフォルトのままにしておけば、コーナーポップアップで直近に選んだモデルに追従します。
 - **Bar Yura thinking**: 対応モデル (qwen3、Claude sonnet+opus、Gemini 2.5、OpenAI o-series) では、バーのチャットを各プロバイダの reasoning チャンネルに流します。未対応モデルでは何も言わずチャットに戻ります。
 - **Tool categories**: グループ単位 (audio、music、brightness、theme、wallpaper、notification、timer、calendar、panel、app launcher) で ON/OFF。OFF にしたカテゴリは Yura のツール一覧から消えて、OFF のものを頼まれたら Yura がそう返します。
 - **Allowed apps**: `app_launch` の strict allowlist。デフォルトは空で、ピッカーでアプリを選ぶまで Yura は何も開けません。ピッカーには検索付きでインストール済の desktop app が並びます。pill のトグルで個別に切り替えるか、検索結果に対して "All on / All off" が効きます。起動リクエストに混じったシェルメタ文字 (`; | & $` 等) は常に弾かれます。

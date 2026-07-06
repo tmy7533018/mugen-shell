@@ -233,7 +233,7 @@ Yura (`Super + Y` for the bar row, `Super + Shift + Y` for the corner pop-up) ta
 
 - **Personality**: name, tone, language, and system prompt. Save & Apply writes `~/.config/mugen-ai/config.toml` and bounces the systemd unit. Two escape hatches sit on the same row: **Edit toml** opens the file in `$EDITOR`, and **Restart AI** restarts the service after manual edits.
 - **Providers**: read-only status card showing which API keys are set, each provider's host or base_url, and the models list. Refresh re-fetches.
-- **Bar Yura model**: pins the model used by the bar row. Leave it on the default to follow whichever model the corner pop-up most recently selected.
+- **Bar Yura model**: pins the model used by the bar row and by voice turns (they share the Spotlight surface). Leave it on the default to follow whichever model the corner pop-up most recently selected.
 - **Bar Yura thinking**: routes the bar's chat through each provider's reasoning channel for capable models (qwen3, Claude sonnet+opus, Gemini 2.5, OpenAI o-series). Falls back silently otherwise.
 - **Tool categories**: toggle whole groups (audio, music, brightness, theme, wallpaper, notification, timer, calendar, panels, app launcher) on or off. Disabled categories disappear from Yura's tool list, and Yura reports back when you ask for something turned off.
 - **Allowed apps**: strict allowlist for `app_launch`. The default is empty, meaning Yura cannot open anything until you pick apps. The picker shows installed desktop apps with a search; toggle pills for individual apps, or use "All on / All off" against the current filter. Shell metacharacters (`; | & $` etc.) in launch requests are always rejected.

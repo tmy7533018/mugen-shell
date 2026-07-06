@@ -62,16 +62,20 @@ SETTINGS_FILE = os.path.expanduser("~/.config/mugen-shell/settings.json")
 _settings_cache: tuple[float, dict] = (0.0, {})
 
 
-def voice_settings() -> dict:
+def _settings() -> dict:
     global _settings_cache
     try:
         mtime = os.path.getmtime(SETTINGS_FILE)
         if mtime != _settings_cache[0]:
             with open(SETTINGS_FILE) as f:
-                _settings_cache = (mtime, json.load(f).get("voice", {}))
+                _settings_cache = (mtime, json.load(f))
     except Exception:
         pass  # keep last good values; defaults apply on first failure
     return _settings_cache[1]
+
+
+def voice_settings() -> dict:
+    return _settings().get("voice", {})
 
 SR = 16000
 CHUNK = 1280                      # 80 ms, what openWakeWord expects
@@ -261,6 +265,12 @@ class Chat:
     def _ask(self, text: str) -> str:
         parts: list[str] = []
         payload = {"message": text, "conversation_id": self.conversation_id}
+        # Voice mirrors into the bar pill, so it follows the bar's model
+        # knob (Settings → AI / Yura → Bar Yura model); empty falls back
+        # to the backend default, exactly like the bar row does.
+        model = _settings().get("ai", {}).get("barModel", "")
+        if model:
+            payload["model"] = model
         with requests.post(f"{AI_URL}/chat", json=payload, stream=True,
                            timeout=(5, 300)) as r:
             r.raise_for_status()
