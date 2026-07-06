@@ -404,7 +404,7 @@ This path is Japanese-first (STT defaults to `ja`, TTS is VOICEVOX) and is **not
    systemctl --user enable --now yura-voice.service
    ```
 
-Runtime control lives in **Settings → Voice input**: an enable toggle (off releases the microphone; picked up live, no restart needed) and a wake-open target (panel / bar / none). Both Yura UIs get a push-to-talk mic button — it works even with the wake word disabled — which flips into a cancel control while listening.
+Runtime control lives in **Settings → Voice input**: an enable toggle (off releases the microphone; picked up live, no restart needed), a wake-open target (panel / bar / none), a VOICEVOX voice picker with per-voice preview, and a speech-speed selector. Voice and speed apply from the next spoken sentence — the daemon watches `settings.json`. Both Yura UIs get a push-to-talk mic button — it works even with the wake word disabled — which flips into a cancel control while listening.
 
 Environment knobs, set in the unit or a drop-in: `YURA_WAKEWORD` (path to a custom model; default `hey_jarvis`), `YURA_WAKE_THRESHOLD` (ships at `0.7` for the custom model), `YURA_WAKE_PATIENCE` (consecutive frames over the threshold; default `2`), `YURA_VOICEVOX_SPEAKER` (default `14`), `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`.
 

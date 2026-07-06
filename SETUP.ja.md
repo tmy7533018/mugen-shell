@@ -405,7 +405,7 @@ mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp
    systemctl --user enable --now yura-voice.service
    ```
 
-実行中の制御は **Settings → Voice input** から: 有効トグル (OFF でマイクを解放。再起動なしで即反映) と、wake word で開く先 (panel / bar / none)。両方の Yura UI に push-to-talk のマイクボタンが付き (wake word 無効でも使えます)、listening 中はキャンセルボタンに変わります。
+実行中の制御は **Settings → Voice input** から: 有効トグル (OFF でマイクを解放。再起動なしで即反映)、wake word で開く先 (panel / bar / none)、試聴ボタン付きの VOICEVOX ボイスピッカー、話速セレクタ。声と話速は次に喋る文から反映されます (デーモンが `settings.json` を監視)。両方の Yura UI に push-to-talk のマイクボタンが付き (wake word 無効でも使えます)、listening 中はキャンセルボタンに変わります。
 
 環境変数ノブ (unit か drop-in で設定): `YURA_WAKEWORD` (カスタムモデルのパス。デフォルト `hey_jarvis`)、`YURA_WAKE_THRESHOLD` (自作モデル用に `0.7` を設定済み)、`YURA_WAKE_PATIENCE` (閾値を連続で超えるべきフレーム数。デフォルト `2`)、`YURA_VOICEVOX_SPEAKER` (デフォルト `14`)、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`。
 

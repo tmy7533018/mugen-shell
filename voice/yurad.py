@@ -290,12 +290,16 @@ def split_sentences(text: str) -> list[str]:
 
 
 def synthesize(sentence: str) -> bytes:
+    # Voice knobs come from settings.json (Settings GUI, mtime-watched) so
+    # a change applies from the next sentence; env vars are the fallback.
+    vs = voice_settings()
+    speaker = int(vs.get("speaker", VOICEVOX_SPEAKER))
     q = requests.post(f"{VOICEVOX_URL}/audio_query",
-                      params={"text": sentence, "speaker": VOICEVOX_SPEAKER},
+                      params={"text": sentence, "speaker": speaker},
                       timeout=10).json()
-    q["speedScale"] = TTS_SPEED
+    q["speedScale"] = float(vs.get("speed", TTS_SPEED))
     r = requests.post(f"{VOICEVOX_URL}/synthesis",
-                      params={"speaker": VOICEVOX_SPEAKER}, json=q, timeout=60)
+                      params={"speaker": speaker}, json=q, timeout=60)
     r.raise_for_status()
     return r.content
 

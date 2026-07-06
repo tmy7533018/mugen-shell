@@ -39,6 +39,8 @@ QtObject {
     // Voice input (yurad reads these straight from settings.json).
     property bool voiceEnabled: true
     property string voiceWakeOpens: "panel"  // "panel" | "bar" | "none"
+    property int voiceSpeaker: 14  // VOICEVOX style id
+    property real voiceSpeed: 1.0
 
     // Suppress save while we are applying values that just came in from disk
     // (either initial load or an external write detected by the file watcher).
@@ -99,7 +101,9 @@ QtObject {
             },
             "voice": {
                 "enabled": voiceEnabled,
-                "wakeOpens": voiceWakeOpens
+                "wakeOpens": voiceWakeOpens,
+                "speaker": voiceSpeaker,
+                "speed": voiceSpeed
             }
         }
 
@@ -226,6 +230,12 @@ QtObject {
                 }
                 if (settings.voice.wakeOpens !== undefined) {
                     voiceWakeOpens = settings.voice.wakeOpens
+                }
+                if (settings.voice.speaker !== undefined) {
+                    voiceSpeaker = settings.voice.speaker
+                }
+                if (settings.voice.speed !== undefined) {
+                    voiceSpeed = settings.voice.speed
                 }
             }
 

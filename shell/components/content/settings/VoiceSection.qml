@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Io
 import "../../../lib" as Theme
 
 Rectangle {
@@ -17,6 +18,60 @@ Rectangle {
     border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
 
     readonly property var wakeOpenOptions: ["panel", "bar", "none"]
+    readonly property var speedOptions: [0.9, 1.0, 1.1, 1.2]
+
+    // [{label, id}] flattened from VOICEVOX /speakers (name × style).
+    property var speakers: []
+    property bool voiceExpanded: false
+
+    function speakerLabel() {
+        const id = settingsManager ? settingsManager.voiceSpeaker : 14
+        for (const s of speakers) {
+            if (s.id === id) return s.label
+        }
+        return "ID " + id
+    }
+
+    function preview(id) {
+        const enc = encodeURIComponent("こんにちは、ユラだよ。この声はどうかな")
+        previewProc.running = false
+        previewProc.command = ["bash", "-c",
+            'q=$(mktemp); w=$(mktemp --suffix=.wav); trap \'rm -f "$q" "$w"\' EXIT; '
+            + `curl -s -m 5 -X POST "http://127.0.0.1:50021/audio_query?text=${enc}&speaker=${id}" -o "$q" && `
+            + `curl -s -m 15 -X POST "http://127.0.0.1:50021/synthesis?speaker=${id}" -H "Content-Type: application/json" -d @"$q" -o "$w" && `
+            + 'pw-play "$w"']
+        previewProc.running = true
+    }
+
+    Process {
+        id: previewProc
+        running: false
+    }
+
+    Process {
+        id: speakersProc
+        running: false
+        property string buf: ""
+        command: ["curl", "-sS", "--max-time", "2", "http://127.0.0.1:50021/speakers"]
+
+        stdout: SplitParser { onRead: data => { speakersProc.buf += data } }
+        onRunningChanged: { if (running) buf = "" }
+
+        onExited: (exitCode) => {
+            if (exitCode !== 0) return
+            try {
+                let list = []
+                for (const sp of JSON.parse(speakersProc.buf)) {
+                    for (const st of sp.styles) {
+                        list.push({ label: sp.name + " (" + st.name + ")", id: st.id })
+                    }
+                }
+                section.speakers = list
+            } catch (e) {}
+        }
+    }
+
+    Component.onCompleted: speakersProc.running = true
 
     function bump() {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
@@ -174,6 +229,173 @@ Rectangle {
                         onClicked: {
                             if (!section.settingsManager) return
                             section.settingsManager.voiceWakeOpens = modelData
+                            section.save()
+                        }
+                    }
+                }
+            }
+        }
+
+        Item {
+            Layout.fillWidth: true
+            implicitHeight: voiceHeader.implicitHeight
+
+            RowLayout {
+                id: voiceHeader
+                anchors.left: parent.left
+                anchors.right: parent.right
+                spacing: 12
+
+                RowLabel {
+                    title: "Voice"
+                    desc: "VOICEVOX speaker for spoken replies"
+                }
+
+                Text {
+                    text: section.speakerLabel()
+                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                    font.pixelSize: 11
+                    font.family: "M PLUS 2"
+                    opacity: 0.85
+                }
+
+                Text {
+                    text: section.voiceExpanded ? "▴" : "▾"
+                    color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                    font.pixelSize: 12
+                    font.family: "M PLUS 2"
+                    opacity: 0.7
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    section.voiceExpanded = !section.voiceExpanded
+                    section.bump()
+                }
+            }
+        }
+
+        Text {
+            visible: section.voiceExpanded && section.speakers.length === 0
+            text: "VOICEVOX engine not reachable"
+            color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.60)
+            font.pixelSize: 10
+            font.family: "M PLUS 2"
+            opacity: 0.6
+        }
+
+        ListView {
+            id: voiceList
+            visible: section.voiceExpanded && section.speakers.length > 0
+            Layout.fillWidth: true
+            Layout.preferredHeight: visible ? 220 : 0
+            clip: true
+            model: section.speakers
+            interactive: contentHeight > height
+            boundsBehavior: Flickable.StopAtBounds
+
+            delegate: Rectangle {
+                required property var modelData
+                width: voiceList.width
+                height: 30
+                radius: 8
+
+                readonly property bool isSelected: section.settingsManager
+                    && section.settingsManager.voiceSpeaker === modelData.id
+
+                color: rowMouse.containsMouse
+                    ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.25) : Qt.rgba(0.65, 0.55, 0.85, 0.25))
+                    : (isSelected
+                        ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4))
+                        : "transparent")
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+
+                MouseArea {
+                    id: rowMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (!section.settingsManager) return
+                        section.settingsManager.voiceSpeaker = modelData.id
+                        section.save()
+                    }
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.right: playChip.left
+                    anchors.rightMargin: 8
+                    text: parent.modelData.label
+                    elide: Text.ElideRight
+                    color: parent.isSelected
+                        ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.85, 1.0, 1.0))
+                        : (section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
+                    font.pixelSize: 11
+                    font.family: "M PLUS 2"
+                    font.weight: parent.isSelected ? Font.Medium : Font.Normal
+                }
+
+                Rectangle {
+                    id: playChip
+                    anchors.right: parent.right
+                    anchors.rightMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 26
+                    height: 20
+                    radius: 10
+                    visible: rowMouse.containsMouse || playMouse.containsMouse
+                    color: playMouse.containsMouse
+                        ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.5) : Qt.rgba(0.65, 0.55, 0.85, 0.5))
+                        : Qt.rgba(1, 1, 1, 0.08)
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "▶"
+                        color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                        font.pixelSize: 9
+                    }
+
+                    MouseArea {
+                        id: playMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: section.preview(parent.parent.modelData.id)
+                    }
+                }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            RowLabel {
+                title: "Speech speed"
+                desc: "VOICEVOX speedScale for replies"
+            }
+
+            Row {
+                spacing: 6
+                Layout.alignment: Qt.AlignVCenter
+
+                Repeater {
+                    model: section.speedOptions
+
+                    Chip {
+                        required property real modelData
+                        label: modelData.toFixed(1) + "x"
+                        selected: section.settingsManager
+                            && Math.abs(section.settingsManager.voiceSpeed - modelData) < 0.05
+                        onClicked: {
+                            if (!section.settingsManager) return
+                            section.settingsManager.voiceSpeed = modelData
                             section.save()
                         }
                     }
