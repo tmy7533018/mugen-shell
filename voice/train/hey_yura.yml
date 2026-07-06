@@ -1,0 +1,46 @@
+# Training config for the "hey yura" wake word model (openWakeWord v0.6.0).
+# Positive/adversarial clips come from gen_voicevox.py, not piper, so run
+# train.py with --augment_clips / --train_model only (never --generate_clips).
+# Paths are relative to voice/train/.
+
+model_name: "hey_yura"
+target_phrase:
+  - "hey yura"
+custom_negative_phrases: []
+
+# Counts must match what gen_voicevox.py produced (used for n_total bookkeeping)
+n_samples: 4000
+n_samples_val: 800
+
+# Unused (piper generation is skipped) but train.py reads them unconditionally
+tts_batch_size: 50
+piper_sample_generator_path: "."
+
+augmentation_batch_size: 16
+augmentation_rounds: 3
+
+output_dir: "./out"
+
+rir_paths:
+  - "./data/mit_rirs"
+background_paths:
+  - "./data/audioset_16k"
+background_paths_duplication_rate:
+  - 1
+
+false_positive_validation_data_path: "./data/validation_set_features.npy"
+
+feature_data_files:
+  "ACAV100M_sample": "./data/openwakeword_features_ACAV100M_2000_hrs_16bit.npy"
+
+batch_n_per_class:
+  "ACAV100M_sample": 1024
+  "adversarial_negative": 100
+  "positive": 100
+
+model_type: "dnn"
+layer_size: 64
+
+steps: 50000
+max_negative_weight: 1000
+target_false_positives_per_hour: 0.2
