@@ -39,6 +39,10 @@ TTS_SPEED = float(os.environ.get("YURA_VOICE_SPEED", "1.0"))
 # Name of a bundled openWakeWord model, or a path to a custom .onnx.
 WAKEWORD = os.environ.get("YURA_WAKEWORD", "hey_jarvis")
 WAKE_THRESHOLD = float(os.environ.get("YURA_WAKE_THRESHOLD", "0.5"))
+# Consecutive frames that must clear the threshold. Real utterances hold a
+# high-score plateau across several 80 ms frames; media speech grazing the
+# boundary (anime dialogue especially) tends to spike on a single frame.
+WAKE_PATIENCE = int(os.environ.get("YURA_WAKE_PATIENCE", "2"))
 YURA_SHELL_QML = os.path.expanduser(
     "~/.config/quickshell/mugen-shell/yura-shell.qml")
 # Live knobs (voice.enabled, voice.wakeOpens) come from the shell's
@@ -513,6 +517,7 @@ class Daemon:
                             blocksize=CHUNK, callback=self._on_audio):
             log("ready", "say the wake word")
             last_check = time.time()
+            wake_streak = 0
             while self.running:
                 try:
                     frame = self.audio_q.get(timeout=1)
@@ -528,12 +533,17 @@ class Daemon:
                 else:
                     score = self.wake.predict(frame)[self.wake_name]
                     if score < WAKE_THRESHOLD:
+                        wake_streak = 0
                         if time.time() - last_check > 2:
                             last_check = time.time()
                             if not voice_settings().get("enabled", True):
                                 log("voice", "disabled, releasing mic")
                                 return
                         continue
+                    wake_streak += 1
+                    if wake_streak < WAKE_PATIENCE:
+                        continue
+                    wake_streak = 0
                     log("wake", f"score={score:.2f}")
                 try:
                     self._handle_turn(from_button)

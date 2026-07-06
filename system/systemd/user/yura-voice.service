@@ -10,7 +10,7 @@ WorkingDirectory=%h/mugen-shell/voice
 # Custom model trained in voice/train; scores saturate near 1.0 on true
 # positives, so 0.7 trims borderline false wakes at ~no recall cost.
 Environment=YURA_WAKEWORD=%h/mugen-shell/voice/models/hey_yura.onnx
-Environment=YURA_WAKE_THRESHOLD=0.7
+Environment=YURA_WAKE_THRESHOLD=0.85
 ExecStart=%h/mugen-shell/voice/.venv/bin/python %h/mugen-shell/voice/yurad.py
 Restart=on-failure
 RestartSec=3
