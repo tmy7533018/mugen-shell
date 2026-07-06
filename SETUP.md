@@ -386,7 +386,7 @@ Yura can also be driven hands-free: say **"Hey Yura"**, speak, and the reply is 
 mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp → mugen-ai /chat → VOICEVOX
 ```
 
-This path is Japanese-first (STT defaults to `ja`, TTS is VOICEVOX) and is **not covered by the Nix flake or `make install` yet** — it expects a manual setup on top of a running mugen-ai:
+The default stack is Japanese-first but not Japanese-only (see *Other languages* below), and is **not covered by the Nix flake or `make install` yet** — it expects a manual setup on top of a running mugen-ai:
 
 1. **Python venv** for the daemon (Python 3.14 has no tflite wheel, so openwakeword is installed `--no-deps` and runs its ONNX path; the pinned runtime deps are listed in `voice/requirements.txt`):
    ```bash
@@ -404,7 +404,16 @@ This path is Japanese-first (STT defaults to `ja`, TTS is VOICEVOX) and is **not
    systemctl --user enable --now yura-voice.service
    ```
 
-Runtime control lives in **Settings → Voice input**: an enable toggle (off releases the microphone; picked up live, no restart needed), a wake-open target (panel / bar / none), a VOICEVOX voice picker with per-voice preview, and a speech-speed selector. Voice and speed apply from the next spoken sentence — the daemon watches `settings.json`. Both Yura UIs get a push-to-talk mic button — it works even with the wake word disabled — which flips into a cancel control while listening.
+Runtime control lives in **Settings → Voice input**: an enable toggle (off releases the microphone; picked up live, no restart needed), a wake-open target (panel / bar / none), a voice picker with per-voice preview, a speech-speed selector, and a speech-recognition language (Auto / JA / EN). Voice, speed, and language apply from the next utterance — the daemon watches `settings.json`. Both Yura UIs get a push-to-talk mic button — it works even with the wake word disabled — which flips into a cancel control while listening.
+
+### Other languages
+
+Only the reply voice is engine-specific; everything else is multilingual already. To run Yura's voice in English (or any other language):
+
+- **TTS**: install [Piper](https://github.com/rhasspy/piper) (`piper` on `PATH`, or `YURA_PIPER_BIN`) and drop voices (`.onnx` + `.onnx.json` pairs from [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices)) into `~/.local/share/piper/voices/`. They appear in the same Settings voice picker as `Piper: <name>` entries — the picked voice carries the engine, so there is no separate engine switch. VOICEVOX is then optional.
+- **STT**: set Speech recognition to Auto (per-utterance detection) or a fixed language; whisper covers ~100 languages.
+- **Wake word**: with `YURA_WAKEWORD` unset, the daemon uses openWakeWord's bundled English `hey_jarvis`. The shipped `hey_yura.onnx` is tuned for Japanese pronunciation; retrain via `voice/train/` for other accents.
+- **Replies**: set the assistant's language under Settings → AI / Yura → Personality.
 
 Environment knobs, set in the unit or a drop-in: `YURA_WAKEWORD` (path to a custom model; default `hey_jarvis`), `YURA_WAKE_THRESHOLD` (ships at `0.7` for the custom model), `YURA_WAKE_PATIENCE` (consecutive frames over the threshold; default `2`), `YURA_VOICEVOX_SPEAKER` (default `14`), `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`.
 

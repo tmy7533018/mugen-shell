@@ -36,6 +36,10 @@ STT_LANG = os.environ.get("YURA_VOICE_LANG", "ja")
 VOICEVOX_URL = os.environ.get("YURA_VOICEVOX_URL", "http://127.0.0.1:50021")
 VOICEVOX_SPEAKER = int(os.environ.get("YURA_VOICEVOX_SPEAKER", "14"))
 TTS_SPEED = float(os.environ.get("YURA_VOICE_SPEED", "1.0"))
+# Piper is the non-Japanese TTS path; voices are bare names resolved here.
+PIPER_BIN = os.environ.get("YURA_PIPER_BIN", "piper")
+PIPER_VOICES_DIR = os.path.expanduser(
+    os.environ.get("YURA_PIPER_VOICES", "~/.local/share/piper/voices"))
 # Name of a bundled openWakeWord model, or a path to a custom .onnx.
 WAKEWORD = os.environ.get("YURA_WAKEWORD", "hey_jarvis")
 WAKE_THRESHOLD = float(os.environ.get("YURA_WAKE_THRESHOLD", "0.5"))
@@ -200,10 +204,14 @@ def ensure_whisper_server() -> subprocess.Popen | None:
 
 
 def transcribe(wav: bytes) -> str:
+    # Per-request language wins over the server's -l startup default,
+    # so the Settings knob applies without a whisper-server restart.
+    lang = str(voice_settings().get("sttLang", STT_LANG))
     r = requests.post(
         f"{WHISPER_URL}/inference",
         files={"file": ("speech.wav", wav, "audio/wav")},
-        data={"response_format": "json", "temperature": "0.0"},
+        data={"response_format": "json", "temperature": "0.0",
+              "language": lang},
         timeout=60)
     r.raise_for_status()
     return r.json().get("text", "").strip()
@@ -276,7 +284,8 @@ def clean_for_speech(text: str) -> str:
 
 
 def split_sentences(text: str) -> list[str]:
-    raw = re.split(r"(?<=[。!?!?\n])", text)
+    # ASCII periods only count at a whitespace boundary so decimals survive.
+    raw = re.split(r"(?<=[。!?!?\n])|(?<=\.)\s+", text)
     out: list[str] = []
     for s in (s.strip() for s in raw):
         if not s:
@@ -289,19 +298,43 @@ def split_sentences(text: str) -> list[str]:
     return out
 
 
-def synthesize(sentence: str) -> bytes:
-    # Voice knobs come from settings.json (Settings GUI, mtime-watched) so
-    # a change applies from the next sentence; env vars are the fallback.
-    vs = voice_settings()
-    speaker = int(vs.get("speaker", VOICEVOX_SPEAKER))
+def synth_voicevox(speaker: int, sentence: str, speed: float) -> bytes:
     q = requests.post(f"{VOICEVOX_URL}/audio_query",
                       params={"text": sentence, "speaker": speaker},
                       timeout=10).json()
-    q["speedScale"] = float(vs.get("speed", TTS_SPEED))
+    q["speedScale"] = speed
     r = requests.post(f"{VOICEVOX_URL}/synthesis",
                       params={"speaker": speaker}, json=q, timeout=60)
     r.raise_for_status()
     return r.content
+
+
+def synth_piper(voice: str, sentence: str, speed: float) -> bytes:
+    model = voice if os.path.isabs(voice) else os.path.join(
+        PIPER_VOICES_DIR, voice + ".onnx")
+    p = subprocess.run(
+        [PIPER_BIN, "--model", model, "--length_scale", f"{1.0 / speed:.2f}",
+         "--output_file", "-"],
+        input=sentence.encode(), capture_output=True, timeout=30)
+    if p.returncode != 0:
+        raise RuntimeError(f"piper: {p.stderr.decode(errors='replace')[-200:]}")
+    return p.stdout
+
+
+def synthesize(sentence: str) -> bytes:
+    # Voice knobs come from settings.json (Settings GUI, mtime-watched) so
+    # a change applies from the next sentence; env vars are the fallback.
+    # voice.tts is "voicevox:<style-id>" or "piper:<voice-name>"; the voice
+    # choice carries the engine, no separate engine setting.
+    vs = voice_settings()
+    speed = float(vs.get("speed", TTS_SPEED))
+    engine, _, voice = str(vs.get("tts", "")).partition(":")
+    if engine == "piper" and voice:
+        return synth_piper(voice, sentence, speed)
+    if engine == "voicevox" and voice:
+        return synth_voicevox(int(voice), sentence, speed)
+    return synth_voicevox(int(vs.get("speaker", VOICEVOX_SPEAKER)),
+                          sentence, speed)
 
 
 def play_wav(data: bytes) -> None:

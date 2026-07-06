@@ -20,26 +20,39 @@ Rectangle {
     readonly property var wakeOpenOptions: ["panel", "bar", "none"]
     readonly property var speedOptions: [0.9, 1.0, 1.1, 1.2]
 
-    // [{label, id}] flattened from VOICEVOX /speakers (name × style).
-    property var speakers: []
+    // One list, two engines: the picked value carries the engine prefix
+    // ("voicevox:<style-id>" | "piper:<voice>"), matching voice.tts.
+    property var voicevoxVoices: []
+    property var piperVoices: []
+    readonly property var voices: [...voicevoxVoices, ...piperVoices]
     property bool voiceExpanded: false
 
-    function speakerLabel() {
-        const id = settingsManager ? settingsManager.voiceSpeaker : 14
-        for (const s of speakers) {
-            if (s.id === id) return s.label
+    function voiceLabel() {
+        const tts = settingsManager ? settingsManager.voiceTts : ""
+        for (const v of voices) {
+            if (v.value === tts) return v.label
         }
-        return "ID " + id
+        return tts !== "" ? tts : "voicevox:14"
     }
 
-    function preview(id) {
-        const enc = encodeURIComponent("こんにちは、ユラだよ。この声はどうかな")
+    function preview(value) {
+        const engine = value.split(":")[0]
+        const voice = value.slice(engine.length + 1)
+        let script
+        if (engine === "piper") {
+            script = 'w=$(mktemp --suffix=.wav); trap \'rm -f "$w"\' EXIT; '
+                + `echo "Hi! I'm Yura. How does this voice sound?" | `
+                + `piper --model "$HOME/.local/share/piper/voices/${voice}.onnx" --output_file "$w" && `
+                + 'pw-play "$w"'
+        } else {
+            const enc = encodeURIComponent("こんにちは、ユラだよ。この声はどうかな")
+            script = 'q=$(mktemp); w=$(mktemp --suffix=.wav); trap \'rm -f "$q" "$w"\' EXIT; '
+                + `curl -s -m 5 -X POST "http://127.0.0.1:50021/audio_query?text=${enc}&speaker=${voice}" -o "$q" && `
+                + `curl -s -m 15 -X POST "http://127.0.0.1:50021/synthesis?speaker=${voice}" -H "Content-Type: application/json" -d @"$q" -o "$w" && `
+                + 'pw-play "$w"'
+        }
         previewProc.running = false
-        previewProc.command = ["bash", "-c",
-            'q=$(mktemp); w=$(mktemp --suffix=.wav); trap \'rm -f "$q" "$w"\' EXIT; '
-            + `curl -s -m 5 -X POST "http://127.0.0.1:50021/audio_query?text=${enc}&speaker=${id}" -o "$q" && `
-            + `curl -s -m 15 -X POST "http://127.0.0.1:50021/synthesis?speaker=${id}" -H "Content-Type: application/json" -d @"$q" -o "$w" && `
-            + 'pw-play "$w"']
+        previewProc.command = ["bash", "-c", script]
         previewProc.running = true
     }
 
@@ -63,15 +76,40 @@ Rectangle {
                 let list = []
                 for (const sp of JSON.parse(speakersProc.buf)) {
                     for (const st of sp.styles) {
-                        list.push({ label: sp.name + " (" + st.name + ")", id: st.id })
+                        list.push({ label: sp.name + " (" + st.name + ")",
+                                    value: "voicevox:" + st.id })
                     }
                 }
-                section.speakers = list
+                section.voicevoxVoices = list
             } catch (e) {}
         }
     }
 
-    Component.onCompleted: speakersProc.running = true
+    Process {
+        id: piperProc
+        running: false
+        property string buf: ""
+        command: ["bash", "-c", "ls -1 $HOME/.local/share/piper/voices/*.onnx 2>/dev/null"]
+
+        stdout: SplitParser { onRead: data => { piperProc.buf += data + "\n" } }
+        onRunningChanged: { if (running) buf = "" }
+
+        onExited: () => {
+            let list = []
+            for (const line of piperProc.buf.split("\n")) {
+                const f = line.trim()
+                if (!f.endsWith(".onnx")) continue
+                const name = f.split("/").pop().replace(/\.onnx$/, "")
+                list.push({ label: "Piper: " + name, value: "piper:" + name })
+            }
+            section.piperVoices = list
+        }
+    }
+
+    Component.onCompleted: {
+        speakersProc.running = true
+        piperProc.running = true
+    }
 
     function bump() {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
@@ -252,7 +290,7 @@ Rectangle {
                 }
 
                 Text {
-                    text: section.speakerLabel()
+                    text: section.voiceLabel()
                     color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
                     font.pixelSize: 11
                     font.family: "M PLUS 2"
@@ -279,8 +317,8 @@ Rectangle {
         }
 
         Text {
-            visible: section.voiceExpanded && section.speakers.length === 0
-            text: "VOICEVOX engine not reachable"
+            visible: section.voiceExpanded && section.voices.length === 0
+            text: "No voices found (VOICEVOX engine down, no Piper voices installed)"
             color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.60)
             font.pixelSize: 10
             font.family: "M PLUS 2"
@@ -289,11 +327,11 @@ Rectangle {
 
         ListView {
             id: voiceList
-            visible: section.voiceExpanded && section.speakers.length > 0
+            visible: section.voiceExpanded && section.voices.length > 0
             Layout.fillWidth: true
             Layout.preferredHeight: visible ? 220 : 0
             clip: true
-            model: section.speakers
+            model: section.voices
             interactive: contentHeight > height
             boundsBehavior: Flickable.StopAtBounds
 
@@ -304,7 +342,7 @@ Rectangle {
                 radius: 8
 
                 readonly property bool isSelected: section.settingsManager
-                    && section.settingsManager.voiceSpeaker === modelData.id
+                    && section.settingsManager.voiceTts === modelData.value
 
                 color: rowMouse.containsMouse
                     ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.25) : Qt.rgba(0.65, 0.55, 0.85, 0.25))
@@ -320,7 +358,12 @@ Rectangle {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         if (!section.settingsManager) return
-                        section.settingsManager.voiceSpeaker = modelData.id
+                        section.settingsManager.voiceTts = modelData.value
+                        // Keep the legacy key in sync while a VOICEVOX voice
+                        // is picked, so older yurad builds keep working.
+                        if (modelData.value.startsWith("voicevox:")) {
+                            section.settingsManager.voiceSpeaker = parseInt(modelData.value.slice(9))
+                        }
                         section.save()
                     }
                 }
@@ -366,7 +409,7 @@ Rectangle {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: section.preview(parent.parent.modelData.id)
+                        onClicked: section.preview(parent.parent.modelData.value)
                     }
                 }
             }
@@ -396,6 +439,37 @@ Rectangle {
                         onClicked: {
                             if (!section.settingsManager) return
                             section.settingsManager.voiceSpeed = modelData
+                            section.save()
+                        }
+                    }
+                }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            RowLabel {
+                title: "Speech recognition"
+                desc: "Whisper language; Auto detects per utterance"
+            }
+
+            Row {
+                spacing: 6
+                Layout.alignment: Qt.AlignVCenter
+
+                Repeater {
+                    model: ["auto", "ja", "en"]
+
+                    Chip {
+                        required property string modelData
+                        label: modelData === "auto" ? "Auto" : modelData.toUpperCase()
+                        selected: section.settingsManager
+                            && section.settingsManager.voiceSttLang === modelData
+                        onClicked: {
+                            if (!section.settingsManager) return
+                            section.settingsManager.voiceSttLang = modelData
                             section.save()
                         }
                     }

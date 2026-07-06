@@ -387,7 +387,7 @@ Yura はハンズフリーでも操作できます。**「Hey Yura」**と呼び
 mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp → mugen-ai /chat → VOICEVOX
 ```
 
-日本語ファースト構成です (STT のデフォルトは `ja`、TTS は VOICEVOX)。**Nix flake / `make install` にはまだ含まれていません** — mugen-ai が動いている前提で、手動セットアップになります:
+デフォルト構成は日本語ファーストですが、日本語専用ではありません (後述の「他言語で使う」参照)。**Nix flake / `make install` にはまだ含まれていません** — mugen-ai が動いている前提で、手動セットアップになります:
 
 1. **デーモン用の Python venv** (Python 3.14 には tflite の wheel が無いので、openwakeword は `--no-deps` で入れて ONNX 経路で動かします。ピン留めしたランタイム依存は `voice/requirements.txt` にあります):
    ```bash
@@ -405,7 +405,16 @@ mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp
    systemctl --user enable --now yura-voice.service
    ```
 
-実行中の制御は **Settings → Voice input** から: 有効トグル (OFF でマイクを解放。再起動なしで即反映)、wake word で開く先 (panel / bar / none)、試聴ボタン付きの VOICEVOX ボイスピッカー、話速セレクタ。声と話速は次に喋る文から反映されます (デーモンが `settings.json` を監視)。両方の Yura UI に push-to-talk のマイクボタンが付き (wake word 無効でも使えます)、listening 中はキャンセルボタンに変わります。
+実行中の制御は **Settings → Voice input** から: 有効トグル (OFF でマイクを解放。再起動なしで即反映)、wake word で開く先 (panel / bar / none)、試聴ボタン付きのボイスピッカー、話速セレクタ、音声認識の言語 (Auto / JA / EN)。声・話速・言語は次の発話から反映されます (デーモンが `settings.json` を監視)。両方の Yura UI に push-to-talk のマイクボタンが付き (wake word 無効でも使えます)、listening 中はキャンセルボタンに変わります。
+
+### 他言語で使う
+
+エンジン依存なのは返答の声だけで、それ以外はもともと多言語対応です。英語 (や他の言語) で Yura の音声を使うには:
+
+- **TTS**: [Piper](https://github.com/rhasspy/piper) を入れて (`PATH` 上の `piper`、または `YURA_PIPER_BIN`)、[rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices) の声 (`.onnx` + `.onnx.json` のペア) を `~/.local/share/piper/voices/` に置きます。Settings の同じボイスピッカーに `Piper: <名前>` として並び、**選んだ声がエンジンを決める**ので、別途エンジン切替はありません。この場合 VOICEVOX は無くても動きます。
+- **STT**: Speech recognition を Auto (発話ごとに自動判定) か固定言語に。whisper は約 100 言語をカバーします。
+- **Wake word**: `YURA_WAKEWORD` 未設定ならデーモンは openWakeWord 同梱の英語モデル `hey_jarvis` を使います。同梱の `hey_yura.onnx` は日本語発音チューニングなので、他のアクセント向けには `voice/train/` で再訓練を。
+- **返答の言語**: Settings → AI / Yura → Personality の language で指定します。
 
 環境変数ノブ (unit か drop-in で設定): `YURA_WAKEWORD` (カスタムモデルのパス。デフォルト `hey_jarvis`)、`YURA_WAKE_THRESHOLD` (自作モデル用に `0.7` を設定済み)、`YURA_WAKE_PATIENCE` (閾値を連続で超えるべきフレーム数。デフォルト `2`)、`YURA_VOICEVOX_SPEAKER` (デフォルト `14`)、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`。
 
