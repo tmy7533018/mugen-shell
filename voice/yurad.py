@@ -246,41 +246,53 @@ class Chat:
         self.conversation_id = 0
         self.model = ""
 
-    def ask(self, text: str) -> str:
+    def maybe_rotate(self, want: str | None = None) -> None:
+        """Every start-a-fresh-conversation policy lives here."""
+        if not self.conversation_id:
+            return
         # An hour of silence usually means a new topic; a fresh conversation
         # keeps per-turn context small. Long-term memory bridges the cut.
-        if self.conversation_id and time.time() - self.last_turn > CONV_IDLE_ROTATE_S:
+        if time.time() - self.last_turn > CONV_IDLE_ROTATE_S:
             log("chat", "idle gap, rotating to a new conversation")
             self.reset()
+            return
         # The bound model always wins on the backend, so a mid-conversation
         # change of the bar model knob would silently not apply; changing
-        # models reads as "new head, new conversation".
-        want = _settings().get("ai", {}).get("barModel", "")
-        if self.conversation_id and want and self.model and want != self.model:
+        # models reads as "new head, new conversation". Compare against the
+        # knob value this conversation was seeded with — the backend may
+        # echo a normalized name.
+        if want is None:
+            want = _settings().get("ai", {}).get("barModel", "")
+        if want and self.model and want != self.model:
             log("chat", f"model changed to {want}, rotating conversation")
             self.reset()
+
+    def ask(self, text: str) -> str:
+        # One read serves both the rotation check and the request payload,
+        # so a settings write mid-turn can't split the decision.
+        want = _settings().get("ai", {}).get("barModel", "")
+        self.maybe_rotate(want)
         try:
-            reply = self._ask(text)
+            reply = self._ask(text, want)
         except requests.HTTPError as e:
             # 400 with a bound id = the conversation was deleted from the
             # panel behind our back; start a fresh one instead of dying.
             if (self.conversation_id and e.response is not None
                     and e.response.status_code == 400):
                 log("chat", "conversation gone, starting a new one")
-                self.conversation_id = 0
-                reply = self._ask(text)
+                self.reset()
+                reply = self._ask(text, want)
             else:
                 raise
         self.last_turn = time.time()
         return reply
 
-    def _ask(self, text: str) -> str:
+    def _ask(self, text: str, model: str = "") -> str:
         parts: list[str] = []
         payload = {"message": text, "conversation_id": self.conversation_id}
         # Voice mirrors into the bar pill, so it follows the bar's model
         # knob (Settings → AI / Yura → Bar Yura model); empty falls back
         # to the backend default, exactly like the bar row does.
-        model = _settings().get("ai", {}).get("barModel", "")
         if model:
             payload["model"] = model
         with requests.post(f"{AI_URL}/chat", json=payload, stream=True,
@@ -293,10 +305,11 @@ class Chat:
                 if not line or not line.startswith("data: "):
                     continue
                 ev = json.loads(line[6:])
-                if "conversation_id" in ev and "model" in ev:
-                    self.model = ev["model"]
                 if "conversation_id" in ev and not self.conversation_id:
                     self.conversation_id = ev["conversation_id"]
+                    # Seed tracking from the knob we sent; the backend echo
+                    # only fills in when the knob was empty.
+                    self.model = model or ev.get("model", "")
                     # Select it AND steer the panel there — selection alone
                     # is not broadcast, so an open panel would keep showing
                     # whatever conversation it had before.
@@ -355,6 +368,16 @@ def join_spoken(parts: list[str]) -> str:
     return out
 
 
+def _style_id(voice: str) -> int | None:
+    # Hand-edited settings must degrade to the default voice, not crash
+    # the turn sentence by sentence.
+    try:
+        return int(voice)
+    except ValueError:
+        log("tts", f"bad style id {voice!r}, using default voice")
+        return None
+
+
 def synth_voicevox(base_url: str, speaker: int, sentence: str, speed: float) -> bytes:
     q = requests.post(f"{base_url}/audio_query",
                       params={"text": sentence, "speaker": speaker},
@@ -389,17 +412,21 @@ def synthesize(sentence: str) -> bytes:
     engine, _, voice = str(vs.get("tts", "")).partition(":")
     if engine == "piper" and voice:
         return synth_piper(voice, sentence, speed)
-    if engine == "aivis" and voice:
-        return synth_voicevox(AIVIS_URL, int(voice), sentence, speed)
-    speaker = (int(voice) if engine == "voicevox" and voice
-               else int(vs.get("speaker", VOICEVOX_SPEAKER)))
-    return synth_voicevox(VOICEVOX_URL, speaker, sentence, speed)
+    sid = _style_id(voice) if voice else None
+    if engine == "aivis" and sid is not None:
+        return synth_voicevox(AIVIS_URL, sid, sentence, speed)
+    if engine != "voicevox" or sid is None:
+        sid = int(vs.get("speaker", VOICEVOX_SPEAKER))
+    return synth_voicevox(VOICEVOX_URL, sid, sentence, speed)
 
 
 def play_wav(data: bytes) -> None:
     with wave.open(io.BytesIO(data), "rb") as w:
         sr = w.getframerate()
+        channels = w.getnchannels()
         audio = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
+    if channels > 1:
+        audio = audio.reshape(-1, channels)
     x = audio.astype(np.float32) / 32768.0
     rms = float(np.sqrt(np.mean(x * x)))
     if rms > 1e-4:
@@ -577,6 +604,9 @@ class Daemon:
                     open_panel()
                 elif opens == "bar":
                     shell_ipc("panel", "open", "ai")
+            # Rotation must run before steering, or the panel would flash
+            # the stale conversation this turn is about to abandon.
+            self.chat.maybe_rotate()
             # Later turns already know the conversation; land the panel on
             # it before the transcript arrives (first turn: Chat._ask).
             if self.chat.conversation_id:

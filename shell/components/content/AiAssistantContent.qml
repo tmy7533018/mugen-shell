@@ -468,8 +468,11 @@ FocusScope {
                         onClicked: {
                             // main only — the broadcast default would signal
                             // the whisper-server child too, which dies on it.
+                            // On an empty chat, RTMIN+1 asks for a fresh
+                            // conversation (same gesture as the panel).
                             Quickshell.execDetached(["systemctl", "--user", "kill",
-                                "-s", root.voiceListening ? "SIGUSR2" : "SIGUSR1",
+                                "-s", root.voiceListening ? "SIGUSR2"
+                                    : (root.currentConvId === 0 ? "SIGRTMIN+1" : "SIGUSR1"),
                                 "--kill-whom=main", "yura-voice.service"])
                         }
                     }
