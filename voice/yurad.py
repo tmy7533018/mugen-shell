@@ -54,6 +54,10 @@ WAKE_THRESHOLD = float(os.environ.get("YURA_WAKE_THRESHOLD", "0.5"))
 # high-score plateau across several 80 ms frames; media speech grazing the
 # boundary (anime dialogue especially) tends to spike on a single frame.
 WAKE_PATIENCE = int(os.environ.get("YURA_WAKE_PATIENCE", "2"))
+# The wake model is confidently wrong on out-of-domain mechanical noise
+# (washing machines scored 0.7-0.9); a trigger only counts if the VAD saw
+# something speech-like in the last second.
+WAKE_VAD_GATE = float(os.environ.get("YURA_WAKE_VAD_GATE", "0.3"))
 YURA_SHELL_QML = os.path.expanduser(
     "~/.config/quickshell/mugen-shell/yura-shell.qml")
 # Live knobs (voice.enabled, voice.wakeOpens) come from the shell's
@@ -704,6 +708,7 @@ class Daemon:
             last_check = time.time()
             wake_streak = 0
             wake_ring: deque[np.ndarray] = deque(maxlen=int(2.5 / (CHUNK / SR)))
+            vad_recent: deque[float] = deque(maxlen=int(1.0 / (CHUNK / SR)))
             while self.running:
                 try:
                     frame = self.audio_q.get(timeout=1)
@@ -724,6 +729,7 @@ class Daemon:
                     continue
                 else:
                     wake_ring.append(frame)
+                    vad_recent.append(self.vad.prob(frame))
                     score = self.wake.predict(frame)[self.wake_name]
                     if score < WAKE_THRESHOLD:
                         wake_streak = 0
@@ -737,6 +743,10 @@ class Daemon:
                     if wake_streak < WAKE_PATIENCE:
                         continue
                     wake_streak = 0
+                    if max(vad_recent, default=0.0) < WAKE_VAD_GATE:
+                        log("wake", f"gated: score={score:.2f} vad={max(vad_recent, default=0.0):.2f}")
+                        dump_wake_audio(wake_ring, score)
+                        continue
                     log("wake", f"score={score:.2f}")
                     dump_wake_audio(wake_ring, score)
                 try:
