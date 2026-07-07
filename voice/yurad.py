@@ -58,6 +58,12 @@ WAKE_PATIENCE = int(os.environ.get("YURA_WAKE_PATIENCE", "2"))
 # (washing machines scored 0.7-0.9); a trigger only counts if the VAD saw
 # something speech-like in the last second.
 WAKE_VAD_GATE = float(os.environ.get("YURA_WAKE_VAD_GATE", "0.3"))
+# Speaker verifier: a per-user model that re-scores a wake as "was this the
+# owner's voice", the only defense against another *human* voice (a phone
+# video) saying the phrase. Trained from the user's own clips; dormant when
+# the path is unset, so the default install is unchanged.
+WAKE_VERIFIER = os.environ.get("YURA_VERIFIER", "")
+WAKE_VERIFIER_THRESHOLD = float(os.environ.get("YURA_VERIFIER_THRESHOLD", "0.4"))
 YURA_SHELL_QML = os.path.expanduser(
     "~/.config/quickshell/mugen-shell/yura-shell.qml")
 # Live knobs (voice.enabled, voice.wakeOpens) come from the shell's
@@ -523,15 +529,25 @@ def speak_guarded(text: str, on_sentence=None, should_stop=None) -> None:
 class Daemon:
     def __init__(self):
         self.audio_q: queue.Queue[np.ndarray] = queue.Queue(maxsize=64)
+        verifier_kw = {}
+        if WAKE_VERIFIER and os.path.exists(WAKE_VERIFIER):
+            # openWakeWord keys the verifier by the model name (a path's
+            # basename stem), not the wakeword path we loaded it from.
+            model_key = os.path.splitext(os.path.basename(WAKEWORD))[0]
+            verifier_kw = {
+                "custom_verifier_models": {model_key: WAKE_VERIFIER},
+                "custom_verifier_threshold": WAKE_VERIFIER_THRESHOLD,
+            }
+            log("verifier", f"speaker verifier on ({WAKE_VERIFIER})")
         try:
             self.wake = WakeModel(wakeword_models=[WAKEWORD],
-                                  inference_framework="onnx")
+                                  inference_framework="onnx", **verifier_kw)
         except Exception:
             # First run on a fresh machine: fetch the bundled models.
             import openwakeword.utils
             openwakeword.utils.download_models()
             self.wake = WakeModel(wakeword_models=[WAKEWORD],
-                                  inference_framework="onnx")
+                                  inference_framework="onnx", **verifier_kw)
         self.wake_name = list(self.wake.models.keys())[0]
         self.vad = SileroVAD()
         self.chat = Chat()
