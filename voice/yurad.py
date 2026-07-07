@@ -12,6 +12,7 @@ import io
 import json
 import os
 import queue
+from collections import deque
 import re
 import signal
 import subprocess
@@ -85,6 +86,10 @@ MAX_UTTERANCE_S = 15.0
 LISTEN_TIMEOUT_S = 6.0            # wake with no speech -> give up
 FOLLOWUP_TIMEOUT_S = 4.0          # post-reply window before returning to idle
 CONV_IDLE_ROTATE_S = float(os.environ.get("YURA_CONV_IDLE_ROTATE", "3600"))
+# Every wake-word trigger archives its preceding audio: false wakes become
+# retraining negatives, real ones positives. Ring-capped, ~80 KB per file.
+WAKE_DUMP_DIR = os.path.expanduser("~/.local/share/mugen-shell/wake-debug")
+WAKE_DUMP_KEEP = 100
 VAD_THRESHOLD = 0.35              # silero speech probability
 
 log_lock = threading.Lock()
@@ -486,6 +491,21 @@ def speak(text: str, on_sentence=None, should_stop=None) -> None:
                 break
 
 
+def dump_wake_audio(frames, score: float) -> None:
+    try:
+        os.makedirs(WAKE_DUMP_DIR, exist_ok=True)
+        name = time.strftime("%Y%m%d-%H%M%S") + f"-{score:.2f}.wav"
+        with wave.open(os.path.join(WAKE_DUMP_DIR, name), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(SR)
+            w.writeframes(np.concatenate(list(frames)).tobytes())
+        for old in sorted(os.listdir(WAKE_DUMP_DIR))[:-WAKE_DUMP_KEEP]:
+            os.remove(os.path.join(WAKE_DUMP_DIR, old))
+    except Exception as e:
+        log("dump", str(e))
+
+
 def speak_guarded(text: str, on_sentence=None, should_stop=None) -> None:
     # Every audible reply must raise yuraSpeaking (the bar holds auto-close
     # on it), including the error apology.
@@ -683,6 +703,7 @@ class Daemon:
             log("ready", "say the wake word")
             last_check = time.time()
             wake_streak = 0
+            wake_ring: deque[np.ndarray] = deque(maxlen=int(2.5 / (CHUNK / SR)))
             while self.running:
                 try:
                     frame = self.audio_q.get(timeout=1)
@@ -702,6 +723,7 @@ class Daemon:
                 elif frame is None:
                     continue
                 else:
+                    wake_ring.append(frame)
                     score = self.wake.predict(frame)[self.wake_name]
                     if score < WAKE_THRESHOLD:
                         wake_streak = 0
@@ -716,6 +738,7 @@ class Daemon:
                         continue
                     wake_streak = 0
                     log("wake", f"score={score:.2f}")
+                    dump_wake_audio(wake_ring, score)
                 try:
                     self._handle_turn(from_button)
                 except Exception as e:
