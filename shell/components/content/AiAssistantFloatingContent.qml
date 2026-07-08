@@ -6,6 +6,7 @@ import Quickshell.Io
 import "../../lib" as Theme
 import "../ui" as UI
 import "../common" as Common
+import "../managers" as Managers
 import "./ai" as Ai
 
 FocusScope {
@@ -19,6 +20,11 @@ FocusScope {
     property bool showInternalOrb: true
     // Daemon capture state (over IPC); the mic button becomes a cancel button.
     property bool voiceListening: false
+    onVoiceListeningChanged: voiceListening ? listenCava.start() : listenCava.stop()
+
+    // Private instance — the volume panel stops the shared one on its own
+    // schedule, which would kill our capture visuals mid-listen.
+    Managers.MicCavaManager { id: listenCava }
 
     // Emitted on any user interaction (typing, sending) so a host can treat
     // keyboard-only use as activity — the auto-collapse timer otherwise only
@@ -889,6 +895,24 @@ FocusScope {
                     && parent.preeditText.length === 0
                     && !parent.inputMethodComposing
             }
+        }
+
+        // While the daemon listens, the input row breathes with the mic.
+        Common.BarVisualizer {
+            anchors.right: micIcon.left
+            anchors.rightMargin: modeManager.scale(8)
+            anchors.verticalCenter: parent.verticalCenter
+            visible: root.voiceListening
+            cavaManager: listenCava
+            barCount: 8
+            barIndices: [14, 10, 6, 2, 3, 7, 11, 15]
+            maxHeightMultipliers: [0.5, 0.7, 0.9, 1.0, 1.0, 0.9, 0.7, 0.5]
+            barWidth: modeManager.scale(2.5)
+            barSpacing: modeManager.scale(2.5)
+            minBarHeight: modeManager.scale(4)
+            maxBarHeight: modeManager.scale(20)
+            barColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
+            baseColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
         }
 
         // Push-to-talk: pokes the voice daemon (SIGUSR1) so it starts

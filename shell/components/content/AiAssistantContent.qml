@@ -7,6 +7,7 @@ import Quickshell.Io
 import "../../lib" as Theme
 import "../ui" as UI
 import "../common" as Common
+import "../managers" as Managers
 import "./ai" as Ai
 
 FocusScope {
@@ -20,6 +21,11 @@ FocusScope {
     property bool isStandalone: false
     // Daemon capture state (over IPC); the mic button becomes a cancel button.
     property bool voiceListening: false
+    onVoiceListeningChanged: voiceListening ? listenCava.start() : listenCava.stop()
+
+    // Private instance: the volume panel owns the shared one and stops it
+    // on its own schedule, which would kill our capture visuals mid-listen.
+    Managers.MicCavaManager { id: listenCava }
 
     // Fallback used when no AiBackend is wired (e.g. legacy embedding paths).
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://127.0.0.1:11435"
@@ -415,6 +421,26 @@ FocusScope {
                             }
                         }
                     }
+                }
+
+                // While the daemon listens, the pill breathes with the mic:
+                // same visualizer the music widgets use, fed by a private
+                // mic-mode cava that only runs during capture.
+                Common.BarVisualizer {
+                    anchors.right: micIcon.left
+                    anchors.rightMargin: modeManager.scale(8)
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: root.voiceListening
+                    cavaManager: listenCava
+                    barCount: 8
+                    barIndices: [14, 10, 6, 2, 3, 7, 11, 15]
+                    maxHeightMultipliers: [0.5, 0.7, 0.9, 1.0, 1.0, 0.9, 0.7, 0.5]
+                    barWidth: modeManager.scale(2.5)
+                    barSpacing: modeManager.scale(2.5)
+                    minBarHeight: modeManager.scale(4)
+                    maxBarHeight: modeManager.scale(18)
+                    barColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
+                    baseColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
                 }
 
                 // Same push-to-talk / cancel control as the float panel.
