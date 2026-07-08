@@ -69,7 +69,7 @@ Rectangle {
         id: listProcess
         running: false
         property string buf: ""
-        command: ["curl", "-sS", "--max-time", "3", aiBackend.baseUrl + "/memories"]
+        command: ["curl", "-fsS", "--max-time", "3", aiBackend.baseUrl + "/memories"]
         stdout: SplitParser { onRead: data => listProcess.buf += data }
         onRunningChanged: { if (running) buf = "" }
         onExited: (exitCode) => {
@@ -89,7 +89,7 @@ Rectangle {
         id: deleteProcess
         running: false
         property int memoryId: 0
-        command: ["curl", "-sS", "--max-time", "3",
+        command: ["curl", "-fsS", "--max-time", "3",
                   "-X", "DELETE", aiBackend.baseUrl + "/memories/" + memoryId]
         onExited: (exitCode) => {
             section.statusText = exitCode === 0 ? "" : "delete failed"
@@ -100,7 +100,7 @@ Rectangle {
     Process {
         id: clearProcess
         running: false
-        command: ["curl", "-sS", "--max-time", "3",
+        command: ["curl", "-fsS", "--max-time", "3",
                   "-X", "DELETE", aiBackend.baseUrl + "/memories"]
         onExited: (exitCode) => {
             section.statusText = exitCode === 0 ? "" : "clear failed"

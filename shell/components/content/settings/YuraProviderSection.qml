@@ -47,7 +47,7 @@ Rectangle {
         id: loadProcess
         running: false
         property string buf: ""
-        command: ["curl", "-sS", "--max-time", "3", aiBackend.baseUrl + "/config"]
+        command: ["curl", "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
         stdout: SplitParser { onRead: data => loadProcess.buf += data }
         onRunningChanged: { if (running) buf = "" }
         onExited: (exitCode) => {
