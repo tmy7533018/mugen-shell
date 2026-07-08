@@ -356,7 +356,8 @@ class Chat:
 
     def _ask(self, text: str, model: str = "") -> str:
         parts: list[str] = []
-        payload = {"message": text, "conversation_id": self.conversation_id}
+        payload = {"message": text, "conversation_id": self.conversation_id,
+                   "voice": True}
         # Voice mirrors into the bar pill, so it follows the bar's model
         # knob (Settings → AI / Yura → Bar Yura model); empty falls back
         # to the backend default, exactly like the bar row does.

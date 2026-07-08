@@ -72,11 +72,21 @@ FocusScope {
     }
     readonly property bool isThinking: streaming && responseDisplay.length === 0
 
+    // Mirror of yurad's clean_for_speech: the one-line pill can't render
+    // markdown, so show replies as plain prose.
+    function mdFlat(t) {
+        return t.replace(/```[\s\S]*?```/g, " ")
+                .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+                .replace(/[`*_#>]/g, "")
+                .replace(/\s*\n+\s*/g, " ")
+                .replace(/[ \t]+/g, " ")
+    }
+
     readonly property string activePlaceholder: {
         if (isThinking) return "thinking"
         if (responseDisplay.length > 0) {
             // Single-line bar: collapse newlines.
-            return responseDisplay.replace(/\s*\n+\s*/g, " ")
+            return mdFlat(responseDisplay)
         }
         return idlePlaceholder
     }
@@ -141,7 +151,7 @@ FocusScope {
 
     function showVoiceReply(text) {
         responseDisplay = text
-        inputField.text = responseDisplay.replace(/\s*\n+\s*/g, " ")
+        inputField.text = mdFlat(responseDisplay)
         inputField.cursorPosition = 0
         displayingResponse = true
     }
@@ -761,7 +771,7 @@ FocusScope {
             }
             // Park the response in the input field so it can be scrolled / copied.
             if (root.responseDisplay.length > 0) {
-                inputField.text = root.responseDisplay.replace(/\s*\n+\s*/g, " ")
+                inputField.text = root.mdFlat(root.responseDisplay)
                 inputField.cursorPosition = 0
                 root.displayingResponse = true
                 inputField.forceActiveFocus()

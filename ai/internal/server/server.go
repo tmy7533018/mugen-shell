@@ -140,7 +140,12 @@ type chatRequest struct {
 	// conversations it sets the bound value; for existing ones it updates
 	// the bound value (per-conversation toggle from the UI).
 	Thinking *bool `json:"thinking,omitempty"`
+	// Voice turns are heard, not read; a transient style hint keeps the
+	// reply speakable. Set by yurad, never persisted.
+	Voice bool `json:"voice,omitempty"`
 }
+
+const voiceStyleHint = "This is a voice conversation. Answer in short spoken-style sentences: no markdown, no bullet or numbered lists, no headings, no code blocks, no emoji."
 
 // beginChatTurn resolves the conversation, model, and thinking flag and
 // appends the user message under chatSetupMu, then snapshots the message list.
@@ -246,6 +251,15 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			msgs = append(msgs[:len(msgs)-1:len(msgs)-1],
 				provider.Message{Role: "system", Content: blk}, userMsg)
 		}
+	}
+
+	// Same transient-rider trick as the desktop snapshot: the hint sits
+	// before the newest user message and is never persisted, so typed
+	// follow-ups in the panel get normal markdown again.
+	if req.Voice && len(msgs) > 0 {
+		userMsg := msgs[len(msgs)-1]
+		msgs = append(msgs[:len(msgs)-1:len(msgs)-1],
+			provider.Message{Role: "system", Content: voiceStyleHint}, userMsg)
 	}
 
 	// Tool calls / results stay in-memory only — history persists just the
