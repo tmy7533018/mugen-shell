@@ -27,11 +27,14 @@ def main():
     print(f"positives={npos} negatives={nneg}")
     if npos < 5 or nneg < 5:
         sys.exit("need >=5 clips each; record more / copy more negatives")
+    # Upstream iterates the argument directly, so a directory string would
+    # be walked character by character — pass explicit file lists.
     train_custom_verifier(
-        positive_reference_clips=POS,
-        negative_reference_clips=NEG,
+        positive_reference_clips=sorted(glob.glob(os.path.join(POS, "*.wav"))),
+        negative_reference_clips=sorted(glob.glob(os.path.join(NEG, "*.wav"))),
         output_path=OUT,
         model_name=MODEL,
+        inference_framework="onnx",
     )
     print(f"wrote {OUT}\nSet in yura-voice.service:\n"
           f"  Environment=YURA_VERIFIER={OUT}")

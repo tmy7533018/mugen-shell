@@ -1,7 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Quickshell.Io
 import "../../common" as Common
+import "../../managers" as Managers
 import "../../../lib" as Theme
 
 Rectangle {
@@ -20,6 +22,65 @@ Rectangle {
 
     readonly property var wakeOpenOptions: ["panel", "bar", "none"]
     readonly property var speedOptions: [0.9, 1.0, 1.1, 1.2]
+
+    // Voice enrollment: the daemon owns the flow (SIGRTMIN+2); the pkl file
+    // is the source of truth for "enrolled?" across the process boundary.
+    property bool enrolled: false
+    property bool enrolling: false
+
+    Managers.MicCavaManager { id: enrollCava }
+
+    Process {
+        id: enrollCheck
+        command: ["bash", "-c",
+            "test -f \"$HOME/.local/share/mugen-shell/verifier/hey_yura_verifier.pkl\" && echo yes || echo no"]
+        stdout: SplitParser { onRead: d => { section.enrolled = d.trim() === "yes" } }
+    }
+
+    Process {
+        id: enrollStart
+        command: ["systemctl", "--user", "kill", "-s", "SIGRTMIN+2",
+                  "--kill-whom=main", "yura-voice.service"]
+    }
+
+    Process {
+        id: enrollCancel
+        command: ["systemctl", "--user", "kill", "-s", "SIGUSR2",
+                  "--kill-whom=main", "yura-voice.service"]
+    }
+
+    // Training lands the pkl a while after the last clip; poll so the row
+    // flips to "enrolled" on its own, then release the mic visualizer.
+    Timer {
+        id: enrollPoll
+        interval: 2000
+        repeat: true
+        running: section.enrolling
+        onTriggered: {
+            enrollCheck.running = true
+            if (section.enrolled) section.stopEnroll()
+        }
+    }
+
+    // Enrollment runs minutes at most; never leave the mic tapped forever.
+    Timer {
+        id: enrollTimeout
+        interval: 4 * 60 * 1000
+        running: section.enrolling
+        onTriggered: section.stopEnroll()
+    }
+
+    function startEnroll() {
+        section.enrolling = true
+        enrollCava.start()
+        enrollStart.running = true
+    }
+
+    function stopEnroll() {
+        section.enrolling = false
+        enrollCava.stop()
+        enrollCheck.running = true
+    }
 
     // One list, two engines: the picked value carries the engine prefix
     // ("voicevox:<style-id>" | "piper:<voice>"), matching voice.tts.
@@ -149,6 +210,7 @@ Rectangle {
         speakersProc.running = true
         aivisProc.running = true
         piperProc.running = true
+        enrollCheck.running = true
     }
 
     function bump() {
@@ -270,6 +332,51 @@ Rectangle {
                     if (!section.settingsManager) return
                     section.settingsManager.voiceFollowUp = checked
                     section.save()
+                }
+            }
+        }
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                RowLabel {
+                    title: "Voice enrollment"
+                    desc: section.enrolling
+                        ? "Say “Hey Yura” after each beep…"
+                        : (section.enrolled
+                            ? "Registered — Yura answers only to your voice"
+                            : "Teach Yura your voice so others can’t wake it")
+                }
+
+                Common.BarVisualizer {
+                    visible: section.enrolling
+                    Layout.alignment: Qt.AlignVCenter
+                    cavaManager: enrollCava
+                    barCount: 12
+                    barIndices: [15, 12, 9, 6, 3, 0, 1, 4, 7, 10, 13, 14]
+                    maxHeightMultipliers: [0.5, 0.65, 0.8, 0.9, 1.0, 1.0, 1.0, 1.0, 0.9, 0.8, 0.65, 0.5]
+                    barColor: section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
+                    baseColor: section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
+                }
+
+                Chip {
+                    label: section.enrolling
+                        ? "Cancel"
+                        : (section.enrolled ? "Re-register" : "Register my voice")
+                    selected: section.enrolling
+                    onClicked: {
+                        if (section.enrolling) {
+                            enrollCancel.running = true
+                            section.stopEnroll()
+                        } else {
+                            section.startEnroll()
+                        }
+                    }
                 }
             }
         }

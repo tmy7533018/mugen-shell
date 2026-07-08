@@ -8,10 +8,12 @@ Run from a terminal inside the graphical session so `qs ipc` reaches the
 shell. All knobs are env vars; see CONFIG below.
 """
 
+import glob
 import io
 import json
 import os
 import queue
+import random
 from collections import deque
 import re
 import signal
@@ -60,10 +62,13 @@ WAKE_PATIENCE = int(os.environ.get("YURA_WAKE_PATIENCE", "2"))
 WAKE_VAD_GATE = float(os.environ.get("YURA_WAKE_VAD_GATE", "0.3"))
 # Speaker verifier: a per-user model that re-scores a wake as "was this the
 # owner's voice", the only defense against another *human* voice (a phone
-# video) saying the phrase. Trained from the user's own clips; dormant when
-# the path is unset, so the default install is unchanged.
-WAKE_VERIFIER = os.environ.get("YURA_VERIFIER", "")
+# video) saying the phrase. Enrollment (SIGRTMIN+2, or the Settings button)
+# trains it in place; dormant until the file exists.
+VERIFIER_DIR = os.path.expanduser("~/.local/share/mugen-shell/verifier")
+WAKE_VERIFIER = os.path.expanduser(os.environ.get(
+    "YURA_VERIFIER", os.path.join(VERIFIER_DIR, "hey_yura_verifier.pkl")))
 WAKE_VERIFIER_THRESHOLD = float(os.environ.get("YURA_VERIFIER_THRESHOLD", "0.4"))
+ENROLL_CLIPS = int(os.environ.get("YURA_ENROLL_CLIPS", "10"))
 YURA_SHELL_QML = os.path.expanduser(
     "~/.config/quickshell/mugen-shell/yura-shell.qml")
 # Live knobs (voice.enabled, voice.wakeOpens) come from the shell's
@@ -87,6 +92,50 @@ def _settings() -> dict:
 
 def voice_settings() -> dict:
     return _settings().get("voice", {})
+
+
+# Canned lines yurad speaks itself (the LLM replies already follow the
+# personality). Keyed by personality.language, hinted by voice.sttLang,
+# anything else falls back to English.
+MESSAGES = {
+    "ja": {
+        "error": "ごめんね、エラーで返事できなかった。",
+        "enroll_start": "声の登録を始めるよ。ピコンって鳴ったら、ヘイユラ、って言ってね。全部で{n}回だよ。",
+        "enroll_more": "いいね、あと{n}回。",
+        "enroll_retry": "うまく録れなかった。もう一回お願い。",
+        "enroll_done": "登録完了。これからは君の声だけ聞くね。",
+        "enroll_fail": "ごめん、登録に失敗しちゃった。",
+    },
+    "en": {
+        "error": "Sorry, something went wrong and I couldn't reply.",
+        "enroll_start": "Let's register your voice. After each beep, say: Hey Yura. {n} times in total.",
+        "enroll_more": "Nice, {n} to go.",
+        "enroll_retry": "That one didn't come through. One more time, please.",
+        "enroll_done": "All set. From now on I'll only answer to your voice.",
+        "enroll_fail": "Sorry, the enrollment failed.",
+    },
+}
+
+_lang_cache: tuple[float, str] = (0.0, "")
+
+
+def speech_lang() -> str:
+    global _lang_cache
+    now = time.time()
+    if now - _lang_cache[0] > 60:
+        lang = ""
+        try:
+            r = requests.get(f"{AI_URL}/config", timeout=3)
+            lang = str(r.json().get("personality", {}).get("language") or "")
+        except requests.RequestException:
+            pass
+        _lang_cache = (now, lang.strip().lower()[:2])
+    lang = _lang_cache[1] or str(voice_settings().get("sttLang", STT_LANG)).lower()[:2]
+    return lang if lang in MESSAGES else "en"
+
+
+def msg(key: str, **kw) -> str:
+    return MESSAGES[speech_lang()][key].format(**kw)
 
 SR = 16000
 CHUNK = 1280                      # 80 ms, what openWakeWord expects
@@ -529,8 +578,23 @@ def speak_guarded(text: str, on_sentence=None, should_stop=None) -> None:
 class Daemon:
     def __init__(self):
         self.audio_q: queue.Queue[np.ndarray] = queue.Queue(maxsize=64)
+        self._build_wake()
+        self.vad = SileroVAD()
+        self.chat = Chat()
+        self.running = True
+        # SIGUSR1 (the panel's mic button) starts a turn without a wake word;
+        # SIGUSR2 cancels the capture (or stops speech at a sentence break).
+        # SIGRTMIN+1 is the mic button on an empty chat: same as SIGUSR1 but
+        # into a fresh conversation instead of the running voice thread.
+        # SIGRTMIN+2 starts voice enrollment (Settings button).
+        self.trigger = threading.Event()
+        self.trigger_fresh = threading.Event()
+        self.enroll = threading.Event()
+        self.cancel = threading.Event()
+
+    def _build_wake(self) -> None:
         verifier_kw = {}
-        if WAKE_VERIFIER and os.path.exists(WAKE_VERIFIER):
+        if os.path.exists(WAKE_VERIFIER):
             # openWakeWord keys the verifier by the model name (a path's
             # basename stem), not the wakeword path we loaded it from.
             model_key = os.path.splitext(os.path.basename(WAKEWORD))[0]
@@ -549,16 +613,6 @@ class Daemon:
             self.wake = WakeModel(wakeword_models=[WAKEWORD],
                                   inference_framework="onnx", **verifier_kw)
         self.wake_name = list(self.wake.models.keys())[0]
-        self.vad = SileroVAD()
-        self.chat = Chat()
-        self.running = True
-        # SIGUSR1 (the panel's mic button) starts a turn without a wake word;
-        # SIGUSR2 cancels the capture (or stops speech at a sentence break).
-        # SIGRTMIN+1 is the mic button on an empty chat: same as SIGUSR1 but
-        # into a fresh conversation instead of the running voice thread.
-        self.trigger = threading.Event()
-        self.trigger_fresh = threading.Event()
-        self.cancel = threading.Event()
 
     def _on_audio(self, indata, frames, t, status):
         if status:
@@ -614,6 +668,110 @@ class Daemon:
             if time.time() - started > MAX_UTTERANCE_S:
                 break
         return frames
+
+    def _synth_negatives(self, neg_dir: str, want: int = 15) -> None:
+        """Other voices saying the phrase are ideal verifier negatives, and
+        the local TTS engines can produce as many as needed on demand."""
+        have = len([f for f in os.listdir(neg_dir) if f.endswith(".wav")])
+        if have >= want:
+            return
+        styles: list[int] = []
+        base = ""
+        for url in (AIVIS_URL, VOICEVOX_URL):
+            try:
+                r = requests.get(f"{url}/speakers", timeout=3)
+                styles = [st["id"] for sp in r.json() for st in sp["styles"]]
+                base = url
+                break
+            except requests.RequestException:
+                continue
+        if not base:
+            log("enroll", "no TTS engine up; using existing negatives only")
+            return
+        random.Random(0).shuffle(styles)
+        texts = ["ヘイユラ", "ヘイ、ユラ"]
+        made = 0
+        for sid in styles:
+            if have + made >= want:
+                break
+            try:
+                q = requests.post(f"{base}/audio_query",
+                                  params={"text": texts[made % len(texts)],
+                                          "speaker": sid}, timeout=10).json()
+                q["outputSamplingRate"] = SR
+                q["outputStereo"] = False
+                r = requests.post(f"{base}/synthesis", params={"speaker": sid},
+                                  json=q, timeout=30)
+                r.raise_for_status()
+                with open(os.path.join(neg_dir, f"synth_{sid}.wav"), "wb") as f:
+                    f.write(r.content)
+                made += 1
+            except requests.RequestException as e:
+                log("enroll", f"negative synth {sid}: {e}")
+        log("enroll", f"negatives ready: {have}+{made}")
+
+    def _run_enrollment(self) -> None:
+        """Google-style voice registration, guided by Yura's own voice."""
+        self.cancel.clear()
+        pos_dir = os.path.join(VERIFIER_DIR, "positive")
+        neg_dir = os.path.join(VERIFIER_DIR, "negative")
+        os.makedirs(pos_dir, exist_ok=True)
+        os.makedirs(neg_dir, exist_ok=True)
+        log("enroll", f"starting ({ENROLL_CLIPS} clips)")
+        try:
+            speak_guarded(msg("enroll_start", n=ENROLL_CLIPS),
+                          should_stop=self.cancel.is_set)
+            got = 0
+            misses = 0
+            stamp = time.strftime("%Y%m%d-%H%M%S")
+            while got < ENROLL_CLIPS and self.running:
+                if self.cancel.is_set() or misses >= 3:
+                    log("enroll", "aborted")
+                    beep(330, 0.3)
+                    return
+                beep(880)
+                set_listening(True)
+                try:
+                    self._drain()
+                    frames = self._capture_utterance(timeout=8.0)
+                finally:
+                    set_listening(False)
+                if not frames or sum(f.size for f in frames) / SR < 0.4:
+                    misses += 1
+                    if not self.cancel.is_set():
+                        speak_guarded(msg("enroll_retry"),
+                                      should_stop=self.cancel.is_set)
+                    continue
+                misses = 0
+                got += 1
+                with open(os.path.join(pos_dir, f"{stamp}_{got:02d}.wav"), "wb") as f:
+                    f.write(frames_to_wav(frames))
+                log("enroll", f"clip {got}/{ENROLL_CLIPS}")
+                if got < ENROLL_CLIPS and got % 3 == 0:
+                    speak_guarded(msg("enroll_more", n=ENROLL_CLIPS - got),
+                                  should_stop=self.cancel.is_set)
+            if got < ENROLL_CLIPS:
+                return
+            self._synth_negatives(neg_dir)
+            log("enroll", "training verifier")
+            from openwakeword.custom_verifier_model import train_custom_verifier
+            # Upstream iterates these directly, so pass file lists even
+            # though its docstring asks for directories.
+            train_custom_verifier(
+                positive_reference_clips=sorted(glob.glob(os.path.join(pos_dir, "*.wav"))),
+                negative_reference_clips=sorted(glob.glob(os.path.join(neg_dir, "*.wav"))),
+                output_path=WAKE_VERIFIER,
+                model_name=WAKEWORD,
+                inference_framework="onnx")
+            self._build_wake()
+            log("enroll", f"done, verifier at {WAKE_VERIFIER}")
+            speak_guarded(msg("enroll_done"))
+        except Exception as e:
+            log("enroll", f"failed: {e}")
+            try:
+                speak_guarded(msg("enroll_fail"))
+            except Exception:
+                pass
 
     def _handle_turn(self, from_button: bool = False) -> None:
         self.cancel.clear()
@@ -730,6 +888,12 @@ class Daemon:
                     frame = self.audio_q.get(timeout=1)
                 except queue.Empty:
                     frame = None
+                if self.enroll.is_set():
+                    self.enroll.clear()
+                    self._run_enrollment()
+                    self.wake.reset()
+                    self._drain()
+                    continue
                 from_button = False
                 if self.trigger_fresh.is_set():
                     self.trigger_fresh.clear()
@@ -771,7 +935,7 @@ class Daemon:
                     log("error", str(e))
                     beep(330, 0.3)
                     try:
-                        speak_guarded("ごめんね、エラーで返事できなかった。")
+                        speak_guarded(msg("error"))
                     except Exception:
                         pass
                 self.wake.reset()
@@ -792,6 +956,7 @@ def main() -> None:
     signal.signal(signal.SIGUSR1, lambda *_: daemon.trigger.set())
     signal.signal(signal.SIGUSR2, lambda *_: daemon.cancel.set())
     signal.signal(signal.SIGRTMIN + 1, lambda *_: daemon.trigger_fresh.set())
+    signal.signal(signal.SIGRTMIN + 2, lambda *_: daemon.enroll.set())
     daemon.run()
 
 
