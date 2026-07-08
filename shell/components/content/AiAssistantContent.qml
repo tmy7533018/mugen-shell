@@ -281,7 +281,7 @@ FocusScope {
                     anchors.left: parent.left
                     // Invisible items keep their geometry, so skip the mic
                     // slot when voice input is switched off.
-                    anchors.right: micIcon.visible ? micIcon.left : sendIcon.left
+                    anchors.right: micIcon.visible ? listenViz.left : sendIcon.left
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.leftMargin: modeManager.scale(20)
                     anchors.rightMargin: modeManager.scale(8)
@@ -424,23 +424,32 @@ FocusScope {
                 }
 
                 // While the daemon listens, the pill breathes with the mic:
-                // same visualizer the music widgets use, fed by a private
-                // mic-mode cava that only runs during capture.
-                Common.BarVisualizer {
+                // an animating slot so the input text yields the space
+                // smoothly instead of being painted over.
+                Item {
+                    id: listenViz
                     anchors.right: micIcon.left
-                    anchors.rightMargin: modeManager.scale(8)
+                    anchors.rightMargin: root.voiceListening ? modeManager.scale(4) : 0
                     anchors.verticalCenter: parent.verticalCenter
-                    visible: root.voiceListening
-                    cavaManager: listenCava
-                    barCount: 8
-                    barIndices: [14, 10, 6, 2, 3, 7, 11, 15]
-                    maxHeightMultipliers: [0.5, 0.7, 0.9, 1.0, 1.0, 0.9, 0.7, 0.5]
-                    barWidth: modeManager.scale(2.5)
-                    barSpacing: modeManager.scale(2.5)
-                    minBarHeight: modeManager.scale(4)
-                    maxBarHeight: modeManager.scale(18)
-                    barColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
-                    baseColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
+                    width: root.voiceListening ? modeManager.scale(44) : 0
+                    height: parent.height
+                    clip: true
+
+                    Behavior on width { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
+
+                    Common.BarVisualizer {
+                        anchors.centerIn: parent
+                        cavaManager: listenCava
+                        barCount: 8
+                        barIndices: [14, 10, 6, 2, 3, 7, 11, 15]
+                        maxHeightMultipliers: [0.5, 0.7, 0.9, 1.0, 1.0, 0.9, 0.7, 0.5]
+                        barWidth: modeManager.scale(2.5)
+                        barSpacing: modeManager.scale(2.5)
+                        minBarHeight: modeManager.scale(4)
+                        maxBarHeight: modeManager.scale(18)
+                        barColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
+                        baseColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
+                    }
                 }
 
                 // Same push-to-talk / cancel control as the float panel.
