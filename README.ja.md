@@ -123,6 +123,14 @@ Yura からのツール呼び出しは `qs ipc call` を経由します。既存
 
 ---
 
+## クレジット
+
+mugen-shell は [Hyprland](https://hyprland.org/) と [Quickshell](https://quickshell.outfoxxed.me/) をはじめ多くのプロジェクトの上に成り立っています — 全リストは [SETUP.ja.md → クレジット](SETUP.ja.md#クレジット) へ。
+
+同梱の「Hey Yura」ウェイクワードモデル (`voice/models/hey_yura.onnx`) は、[VOICEVOX](https://voicevox.hiroshiba.jp/) で合成した日本語音声で学習したカスタム [openWakeWord](https://github.com/dscripka/openWakeWord) モデルです。
+
+---
+
 ## ライセンス
 
 MIT License

@@ -574,3 +574,9 @@ sudo grub-mkconfig -o /boot/grub/grub.cfg
 - [playerctl](https://github.com/altdesktop/playerctl) — Media player control
 - [grim](https://sr.ht/~emersion/grim/) / [slurp](https://github.com/emersion/slurp) — Screenshot tools
 - [cliphist](https://github.com/sentriz/cliphist) — Clipboard history
+- [openWakeWord](https://github.com/dscripka/openWakeWord) — Wake word detection
+- [Silero VAD](https://github.com/snakers4/silero-vad) — Voice activity detection
+- [whisper.cpp](https://github.com/ggml-org/whisper.cpp) — Speech-to-text
+- [VOICEVOX](https://voicevox.hiroshiba.jp/) — TTS engine; also the source of the synthesized Japanese speech used to train the bundled `hey_yura.onnx` wake word model
+- [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine) — VOICEVOX-compatible TTS with Style-Bert-VITS2 voices, models from [AivisHub](https://hub.aivis-project.com/)
+- [Piper](https://github.com/rhasspy/piper) — TTS for non-Japanese voices

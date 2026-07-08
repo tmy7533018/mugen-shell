@@ -575,3 +575,9 @@ sudo grub-mkconfig -o /boot/grub/grub.cfg
 - [playerctl](https://github.com/altdesktop/playerctl) — メディアプレイヤー制御
 - [grim](https://sr.ht/~emersion/grim/) / [slurp](https://github.com/emersion/slurp) — スクリーンショットツール
 - [cliphist](https://github.com/sentriz/cliphist) — クリップボード履歴
+- [openWakeWord](https://github.com/dscripka/openWakeWord) — ウェイクワード検出
+- [Silero VAD](https://github.com/snakers4/silero-vad) — 音声区間検出
+- [whisper.cpp](https://github.com/ggml-org/whisper.cpp) — 音声認識
+- [VOICEVOX](https://voicevox.hiroshiba.jp/) — TTS エンジン。同梱の `hey_yura.onnx` ウェイクワードモデルの学習に使った合成音声の生成元でもあります
+- [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine) — VOICEVOX 互換の Style-Bert-VITS2 系 TTS。モデルは [AivisHub](https://hub.aivis-project.com/) から
+- [Piper](https://github.com/rhasspy/piper) — 日本語以外の声向け TTS

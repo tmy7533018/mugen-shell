@@ -123,6 +123,14 @@ After installation (see [SETUP.md](SETUP.md)), the bar starts automatically with
 
 ---
 
+## Credits
+
+mugen-shell stands on [Hyprland](https://hyprland.org/), [Quickshell](https://quickshell.outfoxxed.me/), and many other projects — the full list is in [SETUP.md → Credits](SETUP.md#credits).
+
+The bundled "Hey Yura" wake word model (`voice/models/hey_yura.onnx`) is a custom [openWakeWord](https://github.com/dscripka/openWakeWord) model trained on Japanese speech synthesized with [VOICEVOX](https://voicevox.hiroshiba.jp/).
+
+---
+
 ## License
 
 MIT License
