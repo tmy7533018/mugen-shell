@@ -42,5 +42,7 @@ ShellRoot {
         function show_conversation(id: int) { chatPanel.showConversation(id) }
         // Voice daemon capture state; flips the mic button into a cancel button.
         function set_listening(on: bool) { chatPanel.setVoiceListening(on) }
+        // TTS playback state; the same button becomes a stop control.
+        function set_speaking(on: bool) { chatPanel.setVoiceSpeaking(on) }
     }
 }

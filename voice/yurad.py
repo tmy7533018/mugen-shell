@@ -197,8 +197,11 @@ def set_listening(on: bool) -> None:
 
 
 def set_speaking(on: bool) -> None:
-    # The bar holds its auto-close while the spoken reply is playing.
-    shell_ipc("yura", "set_speaking", "true" if on else "false")
+    # The bar holds its auto-close while the spoken reply is playing, and
+    # both mic buttons flip into a stop control.
+    flag = "true" if on else "false"
+    shell_ipc("yura", "set_speaking", flag)
+    yura_ipc("set_speaking", flag)
 
 
 def yura_ipc(*args: str) -> None:

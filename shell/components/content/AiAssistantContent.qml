@@ -21,6 +21,9 @@ FocusScope {
     property bool isStandalone: false
     // Daemon capture state (over IPC); the mic button becomes a cancel button.
     property bool voiceListening: false
+    property bool voiceSpeaking: false
+    // Cancel is meaningful during capture AND while the reply plays.
+    readonly property bool voiceActive: voiceListening || voiceSpeaking
     onVoiceListeningChanged: voiceListening ? listenCava.start() : listenCava.stop()
 
     // Private instance: the volume panel owns the shared one and stops it
@@ -461,14 +464,14 @@ FocusScope {
                     width: modeManager.scale(28)
                     height: modeManager.scale(28)
                     visible: !root.settingsManager || root.settingsManager.voiceEnabled
-                    opacity: (root.voiceListening || micHover.hovered) ? 1.0 : 0.5
+                    opacity: (root.voiceActive || micHover.hovered) ? 1.0 : 0.5
 
                     Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
 
                     Rectangle {
                         anchors.fill: parent
                         radius: width / 2
-                        color: (root.voiceListening || micHover.hovered)
+                        color: (root.voiceActive || micHover.hovered)
                             ? (root.theme ? Qt.rgba(root.theme.glowSecondary.r, root.theme.glowSecondary.g, root.theme.glowSecondary.b, 0.32) : Qt.rgba(0.55, 0.75, 0.85, 0.32))
                             : "transparent"
 
@@ -481,7 +484,7 @@ FocusScope {
                         height: modeManager.scale(15)
                         source: root.icons ? root.icons.micSvg : ""
                         color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
-                        visible: !root.voiceListening
+                        visible: !root.voiceActive
                     }
 
                     Text {
@@ -490,7 +493,7 @@ FocusScope {
                         color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
                         font.pixelSize: modeManager.scale(12)
                         font.family: "M PLUS 2"
-                        visible: root.voiceListening
+                        visible: root.voiceActive
                     }
 
                     HoverHandler {
@@ -506,7 +509,7 @@ FocusScope {
                             // On an empty chat, RTMIN+1 asks for a fresh
                             // conversation (same gesture as the panel).
                             Quickshell.execDetached(["systemctl", "--user", "kill",
-                                "-s", root.voiceListening ? "SIGUSR2"
+                                "-s", root.voiceActive ? "SIGUSR2"
                                     : (root.currentConvId === 0 ? "SIGRTMIN+1" : "SIGUSR1"),
                                 "--kill-whom=main", "yura-voice.service"])
                         }

@@ -621,6 +621,7 @@ PanelWindow {
             settingsManager: aiAssistantLoader.settingsManagerRef
             aiBackend: aiAssistantLoader.aiBackendRef
             voiceListening: barWindow.yuraListening
+            voiceSpeaking: barWindow.yuraSpeaking
         }
     }
 
