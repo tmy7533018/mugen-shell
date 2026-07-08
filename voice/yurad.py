@@ -488,7 +488,7 @@ def synthesize(sentence: str) -> bytes:
     return synth_voicevox(VOICEVOX_URL, sid, sentence, speed)
 
 
-def play_wav(data: bytes) -> None:
+def play_wav(data: bytes, should_stop=None) -> None:
     with wave.open(io.BytesIO(data), "rb") as w:
         sr = w.getframerate()
         channels = w.getnchannels()
@@ -503,7 +503,17 @@ def play_wav(data: bytes) -> None:
         gain = min(10 ** (TTS_TARGET_DBFS / 20) / rms, 3.0)
         audio = (np.clip(x * gain, -1.0, 1.0) * 32767).astype(np.int16)
     sd.play(audio, sr)
-    sd.wait()
+    if should_stop is None:
+        sd.wait()
+        return
+    # Poll while the sentence plays so a cancel (SIGUSR2 / the ✕ button) cuts
+    # it off immediately instead of only at the next sentence boundary.
+    stream = sd.get_stream()
+    while stream.active:
+        if should_stop():
+            sd.stop()
+            break
+        time.sleep(0.03)
 
 
 def speak(text: str, on_sentence=None, should_stop=None) -> None:
@@ -544,7 +554,7 @@ def speak(text: str, on_sentence=None, should_stop=None) -> None:
             sentence, wav = item
             if on_sentence:
                 on_sentence(sentence)
-            play_wav(wav)
+            play_wav(wav, should_stop=should_stop)
     finally:
         done.set()
         while not q.empty():
