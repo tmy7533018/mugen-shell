@@ -2,6 +2,7 @@ import QtQuick
 import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import "../../lib" as Theme
 import "../content" as Content
 import "../content/ai" as Ai

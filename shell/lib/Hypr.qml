@@ -13,10 +13,11 @@ import Quickshell.Hyprland
 Item {
     id: root
 
-    // Detected once from `hyprctl systeminfo`. Defaults to the current reality
-    // (hyprlang); a dispatch fired before the probe returns just uses the
-    // legacy form, which is harmless while we are still on hyprlang.
-    property bool isLua: false
+    // Detected synchronously from the env var the Lua config sets, so dispatches
+    // that fire at startup (before the async probe returns) still pick the right
+    // syntax. The probe below is a backstop for a Lua config that omits the var —
+    // it only upgrades to true, never flips a known value back to false.
+    property bool isLua: Quickshell.env("HYPR_CONFIG_LUA") === "1"
 
     function esc(s) {
         return String(s).replace(/\\/g, "\\\\").replace(/"/g, "\\\"")
@@ -51,8 +52,8 @@ Item {
         running: true
         stdout: SplitParser {
             onRead: line => {
-                if (line.indexOf("configProvider:") !== -1)
-                    root.isLua = line.split(":")[1].trim() === "lua"
+                if (line.indexOf("configProvider:") !== -1 && line.split(":")[1].trim() === "lua")
+                    root.isLua = true
             }
         }
     }
