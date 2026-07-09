@@ -53,6 +53,11 @@ QtObject {
     // (either initial load or an external write detected by the file watcher).
     property bool _applyingExternal: false
 
+    // Last full settings object seen on disk. saveSettings merges the modeled
+    // values over this, so keys written by a newer process (ones this build
+    // doesn't model yet) survive our save instead of being dropped.
+    property var _rawSettings: ({})
+
     signal settingsChanged()
 
     Component.onCompleted: {
@@ -64,10 +69,29 @@ QtObject {
         readSettingsProcess.running = true
     }
 
+    function _isPlainObject(v) {
+        return v !== null && typeof v === "object" && !Array.isArray(v)
+    }
+
+    // Returns a new object: `override` applied over `base`, recursing into
+    // nested objects so keys present on only one side are preserved.
+    function _deepMerge(base, override) {
+        let out = _isPlainObject(base) ? JSON.parse(JSON.stringify(base)) : {}
+        for (let k in override) {
+            if (!override.hasOwnProperty(k)) continue
+            if (_isPlainObject(override[k]) && _isPlainObject(out[k])) {
+                out[k] = _deepMerge(out[k], override[k])
+            } else {
+                out[k] = override[k]
+            }
+        }
+        return out
+    }
+
     function saveSettings() {
         if (_applyingExternal) return
 
-        let settings = {
+        let modeled = {
             "autoCloseTimer": {
                 "interval": autoCloseTimerInterval
             },
@@ -120,7 +144,11 @@ QtObject {
             }
         }
 
-        let jsonString = JSON.stringify(settings, null, 2)
+        // Merge over the last-seen on-disk object so keys this build doesn't
+        // model (written by a newer process) aren't dropped on save.
+        let merged = _deepMerge(_rawSettings, modeled)
+        _rawSettings = merged
+        let jsonString = JSON.stringify(merged, null, 2)
 
         // Atomic write (tmp + rename): every shell process re-reads this file
         // on change, and a reader hitting a truncate-in-progress used to see
@@ -146,6 +174,9 @@ QtObject {
     function applySettingsFromJson(jsonString) {
         try {
             let settings = JSON.parse(jsonString)
+
+            // Keep the full object so unknown keys survive our next save.
+            _rawSettings = settings
 
             _applyingExternal = true
 
