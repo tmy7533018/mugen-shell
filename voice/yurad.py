@@ -243,12 +243,23 @@ def cue(kind: str, freq: float, dur: float = 0.12) -> None:
         path = os.path.join(SOUNDS_DIR, os.path.basename(name))
         if os.path.isfile(path):
             try:
-                subprocess.Popen(
+                proc = subprocess.Popen(
                     ["paplay", path],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                return
             except Exception:
-                pass
+                beep(freq, dur)
+                return
+            # paplay spawns fine but exits fast and non-zero when it can't
+            # decode the file (e.g. mp3 on a libsndfile that lacks it); a guard
+            # thread reaps the child and falls back to the beep only on that
+            # quick failure, never on a normal (slow, rc 0) playback.
+            def _guard() -> None:
+                t0 = time.monotonic()
+                rc = proc.wait()
+                if rc != 0 and time.monotonic() - t0 < 0.5:
+                    beep(freq, dur)
+            threading.Thread(target=_guard, daemon=True).start()
+            return
     beep(freq, dur)
 
 

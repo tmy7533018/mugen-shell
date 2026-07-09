@@ -650,6 +650,7 @@ FocusScope {
             anchors.fill: parent
             orbColor: root.theme ? root.theme.glowTertiary : Qt.rgba(0.95, 0.72, 0.74, 0.9)
             streaming: !root.isEmpty && root.streaming
+            speaking: root.voiceSpeaking
             haloScale: root.isEmpty ? 1.5 : 1.8
             haloOpacity: root.isEmpty ? 0.45 : 0.6
         }

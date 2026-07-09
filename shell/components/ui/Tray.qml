@@ -29,6 +29,18 @@ RowLayout {
 
     function scaled(v) { return modeManager ? modeManager.scale(v) : v }
 
+    // Position among the *shown* items, skipping blocked entries, so the
+    // reveal stagger stays contiguous (no dead beat when a blocked item like
+    // fcitx holds a low model index).
+    function visiblePosition(modelIndex) {
+        let items = SystemTray.items.values
+        let n = 0
+        for (let i = 0; i < modelIndex && i < items.length; i++) {
+            if (!isBlocked(items[i])) n++
+        }
+        return n
+    }
+
     spacing: scaled(8)
     Layout.alignment: Qt.AlignVCenter
 
@@ -46,7 +58,7 @@ RowLayout {
             // Cascade only the bloom (scale/opacity); the slots all open
             // together so the row doesn't shove its icons around as each width
             // animates in turn (the jumpy multi-icon behaviour).
-            readonly property int revealDelay: shouldShow ? index * 50 : 0
+            readonly property int revealDelay: shouldShow ? root.visiblePosition(index) * 50 : 0
 
             Layout.preferredWidth: shouldShow ? root.scaled(20) : 0
             Layout.preferredHeight: root.scaled(20)
