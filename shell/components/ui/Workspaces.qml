@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
 import "../../lib" as Theme
+import "../common" as Common
 
 Item {
     id: workspacesRoot
@@ -209,91 +210,14 @@ Item {
 
                     opacity: 0.5 - index * 0.25
 
-                    Canvas {
-                        id: trailBlobCanvas
+                    Common.BlobEffect {
                         anchors.fill: parent
-
-                        property int pointCount: 16
-                        property var offsets: []
-                        property real waveAmplitude: scaled(2) + index * scaled(2.0)
-
-                        Component.onCompleted: {
-                            offsets = [];
-                            for (let i = 0; i < pointCount; i++) {
-                                offsets.push(Math.random() * Math.PI * 2);
-                            }
-                            requestPaint();
-                        }
-
-                        Connections {
-                            target: workspacesRoot
-                            function onActiveColorChanged() {
-                                trailBlobCanvas.requestPaint()
-                            }
-                        }
-
-                        onPaint: {
-                            let ctx = getContext("2d");
-                            ctx.reset();
-
-                            if (width <= 0 || height <= 0) return;
-
-                            let centerX = width / 2;
-                            let centerY = height / 2;
-                            let baseRadius = Math.min(width, height) / 2 - waveAmplitude * 2;
-
-                            if (baseRadius <= 0 || !isFinite(baseRadius)) return;
-
-                            ctx.beginPath();
-
-                            for (let i = 0; i <= pointCount; i++) {
-                                let angle = (i / pointCount) * Math.PI * 2;
-                                let waveOffset = Math.sin(offsets[i % pointCount]) * waveAmplitude;
-                                let radius = baseRadius + waveOffset;
-                                let x = centerX + Math.cos(angle) * radius;
-                                let y = centerY + Math.sin(angle) * radius;
-
-                                if (i === 0) {
-                                    ctx.moveTo(x, y);
-                                } else {
-                                    ctx.lineTo(x, y);
-                                }
-                            }
-
-                            ctx.closePath();
-
-                            let gradient = ctx.createRadialGradient(
-                                centerX, centerY, 0,
-                                centerX, centerY, baseRadius
-                            );
-                            gradient.addColorStop(0, Qt.rgba(
-                                workspacesRoot.activeColor.r,
-                                workspacesRoot.activeColor.g,
-                                workspacesRoot.activeColor.b,
-                                0.6 - index * 0.2
-                            ));
-                            gradient.addColorStop(1, Qt.rgba(
-                                workspacesRoot.activeColor.r,
-                                workspacesRoot.activeColor.g,
-                                workspacesRoot.activeColor.b,
-                                0
-                            ));
-
-                            ctx.fillStyle = gradient;
-                            ctx.fill();
-                        }
-
-                        Timer {
-                            interval: 150
-                            running: trailEffect.visible
-                            repeat: true
-                            onTriggered: {
-                                for (let i = 0; i < trailBlobCanvas.pointCount; i++) {
-                                    trailBlobCanvas.offsets[i] += (0.08 + index * 0.15) * 2;
-                                }
-                                trailBlobCanvas.requestPaint();
-                            }
-                        }
+                        layers: 1
+                        blobColor: workspacesRoot.activeColor
+                        baseOpacity: 0.85 - index * 0.25
+                        waveAmplitude: scaled(2) + index * scaled(2.0)
+                        animationSpeed: 0.08 + index * 0.15
+                        running: trailEffect.visible
                     }
                 }
             }
@@ -314,6 +238,20 @@ Item {
                 property real layerScale: 1.0
 
                 property real pulseScale: 1.0
+
+                // Per-layer hue nudge + brightness boost, formerly baked into
+                // the Canvas gradient; a binding so it tracks theme/boost live.
+                readonly property color layerColor: {
+                    var ac = workspacesRoot.activeColor
+                    var base
+                    if (index === 0) base = ac
+                    else if (index === 1) base = Qt.rgba(ac.r * 0.9, ac.g * 1.05, ac.b * 0.95, 1.0)
+                    else base = Qt.rgba(ac.r * 1.05, ac.g * 0.95, ac.b * 1.1, 1.0)
+                    var boost = activeSmokeContainer.brightnessBoost
+                    return Qt.rgba(Math.min(1.0, base.r + boost * 0.3),
+                                   Math.min(1.0, base.g + boost * 0.3),
+                                   Math.min(1.0, base.b + boost * 0.3), 1.0)
+                }
 
                 SequentialAnimation on pulseScale {
                     loops: Animation.Infinite
@@ -432,150 +370,16 @@ Item {
                     easing.period: 0.4
                 }
 
-                Canvas {
-                    id: blobCanvas
+                Common.BlobEffect {
                     anchors.fill: parent
-
-                    property int pointCount: 16
-                    property var offsets: []
-                    property real waveAmplitude: scaled(2) + index * scaled(2.0)
-
-                    property color _cachedBlobColor: Qt.rgba(0, 0, 0, 0)
-                    property color _lastActiveColor: Qt.rgba(0, 0, 0, 0)
-                    property real _lastBrightnessBoost: -1
-
-                    function calculateBlobColor() {
-                        let baseColor;
-                        if (index === 0) baseColor = workspacesRoot.activeColor;
-                        else if (index === 1) baseColor = Qt.rgba(
-                            workspacesRoot.activeColor.r * 0.9,
-                            workspacesRoot.activeColor.g * 1.05,
-                            workspacesRoot.activeColor.b * 0.95,
-                            1.0
-                        );
-                        else if (index === 2) baseColor = Qt.rgba(
-                            workspacesRoot.activeColor.r * 1.05,
-                            workspacesRoot.activeColor.g * 0.95,
-                            workspacesRoot.activeColor.b * 1.1,
-                            1.0
-                        );
-                        else baseColor = Qt.rgba(
-                            workspacesRoot.activeColor.r * 0.95,
-                            workspacesRoot.activeColor.g * 0.9,
-                            workspacesRoot.activeColor.b * 1.05,
-                            1.0
-                        );
-
-                        let boost = activeSmokeContainer.brightnessBoost;
-                        return Qt.rgba(
-                            Math.min(1.0, baseColor.r + boost * 0.3),
-                            Math.min(1.0, baseColor.g + boost * 0.3),
-                            Math.min(1.0, baseColor.b + boost * 0.3),
-                            1.0
-                        );
-                    }
-
-                    function updateBlobColor() {
-                        if (_lastActiveColor !== workspacesRoot.activeColor ||
-                            _lastBrightnessBoost !== activeSmokeContainer.brightnessBoost) {
-                            _cachedBlobColor = calculateBlobColor()
-                            _lastActiveColor = workspacesRoot.activeColor
-                            _lastBrightnessBoost = activeSmokeContainer.brightnessBoost
-                            blobCanvas.requestPaint()
-                        }
-                    }
-
-                    property color blobColor: _cachedBlobColor
-
-                    Connections {
-                        target: workspacesRoot
-                        function onActiveColorChanged() {
-                            blobCanvas.updateBlobColor()
-                        }
-                    }
-
-                    Connections {
-                        target: activeSmokeContainer
-                        function onBrightnessBoostChanged() {
-                            blobCanvas.updateBlobColor()
-                        }
-                    }
-
-                    Component.onCompleted: {
-                        offsets = [];
-                        for (let i = 0; i < pointCount; i++) {
-                            offsets.push(Math.random() * Math.PI * 2);
-                        }
-                        _lastActiveColor = workspacesRoot.activeColor
-                        _lastBrightnessBoost = activeSmokeContainer.brightnessBoost
-                        _cachedBlobColor = calculateBlobColor()
-                        requestPaint();
-                    }
-
-                    onPaint: {
-                        let ctx = getContext("2d");
-                        ctx.reset();
-
-                        if (width <= 0 || height <= 0) return;
-
-                        let centerX = width / 2;
-                        let centerY = height / 2;
-                        let baseRadius = Math.min(width, height) / 2 - waveAmplitude * 2;
-
-                        if (baseRadius <= 0 || !isFinite(baseRadius)) return;
-
-                        ctx.beginPath();
-
-                        for (let i = 0; i <= pointCount; i++) {
-                            let angle = (i / pointCount) * Math.PI * 2;
-                            let waveOffset = Math.sin(offsets[i % pointCount]) * waveAmplitude;
-                            let radius = baseRadius + waveOffset;
-
-                            let x = centerX + Math.cos(angle) * radius;
-                            let y = centerY + Math.sin(angle) * radius;
-
-                            if (i === 0) {
-                                ctx.moveTo(x, y);
-                            } else {
-                                ctx.lineTo(x, y);
-                            }
-                        }
-
-                        ctx.closePath();
-
-                        let gradient = ctx.createRadialGradient(
-                            centerX, centerY, 0,
-                            centerX, centerY, baseRadius
-                        );
-                        gradient.addColorStop(0, Qt.rgba(
-                            blobColor.r,
-                            blobColor.g,
-                            blobColor.b,
-                            0.7 - index * 0.12
-                        ));
-                        gradient.addColorStop(1, Qt.rgba(
-                            blobColor.r,
-                            blobColor.g,
-                            blobColor.b,
-                            0
-                        ));
-
-                        ctx.fillStyle = gradient;
-                        ctx.fill();
-                    }
-
-                    Timer {
-                        interval: 150
-                        running: workspacesRoot.visible && parent.visible
-                        repeat: true
-                        onTriggered: {
-                            // Match speed coefficient with inactive blobs to prevent visual drift
-                            for (let i = 0; i < blobCanvas.pointCount; i++) {
-                                blobCanvas.offsets[i] += (0.08 + index * 0.15 + (workspacesRoot.activeWorkspaceId * 0.015)) * 2;
-                            }
-                            blobCanvas.requestPaint();
-                        }
-                    }
+                    layers: 1
+                    blobColor: blobLayer.layerColor
+                    baseOpacity: 0.9 - index * 0.12
+                    waveAmplitude: scaled(2) + index * scaled(2.0)
+                    // Speed coefficient matches the inactive blobs so the
+                    // active and idle rings never drift out of phase.
+                    animationSpeed: 0.08 + index * 0.15 + workspacesRoot.activeWorkspaceId * 0.015
+                    running: workspacesRoot.visible
                 }
             }
         }
@@ -648,85 +452,14 @@ Item {
                         yScale: smallBlobLayer.pulseScale
                     }
 
-                    Canvas {
-                        id: smallBlobCanvas
+                    Common.BlobEffect {
                         anchors.fill: parent
-
-                        property int pointCount: 12
-                        property var offsets: []
-                        property real waveAmplitude: scaled(2) + index * scaled(2.0)
-
-                        Component.onCompleted: {
-                            offsets = [];
-                            for (let i = 0; i < pointCount; i++) {
-                                offsets.push(Math.random() * Math.PI * 2);
-                            }
-                            requestPaint();
-                        }
-
-                        onPaint: {
-                            let ctx = getContext("2d");
-                            ctx.reset();
-
-                            if (width <= 0 || height <= 0) return;
-
-                            let centerX = width / 2;
-                            let centerY = height / 2;
-                            let baseRadius = Math.min(width, height) / 2 - waveAmplitude * 2;
-
-                            if (baseRadius <= 0 || !isFinite(baseRadius)) return;
-
-                            ctx.beginPath();
-
-                            for (let i = 0; i <= pointCount; i++) {
-                                let angle = (i / pointCount) * Math.PI * 2;
-                                let waveOffset = Math.sin(offsets[i % pointCount]) * waveAmplitude;
-                                let radius = baseRadius + waveOffset;
-
-                                let x = centerX + Math.cos(angle) * radius;
-                                let y = centerY + Math.sin(angle) * radius;
-
-                                if (i === 0) {
-                                    ctx.moveTo(x, y);
-                                } else {
-                                    ctx.lineTo(x, y);
-                                }
-                            }
-
-                            ctx.closePath();
-
-                            let gradient = ctx.createRadialGradient(
-                                centerX, centerY, 0,
-                                centerX, centerY, baseRadius
-                            );
-                            gradient.addColorStop(0, Qt.rgba(
-                                inactiveSmokeContainer.smokeColor.r,
-                                inactiveSmokeContainer.smokeColor.g,
-                                inactiveSmokeContainer.smokeColor.b,
-                                inactiveSmokeContainer.hasWindows ? 0.5 - index * 0.12 : 0.4 - index * 0.12
-                            ));
-                            gradient.addColorStop(1, Qt.rgba(
-                                inactiveSmokeContainer.smokeColor.r,
-                                inactiveSmokeContainer.smokeColor.g,
-                                inactiveSmokeContainer.smokeColor.b,
-                                0
-                            ));
-
-                            ctx.fillStyle = gradient;
-                            ctx.fill();
-                        }
-
-                        Timer {
-                            interval: 150
-                            running: inactiveSmokeContainer.visible
-                            repeat: true
-                            onTriggered: {
-                                for (let i = 0; i < smallBlobCanvas.pointCount; i++) {
-                                    smallBlobCanvas.offsets[i] += (0.08 + index * 0.15 + (workspaceId * 0.015)) * 2;
-                                }
-                                smallBlobCanvas.requestPaint();
-                            }
-                        }
+                        layers: 1
+                        blobColor: inactiveSmokeContainer.smokeColor
+                        baseOpacity: (inactiveSmokeContainer.hasWindows ? 0.72 : 0.58) - index * 0.12
+                        waveAmplitude: scaled(2) + index * scaled(2.0)
+                        animationSpeed: 0.08 + index * 0.15 + inactiveSmokeContainer.workspaceId * 0.015
+                        running: inactiveSmokeContainer.visible
                     }
                 }
             }
