@@ -285,10 +285,8 @@ RowLayout {
         Layout.leftMargin: 0
         Layout.rightMargin: 0
 
-        // Yura's orb IS the bar icon: it breathes at rest, pulses while
-        // thinking (bar spotlight stream or the float panel, reported over
-        // IPC), takes the secondary hue while the mic captures, and pings
-        // sonar rings while speaking. Hover lifts its brightness and size.
+        // The orb itself is the bar icon (no separate glyph), so it stays
+        // active and drives every Yura state off its own properties below.
         Ai.AmbientOrb {
             id: aiOrb
             anchors.centerIn: parent

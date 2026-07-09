@@ -239,8 +239,8 @@ Item {
 
                 property real pulseScale: 1.0
 
-                // Per-layer hue nudge + brightness boost, formerly baked into
-                // the Canvas gradient; a binding so it tracks theme/boost live.
+                // A binding (not cached) so theme changes and the transient
+                // brightnessBoost both propagate to the blob live.
                 readonly property color layerColor: {
                     var ac = workspacesRoot.activeColor
                     var base

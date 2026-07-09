@@ -68,10 +68,9 @@ Item {
         yScale: root.pulseScale
     }
 
-    // Sonar rings ping outward while Yura speaks (TTS playback), matching the
-    // notification icon's ripple: thin rings from just inside the orb edge out
-    // to ~1.7x, staggered bursts on a 4s cycle. Opacity is gated by speaking so
-    // it snaps to 0 the instant playback ends rather than finishing a burst.
+    // Sonar rings ping outward while Yura speaks (TTS playback). Opacity is
+    // gated on `speaking` (not just the animation's running state) so a burst
+    // in flight vanishes the instant playback ends instead of finishing.
     Repeater {
         model: 3
         delegate: Rectangle {

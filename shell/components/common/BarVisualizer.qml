@@ -29,12 +29,9 @@ Row {
         return root.minBarHeight + (root.maxBarHeight - root.minBarHeight) * multiplier
     }
     
-    // No QML-side gain tracking here: cava's autosens already adapts the
-    // level range, and a second rolling-peak normalization on top made the
-    // bars whipsaw — one loud hit deadened everything for seconds, while
-    // quiet passages decayed the peak until moderate signal slammed every
-    // bar to max. Plain cava in a terminal (autosens only) is the reference
-    // behaviour.
+    // Levels are used as-is: cava's autosens already owns the gain range, so a
+    // second QML-side normalization on top only fights it. Keep this a plain
+    // blend of the per-bar level and the overall rms.
     function getBarLevel(index) {
         if (!cavaManager || !cavaManager.barLevels) {
             return 0
