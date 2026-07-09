@@ -25,47 +25,6 @@ Rectangle {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
     }
 
-    property int kbHighlightIndex: -1
-
-    function syncKbToCurrent() {
-        if (!section.settingsManager) return
-        let cur = section.settingsManager.animationSpeed
-        section.kbHighlightIndex = Math.max(0, section.animOptions.indexOf(cur))
-    }
-
-    function handleKey(event) {
-        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-            if (!section.isExpanded) {
-                section.isExpanded = true
-                section.syncKbToCurrent()
-            } else {
-                if (section.kbHighlightIndex >= 0 && section.kbHighlightIndex < section.animOptions.length && section.settingsManager) {
-                    section.settingsManager.animationSpeed = section.animOptions[section.kbHighlightIndex]
-                    section.settingsManager.updateAnimationMultiplier()
-                    section.settingsManager.saveSettings()
-                }
-                section.isExpanded = false
-            }
-            section.bump()
-            return true
-        }
-        if (section.isExpanded && event.key === Qt.Key_Escape) {
-            section.isExpanded = false
-            section.bump()
-            return true
-        }
-        if (section.isExpanded && (event.key === Qt.Key_Left || event.key === Qt.Key_Right)) {
-            let dir = event.key === Qt.Key_Right ? 1 : -1
-            let next = section.kbHighlightIndex + dir
-            if (next < 0) next = section.animOptions.length - 1
-            if (next >= section.animOptions.length) next = 0
-            section.kbHighlightIndex = next
-            section.bump()
-            return true
-        }
-        return false
-    }
-
     Behavior on height {
         NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
@@ -162,9 +121,7 @@ Rectangle {
                     radius: 8
                     property bool isCurrent: section.settingsManager && section.settingsManager.animationSpeed === modelData
 
-                    property bool isKbHighlighted: section.kbHighlightIndex === index
-
-                    color: (animMouseArea.containsMouse || isKbHighlighted)
+                    color: animMouseArea.containsMouse
                         ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.25) : Qt.rgba(0.65, 0.55, 0.85, 0.25))
                         : (isCurrent
                             ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.95) : Qt.rgba(0.65, 0.55, 0.85, 0.95))

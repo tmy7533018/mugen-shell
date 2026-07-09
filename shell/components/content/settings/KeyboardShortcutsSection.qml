@@ -28,14 +28,6 @@ Rectangle {
         Hyprland.dispatch("exec ~/.config/quickshell/mugen-shell/scripts/toggle-shortcuts.sh")
     }
 
-    function handleKey(event) {
-        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-            openShortcuts()
-            return true
-        }
-        return false
-    }
-
     MouseArea {
         id: linkArea
         anchors.fill: parent

@@ -19,17 +19,6 @@ Rectangle {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
     }
 
-    function handleKey(event) {
-        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-            if (section.theme) {
-                section.theme.toggleThemeMode()
-                section.bump()
-            }
-            return true
-        }
-        return false
-    }
-
     RowLayout {
         anchors.fill: parent
         anchors.margins: 12

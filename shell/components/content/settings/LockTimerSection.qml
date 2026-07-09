@@ -19,18 +19,6 @@ Rectangle {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
     }
 
-    function handleKey(event) {
-        if (event.key !== Qt.Key_Left && event.key !== Qt.Key_Right) return false
-        if (!section.settingsManager) return false
-        let step = (event.modifiers & Qt.ShiftModifier) ? 5 : 1
-        let dir = event.key === Qt.Key_Right ? 1 : -1
-        let next = Math.max(1, Math.min(30, section.settingsManager.lockTimerMinutes + dir * step))
-        section.settingsManager.lockTimerMinutes = next
-        section.settingsManager.saveSettings()
-        section.bump()
-        return true
-    }
-
     RowLayout {
         anchors.fill: parent
         anchors.margins: 12
