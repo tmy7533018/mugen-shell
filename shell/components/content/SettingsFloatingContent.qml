@@ -30,7 +30,7 @@ Item {
         { id: "appearance", label: "Appearance",   types: ["theme", "gradient", "blur", "animation", "dateFormat"] },
         { id: "sound",      label: "Sound",        types: ["notificationSound", "timerSound"] },
         { id: "timer",      label: "Timer & Lock", types: ["timer", "lockTimer"] },
-        { id: "ai",         label: "AI / Yura",    types: ["yuraPersonality", "yuraProvider", "yuraMcp", "aiBarModel", "yuraThinking", "yuraToolCategories", "yuraAppLaunch", "yuraPanelSide", "yuraUi", "voice", "yuraMemory", "yuraHistory"] },
+        { id: "ai",         label: "AI / Yura",    types: ["yuraPersonality", "yuraProvider", "yuraMcp", "aiBarModel", "yuraThinking", "yuraToolCategories", "yuraAppLaunch", "yuraPanelSide", "yuraUi", "voice", "yuraMemory", "yuraHistory", "yuraAdvanced"] },
         { id: "system",     label: "System",       types: ["battery", "shortcuts"] },
         { id: "reset",      label: "Reset",        types: ["reset"], danger: true }
     ]
@@ -188,6 +188,7 @@ Item {
                                 case "voice":             return voiceSection
                                 case "yuraMemory":        return yuraMemorySection
                                 case "yuraHistory":       return yuraHistorySection
+                                case "yuraAdvanced":      return yuraAdvancedSection
                                 case "shortcuts":         return shortcutsSection
                                 case "reset":             return resetSection
                                 default:                  return null
@@ -331,6 +332,12 @@ Item {
     Component { id: yuraHistorySection; Settings.YuraHistorySection {
         theme: root.theme
         modeManager: root.modeManager
+    }}
+    Component { id: yuraAdvancedSection; Settings.YuraAdvancedSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        onEditConfig: root.editAiConfig()
+        onRestartService: root.restartAi()
     }}
     Component { id: shortcutsSection; Settings.KeyboardShortcutsSection {
         theme: root.theme
