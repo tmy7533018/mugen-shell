@@ -5,6 +5,7 @@ CFG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/hypr/configs"
 PRESETS="$CFG_DIR/blur-presets.json"
 STATE="$CFG_DIR/.blur-current"
 BLUR_CONF="$CFG_DIR/blur.conf"
+BLUR_LUA="$CFG_DIR/blur.lua"
 DEFAULT_PRESET="glow blur"
 
 list_presets() {
@@ -39,11 +40,34 @@ sys.exit(1)
 ' "$PRESETS" "$name" > "$BLUR_CONF"
 }
 
+# Lua-config counterpart of blur.conf; dofile'd by hyprland.lua.
+write_blur_lua() {
+    local name="$1"
+    python3 -c '
+import json, sys
+name = sys.argv[2]
+with open(sys.argv[1]) as f:
+    presets = json.load(f)
+for p in presets:
+    if p["name"] == name:
+        print("hl.config({ decoration = { blur = {")
+        for k, v in p["params"].items():
+            if isinstance(v, bool):
+                v = "true" if v else "false"
+            print(f"    {k} = {v},")
+        print("} } })")
+        sys.exit(0)
+sys.stderr.write(f"preset not found: {name}\n")
+sys.exit(1)
+' "$PRESETS" "$name" > "$BLUR_LUA"
+}
+
 apply_live() {
     local name="$1"
     # Persist for survival across Hyprland reloads (matugen / wallpaper change
     # triggers autoreload that would otherwise drop the runtime keyword values).
     write_blur_conf "$name"
+    write_blur_lua "$name"
     # Apply immediately via IPC for instant feedback. The autoreload that
     # follows the file write applies the same values, so it's a visual no-op.
     while IFS=$'\t' read -r key val; do
