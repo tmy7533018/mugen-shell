@@ -391,13 +391,13 @@ PanelWindow {
             }
         }
 
-        MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.NoButton
-            hoverEnabled: true
-            onWheel: (w) => w.accepted = false
-            // Mouse presence counts as activity for the idle auto-collapse.
-            onPositionChanged: idleCollapse.restart()
+        // Mouse movement counts as activity for the idle auto-collapse. A
+        // HoverHandler, not a full-fill hoverEnabled MouseArea: the latter sat
+        // above the content and swallowed hover, so row hover states (the
+        // Recent list's delete icon) only lit up after a click. HoverHandler
+        // is passive and lets hover reach the items below.
+        HoverHandler {
+            onPointChanged: idleCollapse.restart()
         }
 
         Item {
