@@ -8,6 +8,11 @@ Item {
 
     property color orbColor: Qt.rgba(0.65, 0.55, 0.85, 0.9)
     property bool streaming: false
+    property bool speaking: false
+    // Peak radius of the speaking ripple, as a multiple of the ring's base
+    // size. Lower it in height-constrained hosts (the bar) so rings stay
+    // within the visible strip instead of spilling into the margin.
+    property real rippleMaxScale: 2.0
     property bool active: true
     property bool breathEnabled: true
     property bool showHalo: true
@@ -61,6 +66,47 @@ Item {
         origin.y: root.height / 2
         xScale: root.pulseScale
         yScale: root.pulseScale
+    }
+
+    // Sonar rings ping outward while Yura speaks (TTS playback), matching the
+    // notification icon's ripple: thin rings from just inside the orb edge out
+    // to ~1.7x, staggered bursts on a 4s cycle. Opacity is gated by speaking so
+    // it snaps to 0 the instant playback ends rather than finishing a burst.
+    Repeater {
+        model: 3
+        delegate: Rectangle {
+            id: ring
+            required property int index
+            anchors.centerIn: parent
+            width: root.width * 0.83
+            height: root.height * 0.83
+            radius: width / 2
+            color: "transparent"
+            border.width: Math.max(1, root.width * 0.02)
+            border.color: root.orbColor
+            z: -1
+
+            property real rippleScale: 1.0
+            property real rippleOpacity: 0.0
+            scale: rippleScale
+            opacity: root.speaking ? rippleOpacity : 0
+
+            SequentialAnimation on rippleScale {
+                loops: Animation.Infinite
+                running: root.active && root.speaking
+                PauseAnimation { duration: ring.index * 300 }
+                NumberAnimation { from: 1.0; to: root.rippleMaxScale; duration: 1200; easing.type: Easing.OutCubic }
+                PauseAnimation { duration: 2000 - 1200 - ring.index * 300 }
+            }
+            SequentialAnimation on rippleOpacity {
+                loops: Animation.Infinite
+                running: root.active && root.speaking
+                PauseAnimation { duration: ring.index * 300 }
+                NumberAnimation { from: 0.0; to: 0.5; duration: 200; easing.type: Easing.OutCubic }
+                NumberAnimation { from: 0.5; to: 0.0; duration: 1000; easing.type: Easing.OutCubic }
+                PauseAnimation { duration: 2000 - 1200 - ring.index * 300 }
+            }
+        }
     }
 
     Common.BlobEffect {

@@ -379,6 +379,7 @@ PanelWindow {
                 idleBreathPeak: 1.20
                 idleBreathDuration: 1400
                 active: yuraState.expanded
+                speaking: chatWindow.voiceSpeaking
                 breathEnabled: chatWindow.settingsManager ? chatWindow.settingsManager.yuraIdleBreath : true
             }
 

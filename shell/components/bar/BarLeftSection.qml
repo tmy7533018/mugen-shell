@@ -27,6 +27,7 @@ RowLayout {
     property var timerManager
     property bool aiThinking: false
     property bool aiListening: false
+    property bool aiSpeaking: false
 
     function scaled(val) {
         if (modeManager) return modeManager.scale(val)
@@ -303,8 +304,9 @@ RowLayout {
             coreWaveAmplitude: 0.8
             haloPointCount: 24
             haloWaveAmplitude: 1.2
-            active: root.aiThinking || root.aiListening
-            visible: root.aiThinking || root.aiListening
+            speaking: root.aiSpeaking
+            active: root.aiThinking || root.aiListening || root.aiSpeaking
+            visible: root.aiThinking || root.aiListening || root.aiSpeaking
         }
 
         UI.SvgIcon {
@@ -315,10 +317,10 @@ RowLayout {
             source: root.icons ? root.icons.aiSvg : ""
             color: root.aiListening
                 ? (root.theme ? root.theme.glowSecondary : Qt.rgba(0.55, 0.75, 0.85, 0.9))
-                : root.aiThinking
+                : (root.aiThinking || root.aiSpeaking)
                     ? (root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9))
                     : (root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
-            opacity: (aiMouseArea.containsMouse || root.aiThinking || root.aiListening) ? 1.0 : 0.6
+            opacity: (aiMouseArea.containsMouse || root.aiThinking || root.aiListening || root.aiSpeaking) ? 1.0 : 0.6
             scale: aiMouseArea.containsMouse ? 1.3 : 1.0
 
             Behavior on color {

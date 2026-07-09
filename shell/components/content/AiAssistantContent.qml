@@ -242,6 +242,8 @@ FocusScope {
                     anchors.fill: parent
                     orbColor: root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
                     streaming: root.streaming
+                    speaking: root.voiceSpeaking
+                    rippleMaxScale: 1.5  // keep rings inside the bar strip
                     breathEnabled: root.settingsManager ? root.settingsManager.yuraIdleBreath : true
                     haloScale: 1.25
                     haloOpacity: orbHover.containsMouse ? 0.75 : 0.5

@@ -507,6 +507,7 @@ PanelWindow {
             aiThinking: (aiAssistantLoader.item ? aiAssistantLoader.item.streaming : false)
                 || barWindow.yuraFloatThinking
             aiListening: barWindow.yuraListening
+            aiSpeaking: barWindow.yuraSpeaking
         }
 
         Item { Layout.fillWidth: true }
