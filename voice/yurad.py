@@ -74,6 +74,11 @@ YURA_SHELL_QML = os.path.expanduser(
 # Live knobs (voice.enabled, voice.wakeOpens) come from the shell's
 # settings.json so the Settings GUI controls the daemon without a restart.
 SETTINGS_FILE = os.path.expanduser("~/.config/mugen-shell/settings.json")
+# Shared with the shell's notification sounds; the Settings voice pickers
+# (voice.soundWake / soundFollowUp / soundEnd) list files from here.
+SOUNDS_DIR = os.path.join(
+    os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"),
+    "mugen-shell", "sounds")
 
 _settings_cache: tuple[float, dict] = (0.0, {})
 
@@ -221,6 +226,30 @@ def beep(freq: float, dur: float = 0.12, vol: float = 0.2) -> None:
         sd.play(tone, 48000)
     except Exception:
         pass
+
+
+def cue(kind: str, freq: float, dur: float = 0.12) -> None:
+    """User-picked cue sound for this event, falling back to the beep.
+
+    paplay handles the formats the picker lists (ogg/mp3/...) that the
+    sounddevice path can't; a fire-and-forget subprocess keeps the turn
+    loop from blocking on playback.
+    """
+    name = str(voice_settings().get(kind, "") or "")
+    if name == "none":
+        return
+    if name:
+        # basename: a hand-edited settings.json must not escape SOUNDS_DIR
+        path = os.path.join(SOUNDS_DIR, os.path.basename(name))
+        if os.path.isfile(path):
+            try:
+                subprocess.Popen(
+                    ["paplay", path],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return
+            except Exception:
+                pass
+    beep(freq, dur)
 
 
 class SileroVAD:
@@ -805,7 +834,10 @@ class Daemon:
 
     def _one_turn(self, open_surface: bool, follow_up: bool) -> bool:
         """One capture -> STT -> chat -> TTS round; True keeps the floor open."""
-        beep(660 if follow_up else 880)
+        if follow_up:
+            cue("soundFollowUp", 660)
+        else:
+            cue("soundWake", 880)
         set_listening(True)
         try:
             # The mic button means the user already has a Yura surface in
@@ -830,7 +862,7 @@ class Daemon:
             set_listening(False)
         if not frames:
             log("listen", "no speech, back to idle")
-            beep(440)
+            cue("soundEnd", 440)
             return False
 
         log("stt", f"{sum(f.size for f in frames) / SR:.1f}s of audio")
@@ -851,7 +883,7 @@ class Daemon:
                 text = transcribe(wav)
             if not re.search(r"[ぁ-んァ-ヶ一-龠a-zA-Z0-9]", text):
                 log("stt", f"discarded: {text!r}")
-                beep(440)
+                cue("soundEnd", 440)
                 return False
             log("stt", text)
             # Mirror into the Spotlight pill whenever it's on screen, however

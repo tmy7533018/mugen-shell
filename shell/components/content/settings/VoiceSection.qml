@@ -98,6 +98,44 @@ Rectangle {
         return tts !== "" ? tts : "voicevox:14"
     }
 
+    // Cue sound pickers share the shell's notification sounds dir.
+    // "" = built-in beep, "none" = silent, anything else = a file in soundsDir.
+    readonly property string soundsDir: {
+        let xdg = Quickshell.env("XDG_DATA_HOME")
+        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/share"
+        return xdg + "/mugen-shell/sounds"
+    }
+    property var cueFiles: []
+    readonly property var cueOptions: [
+        { label: "Beep (built-in)", value: "" },
+        { label: "None", value: "none" },
+        ...cueFiles.map(f => ({ label: f, value: f }))
+    ]
+
+    function cueValue(key) {
+        if (!settingsManager) return ""
+        if (key === "soundWake") return settingsManager.voiceSoundWake
+        if (key === "soundFollowUp") return settingsManager.voiceSoundFollowUp
+        return settingsManager.voiceSoundEnd
+    }
+
+    function cueLabel(value) {
+        return value === "" ? "Beep" : (value === "none" ? "None" : value)
+    }
+
+    function applyCue(key, name) {
+        if (!settingsManager) return
+        if (key === "soundWake") settingsManager.voiceSoundWake = name
+        else if (key === "soundFollowUp") settingsManager.voiceSoundFollowUp = name
+        else settingsManager.voiceSoundEnd = name
+        save()
+        if (name !== "" && name !== "none") {
+            cuePreviewProc.running = false
+            cuePreviewProc.command = ["paplay", soundsDir + "/" + name]
+            cuePreviewProc.running = true
+        }
+    }
+
     // Same env fallbacks as yurad (YURA_PIPER_BIN / YURA_PIPER_VOICES /
     // YURA_VOICEVOX_URL) so the preview follows a relocated engine, and the
     // same -23 loudness target so previews match what yurad will play.
@@ -206,11 +244,41 @@ Rectangle {
         }
     }
 
+    Process {
+        id: cueSoundsProc
+        running: false
+        property string buf: ""
+        command: ["sh", "-c", "d=\"" + section.soundsDir + "\"; mkdir -p \"$d\"; ls -1 \"$d\" 2>/dev/null | grep -E '\\.(wav|ogg|mp3|oga|flac)$' || true"]
+
+        stdout: SplitParser { onRead: data => { cueSoundsProc.buf += data + "\n" } }
+        onRunningChanged: { if (running) buf = "" }
+
+        onExited: () => {
+            let list = []
+            for (const line of cueSoundsProc.buf.split("\n")) {
+                const f = line.trim()
+                if (f !== "") list.push(f)
+            }
+            section.cueFiles = list
+        }
+    }
+
+    Process {
+        id: cuePreviewProc
+        running: false
+    }
+
+    Process {
+        id: openSoundsFolderProc
+        running: false
+    }
+
     Component.onCompleted: {
         speakersProc.running = true
         aivisProc.running = true
         piperProc.running = true
         enrollCheck.running = true
+        cueSoundsProc.running = true
     }
 
     function bump() {
@@ -283,6 +351,122 @@ Rectangle {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: parent.clicked()
+        }
+    }
+
+    component SoundPicker: ColumnLayout {
+        id: picker
+        property string title: ""
+        property string desc: ""
+        property string settingKey: ""
+        // Bound by the instances: section.cueOptions resolves as undefined
+        // from inside an inline component, so the list rides in from the
+        // normal document scope instead.
+        property var options: []
+        property bool expanded: false
+        Layout.fillWidth: true
+        spacing: 8
+
+        Item {
+            Layout.fillWidth: true
+            implicitHeight: pickerHeader.implicitHeight
+
+            RowLayout {
+                id: pickerHeader
+                anchors.left: parent.left
+                anchors.right: parent.right
+                spacing: 12
+
+                RowLabel {
+                    title: picker.title
+                    desc: picker.desc
+                }
+
+                Text {
+                    Layout.maximumWidth: 180
+                    text: section.cueLabel(section.cueValue(picker.settingKey))
+                    elide: Text.ElideMiddle
+                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                    font.pixelSize: 11
+                    font.family: "M PLUS 2"
+                    opacity: 0.85
+                }
+
+                Text {
+                    text: picker.expanded ? "▴" : "▾"
+                    color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                    font.pixelSize: 12
+                    font.family: "M PLUS 2"
+                    opacity: 0.7
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    picker.expanded = !picker.expanded
+                    // Rescan so files dropped in while Settings is open show up.
+                    if (picker.expanded) cueSoundsProc.running = true
+                    section.bump()
+                }
+            }
+        }
+
+        ListView {
+            id: cueList
+            visible: picker.expanded
+            Layout.fillWidth: true
+            Layout.preferredHeight: visible ? Math.min((picker.options || []).length, 5) * 30 : 0
+            clip: true
+            model: picker.options
+            interactive: contentHeight > height
+            boundsBehavior: Flickable.StopAtBounds
+
+            delegate: Rectangle {
+                required property var modelData
+                width: cueList.width
+                height: 30
+                radius: 8
+
+                readonly property bool isSelected:
+                    section.cueValue(picker.settingKey) === modelData.value
+
+                color: cueRowMouse.containsMouse
+                    ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.25) : Qt.rgba(0.65, 0.55, 0.85, 0.25))
+                    : (isSelected
+                        ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4))
+                        : "transparent")
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+
+                MouseArea {
+                    id: cueRowMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        section.applyCue(picker.settingKey, modelData.value)
+                        picker.expanded = false
+                        section.bump()
+                    }
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.right: parent.right
+                    anchors.rightMargin: 10
+                    text: parent.modelData.label
+                    elide: Text.ElideRight
+                    color: parent.isSelected
+                        ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.85, 1.0, 1.0))
+                        : (section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
+                    font.pixelSize: 11
+                    font.family: "M PLUS 2"
+                    font.weight: parent.isSelected ? Font.Medium : Font.Normal
+                }
+            }
         }
     }
 
@@ -606,6 +790,57 @@ Rectangle {
                             section.save()
                         }
                     }
+                }
+            }
+        }
+
+        SoundPicker {
+            title: "Wake sound"
+            desc: "When Yura starts listening"
+            settingKey: "soundWake"
+            options: section.cueOptions
+        }
+
+        SoundPicker {
+            title: "Follow-up sound"
+            desc: "When the mic reopens after a reply"
+            settingKey: "soundFollowUp"
+            options: section.cueOptions
+        }
+
+        SoundPicker {
+            title: "End sound"
+            desc: "When listening closes without speech"
+            settingKey: "soundEnd"
+            options: section.cueOptions
+        }
+
+        Item {
+            Layout.fillWidth: true
+            implicitHeight: 16
+
+            Text {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Open sounds folder ↗"
+                color: openSoundsMouse.containsMouse
+                    ? (section.theme ? section.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
+                    : (section.theme ? section.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.65))
+                font.pixelSize: 11
+                font.family: "M PLUS 2"
+                font.letterSpacing: 0.5
+
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+            }
+
+            MouseArea {
+                id: openSoundsMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    openSoundsFolderProc.command = ["xdg-open", section.soundsDir]
+                    openSoundsFolderProc.running = true
                 }
             }
         }

@@ -44,6 +44,10 @@ QtObject {
     property string voiceTts: "voicevox:14"  // "voicevox:<id>" | "piper:<voice>"
     property string voiceSttLang: "ja"  // whisper language, "auto" allowed
     property bool voiceFollowUp: true  // keep listening after replies
+    // Cue sounds from the notification sounds dir; "" = built-in beep, "none" = silent
+    property string voiceSoundWake: ""
+    property string voiceSoundFollowUp: ""
+    property string voiceSoundEnd: ""
 
     // Suppress save while we are applying values that just came in from disk
     // (either initial load or an external write detected by the file watcher).
@@ -109,7 +113,10 @@ QtObject {
                 "speed": voiceSpeed,
                 "tts": voiceTts,
                 "sttLang": voiceSttLang,
-                "followUp": voiceFollowUp
+                "followUp": voiceFollowUp,
+                "soundWake": voiceSoundWake,
+                "soundFollowUp": voiceSoundFollowUp,
+                "soundEnd": voiceSoundEnd
             }
         }
 
@@ -253,6 +260,15 @@ QtObject {
                 }
                 if (settings.voice.followUp !== undefined) {
                     voiceFollowUp = settings.voice.followUp
+                }
+                if (settings.voice.soundWake !== undefined) {
+                    voiceSoundWake = settings.voice.soundWake
+                }
+                if (settings.voice.soundFollowUp !== undefined) {
+                    voiceSoundFollowUp = settings.voice.soundFollowUp
+                }
+                if (settings.voice.soundEnd !== undefined) {
+                    voiceSoundEnd = settings.voice.soundEnd
                 }
             }
 
