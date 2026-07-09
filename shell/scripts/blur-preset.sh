@@ -68,11 +68,16 @@ apply_live() {
     # triggers autoreload that would otherwise drop the runtime keyword values).
     write_blur_conf "$name"
     write_blur_lua "$name"
-    # Apply immediately via IPC for instant feedback. The autoreload that
-    # follows the file write applies the same values, so it's a visual no-op.
-    while IFS=$'\t' read -r key val; do
-        hyprctl keyword "$key" "$val" >/dev/null 2>&1 || true
-    done < <(python3 -c '
+    if [[ "$(hyprctl systeminfo 2>/dev/null | grep -oP 'configProvider:\s*\K\w+')" == "lua" ]]; then
+        # `hyprctl keyword` is rejected under a Lua config; a reload re-runs the
+        # config, which dofiles blur.lua and applies the new values.
+        hyprctl reload >/dev/null 2>&1 || true
+    else
+        # Apply immediately via IPC for instant feedback. The autoreload that
+        # follows the file write applies the same values, so it's a visual no-op.
+        while IFS=$'\t' read -r key val; do
+            hyprctl keyword "$key" "$val" >/dev/null 2>&1 || true
+        done < <(python3 -c '
 import json, sys
 name = sys.argv[2]
 with open(sys.argv[1]) as f:
@@ -85,6 +90,7 @@ for p in presets:
             print(f"decoration:blur:{k}\t{v}")
         sys.exit(0)
 ' "$PRESETS" "$name")
+    fi
     echo "$name" > "$STATE"
 }
 
