@@ -1,20 +1,13 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../../lib" as Theme
 
 QtObject {
     id: wallpaperManager
 
-    readonly property string cacheDir: {
-        let xdg = Quickshell.env("XDG_CACHE_HOME")
-        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.cache"
-        return xdg + "/mugen-shell"
-    }
-    readonly property string dataDir: {
-        let xdg = Quickshell.env("XDG_DATA_HOME")
-        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/share"
-        return xdg + "/mugen-shell"
-    }
+    readonly property string cacheDir: Theme.Paths.cacheDir
+    readonly property string dataDir: Theme.Paths.dataDir
 
     property string wallpaperDir: dataDir + "/wallpapers"
     property string thumbDir: cacheDir + "/wallpaper-thumbs"

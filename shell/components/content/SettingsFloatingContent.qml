@@ -252,18 +252,20 @@ Item {
         modeManager: root.modeManager
         settingsManager: root.settingsManager
     }}
-    Component { id: notificationSoundSection; Settings.NotificationSoundSection {
+    Component { id: notificationSoundSection; Settings.SoundSection {
         theme: root.theme
         modeManager: root.modeManager
-        settingsManager: root.settingsManager
+        label: "Notification Sound"
+        currentSound: root.settingsManager ? root.settingsManager.notificationSound : "None"
         sounds: root.notificationSounds
         folderPath: root.soundsDir
         onApplySound: name => root.applySound(name)
     }}
-    Component { id: timerSoundSection; Settings.TimerSoundSection {
+    Component { id: timerSoundSection; Settings.SoundSection {
         theme: root.theme
         modeManager: root.modeManager
-        settingsManager: root.settingsManager
+        label: "Timer Sound"
+        currentSound: root.settingsManager ? root.settingsManager.timerSound : "None"
         sounds: root.timerSounds
         folderPath: root.timerSoundsDir
         onApplySound: name => root.applyTimerSound(name)

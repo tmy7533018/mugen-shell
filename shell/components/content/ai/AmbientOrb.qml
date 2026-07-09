@@ -68,44 +68,19 @@ Item {
         yScale: root.pulseScale
     }
 
-    // Sonar rings ping outward while Yura speaks (TTS playback). Opacity is
-    // gated on `speaking` (not just the animation's running state) so a burst
-    // in flight vanishes the instant playback ends instead of finishing.
-    Repeater {
-        model: 3
-        delegate: Rectangle {
-            id: ring
-            required property int index
-            anchors.centerIn: parent
-            width: root.width * 0.83
-            height: root.height * 0.83
-            radius: width / 2
-            color: "transparent"
-            border.width: Math.max(1, root.width * 0.02)
-            border.color: root.orbColor
-            z: -1
-
-            property real rippleScale: 1.0
-            property real rippleOpacity: 0.0
-            scale: rippleScale
-            opacity: root.speaking ? rippleOpacity : 0
-
-            SequentialAnimation on rippleScale {
-                loops: Animation.Infinite
-                running: root.active && root.speaking
-                PauseAnimation { duration: ring.index * 300 }
-                NumberAnimation { from: 1.0; to: root.rippleMaxScale; duration: 1200; easing.type: Easing.OutCubic }
-                PauseAnimation { duration: 2000 - 1200 - ring.index * 300 }
-            }
-            SequentialAnimation on rippleOpacity {
-                loops: Animation.Infinite
-                running: root.active && root.speaking
-                PauseAnimation { duration: ring.index * 300 }
-                NumberAnimation { from: 0.0; to: 0.5; duration: 200; easing.type: Easing.OutCubic }
-                NumberAnimation { from: 0.5; to: 0.0; duration: 1000; easing.type: Easing.OutCubic }
-                PauseAnimation { duration: 2000 - 1200 - ring.index * 300 }
-            }
-        }
+    // Sonar rings ping outward while Yura speaks (TTS playback). Gated on
+    // `speaking` so a burst in flight vanishes the instant playback ends.
+    Common.RippleRings {
+        anchors.centerIn: parent
+        width: root.width
+        height: root.height
+        z: -1
+        color: root.orbColor
+        ringSize: root.width * 0.83
+        borderWidth: Math.max(1, root.width * 0.02)
+        maxScale: root.rippleMaxScale
+        cycleMs: 2000
+        running: root.active && root.speaking
     }
 
     Common.BlobEffect {

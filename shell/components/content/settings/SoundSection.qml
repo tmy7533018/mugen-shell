@@ -8,8 +8,9 @@ Rectangle {
 
     required property var theme
     required property var modeManager
-    required property var settingsManager
     required property var sounds
+    property string label: "Sound"
+    property string currentSound: "None"
     property string folderPath: ""
 
     signal applySound(string name)
@@ -31,9 +32,9 @@ Rectangle {
     property int kbHighlightIndex: -1
 
     function syncKbToCurrent() {
-        if (!section.sounds || !section.settingsManager) return
+        if (!section.sounds) return
         for (let i = 0; i < section.sounds.length; i++) {
-            if (section.sounds[i] === section.settingsManager.notificationSound) {
+            if (section.sounds[i] === section.currentSound) {
                 section.kbHighlightIndex = i
                 return
             }
@@ -100,7 +101,7 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                text: "Notification Sound"
+                text: section.label
                 color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                 font.pixelSize: 12
                 font.family: "M PLUS 2"
@@ -109,7 +110,7 @@ Rectangle {
             }
 
             Text {
-                text: section.settingsManager ? section.settingsManager.notificationSound : "None"
+                text: section.currentSound
                 color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
                 font.pixelSize: 12
                 font.family: "M PLUS 2"
@@ -143,7 +144,7 @@ Rectangle {
             width: soundList.width
             height: 36
             radius: 8
-            property bool isCurrent: section.settingsManager && modelData === section.settingsManager.notificationSound
+            property bool isCurrent: modelData === section.currentSound
 
             property bool isKbHighlighted: section.kbHighlightIndex === index
 

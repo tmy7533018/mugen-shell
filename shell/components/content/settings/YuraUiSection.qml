@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import "../../common" as Common
 import "../../../lib" as Theme
 
 Rectangle {
@@ -28,70 +29,6 @@ Rectangle {
         section.bump()
     }
 
-    component RowLabel: ColumnLayout {
-        property string title: ""
-        property string desc: ""
-        Layout.fillWidth: true
-        Layout.minimumWidth: 0
-        spacing: 2
-
-        Text {
-            Layout.fillWidth: true
-            text: parent.title
-            color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-            font.pixelSize: 12
-            font.family: "M PLUS 2"
-            font.letterSpacing: 0.5
-            elide: Text.ElideRight
-        }
-
-        Text {
-            Layout.fillWidth: true
-            text: parent.desc
-            color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.60)
-            font.pixelSize: 10
-            font.family: "M PLUS 2"
-            opacity: 0.6
-            elide: Text.ElideRight
-        }
-    }
-
-    component Chip: Rectangle {
-        property string label: ""
-        property bool selected: false
-        signal clicked()
-
-        width: chipText.implicitWidth + 16
-        height: 22
-        radius: 11
-        color: selected
-            ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.45) : Qt.rgba(0.65, 0.55, 0.85, 0.45))
-            : (chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.04))
-        border.width: 1
-        border.color: selected
-            ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95))
-            : Qt.rgba(1, 1, 1, 0.10)
-
-        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-
-        Text {
-            id: chipText
-            anchors.centerIn: parent
-            text: parent.label
-            color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-            font.pixelSize: 10
-            font.family: "M PLUS 2"
-        }
-
-        MouseArea {
-            id: chipMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: parent.clicked()
-        }
-    }
-
     ColumnLayout {
         id: contentColumn
         anchors.left: parent.left
@@ -104,7 +41,7 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 12
 
-            RowLabel {
+            Common.SettingLabel { theme: section.theme;
                 title: "Idle orb breath"
                 desc: "Slow breathing pulse on Yura's orb while idle"
             }
@@ -155,7 +92,7 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 12
 
-            RowLabel {
+            Common.SettingLabel { theme: section.theme;
                 title: "Auto-collapse"
                 desc: "Close the float panel after idle minutes"
             }
@@ -167,7 +104,7 @@ Rectangle {
                 Repeater {
                     model: section.collapsePresets
 
-                    Chip {
+                    Common.Chip { theme: section.theme;
                         required property int modelData
                         label: modelData === 0 ? "Off" : modelData + "m"
                         selected: section.settingsManager
@@ -186,7 +123,7 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 12
 
-            RowLabel {
+            Common.SettingLabel { theme: section.theme;
                 title: "Typing speed"
                 desc: "Typewriter reveal for streamed replies"
             }
@@ -198,7 +135,7 @@ Rectangle {
                 Repeater {
                     model: section.speedOptions
 
-                    Chip {
+                    Common.Chip { theme: section.theme;
                         required property string modelData
                         label: modelData.charAt(0).toUpperCase() + modelData.slice(1)
                         selected: section.settingsManager

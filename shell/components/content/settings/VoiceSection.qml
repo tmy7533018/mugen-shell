@@ -100,11 +100,7 @@ Rectangle {
 
     // Cue sound pickers share the shell's notification sounds dir.
     // "" = built-in beep, "none" = silent, anything else = a file in soundsDir.
-    readonly property string soundsDir: {
-        let xdg = Quickshell.env("XDG_DATA_HOME")
-        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/share"
-        return xdg + "/mugen-shell/sounds"
-    }
+    readonly property string soundsDir: Theme.Paths.soundsDir
     property var cueFiles: []
     readonly property var cueOptions: [
         { label: "Beep (built-in)", value: "" },
@@ -290,70 +286,6 @@ Rectangle {
         section.bump()
     }
 
-    component RowLabel: ColumnLayout {
-        property string title: ""
-        property string desc: ""
-        Layout.fillWidth: true
-        Layout.minimumWidth: 0
-        spacing: 2
-
-        Text {
-            Layout.fillWidth: true
-            text: parent.title
-            color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-            font.pixelSize: 12
-            font.family: "M PLUS 2"
-            font.letterSpacing: 0.5
-            elide: Text.ElideRight
-        }
-
-        Text {
-            Layout.fillWidth: true
-            text: parent.desc
-            color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.60)
-            font.pixelSize: 10
-            font.family: "M PLUS 2"
-            opacity: 0.6
-            elide: Text.ElideRight
-        }
-    }
-
-    component Chip: Rectangle {
-        property string label: ""
-        property bool selected: false
-        signal clicked()
-
-        width: chipText.implicitWidth + 16
-        height: 22
-        radius: 11
-        color: selected
-            ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.45) : Qt.rgba(0.65, 0.55, 0.85, 0.45))
-            : (chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.04))
-        border.width: 1
-        border.color: selected
-            ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95))
-            : Qt.rgba(1, 1, 1, 0.10)
-
-        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-
-        Text {
-            id: chipText
-            anchors.centerIn: parent
-            text: parent.label
-            color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-            font.pixelSize: 10
-            font.family: "M PLUS 2"
-        }
-
-        MouseArea {
-            id: chipMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: parent.clicked()
-        }
-    }
-
     component SoundPicker: ColumnLayout {
         id: picker
         property string title: ""
@@ -377,7 +309,7 @@ Rectangle {
                 anchors.right: parent.right
                 spacing: 12
 
-                RowLabel {
+                Common.SettingLabel { theme: section.theme;
                     title: picker.title
                     desc: picker.desc
                 }
@@ -482,7 +414,7 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 12
 
-            RowLabel {
+            Common.SettingLabel { theme: section.theme;
                 title: "Voice input"
                 desc: "Wake word listening; off releases the microphone"
             }
@@ -503,7 +435,7 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 12
 
-            RowLabel {
+            Common.SettingLabel { theme: section.theme;
                 title: "Follow-up listening"
                 desc: "After a reply, keep listening — no wake word needed"
             }
@@ -528,7 +460,7 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: 12
 
-                RowLabel {
+                Common.SettingLabel { theme: section.theme;
                     title: "Voice enrollment"
                     desc: section.enrolling
                         ? "Say “Hey Yura” after each beep…"
@@ -548,7 +480,7 @@ Rectangle {
                     baseColor: section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
                 }
 
-                Chip {
+                Common.Chip { theme: section.theme;
                     label: section.enrolling
                         ? "Cancel"
                         : (section.enrolled ? "Re-register" : "Register my voice")
@@ -569,7 +501,7 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 12
 
-            RowLabel {
+            Common.SettingLabel { theme: section.theme;
                 title: "On wake"
                 desc: "What opens when Yura hears you"
             }
@@ -581,7 +513,7 @@ Rectangle {
                 Repeater {
                     model: section.wakeOpenOptions
 
-                    Chip {
+                    Common.Chip { theme: section.theme;
                         required property string modelData
                         label: modelData.charAt(0).toUpperCase() + modelData.slice(1)
                         selected: section.settingsManager
@@ -606,7 +538,7 @@ Rectangle {
                 anchors.right: parent.right
                 spacing: 12
 
-                RowLabel {
+                Common.SettingLabel { theme: section.theme;
                     title: "Voice"
                     desc: "VOICEVOX speaker for spoken replies"
                 }
@@ -736,7 +668,7 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 12
 
-            RowLabel {
+            Common.SettingLabel { theme: section.theme;
                 title: "Speech speed"
                 desc: "VOICEVOX speedScale for replies"
             }
@@ -748,7 +680,7 @@ Rectangle {
                 Repeater {
                     model: section.speedOptions
 
-                    Chip {
+                    Common.Chip { theme: section.theme;
                         required property real modelData
                         label: modelData.toFixed(1) + "x"
                         selected: section.settingsManager
@@ -767,7 +699,7 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 12
 
-            RowLabel {
+            Common.SettingLabel { theme: section.theme;
                 title: "Speech recognition"
                 desc: "Whisper language; Auto detects per utterance"
             }
@@ -779,7 +711,7 @@ Rectangle {
                 Repeater {
                     model: ["auto", "ja", "en"]
 
-                    Chip {
+                    Common.Chip { theme: section.theme;
                         required property string modelData
                         label: modelData === "auto" ? "Auto" : modelData.toUpperCase()
                         selected: section.settingsManager

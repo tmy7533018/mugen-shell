@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../../lib" as Theme
 
 QtObject {
     id: root
@@ -11,11 +12,7 @@ QtObject {
     property var settingsManager
     signal notificationReceived(var notification)
 
-    readonly property string soundsDir: {
-        let xdg = Quickshell.env("XDG_DATA_HOME")
-        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/share"
-        return xdg + "/mugen-shell/sounds"
-    }
+    readonly property string soundsDir: Theme.Paths.soundsDir
 
     function addNotification(n) {
         if (!n.summary && !n.body) {

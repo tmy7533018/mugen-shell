@@ -1,4 +1,5 @@
 singleton Motion 1.0 Motion.qml
+singleton Paths 1.0 Paths.qml
 AiBackend 1.0 AiBackend.qml
 Colors 1.0 Colors.qml
 IconProvider 1.0 IconProvider.qml

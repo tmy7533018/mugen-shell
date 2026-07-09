@@ -30,16 +30,8 @@ ShellRoot {
         }
     }
 
-    readonly property string soundsDir: {
-        let xdg = Quickshell.env("XDG_DATA_HOME")
-        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/share"
-        return xdg + "/mugen-shell/sounds"
-    }
-    readonly property string timerSoundsDir: {
-        let xdg = Quickshell.env("XDG_DATA_HOME")
-        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/share"
-        return xdg + "/mugen-shell/timer-sounds"
-    }
+    readonly property string soundsDir: Theme.Paths.soundsDir
+    readonly property string timerSoundsDir: Theme.Paths.timerSoundsDir
 
     property var blurPresets: []
     property bool isLoadingPresets: false

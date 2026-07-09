@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../../ui" as UI
+import "../../common" as Common
 import "../../../lib" as Theme
 
 Item {
@@ -37,57 +38,17 @@ Item {
         return Qt.hsva(themedH, s, finalV, a)
     }
 
-    Item {
-        id: notificationRippleContainer
+    Common.RippleRings {
         anchors.centerIn: parent
         width: notificationIconContainer.scaled(60)
         height: notificationIconContainer.scaled(60)
-        visible: notificationIconContainer.hasUnreadNotifications
         z: 0
-
-        Repeater {
-            model: 3
-
-            Rectangle {
-                id: ripple
-                anchors.centerIn: parent
-                width: notificationIconContainer.scaled(20)
-                height: notificationIconContainer.scaled(20)
-                radius: width / 2
-                color: "transparent"
-                border.width: 1
-                border.color: notificationIconContainer.notificationBlueColor
-
-                property real rippleScale: 1.0
-                property real rippleOpacity: 0.0
-
-                scale: rippleScale
-                opacity: rippleOpacity
-
-                SequentialAnimation on rippleScale {
-                    loops: Animation.Infinite
-                    running: notificationRippleContainer.visible
-
-                    PauseAnimation { duration: index * 300 }
-                    NumberAnimation {
-                        from: 1.0; to: 2.0
-                        duration: 1200
-                        easing.type: Easing.OutCubic
-                    }
-                    PauseAnimation { duration: 4000 - 1200 - index * 300 }
-                }
-
-                SequentialAnimation on rippleOpacity {
-                    loops: Animation.Infinite
-                    running: notificationRippleContainer.visible
-
-                    PauseAnimation { duration: index * 300 }
-                    NumberAnimation { from: 0.0; to: 0.5; duration: 200; easing.type: Easing.OutCubic }
-                    NumberAnimation { from: 0.5; to: 0.0; duration: 1000; easing.type: Easing.OutCubic }
-                    PauseAnimation { duration: 4000 - 1200 - index * 300 }
-                }
-            }
-        }
+        color: notificationIconContainer.notificationBlueColor
+        ringSize: notificationIconContainer.scaled(20)
+        borderWidth: 1
+        maxScale: 2.0
+        cycleMs: 4000
+        running: notificationIconContainer.hasUnreadNotifications
     }
 
     UI.SvgIcon {
