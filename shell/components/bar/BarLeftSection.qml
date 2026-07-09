@@ -296,7 +296,7 @@ RowLayout {
             height: scaled(26)
             orbColor: root.aiListening
                 ? (root.theme ? root.theme.glowSecondary : Qt.rgba(0.55, 0.75, 0.85, 0.9))
-                : (root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9))
+                : (root.theme ? root.theme.glowTertiary : Qt.rgba(0.95, 0.72, 0.74, 0.9))
             streaming: root.aiThinking
             speaking: root.aiSpeaking
             showHalo: true

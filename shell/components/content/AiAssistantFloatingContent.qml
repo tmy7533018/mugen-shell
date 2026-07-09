@@ -648,7 +648,7 @@ FocusScope {
 
         Ai.AmbientOrb {
             anchors.fill: parent
-            orbColor: root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+            orbColor: root.theme ? root.theme.glowTertiary : Qt.rgba(0.95, 0.72, 0.74, 0.9)
             streaming: !root.isEmpty && root.streaming
             haloScale: root.isEmpty ? 1.5 : 1.8
             haloOpacity: root.isEmpty ? 0.45 : 0.6

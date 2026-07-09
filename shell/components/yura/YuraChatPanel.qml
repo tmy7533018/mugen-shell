@@ -371,7 +371,7 @@ PanelWindow {
 
             Ai.AmbientOrb {
                 anchors.fill: parent
-                orbColor: chatWindow.theme ? chatWindow.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+                orbColor: chatWindow.theme ? chatWindow.theme.glowTertiary : Qt.rgba(0.95, 0.72, 0.74, 0.9)
                 showHalo: false
                 coreOpacity: 0.6
                 corePointCount: 48
@@ -489,7 +489,7 @@ PanelWindow {
 
         Ai.AmbientOrb {
             anchors.fill: parent
-            orbColor: chatWindow.theme ? chatWindow.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+            orbColor: chatWindow.theme ? chatWindow.theme.glowTertiary : Qt.rgba(0.95, 0.72, 0.74, 0.9)
             showHalo: false
             coreOpacity: 0.6
             corePointCount: 48
