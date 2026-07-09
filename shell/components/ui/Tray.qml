@@ -38,21 +38,47 @@ RowLayout {
         delegate: Item {
             id: trayDelegate
             required property var modelData
+            required property int index
 
             readonly property bool blocked: root.isBlocked(modelData)
             readonly property bool shouldShow: root.expanded && !blocked
+
+            // Cascade only the bloom (scale/opacity); the slots all open
+            // together so the row doesn't shove its icons around as each width
+            // animates in turn (the jumpy multi-icon behaviour).
+            readonly property int revealDelay: shouldShow ? index * 50 : 0
 
             Layout.preferredWidth: shouldShow ? root.scaled(20) : 0
             Layout.preferredHeight: root.scaled(20)
             Layout.alignment: Qt.AlignVCenter
             opacity: shouldShow ? 1.0 : 0.0
-            visible: opacity > 0.01
+            // Stay in the layout for the whole reveal (shouldShow), so a
+            // still-fading-in icon already holds its slot instead of popping
+            // into the row mid-animation and shoving its neighbour. Falls back
+            // to opacity while collapsing so the fade-out is still seen.
+            visible: shouldShow || opacity > 0.01
+
+            // Blooms in with a spring overshoot as it materializes — reads as
+            // organic rather than a mechanical width-squish. Multiplies with
+            // the inner hover scale.
+            property real revealScale: shouldShow ? 1.0 : 0.3
+            scale: revealScale
+            transformOrigin: Item.Center
 
             Behavior on Layout.preferredWidth {
-                NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: Theme.Motion.gentle; easing.type: Theme.Motion.easeArrive }
             }
             Behavior on opacity {
-                NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
+                SequentialAnimation {
+                    PauseAnimation { duration: trayDelegate.revealDelay }
+                    NumberAnimation { duration: Theme.Motion.standard; easing.type: Theme.Motion.easeArrive }
+                }
+            }
+            Behavior on revealScale {
+                SequentialAnimation {
+                    PauseAnimation { duration: trayDelegate.revealDelay }
+                    NumberAnimation { duration: Theme.Motion.gentle; easing.type: Theme.Motion.easeSpring }
+                }
             }
 
             Image {
