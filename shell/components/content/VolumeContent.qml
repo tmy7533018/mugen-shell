@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Io
 import "../common" as Common
 import "./volume" as Volume
@@ -646,8 +645,8 @@ Item {
                 cursorShape: Qt.PointingHandCursor
 
                 onClicked: {
-                    // Hyprland.dispatch survives panel unload (Process child wouldn't)
-                    Hyprland.dispatch("exec pavucontrol")
+                    // Dispatch exec survives panel unload (a Process child wouldn't)
+                    Theme.Hypr.exec("pavucontrol")
                     modeManager.closeAllModes()
                 }
             }

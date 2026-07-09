@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../../lib" as Theme
 import "../common" as Common
 
 Common.IconButton {
@@ -33,7 +34,7 @@ Common.IconButton {
 
     Process {
         id: screenshotProcess
-        command: ["hyprctl", "dispatch", "exec", screenshotButton.screenshotScript]
+        command: Theme.Hypr.execArgv(screenshotButton.screenshotScript)
         running: false
 
         stdout: SplitParser { }

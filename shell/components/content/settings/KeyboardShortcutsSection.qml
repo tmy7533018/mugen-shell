@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Hyprland
 import "../../../lib" as Theme
 
 Rectangle {
@@ -25,7 +24,7 @@ Rectangle {
     }
 
     function openShortcuts() {
-        Hyprland.dispatch("exec ~/.config/quickshell/mugen-shell/scripts/toggle-shortcuts.sh")
+        Theme.Hypr.exec("~/.config/quickshell/mugen-shell/scripts/toggle-shortcuts.sh")
     }
 
     MouseArea {

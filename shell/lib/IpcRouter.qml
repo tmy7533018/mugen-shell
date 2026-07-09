@@ -1,8 +1,8 @@
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Io
 import Quickshell.Wayland
+import "." as Lib
 
 // External tool entry point for the MCP layer in mugen-ai. Each target maps
 // 1:1 to a tool group exposed to the LLM. Keep handlers thin — defer to the
@@ -117,7 +117,7 @@ Item {
         function open(name: string): void {
             let script = ipcRouter._detachedScripts[name]
             if (script) {
-                Hyprland.dispatch("exec ~/.config/quickshell/mugen-shell/scripts/" + script)
+                Lib.Hypr.exec("~/.config/quickshell/mugen-shell/scripts/" + script)
                 return
             }
             ipcRouter.modeManager.switchMode(name, true)
@@ -224,9 +224,9 @@ Item {
         function launch(cmd: string): string {
             let trimmed = (cmd || "").trim()
             if (trimmed === "") return "error: empty command"
-            // Hyprland exec inherits the user's $PATH, so plain executable
-            // names like "firefox" work — no need for absolute paths.
-            Hyprland.dispatch("exec " + trimmed)
+            // Exec inherits the user's $PATH, so plain executable names like
+            // "firefox" work — no need for absolute paths.
+            Lib.Hypr.exec(trimmed)
             return "launched: " + trimmed
         }
     }

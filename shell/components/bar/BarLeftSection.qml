@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Io
 import "../../lib" as Theme
 import "../ui" as UI
@@ -147,7 +146,7 @@ RowLayout {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
                     if (root.modeManager) root.modeManager.closeAllModes()
-                    Hyprland.dispatch("exec ~/.config/quickshell/mugen-shell/scripts/toggle-calendar.sh")
+                    Theme.Hypr.exec("~/.config/quickshell/mugen-shell/scripts/toggle-calendar.sh")
                 }
             }
         }

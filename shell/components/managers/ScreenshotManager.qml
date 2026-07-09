@@ -3,6 +3,7 @@ import QtQml
 import Qt.labs.folderlistmodel 2.15
 import Quickshell
 import Quickshell.Io
+import "../../lib" as Theme
 
 QtObject {
     id: screenshotManager
@@ -62,10 +63,10 @@ QtObject {
 
     function openScreenshot(filePath) {
         if (!filePath) return
-        // hyprctl dispatch exec runs this through /bin/sh, so a filename with a
-        // quote must be escaped just like copyScreenshot does.
+        // The exec runs through /bin/sh, so a filename with a quote must be
+        // escaped just like copyScreenshot does.
         let escaped = filePath.replace(/'/g, "'\"'\"'")
-        openScreenshotProcess.command = ["hyprctl", "dispatch", "exec", "imv '" + escaped + "'"]
+        openScreenshotProcess.command = Theme.Hypr.execArgv("imv '" + escaped + "'")
         openScreenshotProcess.running = true
     }
 

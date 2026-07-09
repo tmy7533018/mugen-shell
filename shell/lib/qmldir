@@ -1,3 +1,4 @@
+singleton Hypr 1.0 Hypr.qml
 singleton Motion 1.0 Motion.qml
 singleton Paths 1.0 Paths.qml
 AiBackend 1.0 AiBackend.qml

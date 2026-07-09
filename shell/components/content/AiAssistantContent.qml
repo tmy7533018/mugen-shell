@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Io
 import "../../lib" as Theme
 import "../ui" as UI
@@ -271,7 +270,7 @@ FocusScope {
                         // so window coords map 1:1 between the two.
                         const p = orbSlot.mapToItem(null, 0, 0)
                         modeManager.closeAllModes()
-                        Hyprland.dispatch("exec qs -p ~/.config/quickshell/mugen-shell/yura-shell.qml ipc call yura toggleFrom "
+                        Theme.Hypr.exec("qs -p ~/.config/quickshell/mugen-shell/yura-shell.qml ipc call yura toggleFrom "
                             + Math.round(p.x) + " " + Math.round(p.y) + " " + Math.round(orbSlot.width))
                     }
                 }

@@ -1,7 +1,6 @@
 import QtQuick
 import Qt5Compat.GraphicalEffects
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Wayland
 import "../../lib" as Theme
 import "../content" as Content
@@ -123,7 +122,7 @@ PanelWindow {
 
     // A fresh yura-shell can't be mid-stream; clear any glow left stale on
     // the bar if the previous process died while streaming.
-    Component.onCompleted: Hyprland.dispatch("exec qs -c mugen-shell ipc call yura set_thinking false")
+    Component.onCompleted: Theme.Hypr.exec("qs -c mugen-shell ipc call yura set_thinking false")
 
     function syncScreenSize() {
         if (chatWindow.width <= 0 || chatWindow.height <= 0) return
@@ -539,7 +538,7 @@ PanelWindow {
         target: contentLoader.item
         ignoreUnknownSignals: true
         function onStreamingChanged() {
-            Hyprland.dispatch("exec qs -c mugen-shell ipc call yura set_thinking "
+            Theme.Hypr.exec("qs -c mugen-shell ipc call yura set_thinking "
                 + (contentLoader.item.streaming ? "true" : "false"))
         }
     }

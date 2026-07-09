@@ -478,7 +478,7 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: {
-                Hyprland.dispatch("workspace " + workspaceId);
+                Theme.Hypr.workspace(workspaceId);
                 workspacesRoot.updateWorkspaces();
             }
         }

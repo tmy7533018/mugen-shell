@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
-import Quickshell.Hyprland
 import "../ui" as UI
 import "../../lib" as Theme
 
@@ -63,7 +62,7 @@ FocusScope {
 
     function launchExec(execCmd, inTerminal) {
         if (!execCmd) return
-        Hyprland.dispatch("exec " + (inTerminal ? "kitty " + execCmd : execCmd))
+        Theme.Hypr.exec(inTerminal ? "kitty " + execCmd : execCmd)
         modeManager.closeAllModes()
     }
 

@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Io
 import "../ui" as UI
 import "../../lib" as Theme
@@ -208,7 +207,7 @@ FocusScope {
                 color: Qt.rgba(0.45, 0.65, 0.90, 1.0)
                 onClicked: {
                     root.resetAutoCloseTimer()
-                    Hyprland.dispatch("exec hyprlock")
+                    Theme.Hypr.exec("hyprlock")
                     modeManager.closeAllModes()
                 }
             }
@@ -222,7 +221,7 @@ FocusScope {
                 color: Qt.rgba(0.65, 0.55, 0.85, 1.0)
                 onClicked: {
                     root.resetAutoCloseTimer()
-                    logoutProcess.running = true
+                    Theme.Hypr.exit()
                 }
             }
 
@@ -235,7 +234,7 @@ FocusScope {
                 color: Qt.rgba(0.55, 0.75, 0.85, 1.0)
                 onClicked: {
                     root.resetAutoCloseTimer()
-                    Hyprland.dispatch("exec systemctl suspend")
+                    Theme.Hypr.exec("systemctl suspend")
                     modeManager.closeAllModes()
                 }
             }
@@ -275,7 +274,7 @@ FocusScope {
                 color: Qt.rgba(0.72, 0.72, 0.82, 1.0)
                 onClicked: {
                     if (modeManager) modeManager.closeAllModes()
-                    Hyprland.dispatch("exec ~/.config/quickshell/mugen-shell/scripts/toggle-settings.sh")
+                    Theme.Hypr.exec("~/.config/quickshell/mugen-shell/scripts/toggle-settings.sh")
                 }
             }
         }
@@ -283,13 +282,6 @@ FocusScope {
         Item { Layout.fillWidth: true }
     }
     
-    Process {
-        id: logoutProcess
-        command: ["bash", "-c", "hyprctl dispatch exit"]
-        running: false
-    }
-
-
     Process {
         id: rebootProcess
         command: ["bash", "-c", "systemctl reboot"]
