@@ -29,39 +29,27 @@ Row {
         return root.minBarHeight + (root.maxBarHeight - root.minBarHeight) * multiplier
     }
     
-    // AGC: tracks peak level to normalize output and maintain consistent visual amplitude
-    property real signalPeak: 0.15
-
-    Connections {
-        target: cavaManager
-        function onAudioLevelChanged() {
-            let current = cavaManager.audioLevel
-            if (current > signalPeak) {
-                signalPeak = current
-            } else {
-                // Slow decay (~3s half-life) so sensitivity gradually increases during quiet passages
-                signalPeak = Math.max(0.15, signalPeak * 0.995)
-            }
-        }
-    }
-
+    // No QML-side gain tracking here: cava's autosens already adapts the
+    // level range, and a second rolling-peak normalization on top made the
+    // bars whipsaw — one loud hit deadened everything for seconds, while
+    // quiet passages decayed the peak until moderate signal slammed every
+    // bar to max. Plain cava in a terminal (autosens only) is the reference
+    // behaviour.
     function getBarLevel(index) {
         if (!cavaManager || !cavaManager.barLevels) {
             return 0
         }
-        
+
         let indices = (barIndices && barIndices.length === barCount)
             ? barIndices
             : Array.from({length: barCount}, (_, i) => Math.min(Math.round(i * 15 / Math.max(1, barCount - 1)), 15))
-        
+
         let sourceIndex = indices[Math.min(index, indices.length - 1)]
         let specific = cavaManager.barLevels[sourceIndex] || 0
         let overall = cavaManager.rms || 0
         let blended = specific * heightBlend + overall * (1.0 - heightBlend)
-        
-        let normalized = blended / Math.max(0.01, signalPeak)
-        
-        return Math.max(0, Math.min(1, normalized))
+
+        return Math.max(0, Math.min(1, blended))
     }
     
     Repeater {
@@ -81,16 +69,18 @@ Row {
                 property real currentLevel: 0
                 radius: root.barWidth / 2
                 
+                // 80ms: at the 60fps feed this is just enough to bridge frames
+                // without adding visible lag (120ms read as sluggish).
                 Behavior on height {
                     NumberAnimation {
-                        duration: 120
+                        duration: 80
                         easing.type: Easing.OutQuad
                     }
                 }
-                
+
                 Behavior on targetY {
                     NumberAnimation {
-                        duration: 120
+                        duration: 80
                         easing.type: Easing.OutQuad
                     }
                 }

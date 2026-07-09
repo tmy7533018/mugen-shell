@@ -24,7 +24,7 @@ fi
 cat <<EOF > "$TMP_CONFIG"
 [general]
 bars = 16
-framerate = 20
+framerate = 60
 
 [input]
 method = pipewire
