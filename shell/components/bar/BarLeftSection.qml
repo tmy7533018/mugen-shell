@@ -285,55 +285,36 @@ RowLayout {
         Layout.leftMargin: 0
         Layout.rightMargin: 0
 
-        // Pulsing glow behind the icon while Yura is thinking (bar spotlight
-        // stream or the float panel, reported over IPC) or the voice daemon
-        // is capturing speech — listening gets the secondary hue so the two
-        // states stay tellable apart.
+        // Yura's orb IS the bar icon: it breathes at rest, pulses while
+        // thinking (bar spotlight stream or the float panel, reported over
+        // IPC), takes the secondary hue while the mic captures, and pings
+        // sonar rings while speaking. Hover lifts its brightness and size.
         Ai.AmbientOrb {
+            id: aiOrb
             anchors.centerIn: parent
             width: scaled(26)
             height: scaled(26)
             orbColor: root.aiListening
                 ? (root.theme ? root.theme.glowSecondary : Qt.rgba(0.55, 0.75, 0.85, 0.9))
                 : (root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9))
-            streaming: true
-            haloScale: 1.7
-            haloOpacity: 0.55
-            coreOpacity: 0.35
+            streaming: root.aiThinking
+            speaking: root.aiSpeaking
+            showHalo: true
+            haloScale: 1.5
+            haloOpacity: aiMouseArea.containsMouse ? 0.7 : 0.45
+            coreOpacity: aiMouseArea.containsMouse ? 0.9 : 0.72
             corePointCount: 32
             coreWaveAmplitude: 0.8
             haloPointCount: 24
             haloWaveAmplitude: 1.2
-            speaking: root.aiSpeaking
-            active: root.aiThinking || root.aiListening || root.aiSpeaking
-            visible: root.aiThinking || root.aiListening || root.aiSpeaking
-        }
+            rippleMaxScale: 1.8
+            breathEnabled: root.settingsManager ? root.settingsManager.yuraIdleBreath : true
+            active: true
+            scale: aiMouseArea.containsMouse ? 1.08 : 1.0
 
-        UI.SvgIcon {
-            id: aiIconSvg
-            anchors.centerIn: parent
-            width: scaled(24)
-            height: scaled(24)
-            source: root.icons ? root.icons.aiSvg : ""
-            color: root.aiListening
-                ? (root.theme ? root.theme.glowSecondary : Qt.rgba(0.55, 0.75, 0.85, 0.9))
-                : (root.aiThinking || root.aiSpeaking)
-                    ? (root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 0.9))
-                    : (root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
-            opacity: (aiMouseArea.containsMouse || root.aiThinking || root.aiListening || root.aiSpeaking) ? 1.0 : 0.6
-            scale: aiMouseArea.containsMouse ? 1.3 : 1.0
-
-            Behavior on color {
-                ColorAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
-            }
-
-            Behavior on opacity {
-                NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
-            }
-
-            Behavior on scale {
-                NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic }
-            }
+            Behavior on haloOpacity { NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic } }
+            Behavior on coreOpacity { NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic } }
+            Behavior on scale { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
         }
 
         MouseArea {
