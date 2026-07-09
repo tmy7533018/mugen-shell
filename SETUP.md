@@ -202,6 +202,14 @@ source = ~/.config/hypr/configs/mugen-shell.conf
 
 That file ships in the package output (`$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.conf`). Copy it into `~/.config/hypr/configs/` once and the `source =` line keeps it up to date across rebuilds. Without that line nothing spawns `quickshell -c mugen-shell`, and the bar and Yura panels will not start.
 
+**Lua config (Hyprland 0.55+).** hyprlang is deprecated in favour of Lua, and mugen-shell ships `.lua` counterparts next to every `.conf` (`hyprland.lua`, `configs/mugen-shell.lua`, generated `colors.lua` / `configs/blur.lua`). Hyprland prefers `hyprland.lua` when it exists, so the two sit side-by-side and removing the `.lua` restores the legacy config. On a fresh install the shipped `hyprland.lua` is picked up automatically. If you already keep your own Lua config, adopt the mugen-shell autostart with the Lua equivalent of the `source =` line:
+
+```lua
+dofile(os.getenv("HOME") .. "/.config/hypr/configs/mugen-shell.lua")
+```
+
+That snippet also sets `HYPR_CONFIG_LUA=1`, which the shell's dispatch layer reads to emit Lua dispatchers (`hl.dsp.*`) instead of the legacy strings Hyprland rejects under a Lua config. A relog is required to switch config languages (`hyprctl reload` does not).
+
 Two Arch-specific items the NixOS module handles automatically:
 
 - **`hyprlock` PAM file.** Arch does not ship one by default, so `hyprlock` refuses to unlock the screen. Drop the upstream sample into `/etc/pam.d/hyprlock`:
