@@ -16,6 +16,14 @@ type Config struct {
 	History     History     `toml:"history" json:"history"`
 	Context     Context     `toml:"context" json:"context"`
 	Weather     Weather     `toml:"weather" json:"weather"`
+	Logging     Logging     `toml:"logging" json:"logging"`
+}
+
+// Logging controls diagnostic output. Audit gates the JSONL tool-call log
+// (audit.log); turning it off means tool calls — including their arguments —
+// leave no trace on disk.
+type Logging struct {
+	Audit bool `toml:"audit" json:"audit"`
 }
 
 // Weather configures the weather_get tool (Open-Meteo, no API key). Place
@@ -160,6 +168,7 @@ func Default() Config {
 		Shell:   Shell{QsConfig: "mugen-shell"},
 		Context: Context{DesktopState: true, DesktopStateRemote: true},
 		History: History{MaxContextTokens: 8000},
+		Logging: Logging{Audit: true},
 	}
 }
 

@@ -35,6 +35,10 @@ Rectangle {
     }
 
     property string qsConfig: ""
+    property bool auditEnabled: true
+    property bool auditBusy: false
+    property bool auditTarget: true
+    property string auditStatus: ""
 
     function bump() {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
@@ -54,7 +58,81 @@ Rectangle {
             try {
                 let c = JSON.parse(configProc.buf)
                 section.qsConfig = (c.config && c.config.shell && c.config.shell.qs_config) || ""
+                // Missing [logging] (older backend) means the auditor is always on.
+                let lg = c.config && c.config.logging
+                section.auditEnabled = !(lg && lg.audit === false)
             } catch (e) {}
+        }
+    }
+
+    function toggleAudit() {
+        if (auditGetProc.running || auditSaveProc.running) return
+        section.auditBusy = true
+        section.auditTarget = !section.auditEnabled
+        section.auditStatus = "saving…"
+        auditGetProc.running = true
+        section.bump()
+    }
+
+    // Re-fetch before save so the toggle patches a fresh config instead of
+    // clobbering edits made elsewhere since this panel loaded.
+    Process {
+        id: auditGetProc
+        running: false
+        property string buf: ""
+        command: ["curl", "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
+        stdout: SplitParser { onRead: data => auditGetProc.buf += data }
+        onRunningChanged: { if (running) buf = "" }
+        onExited: (exitCode) => {
+            if (exitCode !== 0) {
+                section.auditBusy = false
+                section.auditStatus = "load failed"
+                return
+            }
+            try {
+                let cfg = JSON.parse(auditGetProc.buf).config || {}
+                if (!cfg.logging) cfg.logging = {}
+                cfg.logging.audit = section.auditTarget
+                auditSaveProc.payload = JSON.stringify(cfg)
+                auditSaveProc.running = true
+            } catch (e) {
+                section.auditBusy = false
+                section.auditStatus = "parse failed"
+            }
+        }
+    }
+
+    Process {
+        id: auditSaveProc
+        running: false
+        property string buf: ""
+        property string payload: ""
+        command: ["curl", "-fsS", "--max-time", "5",
+                  "-X", "PUT", aiBackend.baseUrl + "/config",
+                  "-H", "Content-Type: application/json",
+                  "-d", payload]
+        stdout: SplitParser { onRead: data => auditSaveProc.buf += data }
+        onRunningChanged: { if (running) buf = "" }
+        onExited: (exitCode) => {
+            if (exitCode === 0 && auditSaveProc.buf.indexOf("saved") >= 0) {
+                section.auditEnabled = section.auditTarget
+                section.auditStatus = "saved, applying…"
+                auditRestartProc.running = true
+            } else {
+                section.auditBusy = false
+                section.auditStatus = "save failed"
+            }
+        }
+    }
+
+    Process {
+        id: auditRestartProc
+        running: false
+        command: ["curl", "-fsS", "--max-time", "3",
+                  "-X", "POST", aiBackend.baseUrl + "/config/restart"]
+        onExited: (exitCode) => {
+            section.auditBusy = false
+            section.auditStatus = exitCode === 0 ? "applied" : "applied (restart pending)"
         }
     }
 
@@ -196,6 +274,78 @@ Rectangle {
             ActionButton {
                 label: "View log"
                 onClicked: { section.openPath(section.auditPath); section.bump() }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                spacing: 2
+
+                Text {
+                    Layout.fillWidth: true
+                    text: "Audit logging"
+                    color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                    font.pixelSize: 12
+                    font.family: "M PLUS 2"
+                    font.letterSpacing: 0.5
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: section.auditStatus !== ""
+                        ? section.auditStatus
+                        : "Record every tool call (with arguments) to audit.log"
+                    color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.60)
+                    font.pixelSize: 10
+                    font.family: "M PLUS 2"
+                    opacity: 0.6
+                    elide: Text.ElideRight
+                }
+            }
+
+            Rectangle {
+                id: auditPill
+                Layout.preferredWidth: 44
+                Layout.preferredHeight: 24
+                Layout.alignment: Qt.AlignVCenter
+                radius: 12
+                opacity: section.auditBusy ? 0.5 : 1.0
+
+                readonly property bool on: section.auditEnabled
+
+                color: auditPill.on
+                    ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.55) : Qt.rgba(0.65, 0.55, 0.85, 0.55))
+                    : Qt.rgba(0.3, 0.3, 0.36, 0.5)
+                border.width: 1
+                border.color: auditPill.on
+                    ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95))
+                    : Qt.rgba(1, 1, 1, 0.10)
+                Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+                Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
+
+                Rectangle {
+                    width: 18
+                    height: 18
+                    radius: 9
+                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
+                    y: 3
+                    x: auditPill.on ? auditPill.width - width - 3 : 3
+                    Behavior on x { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    enabled: !section.auditBusy
+                    onClicked: section.toggleAudit()
+                }
             }
         }
 

@@ -117,12 +117,17 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		return nil, fmt.Errorf("init history: %w", err)
 	}
 
+	// Empty path → nil auditor → every Log() call is a no-op.
+	auditPath := ""
+	if cfg.Logging.Audit {
+		auditPath = filepath.Join(stateDir, "audit.log")
+	}
 	toolReg := tools.New(
 		cfg.Shell.QsConfig,
 		resolveScriptsDir(cfg.Shell.ScriptsDir),
 		cfg.Tools.AppLaunch.AllowedCommands,
 		cfg.Tools.DisabledCategories,
-		tools.NewAuditor(filepath.Join(stateDir, "audit.log")),
+		tools.NewAuditor(auditPath),
 	)
 
 	toolReg.AttachMemory(st)
