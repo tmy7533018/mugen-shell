@@ -35,7 +35,12 @@ Rectangle {
     property bool addingServer: false
     property string formName: ""
     property string formCommand: ""
+    property string formUrl: ""
     property string formEnv: ""
+
+    // Installed-server candidates from GET /mcp/discover.
+    property var discoverCandidates: []
+    property bool discovered: false
 
     readonly property int expandedHeight: 64 + contentColumn.implicitHeight + 16
 
@@ -73,7 +78,7 @@ Rectangle {
             if (s.name === name) {
                 let copy = {
                     name: s.name, command: s.command, args: s.args,
-                    env: s.env, disabled: s.disabled, trusted: s.trusted
+                    env: s.env, url: s.url, disabled: s.disabled, trusted: s.trusted
                 }
                 copy[key] = value
                 next.push(copy)
@@ -111,14 +116,17 @@ Rectangle {
             if (servers[i].name === name) { section.statusText = "\"" + name + "\" already exists"; return }
         }
         let toks = formCommand.trim().split(/\s+/).filter(t => t.length > 0)
-        if (toks.length === 0) { section.statusText = "command is required"; return }
+        let url = formUrl.trim()
+        if (toks.length === 0 && url.length === 0) { section.statusText = "command or URL is required"; return }
+        if (url.length > 0 && !/^https?:\/\//.test(url)) { section.statusText = "URL must start with http:// or https://"; return }
 
         let next = servers.slice()
         next.push({
             name: name,
-            command: toks[0],
+            command: toks.length > 0 ? toks[0] : "",
             args: toks.slice(1),
             env: parseEnv(formEnv),
+            url: url,
             disabled: false,
             trusted: false
         })
@@ -126,6 +134,7 @@ Rectangle {
         section.dirty = true
         section.formName = ""
         section.formCommand = ""
+        section.formUrl = ""
         section.formEnv = ""
         section.addingServer = false
         section.statusText = "added \"" + name + "\" — Save & Apply to start it"
@@ -145,6 +154,7 @@ Rectangle {
         section.addingServer = false
         section.formName = ""
         section.formCommand = ""
+        section.formUrl = ""
         section.formEnv = ""
         section.statusText = "reverted unsaved changes"
         loadConfigProcess.running = true
@@ -176,6 +186,7 @@ Rectangle {
                         command: s.command || "",
                         args: s.args || [],
                         env: s.env || ({}),
+                        url: s.url || "",
                         disabled: !!s.disabled,
                         trusted: !!s.trusted
                     })
@@ -228,7 +239,7 @@ Rectangle {
                 let m = {}
                 for (let i = 0; i < section.servers.length; i++) {
                     let s = section.servers[i]
-                    m[s.name] = { command: s.command, args: s.args, env: s.env, disabled: s.disabled, trusted: s.trusted }
+                    m[s.name] = { command: s.command, args: s.args, env: s.env, url: s.url || "", disabled: s.disabled, trusted: s.trusted }
                 }
                 cfg.mcp.servers = m
                 saveProcess.payload = JSON.stringify(cfg)
@@ -283,6 +294,27 @@ Rectangle {
         // servers after a restart; reload once it should be listening again.
         interval: 4000
         onTriggered: loadConfigProcess.running = true
+    }
+
+    Process {
+        id: discoverProcess
+        running: false
+        property string buf: ""
+        command: ["curl", "-fsS", "--max-time", "8", aiBackend.baseUrl + "/mcp/discover"]
+        stdout: SplitParser { onRead: data => discoverProcess.buf += data }
+        onRunningChanged: { if (running) buf = "" }
+        onExited: (exitCode) => {
+            if (exitCode !== 0) { section.statusText = "discover failed"; return }
+            try {
+                section.discoverCandidates = (JSON.parse(discoverProcess.buf).candidates) || []
+                section.discovered = true
+                if (section.discoverCandidates.length === 0)
+                    section.statusText = "no installed MCP servers found (npm -g)"
+                section.bump()
+            } catch (e) {
+                section.statusText = "discover parse failed"
+            }
+        }
     }
 
     Component.onCompleted: loadConfigProcess.running = true
@@ -516,7 +548,7 @@ Rectangle {
                                 ? "Not running yet — Save & Apply to start it."
                                 : (serverRow.st && serverRow.st.connected)
                                     ? (serverRow.st.tool_count + " tool" + (serverRow.st.tool_count === 1 ? "" : "s")
-                                       + "  ·  " + serverRow.modelData.command)
+                                       + "  ·  " + (serverRow.modelData.url || serverRow.modelData.command))
                                     : ((serverRow.st && serverRow.st.error) || "Handshake failed.")
                         color: failed
                             ? Qt.rgba(0.9, 0.55, 0.55, 0.9)
@@ -585,35 +617,118 @@ Rectangle {
             }
         }
 
-        // "+ Add server" toggle button.
-        Rectangle {
+        // "+ Add server" toggle + "Discover" (installed servers) side by side.
+        RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 30
             visible: !section.addingServer
-            radius: 10
-            color: addMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.30) : Qt.rgba(0.55, 0.55, 0.65, 0.18)
-            border.width: 1
-            border.color: section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.12)
-            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+            spacing: 8
 
-            Text {
-                anchors.centerIn: parent
-                text: "+ Add server"
-                color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                font.pixelSize: 11
-                font.family: "M PLUS 2"
-                font.weight: Font.Medium
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 30
+                radius: 10
+                color: addMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.30) : Qt.rgba(0.55, 0.55, 0.65, 0.18)
+                border.width: 1
+                border.color: section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.12)
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "+ Add server"
+                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                    font.pixelSize: 11
+                    font.family: "M PLUS 2"
+                    font.weight: Font.Medium
+                }
+
+                MouseArea {
+                    id: addMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        section.addingServer = true
+                        section.statusText = ""
+                        section.bump()
+                    }
+                }
             }
 
-            MouseArea {
-                id: addMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    section.addingServer = true
-                    section.statusText = ""
-                    section.bump()
+            Rectangle {
+                Layout.preferredWidth: 90
+                Layout.preferredHeight: 30
+                radius: 10
+                color: discoverMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.30) : Qt.rgba(0.55, 0.55, 0.65, 0.18)
+                border.width: 1
+                border.color: section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.12)
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: discoverProcess.running ? "…" : "Discover"
+                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                    font.pixelSize: 11
+                    font.family: "M PLUS 2"
+                }
+
+                MouseArea {
+                    id: discoverMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        section.statusText = ""
+                        discoverProcess.running = true
+                        section.bump()
+                    }
+                }
+            }
+        }
+
+        // Discovered candidates — tap to prefill the add form.
+        Flow {
+            Layout.fillWidth: true
+            visible: !section.addingServer && section.discoverCandidates.length > 0
+            spacing: 6
+
+            Repeater {
+                model: section.discoverCandidates
+
+                Rectangle {
+                    id: candidatePill
+                    required property var modelData
+                    width: candidateLabel.implicitWidth + 20
+                    height: 24
+                    radius: 12
+                    color: candidateMouse.containsMouse ? Qt.rgba(0.45, 0.65, 0.90, 0.35) : Qt.rgba(0.45, 0.65, 0.90, 0.18)
+                    border.width: 1
+                    border.color: Qt.rgba(0.45, 0.65, 0.90, 0.5)
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+
+                    Text {
+                        id: candidateLabel
+                        anchors.centerIn: parent
+                        text: "+ " + candidatePill.modelData.name
+                        color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                        font.pixelSize: 10
+                        font.family: "M PLUS 2"
+                    }
+
+                    MouseArea {
+                        id: candidateMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            section.formName = candidatePill.modelData.name
+                            section.formCommand = candidatePill.modelData.command + " "
+                                + (candidatePill.modelData.args || []).join(" ")
+                            section.formUrl = ""
+                            section.addingServer = true
+                            section.statusText = ""
+                            section.bump()
+                        }
+                    }
                 }
             }
         }
@@ -638,11 +753,12 @@ Rectangle {
                 anchors.topMargin: 10
                 spacing: 6
 
-                // name + command share the labelled-input pattern.
+                // name + command + url share the labelled-input pattern.
                 Repeater {
                     model: [
                         { key: "name", label: "Name", hint: "memory" },
-                        { key: "command", label: "Command", hint: "npx -y @modelcontextprotocol/server-memory" }
+                        { key: "command", label: "Command", hint: "npx -y @modelcontextprotocol/server-memory" },
+                        { key: "url", label: "URL", hint: "http://host:port/mcp — remote server, instead of a command" }
                     ]
 
                     RowLayout {
@@ -675,7 +791,9 @@ Rectangle {
                                 anchors.fill: parent
                                 anchors.leftMargin: 8
                                 anchors.rightMargin: 8
-                                text: fieldRow.modelData.key === "name" ? section.formName : section.formCommand
+                                text: fieldRow.modelData.key === "name" ? section.formName
+                                    : fieldRow.modelData.key === "command" ? section.formCommand
+                                    : section.formUrl
                                 color: section.theme ? section.theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.9)
                                 selectionColor: section.theme ? Qt.rgba(section.theme.glowPrimary.r, section.theme.glowPrimary.g, section.theme.glowPrimary.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4)
                                 font.pixelSize: 11
@@ -684,7 +802,8 @@ Rectangle {
                                 clip: true
                                 onTextChanged: {
                                     if (fieldRow.modelData.key === "name") section.formName = text
-                                    else section.formCommand = text
+                                    else if (fieldRow.modelData.key === "command") section.formCommand = text
+                                    else section.formUrl = text
                                 }
 
                                 Text {
@@ -777,6 +896,7 @@ Rectangle {
                                 section.addingServer = false
                                 section.formName = ""
                                 section.formCommand = ""
+                                section.formUrl = ""
                                 section.formEnv = ""
                                 section.statusText = ""
                                 section.bump()

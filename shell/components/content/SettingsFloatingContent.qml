@@ -30,7 +30,7 @@ Item {
         { id: "appearance", label: "Appearance",   types: ["theme", "gradient", "blur", "animation", "dateFormat"] },
         { id: "sound",      label: "Sound",        types: ["notificationSound", "timerSound"] },
         { id: "timer",      label: "Timer & Lock", types: ["timer", "lockTimer"] },
-        { id: "ai",         label: "AI / Yura",    types: ["yuraPersonality", "yuraProvider", "yuraMcp", "aiBarModel", "yuraThinking", "yuraToolCategories", "yuraAppLaunch", "yuraPanelSide", "yuraUi", "voice", "yuraMemory", "yuraHistory", "yuraAdvanced"] },
+        { id: "ai",         label: "AI / Yura",    types: ["yuraPersonality", "yuraProvider", "yuraMcp", "yuraMcpExpose", "aiBarModel", "yuraThinking", "yuraToolCategories", "yuraAppLaunch", "yuraPanelSide", "yuraUi", "voice", "yuraMemory", "yuraHistory", "yuraAdvanced"] },
         { id: "system",     label: "System",       types: ["battery", "shortcuts"] },
         { id: "reset",      label: "Reset",        types: ["reset"], danger: true }
     ]
@@ -181,6 +181,7 @@ Item {
                                 case "yuraPersonality":   return yuraPersonalitySection
                                 case "yuraProvider":      return yuraProviderSection
                                 case "yuraMcp":           return yuraMcpSection
+                                case "yuraMcpExpose":     return yuraMcpExposeSection
                                 case "yuraThinking":      return yuraThinkingSection
                                 case "yuraToolCategories": return yuraToolCategoriesSection
                                 case "yuraAppLaunch":     return yuraAppLaunchSection
@@ -310,6 +311,10 @@ Item {
         modeManager: root.modeManager
     }}
     Component { id: yuraMcpSection; Settings.YuraMcpSection {
+        theme: root.theme
+        modeManager: root.modeManager
+    }}
+    Component { id: yuraMcpExposeSection; Settings.YuraMcpExposeSection {
         theme: root.theme
         modeManager: root.modeManager
     }}
