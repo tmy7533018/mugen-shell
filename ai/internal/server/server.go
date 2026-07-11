@@ -112,6 +112,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /tools/call", s.handleToolCall)
 
 	mux.HandleFunc("GET /mcp/servers", s.handleListMCPServers)
+	mux.HandleFunc("GET /mcp/discover", s.handleMCPDiscover)
 	mux.HandleFunc("POST /mcp", s.handleMCPExpose)
 
 	mux.HandleFunc("GET /memories", s.handleListMemories)
@@ -771,6 +772,12 @@ func (s *Server) handleListMCPServers(w http.ResponseWriter, _ *http.Request) {
 		statuses = []mcp.ServerStatus{}
 	}
 	writeJSON(w, map[string]any{"servers": statuses})
+}
+
+// handleMCPDiscover lists MCP servers already installed on this machine so
+// the Settings GUI can offer them as one-tap config entries.
+func (s *Server) handleMCPDiscover(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]any{"candidates": mcp.Discover(r.Context())})
 }
 
 func providerTools(in []tools.Tool) []provider.Tool {
