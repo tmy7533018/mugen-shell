@@ -81,15 +81,17 @@ type MCP struct {
 	Servers map[string]MCPServer `toml:"servers" json:"servers"`
 }
 
-// MCPServer is one stdio MCP server entry. Command is the executable,
-// Args its arguments, Env extra variables layered onto the inherited
-// environment. Disabled keeps the entry in the file but skips spawning it.
-// Trusted skips the per-call approval prompt for this server's destructive
-// tools — opt-in, since it removes the only gate on irreversible writes.
+// MCPServer is one MCP server entry. Command (plus Args / Env, layered onto
+// the inherited environment) spawns a stdio server; URL connects to a remote
+// Streamable HTTP server instead — when both are set, URL wins. Disabled
+// keeps the entry in the file but skips connecting it. Trusted skips the
+// per-call approval prompt for this server's destructive tools — opt-in,
+// since it removes the only gate on irreversible writes.
 type MCPServer struct {
 	Command  string            `toml:"command" json:"command"`
 	Args     []string          `toml:"args" json:"args"`
 	Env      map[string]string `toml:"env" json:"env"`
+	URL      string            `toml:"url" json:"url"`
 	Disabled bool              `toml:"disabled" json:"disabled"`
 	Trusted  bool              `toml:"trusted" json:"trusted"`
 }

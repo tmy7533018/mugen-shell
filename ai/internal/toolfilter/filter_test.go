@@ -121,9 +121,9 @@ func TestKeywordHitsJapaneseAndEnglish(t *testing.T) {
 		{"音量ちょっと上げて", []string{"audio"}},
 		{"set a TIMER for five minutes", []string{"timer"}},
 		{"明日の天気どう？", []string{"weather"}},
-		{"the dynamic range is wide", nil},       // "mic" must not fire inside "dynamic"
-		{"こんにちは", nil},                           // chat-only
-		{"開いて firefox", []string{"app"}},         // ja keyword
+		{"the dynamic range is wide", nil}, // "mic" must not fire inside "dynamic"
+		{"こんにちは", nil},                     // chat-only
+		{"開いて firefox", []string{"app"}},   // ja keyword
 		{"volume and weather", []string{"audio", "weather"}},
 	}
 	for _, c := range cases {

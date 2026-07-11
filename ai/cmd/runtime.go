@@ -204,6 +204,7 @@ func mcpServerConfigs(c config.MCP) map[string]mcp.ServerConfig {
 			Command:  s.Command,
 			Args:     s.Args,
 			Env:      expandEnv(s.Env),
+			URL:      s.URL,
 			Disabled: s.Disabled,
 		}
 	}
