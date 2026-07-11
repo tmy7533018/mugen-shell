@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -53,7 +54,19 @@ func (s *Server) handlePutConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Decoding onto the loaded config merges maps rather than replacing them,
+	// so a deleted MCP server (sent as a servers map missing that key) would
+	// survive. When the body carries mcp.servers, drop the existing map first
+	// so the decode repopulates it fresh and deletions actually persist.
+	if mcpServersPresent(body) {
+		cfg.MCP.Servers = nil
+	}
+	if err := json.Unmarshal(body, &cfg); err != nil {
 		http.Error(w, "invalid json: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -62,6 +75,21 @@ func (s *Server) handlePutConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, map[string]any{"saved": true, "restart_required": true})
+}
+
+// mcpServersPresent reports whether the request body explicitly carries an
+// mcp.servers object — the signal that the client is sending the full server
+// list and expects deletions to take effect.
+func mcpServersPresent(body []byte) bool {
+	var probe struct {
+		MCP *struct {
+			Servers json.RawMessage `json:"servers"`
+		} `json:"mcp"`
+	}
+	if err := json.Unmarshal(body, &probe); err != nil {
+		return false
+	}
+	return probe.MCP != nil && probe.MCP.Servers != nil
 }
 
 func (s *Server) handleRestart(w http.ResponseWriter, _ *http.Request) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -82,9 +83,14 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 	}
 	// Without this note a filtered turn makes the model under-report what it
 	// can do ("I have no wallpaper tools") instead of realising the list is
-	// per-turn.
+	// per-turn. Derived from the actually-enabled categories (disabled ones
+	// excluded, configured MCP servers included) so it never advertises a
+	// capability the model will refuse or omit one the user added.
 	if cfg.Tools.ContextFilter.Enabled {
-		tooling += "\n\nTool visibility: for efficiency you may be shown only the tools relevant to the current message. Your full capabilities cover: audio volume, music playback, shell panels, brightness, theme, wallpaper, notifications and DnD, timers, calendar, app launching, long-term memory, and weather. If the user asks what you can do, describe that full set even when only a few tools are visible this turn."
+		if caps := enabledCapabilities(cfg); caps != "" {
+			tooling += "\n\nTool visibility: for efficiency you may be shown only the tools relevant to the current message. Your full capabilities cover: " + caps +
+				". If the user asks what you can do, describe that full set even when only a few tools are visible this turn."
+		}
 	}
 
 	var system string
@@ -148,9 +154,11 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 	mcpMgr := mcp.Connect(context.Background(), mcpServerConfigs(cfg.MCP))
 	toolReg.AttachMCP(mcpMgr, trustedMCPServers(cfg.MCP))
 
-	// Built after AttachMCP so MCP server categories get embedding profiles
-	// too. Warm runs in the background: the first turns simply degrade to
-	// keyword-only until the category vectors are ready.
+	// The category vectors warm lazily on the first turn that actually needs
+	// them (a local-model chat with the filter applied), so cloud-only users
+	// never spawn a doomed embed call against a non-running Ollama. The lazy
+	// path copies the tool slice, avoiding an unsynchronised read of the
+	// registry's internal slice from a background goroutine.
 	var filter *toolfilter.Filter
 	if fc := cfg.Tools.ContextFilter; fc.Enabled {
 		var embed toolfilter.EmbedFunc
@@ -165,7 +173,6 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 			MinScore:      fc.MinScore,
 			AlwaysInclude: fc.AlwaysInclude,
 		}, embed)
-		go filter.Warm(context.Background(), toolReg.List())
 	}
 
 	return &runtimeContext{
@@ -313,6 +320,52 @@ func assemblePersona(p config.Personality) string {
 		return header
 	}
 	return header + "\n\n" + p.SystemPrompt
+}
+
+// builtinCapabilities maps each built-in tool category to a short human
+// phrase for the "full capabilities" prompt note, in a stable display order.
+var builtinCapabilities = []struct{ cat, phrase string }{
+	{"audio", "audio and mic volume"},
+	{"music", "music playback"},
+	{"panel", "shell panels"},
+	{"brightness", "brightness"},
+	{"theme", "theme"},
+	{"wallpaper", "wallpaper"},
+	{"notification", "notifications and DnD"},
+	{"timer", "timers"},
+	{"calendar", "calendar"},
+	{"app", "app launching"},
+	{"memory", "long-term memory"},
+	{"weather", "weather"},
+}
+
+// enabledCapabilities builds the capability sentence from the categories that
+// are actually live: built-ins minus DisabledCategories, plus every enabled,
+// non-disabled MCP server (its name is its tool category). Returns "" if
+// everything is disabled.
+func enabledCapabilities(cfg config.Config) string {
+	disabled := map[string]bool{}
+	for _, c := range cfg.Tools.DisabledCategories {
+		disabled[strings.ToLower(strings.TrimSpace(c))] = true
+	}
+	var parts []string
+	for _, bc := range builtinCapabilities {
+		if !disabled[bc.cat] {
+			parts = append(parts, bc.phrase)
+		}
+	}
+	names := make([]string, 0, len(cfg.MCP.Servers))
+	for name := range cfg.MCP.Servers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		s := cfg.MCP.Servers[name]
+		if !s.Disabled && !disabled[strings.ToLower(name)] {
+			parts = append(parts, name)
+		}
+	}
+	return strings.Join(parts, ", ")
 }
 
 func stateBaseDir() string {

@@ -277,6 +277,45 @@ func TestWarmFailureThenSelectStillWorks(t *testing.T) {
 	}
 }
 
+func TestContainsWordUTF8Boundary(t *testing.T) {
+	// The boundary byte before "open" is リ's trailing UTF-8 byte (0xAA); a
+	// byte-wise check mis-reads it as a letter and drops the match.
+	if !containsWord("アプリopen", "open") {
+		t.Error(`containsWord("アプリopen","open") should be true`)
+	}
+	if !containsWord("東京はrain", "rain") {
+		t.Error(`containsWord("東京はrain","rain") should be true`)
+	}
+	// Genuine word-internal occurrences must still be rejected.
+	if containsWord("dynamic", "mic") {
+		t.Error(`"mic" must not match inside "dynamic"`)
+	}
+	if containsWord("wallpaper", "app") {
+		t.Error(`"app" must not match inside "wallpaper"`)
+	}
+}
+
+func TestSelectKeywordOnlyKeepsBlindCategories(t *testing.T) {
+	// embed=nil → keyword-only mode. "github" has no keyword dictionary entry
+	// (stands in for an MCP server); a keyword hit for audio must not drop it.
+	f := New(Config{}, nil)
+	all := testTools("audio", "music", "theme", "wallpaper", "timer", "calendar", "github")
+	sel, reason := f.Select(context.Background(), "音量上げて", nil, all)
+	got := map[string]bool{}
+	for _, c := range catsOf(sel) {
+		got[c] = true
+	}
+	if !got["audio"] {
+		t.Errorf("keyword-hit category audio missing: %s", reason)
+	}
+	if !got["github"] {
+		t.Errorf("keyword-blind category github must be kept in keyword-only mode: %s", reason)
+	}
+	if got["music"] || got["theme"] {
+		t.Errorf("unrelated built-in categories should be trimmed: %v", got)
+	}
+}
+
 func TestNilFilterPassesThrough(t *testing.T) {
 	var f *Filter
 	all := testTools("audio", "music", "theme", "wallpaper", "timer", "calendar", "weather")

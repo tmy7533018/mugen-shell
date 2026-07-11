@@ -312,7 +312,15 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(os.Stderr, "toolfilter: %d/%d tools (%s)\n", len(selTools), len(allTools), reason)
 		}
 	}
-	opts := provider.ChatOptions{Tools: providerTools(selTools), Thinking: thinking}
+	// The filtered list rides the first request; once the model has actually
+	// engaged a tool and we loop, a chain step may need any category the
+	// opening message didn't hint at, so later iterations see the full list.
+	firstTools := providerTools(selTools)
+	fullTools := firstTools
+	if len(selTools) != len(allTools) {
+		fullTools = providerTools(allTools)
+	}
+	opts := provider.ChatOptions{Tools: firstTools, Thinking: thinking}
 
 	sendEvent := func(payload map[string]any) {
 		data, _ := json.Marshal(payload)
@@ -340,6 +348,9 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for iteration := 0; iteration < maxIterations; iteration++ {
+		if iteration == 1 {
+			opts.Tools = fullTools
+		}
 		var iterContent string
 		var iterToolCalls []provider.ToolCall
 
@@ -801,8 +812,9 @@ type toolCallRequest struct {
 // recently. The context filter unions them into every turn's selection so a
 // keyword-less follow-up ("もう少し上げて") keeps the tools it refers to.
 type recentCats struct {
-	mu sync.Mutex
-	m  map[int64]map[string]time.Time
+	mu        sync.Mutex
+	m         map[int64]map[string]time.Time
+	lastSweep time.Time
 }
 
 const recentCatTTL = 15 * time.Minute
@@ -814,10 +826,34 @@ func newRecentCats() *recentCats {
 func (rc *recentCats) note(conv int64, cat string) {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
+	rc.sweepLocked()
 	if rc.m[conv] == nil {
 		rc.m[conv] = map[string]time.Time{}
 	}
 	rc.m[conv][cat] = time.Now()
+}
+
+// sweepLocked drops every expired entry across all conversations at most once
+// per TTL window. get() only prunes the conversation it is queried with, so
+// without this an abandoned conversation (never read again) would leak its
+// category map forever on a long-running daemon.
+func (rc *recentCats) sweepLocked() {
+	now := time.Now()
+	if now.Sub(rc.lastSweep) < recentCatTTL {
+		return
+	}
+	rc.lastSweep = now
+	cutoff := now.Add(-recentCatTTL)
+	for conv, cats := range rc.m {
+		for cat, at := range cats {
+			if at.Before(cutoff) {
+				delete(cats, cat)
+			}
+		}
+		if len(cats) == 0 {
+			delete(rc.m, conv)
+		}
+	}
 }
 
 func (rc *recentCats) get(conv int64) []string {

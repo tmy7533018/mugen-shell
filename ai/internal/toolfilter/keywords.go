@@ -4,6 +4,7 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // categoryKeywords maps each built-in tool category to utterance words that
@@ -101,8 +102,12 @@ func isASCII(s string) bool {
 	return true
 }
 
-// containsWord reports whether w occurs in s delimited by non-letter/digit
-// runes (or string edges).
+// containsWord reports whether the ASCII keyword w occurs in s not glued to
+// another ASCII alphanumeric (so "mic" doesn't match inside "dynamic"). A
+// non-ASCII neighbour — any CJK character — counts as a boundary, since it
+// can't be part of the same English token; neighbours are decoded as full
+// runes rather than single bytes so a multibyte char's trailing byte isn't
+// mistaken for a boundary of its own.
 func containsWord(s, w string) bool {
 	for from := 0; ; {
 		i := strings.Index(s[from:], w)
@@ -110,9 +115,17 @@ func containsWord(s, w string) bool {
 			return false
 		}
 		i += from
-		before := i == 0 || !isWordRune(rune(s[i-1]))
+		before := true
+		if i > 0 {
+			r, _ := utf8.DecodeLastRuneInString(s[:i])
+			before = !isASCIIWord(r)
+		}
 		afterIdx := i + len(w)
-		after := afterIdx >= len(s) || !isWordRune(rune(s[afterIdx]))
+		after := true
+		if afterIdx < len(s) {
+			r, _ := utf8.DecodeRuneInString(s[afterIdx:])
+			after = !isASCIIWord(r)
+		}
 		if before && after {
 			return true
 		}
@@ -120,6 +133,17 @@ func containsWord(s, w string) bool {
 	}
 }
 
-func isWordRune(r rune) bool {
-	return unicode.IsLetter(r) || unicode.IsDigit(r)
+// isASCIIWord reports whether r continues an ASCII word token. Only ASCII
+// letters/digits qualify: an adjacent CJK rune ends the English token.
+func isASCIIWord(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
+}
+
+// categoryHasKeywords reports whether a category can be assessed by the
+// keyword layer at all. Categories with no dictionary entry — every MCP
+// server, whose vocabulary is unknown at compile time — can only be scored
+// by embeddings, so in keyword-only mode they must never be trimmed away.
+func categoryHasKeywords(cat string) bool {
+	_, ok := categoryKeywords[cat]
+	return ok
 }

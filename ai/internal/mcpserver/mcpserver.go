@@ -96,12 +96,19 @@ func (h *Handler) HandleMessage(ctx context.Context, raw []byte) []byte {
 	if msg.Method == "" {
 		return nil
 	}
-	isNotification := len(msg.ID) == 0 || string(msg.ID) == "null"
-
-	result, rerr := h.dispatch(ctx, msg)
-	if isNotification {
+	// A request without an id is a notification. Only genuine notifications
+	// (notifications/*) are legal without an id; anything else — notably a
+	// tools/call missing its id — must not run its side effects fire-and-
+	// forget, so reject it instead of dispatching. This gates execution, not
+	// just the reply.
+	if len(msg.ID) == 0 || string(msg.ID) == "null" {
+		if strings.HasPrefix(msg.Method, "notifications/") {
+			h.dispatch(ctx, msg)
+		}
 		return nil
 	}
+
+	result, rerr := h.dispatch(ctx, msg)
 	resp := rpcResponse{JSONRPC: "2.0", ID: msg.ID, Result: result, Error: rerr}
 	return marshalResponse(resp)
 }

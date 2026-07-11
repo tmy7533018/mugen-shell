@@ -42,6 +42,12 @@ const utteranceEmbedBudget = 800 * time.Millisecond
 // failure (Ollama down, model not pulled) so we don't hammer a dead backend.
 const warmRetryCooldown = 5 * time.Minute
 
+// warmBudget bounds the startup category-embedding call. Without it a backend
+// that accepts the connection but never replies would leave warming=true
+// forever, wedging the embedding layer in keyword-only mode permanently.
+// Generous because a cold embed model can take several seconds to load.
+const warmBudget = 30 * time.Second
+
 type Filter struct {
 	cfg   Config
 	embed EmbedFunc
@@ -54,9 +60,13 @@ type Filter struct {
 }
 
 func New(cfg Config, embed EmbedFunc) *Filter {
-	if cfg.TopK <= 0 {
+	// Negative is the "unset" sentinel; an explicit 0 TopK is honoured (it
+	// means "add no embedding categories, keyword/sticky/always only").
+	if cfg.TopK < 0 {
 		cfg.TopK = 4
 	}
+	// A 0 MinScore would treat every positive cosine as a hit, defeating the
+	// threshold, so it always falls back to the default.
 	if cfg.MinScore <= 0 {
 		cfg.MinScore = 0.4
 	}
@@ -89,7 +99,9 @@ func (f *Filter) Warm(ctx context.Context, all []tools.Tool) {
 		texts = append(texts, profiles[name])
 	}
 
-	vecs, err := f.embed(ctx, texts)
+	wctx, cancel := context.WithTimeout(ctx, warmBudget)
+	defer cancel()
+	vecs, err := f.embed(wctx, texts)
 
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -123,10 +135,12 @@ func (f *Filter) Select(ctx context.Context, utterance string, sticky []string, 
 	kw := keywordHits(utterance, cats)
 	emb, embOK := f.embedHits(ctx, utterance, cats, all)
 
-	// No embedding signal available and no keyword hit: too little evidence
-	// to trim anything safely.
-	if !embOK && len(kw) == 0 {
-		return all, "no signal (embedding unavailable)"
+	// The only evidence that a category is actually relevant to THIS turn is a
+	// keyword or embedding hit; sticky/always merely ride along. With neither,
+	// there is no confident signal, so send the full list rather than trim to
+	// sticky/always and silently strip a capability the user just asked for.
+	if len(kw) == 0 && len(emb) == 0 {
+		return all, "no signal"
 	}
 
 	selected := map[string]bool{}
@@ -146,12 +160,18 @@ func (f *Filter) Select(ctx context.Context, utterance string, sticky []string, 
 			selected[c] = true
 		}
 	}
-
-	// Nothing at all (no always-include configured, fresh conversation):
-	// an empty tool list would silently strip capabilities, so send all.
-	if len(selected) == 0 {
-		return all, "no categories selected"
+	// In keyword-only mode (embeddings unavailable) we cannot assess a
+	// category that has no keyword dictionary — every MCP server. Dropping it
+	// on a keyword hit for some other category would make the user's MCP tools
+	// silently vanish, so never trim a keyword-blind category here.
+	if !embOK {
+		for c := range cats {
+			if !categoryHasKeywords(c) {
+				selected[c] = true
+			}
+		}
 	}
+
 	if len(selected) >= len(cats) {
 		return all, "selection covers all categories"
 	}
