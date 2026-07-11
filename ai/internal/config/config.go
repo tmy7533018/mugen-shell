@@ -13,10 +13,27 @@ type Config struct {
 	Shell       Shell       `toml:"shell" json:"shell"`
 	Tools       Tools       `toml:"tools" json:"tools"`
 	MCP         MCP         `toml:"mcp" json:"mcp"`
+	MCPExpose   MCPExpose   `toml:"mcp_expose" json:"mcp_expose"`
 	History     History     `toml:"history" json:"history"`
 	Context     Context     `toml:"context" json:"context"`
 	Weather     Weather     `toml:"weather" json:"weather"`
 	Logging     Logging     `toml:"logging" json:"logging"`
+}
+
+// MCPExpose publishes mugen-ai's own tools as an MCP server, so external
+// clients (Claude Desktop, Cursor, ...) can drive mugen-shell: over HTTP at
+// POST /mcp on the loopback-only API port, and over stdio via the
+// `mugen-ai mcp-server` bridge subcommand. Tools sourced from external MCP
+// servers are never re-exported. Default when enabled is read-only tools
+// only; Categories opts whole tool groups (theme, wallpaper, timer, ...)
+// into being writable from outside — each named category is a deliberate
+// user decision, since external clients skip Yura's confirmation flow.
+type MCPExpose struct {
+	Enabled  bool `toml:"enabled" json:"enabled"`
+	Readonly bool `toml:"readonly" json:"readonly"`
+	// Categories additionally exposes every tool (reads and writes) of the
+	// listed categories.
+	Categories []string `toml:"categories" json:"categories"`
 }
 
 // Logging controls diagnostic output. Audit gates the JSONL tool-call log
@@ -205,6 +222,7 @@ func Default() Config {
 				AlwaysInclude: []string{"panel", "memory"},
 			},
 		},
+		MCPExpose: MCPExpose{Readonly: true},
 	}
 }
 

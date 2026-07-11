@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/tmy7533018/mugen-ai/internal/mcpserver"
 	"github.com/tmy7533018/mugen-ai/internal/server"
 )
 
@@ -51,6 +52,11 @@ func runServe(_ *cobra.Command, _ []string) error {
 
 	srv := server.New(rt.Registry, rt.History, rt.Store, rt.Tools, rt.MCP, rt.Cfg.Context)
 	srv.SetToolFilter(rt.Filter, rt.Cfg.Tools.ContextFilter.ApplyToRemote)
+	if rt.Cfg.MCPExpose.Enabled {
+		expose := mcpserver.New(rt.Tools, rt.Cfg.MCPExpose.Readonly, rt.Cfg.MCPExpose.Categories, "1")
+		srv.SetMCPExpose(expose)
+		fmt.Fprintf(os.Stdout, "mcp expose: serving %d tools at /mcp\n", len(expose.Exposed()))
+	}
 
 	addr := fmt.Sprintf("127.0.0.1:%d", servePort)
 	httpSrv := &http.Server{Addr: addr, Handler: srv.Routes()}

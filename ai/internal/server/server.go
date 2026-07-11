@@ -45,6 +45,9 @@ type Server struct {
 	filterRemote bool
 	recent       *recentCats
 
+	// mcpExpose serves POST /mcp when the user enabled [mcp_expose].
+	mcpExpose http.Handler
+
 	// chatSetupMu serializes the resolve-conversation → append-user-message
 	// window of /chat so two concurrent requests can't interleave on the
 	// shared history pointer and cross-file each other's messages.
@@ -73,6 +76,18 @@ func (s *Server) SetToolFilter(f *toolfilter.Filter, applyRemote bool) {
 	s.filterRemote = applyRemote
 }
 
+// SetMCPExpose mounts the MCP server handler at POST /mcp. nil (the default)
+// keeps the endpoint returning 404.
+func (s *Server) SetMCPExpose(h http.Handler) { s.mcpExpose = h }
+
+func (s *Server) handleMCPExpose(w http.ResponseWriter, r *http.Request) {
+	if s.mcpExpose == nil {
+		http.Error(w, "MCP expose is disabled ([mcp_expose] enabled = false)", http.StatusNotFound)
+		return
+	}
+	s.mcpExpose.ServeHTTP(w, r)
+}
+
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /chat", s.handleChat)
@@ -97,6 +112,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /tools/call", s.handleToolCall)
 
 	mux.HandleFunc("GET /mcp/servers", s.handleListMCPServers)
+	mux.HandleFunc("POST /mcp", s.handleMCPExpose)
 
 	mux.HandleFunc("GET /memories", s.handleListMemories)
 	mux.HandleFunc("DELETE /memories", s.handleClearMemories)
