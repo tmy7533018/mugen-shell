@@ -82,7 +82,34 @@ type Tools struct {
 	// DisabledCategories hides whole tool groups (audio / music / panel /
 	// brightness / theme / wallpaper / notification / timer / calendar /
 	// app) from the LLM. Empty = every category enabled.
-	DisabledCategories []string `toml:"disabled_categories" json:"disabled_categories"`
+	DisabledCategories []string      `toml:"disabled_categories" json:"disabled_categories"`
+	ContextFilter      ContextFilter `toml:"context_filter" json:"context_filter"`
+}
+
+// ContextFilter narrows the tool list sent per chat turn to the categories
+// relevant to the user's message. Local models pick the wrong tool — or
+// hallucinate calls — more often as the tool count grows, so fewer, on-topic
+// tools make them measurably more reliable. Selection is keyword match plus
+// embedding similarity; when neither produces a confident signal the full
+// list is sent, so filtering can only trim, never brick a request.
+type ContextFilter struct {
+	Enabled bool `toml:"enabled" json:"enabled"`
+	// ApplyToRemote extends filtering to cloud providers. Off by default:
+	// a per-turn tool list defeats their prompt caching (the tool block is
+	// a cache prefix), and large hosted models handle the full list fine.
+	ApplyToRemote bool `toml:"apply_to_remote" json:"apply_to_remote"`
+	// EmbedModel is the Ollama embedding model for the similarity layer.
+	// Missing model or empty string degrades to keyword-only matching.
+	EmbedModel string `toml:"embed_model" json:"embed_model"`
+	// TopK caps how many categories the embedding layer may add; MinScore
+	// is the cosine floor below which a category is not considered related.
+	TopK     int     `toml:"top_k" json:"top_k"`
+	MinScore float64 `toml:"min_score" json:"min_score"`
+	// AlwaysInclude categories ride along on every filtered turn. panel is
+	// referenced by tool error messages (panel_open recovery path) and
+	// memory powers spontaneous memory_save, so dropping either breaks
+	// flows that don't correlate with the user's wording.
+	AlwaysInclude []string `toml:"always_include" json:"always_include"`
 }
 
 // AppLaunchTool gates the app_launch tool. Default is strict: an empty
@@ -169,6 +196,15 @@ func Default() Config {
 		Context: Context{DesktopState: true, DesktopStateRemote: true},
 		History: History{MaxContextTokens: 8000},
 		Logging: Logging{Audit: true},
+		Tools: Tools{
+			ContextFilter: ContextFilter{
+				Enabled:       true,
+				EmbedModel:    "bge-m3",
+				TopK:          4,
+				MinScore:      0.4,
+				AlwaysInclude: []string{"panel", "memory"},
+			},
+		},
 	}
 }
 

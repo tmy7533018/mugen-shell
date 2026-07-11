@@ -50,6 +50,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	defer rt.MCP.Close()
 
 	srv := server.New(rt.Registry, rt.History, rt.Store, rt.Tools, rt.MCP, rt.Cfg.Context)
+	srv.SetToolFilter(rt.Filter, rt.Cfg.Tools.ContextFilter.ApplyToRemote)
 
 	addr := fmt.Sprintf("127.0.0.1:%d", servePort)
 	httpSrv := &http.Server{Addr: addr, Handler: srv.Routes()}

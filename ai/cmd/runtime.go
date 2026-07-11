@@ -14,6 +14,7 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/provider"
 	"github.com/tmy7533018/mugen-ai/internal/state"
 	"github.com/tmy7533018/mugen-ai/internal/store"
+	"github.com/tmy7533018/mugen-ai/internal/toolfilter"
 	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
 
@@ -49,6 +50,8 @@ type runtimeContext struct {
 	History  *history.History
 	Tools    *tools.Registry
 	MCP      *mcp.Manager
+	// Filter is nil when [tools.context_filter] is disabled.
+	Filter *toolfilter.Filter
 }
 
 // loadRuntimeContext is the shared `serve` / `chat` bootstrap. Caller closes rt.Store.
@@ -77,6 +80,12 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		tooling += "\n\nCurrently disabled tool categories: " + strings.Join(cfg.Tools.DisabledCategories, ", ") +
 			". If the user asks for something in one of these categories, tell them the category is off and point them at Settings → AI / Yura → Tool categories before doing anything else (no silent pivot to another tool)."
 	}
+	// Without this note a filtered turn makes the model under-report what it
+	// can do ("I have no wallpaper tools") instead of realising the list is
+	// per-turn.
+	if cfg.Tools.ContextFilter.Enabled {
+		tooling += "\n\nTool visibility: for efficiency you may be shown only the tools relevant to the current message. Your full capabilities cover: audio volume, music playback, shell panels, brightness, theme, wallpaper, notifications and DnD, timers, calendar, app launching, long-term memory, and weather. If the user asks what you can do, describe that full set even when only a few tools are visible this turn."
+	}
 
 	var system string
 	if persona != "" {
@@ -85,7 +94,7 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		system = tooling
 	}
 
-	registry := buildRegistry(cfg, model)
+	registry, ollamaProvider := buildRegistry(cfg, model)
 	if model == "" {
 		if models, _ := registry.Models(context.Background()); len(models) > 0 {
 			model = models[0]
@@ -139,6 +148,26 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 	mcpMgr := mcp.Connect(context.Background(), mcpServerConfigs(cfg.MCP))
 	toolReg.AttachMCP(mcpMgr, trustedMCPServers(cfg.MCP))
 
+	// Built after AttachMCP so MCP server categories get embedding profiles
+	// too. Warm runs in the background: the first turns simply degrade to
+	// keyword-only until the category vectors are ready.
+	var filter *toolfilter.Filter
+	if fc := cfg.Tools.ContextFilter; fc.Enabled {
+		var embed toolfilter.EmbedFunc
+		if fc.EmbedModel != "" {
+			embedModel := fc.EmbedModel
+			embed = func(ctx context.Context, texts []string) ([][]float32, error) {
+				return ollamaProvider.Embed(ctx, embedModel, texts)
+			}
+		}
+		filter = toolfilter.New(toolfilter.Config{
+			TopK:          fc.TopK,
+			MinScore:      fc.MinScore,
+			AlwaysInclude: fc.AlwaysInclude,
+		}, embed)
+		go filter.Warm(context.Background(), toolReg.List())
+	}
+
 	return &runtimeContext{
 		Cfg:      cfg,
 		Model:    model,
@@ -147,6 +176,7 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		History:  hist,
 		Tools:    toolReg,
 		MCP:      mcpMgr,
+		Filter:   filter,
 	}, nil
 }
 
@@ -207,10 +237,12 @@ func resolveScriptsDir(configured string) string {
 	return filepath.Join(xdg, "quickshell", "mugen-shell", "scripts")
 }
 
-func buildRegistry(cfg config.Config, model string) *provider.Registry {
-	providers := []provider.Provider{
-		provider.NewOllama(cfg.Provider.Ollama.Host, cfg.Provider.Ollama.NumCtx, cfg.Provider.Ollama.KeepAlive),
-	}
+// buildRegistry also returns the Ollama provider on its own: the tool
+// context filter needs its Embed method, which is not part of the Provider
+// interface.
+func buildRegistry(cfg config.Config, model string) (*provider.Registry, *provider.Ollama) {
+	ollama := provider.NewOllama(cfg.Provider.Ollama.Host, cfg.Provider.Ollama.NumCtx, cfg.Provider.Ollama.KeepAlive)
+	providers := []provider.Provider{ollama}
 	googleModels := cfg.Provider.Google.Models
 	if len(googleModels) == 0 && cfg.Provider.Google.Model != "" {
 		googleModels = []string{cfg.Provider.Google.Model}
@@ -241,7 +273,7 @@ func buildRegistry(cfg config.Config, model string) *provider.Registry {
 			cfg.Provider.Anthropic.ThinkingBudget,
 		))
 	}
-	return provider.NewRegistry(model, providers...)
+	return provider.NewRegistry(model, providers...), ollama
 }
 
 // assemblePersona prepends an auto-built header (name/tone/language) to the

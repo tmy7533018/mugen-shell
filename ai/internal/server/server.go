@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,6 +19,7 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/provider"
 	"github.com/tmy7533018/mugen-ai/internal/state"
 	"github.com/tmy7533018/mugen-ai/internal/store"
+	"github.com/tmy7533018/mugen-ai/internal/toolfilter"
 	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
 
@@ -35,6 +38,13 @@ type Server struct {
 	// (config [context]).
 	ctxCfg config.Context
 
+	// filter, when non-nil, narrows the tool list per turn (config
+	// [tools.context_filter]); filterRemote extends that beyond Ollama.
+	// recent feeds it the categories each conversation touched lately.
+	filter       *toolfilter.Filter
+	filterRemote bool
+	recent       *recentCats
+
 	// chatSetupMu serializes the resolve-conversation → append-user-message
 	// window of /chat so two concurrent requests can't interleave on the
 	// shared history pointer and cross-file each other's messages.
@@ -51,7 +61,16 @@ func New(registry *provider.Registry, hist *history.History, st *store.Store, t 
 		events:   newEventBus(),
 		confirms: newConfirmRegistry(),
 		ctxCfg:   ctxCfg,
+		recent:   newRecentCats(),
 	}
+}
+
+// SetToolFilter enables per-turn tool-list narrowing. applyRemote extends it
+// to non-Ollama providers — off by default so their prompt caches keep a
+// byte-stable tool block.
+func (s *Server) SetToolFilter(f *toolfilter.Filter, applyRemote bool) {
+	s.filter = f
+	s.filterRemote = applyRemote
 }
 
 func (s *Server) Routes() http.Handler {
@@ -238,6 +257,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "data: %s\n\n", idData)
 	flusher.Flush()
 
+	providerName := s.registry.ProviderNameFor(r.Context(), model)
+
 	// Desktop-state snapshot rides in as a transient system message just
 	// before the newest user message: it is never persisted, so stale
 	// snapshots don't pile up in history, and the earlier message prefix
@@ -245,7 +266,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	// sync event above so a slow shell IPC can't delay the UI's stream
 	// setup. Cloud providers only see it when desktop_state_remote allows.
 	if s.ctxCfg.DesktopState && len(msgs) > 0 &&
-		(s.ctxCfg.DesktopStateRemote || s.registry.ProviderNameFor(r.Context(), model) == "ollama") {
+		(s.ctxCfg.DesktopStateRemote || providerName == "ollama") {
 		if blk := s.tools.DesktopContext(r.Context()); blk != "" {
 			userMsg := msgs[len(msgs)-1]
 			msgs = append(msgs[:len(msgs)-1:len(msgs)-1],
@@ -265,8 +286,16 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	// Tool calls / results stay in-memory only — history persists just the
 	// concatenated assistant text.
 	const maxIterations = 5
-	tools := providerTools(s.tools.List())
-	opts := provider.ChatOptions{Tools: tools, Thinking: thinking}
+	allTools := s.tools.List()
+	selTools := allTools
+	if s.filter != nil && (providerName == "ollama" || s.filterRemote) {
+		var reason string
+		selTools, reason = s.filter.Select(r.Context(), req.Message, s.recent.get(convID), allTools)
+		if len(selTools) != len(allTools) {
+			fmt.Fprintf(os.Stderr, "toolfilter: %d/%d tools (%s)\n", len(selTools), len(allTools), reason)
+		}
+	}
+	opts := provider.ChatOptions{Tools: providerTools(selTools), Thinking: thinking}
 
 	sendEvent := func(payload map[string]any) {
 		data, _ := json.Marshal(payload)
@@ -338,6 +367,10 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		sendEvent(map[string]any{"tool_calls": iterToolCalls})
 
 		for _, tc := range iterToolCalls {
+			// Even a denied or failed call marks its category as in play for
+			// this conversation, so follow-ups keep the same tools visible.
+			s.recent.note(convID, tools.CategoryOf(tc.Name))
+
 			var result string
 			var callErr error
 			// A confirm-gated tool must be approved out-of-band before it
@@ -739,6 +772,48 @@ func providerTools(in []tools.Tool) []provider.Tool {
 type toolCallRequest struct {
 	Name string         `json:"name"`
 	Args map[string]any `json:"args"`
+}
+
+// recentCats remembers which tool categories each conversation touched
+// recently. The context filter unions them into every turn's selection so a
+// keyword-less follow-up ("もう少し上げて") keeps the tools it refers to.
+type recentCats struct {
+	mu sync.Mutex
+	m  map[int64]map[string]time.Time
+}
+
+const recentCatTTL = 15 * time.Minute
+
+func newRecentCats() *recentCats {
+	return &recentCats{m: map[int64]map[string]time.Time{}}
+}
+
+func (rc *recentCats) note(conv int64, cat string) {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	if rc.m[conv] == nil {
+		rc.m[conv] = map[string]time.Time{}
+	}
+	rc.m[conv][cat] = time.Now()
+}
+
+func (rc *recentCats) get(conv int64) []string {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	cutoff := time.Now().Add(-recentCatTTL)
+	var out []string
+	for cat, at := range rc.m[conv] {
+		if at.Before(cutoff) {
+			delete(rc.m[conv], cat)
+			continue
+		}
+		out = append(out, cat)
+	}
+	if len(rc.m[conv]) == 0 {
+		delete(rc.m, conv)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // handleToolCall is a thin debug/test path: invoke a tool by name with no

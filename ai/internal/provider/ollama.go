@@ -176,6 +176,41 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 	return scanner.Err()
 }
 
+// Embed returns one embedding vector per input text via /api/embed.
+// Used by the tool context filter; not part of the Provider interface.
+func (o *Ollama) Embed(ctx context.Context, model string, input []string) ([][]float32, error) {
+	body, err := json.Marshal(map[string]any{"model": model, "input": input})
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, o.host+"/api/embed", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := o.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("ollama unreachable: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return nil, fmt.Errorf("ollama embed returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(bodyBytes)))
+	}
+	var out struct {
+		Embeddings [][]float32 `json:"embeddings"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+	if len(out.Embeddings) != len(input) {
+		return nil, fmt.Errorf("ollama embed returned %d vectors for %d inputs", len(out.Embeddings), len(input))
+	}
+	return out.Embeddings, nil
+}
+
 func (o *Ollama) Models(ctx context.Context) ([]string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, o.host+"/api/tags", nil)
 	if err != nil {
