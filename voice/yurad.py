@@ -986,6 +986,10 @@ class Daemon:
                         continue
                     log("wake", f"score={score:.2f}")
                     dump_wake_audio(wake_ring, score)
+                    # Each wake is a fresh summons: start a clean conversation.
+                    # Follow-up turns still share the one bound this session;
+                    # the panel buttons keep their continue/fresh split.
+                    self.chat.reset()
                 try:
                     self._handle_turn(from_button)
                 except Exception as e:
