@@ -181,7 +181,7 @@ type chatRequest struct {
 	Voice bool `json:"voice,omitempty"`
 }
 
-const voiceStyleHint = "This is a voice conversation. Answer in short spoken-style sentences: no markdown, no bullet or numbered lists, no headings, no code blocks, no emoji."
+const voiceStyleHint = "This is a voice conversation. Answer in short spoken-style sentences: no markdown, no bullet or numbered lists, no headings, no code blocks, no emoji. When the user asks you to do something a tool can do, emit the tool call NOW, in this same turn — a reply that only promises to act (\"やっておくね\", \"変えておくね\") with no tool call does nothing and is a failure."
 
 // beginChatTurn resolves the conversation, model, and thinking flag and
 // appends the user message under chatSetupMu, then snapshots the message list.
