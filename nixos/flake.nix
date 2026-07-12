@@ -4,6 +4,11 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # The user-level flake (homeManagerModules + packages + overlays).
     # `path:..` resolves to the repo root when this flake is fetched via
     # `?dir=nixos`; using a relative path keeps the two layers in lock-step.
@@ -17,6 +22,7 @@
     {
       self,
       nixpkgs,
+      home-manager,
       mugen-shell,
       ...
     }:
@@ -65,6 +71,40 @@
             };
             system.stateVersion = "25.05";
           })
+        ];
+      };
+
+      # Bootable demo VM — see vm.nix for what it does and how to run it.
+      nixosConfigurations.vm = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          nixosModule
+          home-manager.nixosModules.home-manager
+          ./vm.nix
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.users.mugen = { lib, ... }: {
+              imports = [ mugen-shell.homeManagerModules.default ];
+              programs.mugen-shell = {
+                enable = true;
+                # module.nix already installs the stack system-wide.
+                includeSystemDeps = false;
+              };
+              home.stateVersion = "25.05";
+
+              # Hardware cursor planes are unreliable on QEMU's virtio-gpu;
+              # the copied hyprland.conf is mutable user config, so append
+              # rather than fight the install-once activation above.
+              home.activation.vmHyprCursorTweak =
+                lib.hm.dag.entryAfter [ "installMugenSystemDefaults" ] ''
+                  conf="$HOME/.config/hypr/hyprland.conf"
+                  if [[ -f "$conf" ]] && ! grep -q no_hardware_cursors "$conf"; then
+                    printf '\n# QEMU/virtio: hardware cursor planes are unreliable\ncursor {\n  no_hardware_cursors = true\n}\n' >> "$conf"
+                  fi
+                '';
+            };
+          }
         ];
       };
     };
