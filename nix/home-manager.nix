@@ -67,6 +67,8 @@ in
         "${pkgs.gtk3}/lib/girepository-1.0"
         "${pkgs.glib.out}/lib/girepository-1.0"
       ];
+      # Qt5Compat.GraphicalEffects, which nixpkgs' quickshell doesn't bundle.
+      QML2_IMPORT_PATH = "${pkgs.qt6Packages.qt5compat}/lib/qt-6/qml";
     };
 
     # Runtime dependencies. Everything mugen-shell launches via Process or

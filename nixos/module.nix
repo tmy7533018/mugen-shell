@@ -81,12 +81,24 @@ in
       hardware.bluetooth.enable = true;
       networking.networkmanager.enable = true;
 
+      fonts.packages = with pkgs; [
+        mplus-outline-fonts.githubRelease # "M PLUS 2", the shell's primary UI font
+        nerd-fonts.jetbrains-mono # AI panel code blocks
+        noto-fonts-color-emoji
+      ];
+
       # list-apps.py needs GTK 3.0 / Gio 2.0 typelibs at runtime. Setting
       # this as a session variable propagates into Hyprland → quickshell →
       # the python invocation that calls gi.require_version().
       environment.sessionVariables.GI_TYPELIB_PATH = [
         "${pkgs.gtk3}/lib/girepository-1.0"
         "${pkgs.glib.out}/lib/girepository-1.0"
+      ];
+
+      # The QML tree imports Qt5Compat.GraphicalEffects, which nixpkgs'
+      # quickshell doesn't bundle (Arch splits it out as qt6-5compat too).
+      environment.sessionVariables.QML2_IMPORT_PATH = [
+        "${pkgs.qt6Packages.qt5compat}/lib/qt-6/qml"
       ];
 
       environment.systemPackages = with pkgs; [
@@ -113,6 +125,7 @@ in
         socat
         curl
         fastfetch
+        hyprpolkitagent # mugen-shell.conf starts its user unit via exec-once
         # list-apps.py imports `gi` (PyGObject) to enumerate desktop entries;
         # gtk3 carries the GI typelibs the script needs (Gtk / Gio 2.0).
         (python3.withPackages (ps: [ ps.pygobject3 ]))
