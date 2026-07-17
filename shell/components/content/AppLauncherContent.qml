@@ -109,14 +109,18 @@ FocusScope {
             }
             Quickshell.execDetached([
                 "kitty", "--title", "Uninstall " + app.name, "sh", "-c",
-                "pkg=$(pacman -Qoq -- \"$1\" 2>/dev/null); "
+                "if ! command -v pacman >/dev/null 2>&1; then "
+                    + "echo 'No system package manager found — on NixOS, remove the app from your Nix config instead.'; "
+                    + "echo \"  Entry: $1\"; "
+                    + "else "
+                    + "pkg=$(pacman -Qoq -- \"$1\" 2>/dev/null); "
                     + "if [ -z \"$pkg\" ] && [ -n \"$2\" ]; then "
                     + "pkg=$(pacman -Qoq -- \"$(realpath \"$2\" 2>/dev/null || printf %s \"$2\")\" 2>/dev/null); fi; "
                     + "if [ -n \"$pkg\" ]; then echo \"Owning package: $pkg\"; echo; sudo pacman -R \"$pkg\"; "
                     + "else echo 'No package owns this app — it looks manually installed.'; "
                     + "echo \"  Entry: $1\"; "
                     + "if [ -n \"$2\" ]; then echo \"  Exec:  $2\"; fi; "
-                    + "echo 'Remove those files manually to uninstall it.'; fi" + holdTail,
+                    + "echo 'Remove those files manually to uninstall it.'; fi; fi" + holdTail,
                 "sh", df, execFirst
             ])
         }

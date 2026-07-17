@@ -32,7 +32,9 @@ local browser     = "firefox"
 ---- ENVIRONMENT VARS ----
 --------------------------
 hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
-hl.env("XDG_DATA_DIRS", HOME .. "/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/usr/local/share:/usr/share")
+-- Prepend flatpak exports to the inherited value instead of replacing it —
+-- clobbering XDG_DATA_DIRS hides every .desktop entry on NixOS.
+hl.env("XDG_DATA_DIRS", HOME .. "/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:" .. (os.getenv("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"))
 
 -- IME (fcitx5). Drop this block if you don't use an IME.
 hl.env("GTK_IM_MODULE", "fcitx")
@@ -210,7 +212,7 @@ hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
 -- Volume keys — explicitly open the volume panel (change-detection mis-fires on sink swap)
 hl.bind("code:122", hl.dsp.exec_cmd("pactl set-sink-volume @DEFAULT_SINK@ -2% && ~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh open volume"))
 hl.bind("code:123", hl.dsp.exec_cmd("pactl set-sink-volume @DEFAULT_SINK@ +2% && ~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh open volume"))
-hl.bind("code:121", hl.dsp.exec_cmd("pamixer --toggle-mute && ~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh open volume"))
+hl.bind("code:121", hl.dsp.exec_cmd("pactl set-sink-mute @DEFAULT_SINK@ toggle && ~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh open volume"))
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("pactl set-source-mute @DEFAULT_SOURCE@ toggle && ~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh open volume"))
 
 -- Brightness

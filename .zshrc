@@ -24,17 +24,23 @@ precmd_functions+=(set_win_title)
 
 
 ## Plugins section: Enable fish style features
-[[ -e /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] \
-  && source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+# Arch nests plugins under zsh/plugins/<name>; Nix profiles put them
+# directly under share/<name>. Probe both layouts.
+for _plug in zsh-syntax-highlighting zsh-autosuggestions zsh-history-substring-search; do
+    for _dir in /usr/share/zsh/plugins/$_plug /run/current-system/sw/share/$_plug $HOME/.nix-profile/share/$_plug; do
+        [[ -e $_dir/$_plug.zsh ]] && { source $_dir/$_plug.zsh; break }
+    done
+done
+unset _plug _dir
 
-[[ -e /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh ]] \
-  && source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-
-[[ -e /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh ]] \
-  && source /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
-
-[[ -e /usr/share/fzf/key-bindings.zsh ]] && source /usr/share/fzf/key-bindings.zsh
-[[ -e /usr/share/fzf/completion.zsh ]]   && source /usr/share/fzf/completion.zsh
+for _dir in /usr/share/fzf /run/current-system/sw/share/fzf $HOME/.nix-profile/share/fzf; do
+    if [[ -e $_dir/key-bindings.zsh ]]; then
+        source $_dir/key-bindings.zsh
+        [[ -e $_dir/completion.zsh ]] && source $_dir/completion.zsh
+        break
+    fi
+done
+unset _dir
 
 # Arch Linux command-not-found support, you must have package pkgfile installed
 # https://wiki.archlinux.org/index.php/Pkgfile#.22Command_not_found.22_hook

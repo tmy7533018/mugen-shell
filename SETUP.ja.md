@@ -74,6 +74,8 @@ mugen-shell/
 
 ```bash
 mkdir -p ~/.local/share/mugen-shell/sounds && cp /usr/share/sounds/freedesktop/stereo/{bell,message,message-new-instant}.oga ~/.local/share/mugen-shell/sounds/
+# NixOS の場合 (/usr/share が無いので sound-theme-freedesktop を入れてから):
+mkdir -p ~/.local/share/mugen-shell/sounds && cp /run/current-system/sw/share/sounds/freedesktop/stereo/{bell,message,message-new-instant}.oga ~/.local/share/mugen-shell/sounds/
 ```
 
 ---

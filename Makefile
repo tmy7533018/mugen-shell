@@ -1,5 +1,3 @@
-SHELL := /bin/bash
-
 REPO_ROOT := $(shell pwd)
 
 .PHONY: help install install-ai install-symlinks uninstall uninstall-ai uninstall-symlinks

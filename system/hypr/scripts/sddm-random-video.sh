@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# SDDM hosts only — greetd/NixOS setups have no /usr/share/sddm.
+[ -d /usr/share/sddm ] || exit 0
+
 # Example sudoers entry:
 #   YOUR_USERNAME ALL=(root) NOPASSWD: /path/to/sddm-random-video.sh
 

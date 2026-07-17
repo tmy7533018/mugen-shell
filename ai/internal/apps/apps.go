@@ -186,7 +186,15 @@ func desktopDirs() []string {
 		dirs = append(dirs,
 			"/usr/local/share/applications",
 			"/usr/share/applications",
+			// NixOS has no /usr/share; cover its profile share dirs too.
+			"/run/current-system/sw/share/applications",
 		)
+		if home != "" {
+			dirs = append(dirs, filepath.Join(home, ".nix-profile/share/applications"))
+		}
+		if u := os.Getenv("USER"); u != "" {
+			dirs = append(dirs, filepath.Join("/etc/profiles/per-user", u, "share/applications"))
+		}
 	}
 	return dirs
 }

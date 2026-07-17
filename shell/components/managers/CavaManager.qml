@@ -11,7 +11,7 @@ QtObject {
     property var barLevels: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     property Process cavaProcess: Process {
         running: cavaManager.isActive
-        command: ["/bin/bash", Quickshell.shellDir + "/scripts/cava.sh"]
+        command: ["bash", Quickshell.shellDir + "/scripts/cava.sh"]
         
         stdout: SplitParser {
             splitMarker: "\n"

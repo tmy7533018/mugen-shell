@@ -12,7 +12,7 @@ QtObject {
 
     property Process cavaProcess: Process {
         running: micCavaManager.isActive
-        command: ["/bin/bash", Quickshell.shellDir + "/scripts/cava.sh", "mic"]
+        command: ["bash", Quickshell.shellDir + "/scripts/cava.sh", "mic"]
 
         stdout: SplitParser {
             splitMarker: "\n"

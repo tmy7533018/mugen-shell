@@ -74,6 +74,8 @@ User-supplied media goes under the corresponding XDG path. The notification soun
 
 ```bash
 mkdir -p ~/.local/share/mugen-shell/sounds && cp /usr/share/sounds/freedesktop/stereo/{bell,message,message-new-instant}.oga ~/.local/share/mugen-shell/sounds/
+# NixOS (no /usr/share — install sound-theme-freedesktop, then):
+mkdir -p ~/.local/share/mugen-shell/sounds && cp /run/current-system/sw/share/sounds/freedesktop/stereo/{bell,message,message-new-instant}.oga ~/.local/share/mugen-shell/sounds/
 ```
 
 ---

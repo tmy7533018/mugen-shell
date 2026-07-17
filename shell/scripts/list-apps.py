@@ -199,28 +199,35 @@ def build_theme_icon_paths(base_name: str, theme_name: str, home: str) -> list[s
         else:
             paths.append(os.path.join(user_base, size, "apps", base_name + ".png"))
 
-    system_base = os.path.join("/usr/share/icons", theme_name)
-    for size in sizes:
-        if size == "scalable":
-            paths.extend([
-                os.path.join(system_base, size, "apps", base_name + ".svg"),
-                os.path.join(system_base, size, "apps", base_name + ".png"),
-            ])
-        else:
-            paths.append(os.path.join(system_base, size, "apps", base_name + ".png"))
+    for data_dir in system_data_dirs():
+        system_base = os.path.join(data_dir, "icons", theme_name)
+        for size in sizes:
+            if size == "scalable":
+                paths.extend([
+                    os.path.join(system_base, size, "apps", base_name + ".svg"),
+                    os.path.join(system_base, size, "apps", base_name + ".png"),
+                ])
+            else:
+                paths.append(os.path.join(system_base, size, "apps", base_name + ".png"))
 
     return paths
+
+
+def system_data_dirs() -> list[str]:
+    """XDG_DATA_DIRS instead of a hardcoded /usr/share, so NixOS-style layouts work."""
+    raw = os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"
+    return [d for d in raw.split(":") if d]
 
 
 def build_beautyline_icon_paths(base_name: str) -> list[str]:
     """BeautyLine uses apps/scalable/ instead of scalable/apps/"""
     paths = []
-    base = "/usr/share/icons/BeautyLine"
-
-    paths.extend([
-        os.path.join(base, "apps/scalable", base_name + ".svg"),
-        os.path.join(base, "apps/scalable", base_name + ".png"),
-    ])
+    for data_dir in system_data_dirs():
+        base = os.path.join(data_dir, "icons", "BeautyLine")
+        paths.extend([
+            os.path.join(base, "apps/scalable", base_name + ".svg"),
+            os.path.join(base, "apps/scalable", base_name + ".png"),
+        ])
 
     return paths
 
@@ -237,19 +244,22 @@ def build_hicolor_icon_paths(base_name: str, home: str) -> list[str]:
     paths.extend(user_paths)
 
     system_sizes = ["scalable", "512x512", "256x256", "128x128", "96x96", "64x64", "48x48", "32x32"]
-    for size in system_sizes:
-        if size == "scalable":
-            paths.extend([
-                os.path.join("/usr/share/icons/hicolor", size, "apps", base_name + ".svg"),
-                os.path.join("/usr/share/icons/hicolor", size, "apps", base_name + ".png"),
-            ])
-        else:
-            paths.append(os.path.join("/usr/share/icons/hicolor", size, "apps", base_name + ".png"))
+    for data_dir in system_data_dirs():
+        hicolor_base = os.path.join(data_dir, "icons", "hicolor")
+        for size in system_sizes:
+            if size == "scalable":
+                paths.extend([
+                    os.path.join(hicolor_base, size, "apps", base_name + ".svg"),
+                    os.path.join(hicolor_base, size, "apps", base_name + ".png"),
+                ])
+            else:
+                paths.append(os.path.join(hicolor_base, size, "apps", base_name + ".png"))
 
-    paths.extend([
-        os.path.join("/usr/share/pixmaps", base_name + ".png"),
-        os.path.join("/usr/share/pixmaps", base_name + ".svg"),
-    ])
+    for data_dir in system_data_dirs():
+        paths.extend([
+            os.path.join(data_dir, "pixmaps", base_name + ".png"),
+            os.path.join(data_dir, "pixmaps", base_name + ".svg"),
+        ])
 
     return paths
 
