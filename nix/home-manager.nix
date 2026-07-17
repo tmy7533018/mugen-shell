@@ -19,6 +19,19 @@ in
       description = "The mugen-shell QML package (UI tree, scripts, assets).";
     };
 
+    qmlDir = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "/home/you/mugen-shell/shell";
+      description = ''
+        Absolute path to a live checkout's shell/ directory. When set,
+        ~/.config/quickshell/mugen-shell points at it instead of the
+        packaged QML tree, so edits hot-reload without a rebuild.
+        The path must exist by the time the session starts; quickshell
+        has nothing to load otherwise.
+      '';
+    };
+
     includeSystemDeps = lib.mkOption {
       type = lib.types.bool;
       default = true;
@@ -52,10 +65,14 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Readonly symlink so `quickshell -c mugen-shell` finds the QML tree.
-    # The result is a single symlink into /nix/store, regenerated on every
-    # home-manager activation so flake updates propagate automatically.
-    xdg.configFile."quickshell/mugen-shell".source = cfg.package;
+    # Symlink so `quickshell -c mugen-shell` finds the QML tree. Packaged
+    # tree by default (flake updates propagate on activation); qmlDir swaps
+    # in a live checkout via mkOutOfStoreSymlink for the edit → hot-reload
+    # dev workflow without fighting home-manager on rebuilds.
+    xdg.configFile."quickshell/mugen-shell".source =
+      if cfg.qmlDir != null
+      then config.lib.file.mkOutOfStoreSymlink cfg.qmlDir
+      else cfg.package;
 
     # list-apps.py imports `gi` and calls `gi.require_version("Gtk", "3.0")`
     # / `("Gio", "2.0")`. Wrapping python3 with pygobject3 puts the bindings
