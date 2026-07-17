@@ -84,6 +84,7 @@ in
       fonts.packages = with pkgs; [
         mplus-outline-fonts.githubRelease # "M PLUS 2", the shell's primary UI font
         nerd-fonts.jetbrains-mono # AI panel code blocks
+        nerd-fonts.fira-code # kitty.conf's font_family
         noto-fonts-color-emoji
       ];
 
@@ -128,11 +129,26 @@ in
         hyprpolkitagent # mugen-shell.conf starts its user unit via exec-once
         # list-apps.py imports `gi` (PyGObject) to enumerate desktop entries;
         # gtk3 carries the GI typelibs the script needs (Gtk / Gio 2.0).
-        (python3.withPackages (ps: [ ps.pygobject3 ]))
+        # extract-color.py wants pillow+numpy for album-art accent colors.
+        (python3.withPackages (ps: [ ps.pygobject3 ps.pillow ps.numpy ]))
         gtk3
         kitty
         thunar
         firefox
+        # .zshrc quality-of-life: prompt, splash art, fuzzy finder, fish-style plugins
+        starship
+        jp2a
+        fzf
+        zsh-syntax-highlighting
+        zsh-autosuggestions
+        zsh-history-substring-search
+      ];
+
+      # The hypr configs start these with `systemctl --user start`;
+      # systemPackages alone doesn't register a package's user units.
+      systemd.packages = with pkgs; [
+        hypridle
+        hyprpolkitagent
       ];
     })
   ]);

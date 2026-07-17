@@ -25,12 +25,14 @@
     enable = true;
     settings = {
       # Autologin once at boot; fall back to a real prompt after logout.
+      # start-hyprland (0.51+) is the upstream launcher: sets up the session
+      # env and the crash-restart watchdog that bare `Hyprland` skips.
       initial_session = {
-        command = "Hyprland";
+        command = "start-hyprland";
         user = "mugen";
       };
       default_session = {
-        command = "${pkgs.greetd}/bin/agreety --cmd Hyprland";
+        command = "${pkgs.greetd}/bin/agreety --cmd start-hyprland";
         user = "greeter";
       };
     };

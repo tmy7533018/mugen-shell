@@ -1,3 +1,6 @@
+# Manual (go install) setups only — ExecStart expects ~/go/bin/mugen-ai.
+# On NixOS / home-manager, programs.mugen-shell.ai.enable generates this
+# unit with a store-path ExecStart instead; do not install this file there.
 [Unit]
 Description=mugen-ai local AI assistant
 After=graphical-session.target
