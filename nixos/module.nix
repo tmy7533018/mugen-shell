@@ -71,6 +71,10 @@ in
     (lib.mkIf cfg.includeSystemDeps {
       programs.hyprland.enable = true;
       programs.hyprlock.enable = true;
+      # The portal stack hyprland pulls in includes xdg-document-portal,
+      # which FUSE-mounts /run/user/*/doc; without the setuid fusermount3
+      # wrapper it fails every boot.
+      programs.fuse.enable = true;
 
       services.pipewire = {
         enable = true;
