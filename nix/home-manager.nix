@@ -74,27 +74,12 @@ in
       then config.lib.file.mkOutOfStoreSymlink cfg.qmlDir
       else cfg.package;
 
-    # list-apps.py imports `gi` and calls `gi.require_version("Gtk", "3.0")`
-    # / `("Gio", "2.0")`. Wrapping python3 with pygobject3 puts the bindings
-    # on sys.path but the typelibs live in separate derivations and need
-    # GI_TYPELIB_PATH to be findable at runtime. Gtk-3.0.typelib transitively
-    # requires namespaces scattered across all of these (xlib/cairo ship with
-    # gobject-introspection, Atk with at-spi2-core) — missing any one of them
-    # makes the gi import throw and the launcher list come back empty. Set it
-    # once for the whole user session so Hyprland → quickshell → python3
-    # inherits it.
+    # list-apps.py imports `gi` (PyGObject); the typelib dir list lives in
+    # gi-typelib-dirs.nix, shared with the NixOS module. Set once for the
+    # whole user session so Hyprland → quickshell → python3 inherits it.
     home.sessionVariables = lib.mkIf cfg.includeSystemDeps {
-      GI_TYPELIB_PATH = lib.concatStringsSep ":" (
-        map (p: "${p}/lib/girepository-1.0") [
-          pkgs.gtk3
-          pkgs.glib.out
-          pkgs.gobject-introspection.out
-          pkgs.pango.out
-          pkgs.gdk-pixbuf
-          pkgs.harfbuzz
-          pkgs.at-spi2-core
-        ]
-      );
+      GI_TYPELIB_PATH =
+        lib.concatStringsSep ":" (import ./gi-typelib-dirs.nix pkgs);
       # Qt5Compat.GraphicalEffects, which nixpkgs' quickshell doesn't bundle.
       QML2_IMPORT_PATH = "${pkgs.qt6Packages.qt5compat}/lib/qt-6/qml";
     };

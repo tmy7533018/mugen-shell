@@ -90,11 +90,10 @@ in
 
       # list-apps.py needs GTK 3.0 / Gio 2.0 typelibs at runtime. Setting
       # this as a session variable propagates into Hyprland → quickshell →
-      # the python invocation that calls gi.require_version().
-      environment.sessionVariables.GI_TYPELIB_PATH = [
-        "${pkgs.gtk3}/lib/girepository-1.0"
-        "${pkgs.glib.out}/lib/girepository-1.0"
-      ];
+      # the python invocation that calls gi.require_version(). The dir list
+      # is shared with the home-manager module via gi-typelib-dirs.nix.
+      environment.sessionVariables.GI_TYPELIB_PATH =
+        import ../nix/gi-typelib-dirs.nix pkgs;
 
       # The QML tree imports Qt5Compat.GraphicalEffects, which nixpkgs'
       # quickshell doesn't bundle (Arch splits it out as qt6-5compat too).
