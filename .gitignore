@@ -43,3 +43,6 @@ MCP_DESIGN.md
 # in the current working directory)
 result
 result-*
+
+# Per-user hypr overrides, sourced by hyprland.conf but never shipped
+system/hypr/configs/user-overrides.conf
