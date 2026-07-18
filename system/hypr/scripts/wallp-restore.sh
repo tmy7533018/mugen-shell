@@ -8,11 +8,12 @@ MPV_OPTS='no-config no-audio loop cache=yes profile=low-latency'
 is_image() { case "${1,,}" in *.png|*.jpg|*.jpeg|*.webp) return 0;; *) return 1;; esac; }
 is_video() { case "${1,,}" in *.mp4|*.webm|*.mkv|*.gif) return 0;; *) return 1;; esac; }
 
+# Substring pgrep/pkill: Nix wraps these daemons and truncates comm, so -x misses.
 ensure_swww() {
-  if ! pgrep -x awww-daemon >/dev/null 2>&1; then
+  if ! pgrep awww-daemon >/dev/null 2>&1; then
     setsid nohup awww-daemon --format xrgb >/dev/null 2>&1 &
     for _ in {1..10}; do
-      pgrep -x awww-daemon >/dev/null 2>&1 && break
+      pgrep awww-daemon >/dev/null 2>&1 && break
       sleep 0.05
     done
   fi
@@ -23,7 +24,7 @@ ensure_swww() {
 TARGET="$(cat "$CURRENT_WALLPAPER_FILE" 2>/dev/null | tr -d '\n')"
 [[ -n "${TARGET:-}" && -e "$TARGET" ]] || exit 0
 
-pkill -x mpvpaper >/dev/null 2>&1 || true
+pkill mpvpaper >/dev/null 2>&1 || true
 
 if is_video "$TARGET"; then
   setsid nohup mpvpaper -o "$MPV_OPTS" '*' "$TARGET" >/dev/null 2>&1 &

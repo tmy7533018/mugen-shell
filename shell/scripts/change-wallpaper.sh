@@ -80,6 +80,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Nix wraps mpvpaper/awww-daemon in scripts, so comm becomes ".mpvpaper-wrapped"
+# (truncated to 15 chars) and exact-name pgrep/pkill -x silently miss them.
+# Substring matching covers both the plain and wrapped layouts.
+
 is_image() {
   case "${1,,}" in
     *.png|*.jpg|*.jpeg|*.webp) return 0 ;;
@@ -94,6 +98,15 @@ is_video() {
   esac
 }
 
+run_matugen() {
+  local args=(matugen image "$1")
+  # matugen >= 4 aborts headless when several source colors qualify
+  if matugen image --help 2>/dev/null | grep -q -- '--prefer'; then
+    args+=(--prefer saturation)
+  fi
+  "${args[@]}" 2>&1
+}
+
 swww_ready() {
   awww query >/dev/null 2>&1
 }
@@ -106,7 +119,7 @@ ensure_swww() {
   debug_log "ensure_swww: checking awww-daemon status"
   if ! swww_ready; then
     debug_log "ensure_swww: awww-daemon not ready, starting..."
-    pkill -x awww-daemon >/dev/null 2>&1 || true
+    pkill awww-daemon >/dev/null 2>&1 || true
     start_swww
   fi
 
@@ -121,8 +134,8 @@ ensure_swww() {
 }
 
 ensure_swww_top_if_mpvpaper() {
-  if pgrep -x mpvpaper >/dev/null 2>&1; then
-    pkill -x awww-daemon >/dev/null 2>&1 || true
+  if pgrep mpvpaper >/dev/null 2>&1; then
+    pkill awww-daemon >/dev/null 2>&1 || true
     start_swww
     for _ in {1..60}; do
       swww_ready && return 0
@@ -161,16 +174,16 @@ stop_mpvpaper() {
     sleep 0.2
   fi
 
-  if pgrep -x mpvpaper >/dev/null 2>&1; then
-    pkill -x mpvpaper 2>/dev/null || true
+  if pgrep mpvpaper >/dev/null 2>&1; then
+    pkill mpvpaper 2>/dev/null || true
     for _ in {1..10}; do
-      pgrep -x mpvpaper >/dev/null 2>&1 || break
+      pgrep mpvpaper >/dev/null 2>&1 || break
       sleep 0.1
     done
   fi
 
-  if pgrep -x mpvpaper >/dev/null 2>&1; then
-    pkill -9 -x mpvpaper 2>/dev/null || true
+  if pgrep mpvpaper >/dev/null 2>&1; then
+    pkill -9 mpvpaper 2>/dev/null || true
   fi
 
   [[ -S "$MPV_SOCKET" ]] && rm -f "$MPV_SOCKET" || true
@@ -223,7 +236,7 @@ grab_current_video_frame_via_ipc() {
 # For smooth transitions when switching from video wallpapers, capture the current
 # mpvpaper frame and set it via swww before stopping mpvpaper.
 prev_applied=false
-if pgrep -x mpvpaper >/dev/null 2>&1; then
+if pgrep mpvpaper >/dev/null 2>&1; then
   echo "Capturing current video frame for smooth transition..."
 
   prev_png="$(freeze_and_shot_current_frame 2>/dev/null || true)"
@@ -247,7 +260,7 @@ if is_image "$WALLPAPER_ABS"; then
   if command -v matugen >/dev/null 2>&1; then
     echo "Generating color palette with matugen..."
     debug_log "Running matugen..."
-    if matugen_output=$(matugen image "$WALLPAPER_ABS" 2>&1); then
+    if matugen_output=$(run_matugen "$WALLPAPER_ABS"); then
       echo "$matugen_output" >> "$DEBUG_LOG"
       echo "Color palette generated successfully"
       debug_log "matugen: success"
@@ -287,7 +300,7 @@ elif is_video "$WALLPAPER_ABS"; then
   if command -v matugen >/dev/null 2>&1 && [[ -f "$THUMB_FILE" ]]; then
     echo "Generating color palette with matugen..."
     debug_log "Running matugen..."
-    if matugen_output=$(matugen image "$THUMB_FILE" 2>&1); then
+    if matugen_output=$(run_matugen "$THUMB_FILE"); then
       echo "$matugen_output" >> "$DEBUG_LOG"
       echo "Color palette generated successfully"
       debug_log "matugen: success"
@@ -317,7 +330,7 @@ elif is_video "$WALLPAPER_ABS"; then
   setsid nohup mpvpaper -o "$MPV_OPTS" '*' "$WALLPAPER_ABS" >"$THUMB_DIR/mpvpaper.log" 2>&1 &
 
   for i in {1..20}; do
-    if pgrep -x mpvpaper >/dev/null 2>&1; then
+    if pgrep mpvpaper >/dev/null 2>&1; then
       echo "$WALLPAPER_ABS" > "$CURRENT_WALLPAPER_FILE"
       echo "Video wallpaper is playing"
       debug_log "mpvpaper: started successfully"
