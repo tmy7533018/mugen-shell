@@ -11,6 +11,8 @@ https://github.com/user-attachments/assets/beaaf135-5cdf-46d9-975d-91e3e6f04068
 
 Personal dotfiles for a Hyprland + Quickshell desktop, packaged so they can be installed via Nix flake or `make install`.
 
+To try it without installing anything, boot the demo VM: `cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm` (autologins into Hyprland; credentials are `mugen` / `mugen`).
+
 For directory layout, install paths, dependencies, and keybindings see [SETUP.md](SETUP.md).
 
 ---
@@ -19,9 +21,9 @@ For directory layout, install paths, dependencies, and keybindings see [SETUP.md
 
 | | |
 |---|---|
-| OS | Garuda Linux (Arch-based) |
+| OS | NixOS (also runs on Arch-based distros) |
 | GPU | AMD Radeon RX 9070 XT |
-| WM | Hyprland |
+| WM | Hyprland (Lua config — the classic `.conf` twins are kept as a fallback) |
 | Shell | Zsh + Starship |
 | Terminal | Kitty |
 | Desktop Shell | Quickshell |
@@ -34,7 +36,7 @@ For directory layout, install paths, dependencies, and keybindings see [SETUP.md
 
 https://github.com/user-attachments/assets/61328371-aa8e-4f96-aae8-2817fadf3ed4
 
-<sub><i>A casual hello in the bar; the corner pop-up shuffles the wallpaper, switches to light mode, and opens Chrome through tool calls.</i></sub>
+<sub><i>A casual hello in the bar; the corner pop-up shuffles the wallpaper, switches to light mode, and opens a browser through tool calls.</i></sub>
 
 Yura is the desktop chat assistant. It runs in two places: a single input row in the bar (`Super + Y`) and a chat panel anchored to a screen corner (`Super + Shift + Y`).
 

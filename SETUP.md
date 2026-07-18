@@ -29,6 +29,7 @@ mugen-shell/
 │   ├── shell.qml             # Main Quickshell entry (bar + notifications)
 │   ├── yura-shell.qml        # Standalone Quickshell entry for Yura (separate process)
 │   ├── settings-shell.qml    # Standalone Settings window
+│   ├── calendar-shell.qml    # Standalone Calendar window
 │   └── shortcuts-shell.qml   # Standalone keyboard shortcut reference window
 ├── ai/                       # mugen-ai Go backend
 │   ├── cmd/                  # CLI subcommands (chat, serve)
@@ -39,8 +40,8 @@ mugen-shell/
 │   ├── models/               # custom "Hey Yura" openWakeWord model
 │   └── train/                # wake word training pipeline (VOICEVOX-based)
 ├── system/                   # Dotfiles for the surrounding tools
-│   ├── hypr/                 # Hyprland (configs/, scripts/, hyprland.conf, ...)
-│   │   └── configs/          # autostart.conf / ime.conf / keybinds.conf / ...
+│   ├── hypr/                 # Hyprland (hyprland.lua + legacy hyprland.conf, scripts/)
+│   │   └── configs/          # autostart.conf / keybinds.conf / ... + mugen-shell.lua / blur.lua
 │   ├── kitty/                # Kitty terminal
 │   ├── fastfetch/            # System info display
 │   ├── matugen/              # Material You color generation + templates
@@ -48,16 +49,18 @@ mugen-shell/
 │   ├── systemd/user/         # User units (yura-voice, voicevox-engine, event notifier)
 │   └── starship.toml         # Starship prompt
 ├── nix/
-│   └── home-manager.nix      # home-manager module (Arch + Nix path)
+│   ├── gi-typelib-dirs.nix   # GI typelib dir list shared by both Nix modules
+│   └── home-manager.nix      # home-manager module (user layer for every Nix path)
 ├── nixos/
 │   ├── flake.nix             # Umbrella NixOS flake (re-exports root + adds nixosModules)
-│   └── module.nix            # NixOS system module body
+│   ├── module.nix            # NixOS system module body
+│   └── vm.nix                # Bootable demo VM (try before installing)
 ├── flake.nix                 # Root Nix flake (user-level, home-manager target)
 ├── flake.lock
 ├── Makefile                  # `make install` for non-Nix users
 ├── .zshrc
-├── README.md
-└── SETUP.md                  # This file
+├── README.md / README.ja.md
+└── SETUP.md / SETUP.ja.md    # This guide (EN/JA)
 ```
 
 Runtime data lives outside the repo under XDG dirs:
@@ -124,6 +127,10 @@ NixOS users go through the umbrella flake at `?dir=nixos`. It enables `programs.
 ```
 
 Then `nixos-rebuild switch --flake /etc/nixos#mybox`.
+
+To try everything in a throwaway VM first: `cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm` (autologin straight into Hyprland; user `mugen`, password `mugen`).
+
+Hacking on the shell: inside the `home-manager.users.YOUR_USER` block (the option lives in the home-manager module, not the system one), `programs.mugen-shell.qmlDir = "/home/you/mugen-shell/shell";` points `~/.config/quickshell/mugen-shell` at a live checkout instead of the packaged (read-only) store tree, so QML edits hot-reload without a rebuild.
 
 #### Japanese (or other) input via fcitx5
 
@@ -196,7 +203,7 @@ Set `includeSystemDeps = true` to pull all of that into Nix instead. Useful when
 
 Wiring Hyprland into your display manager or login session is left to you (`Hyprland` from TTY, sddm session entry, etc.).
 
-The home-manager activation copies the shipped `system/hypr/` defaults into `~/.config/hypr/` only when the directory is empty, so first-time users get a working Hyprland config with mugen-shell autostart configured. If you already have your own `~/.config/hypr/hyprland.conf`, the copy is skipped. To adopt the mugen-shell autostart, add this line to your existing config:
+The home-manager activation copies the shipped `system/hypr/` defaults into `~/.config/hypr/` only when the directory does not exist yet, so first-time users get a working Hyprland config with mugen-shell autostart configured. If you already have your own `~/.config/hypr/hyprland.conf`, the copy is skipped. To adopt the mugen-shell autostart, add this line to your existing config:
 
 ```hypr
 source = ~/.config/hypr/configs/mugen-shell.conf
@@ -204,7 +211,7 @@ source = ~/.config/hypr/configs/mugen-shell.conf
 
 That file ships in the package output (`$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.conf`). Copy it into `~/.config/hypr/configs/` once and the `source =` line keeps it up to date across rebuilds. Without that line nothing spawns `quickshell -c mugen-shell`, and the bar and Yura panels will not start.
 
-**Lua config (Hyprland 0.55+).** hyprlang is deprecated in favour of Lua, and mugen-shell ships `.lua` counterparts next to every `.conf` (`hyprland.lua`, `configs/mugen-shell.lua`, generated `colors.lua` / `configs/blur.lua`). Hyprland prefers `hyprland.lua` when it exists, so the two sit side-by-side and removing the `.lua` restores the legacy config. On a fresh install the shipped `hyprland.lua` is picked up automatically. If you already keep your own Lua config, adopt the mugen-shell autostart with the Lua equivalent of the `source =` line:
+**Lua config (Hyprland 0.55+).** hyprlang is deprecated in favour of Lua, and mugen-shell ships a complete Lua config alongside the legacy `.conf` set — `hyprland.lua` (the per-file confs consolidated into one) plus `configs/mugen-shell.lua` and the generated `colors.lua` / `configs/blur.lua`. Hyprland prefers `hyprland.lua` when it exists, so the two sit side-by-side and removing the `.lua` restores the legacy config. **The Lua config is the recommended path** — it is what the author's own machine runs daily; the `.conf` set is maintained as a fallback for stock hyprlang setups. On a fresh install the shipped `hyprland.lua` is picked up automatically. If you already keep your own Lua config, adopt the mugen-shell autostart with the Lua equivalent of the `source =` line:
 
 ```lua
 dofile(os.getenv("HOME") .. "/.config/hypr/configs/mugen-shell.lua")
@@ -396,7 +403,7 @@ Yura can also be driven hands-free: say **"Hey Yura"**, speak, and the reply is 
 mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp → mugen-ai /chat → VOICEVOX
 ```
 
-The default stack is Japanese-first but not Japanese-only (see *Other languages* below), and is **not covered by the Nix flake or `make install` yet** — it expects a manual setup on top of a running mugen-ai:
+The default stack is Japanese-first but not Japanese-only (see *Other languages* below), and is **not covered by the Nix flake or `make install` yet** — it expects a manual setup on top of a running mugen-ai. On NixOS this manual route needs `programs.nix-ld.enable = true` (the pip wheels — onnxruntime, sounddevice — and the prebuilt AivisSpeech engine are dynamically linked FHS binaries); native Nix packaging for the voice stack is planned:
 
 1. **Python venv** for the daemon (Python 3.14 has no tflite wheel, so openwakeword is installed `--no-deps` and runs its ONNX path; the pinned runtime deps are listed in `voice/requirements.txt`):
    ```bash
@@ -426,7 +433,7 @@ Only the reply voice is engine-specific; everything else is multilingual already
 - **Wake word**: with `YURA_WAKEWORD` unset, the daemon uses openWakeWord's bundled English `hey_jarvis`. The shipped `hey_yura.onnx` is tuned for Japanese pronunciation; retrain via `voice/train/` for other accents.
 - **Replies**: set the assistant's language under Settings → AI / Yura → Personality.
 
-Environment knobs, set in the unit or a drop-in: `YURA_WAKEWORD` (path to a custom model; default `hey_jarvis`), `YURA_WAKE_THRESHOLD` (ships at `0.7` for the custom model), `YURA_WAKE_PATIENCE` (consecutive frames over the threshold; default `2`), `YURA_VOICEVOX_SPEAKER` (default `14`), `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`, `YURA_AIVIS_URL`.
+Environment knobs, set in the unit or a drop-in: `YURA_WAKEWORD` (path to a custom model; default `hey_jarvis`), `YURA_WAKE_THRESHOLD` (ships at `0.6` for the custom model — lowered to compensate for the echo-cancelled source's noise suppression), `YURA_WAKE_PATIENCE` (consecutive frames over the threshold; default `2`), `YURA_VOICEVOX_SPEAKER` (default `14`), `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`, `YURA_AIVIS_URL`.
 
 **Speakers instead of headphones?** Media audio reaching the mic both causes false wakes and drowns out real ones. PipeWire's WebRTC echo cancellation solves both — it subtracts whatever the default sink is playing from the mic, so the wake word works even mid-playback. Drop this into `~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` (set `target.object` to your mic's `node.name` from `wpctl inspect`), restart PipeWire, then make the new source the default input with `wpctl set-default <id>`:
 
@@ -558,10 +565,12 @@ sudo nano /etc/default/grub
 sudo grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
+On NixOS, declare it instead: `boot.kernelParams = [ "usbcore.autosuspend=-1" ];`
+
 ### Audio/video freezes when using a wireless headset
 
 **Symptom:** Switching to a wireless headset kills audio. Logs show `Failed to get percentage from UPower`.
-**Fix:** `sudo systemctl enable --now upower`
+**Fix:** `sudo systemctl enable --now upower` (NixOS: `services.upower.enable = true;`)
 
 ### Firefox / Zen Browser conflicts with PipeWire
 

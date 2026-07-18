@@ -11,6 +11,8 @@ https://github.com/user-attachments/assets/beaaf135-5cdf-46d9-975d-91e3e6f04068
 
 Hyprland + Quickshell デスクトップ向けの個人 dotfiles を、Nix flake または `make install` で入れられる形にまとめたものです。
 
+インストールせずに試すならデモ VM をどうぞ: `cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm` (Hyprland に自動ログイン。資格情報は `mugen` / `mugen`)。
+
 ディレクトリ構成、インストール先、依存、キーバインドは [SETUP.ja.md](SETUP.ja.md) を見てください。
 
 ---
@@ -19,9 +21,9 @@ Hyprland + Quickshell デスクトップ向けの個人 dotfiles を、Nix flake
 
 | | |
 |---|---|
-| OS | Garuda Linux (Arch 系) |
+| OS | NixOS (Arch 系でも動作) |
 | GPU | AMD Radeon RX 9070 XT |
-| WM | Hyprland |
+| WM | Hyprland (Lua config — 従来の `.conf` 版も fallback として同梱) |
 | Shell | Zsh + Starship |
 | Terminal | Kitty |
 | Desktop Shell | Quickshell |
@@ -34,7 +36,7 @@ Hyprland + Quickshell デスクトップ向けの個人 dotfiles を、Nix flake
 
 https://github.com/user-attachments/assets/61328371-aa8e-4f96-aae8-2817fadf3ed4
 
-<sub><i>バーで軽く挨拶した後、コーナーの Yura が壁紙をシャッフル、ライトモードに切替え、ツール呼び出しで Chrome を開きます。</i></sub>
+<sub><i>バーで軽く挨拶した後、コーナーの Yura が壁紙をシャッフル、ライトモードに切替え、ツール呼び出しでブラウザを開きます。</i></sub>
 
 Yura はデスクトップのチャットアシスタント。バーの 1 行入力 (`Super + Y`) と、画面コーナーに張り付くチャットパネル (`Super + Shift + Y`) の 2 か所で使えます。
 

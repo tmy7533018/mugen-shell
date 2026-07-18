@@ -29,6 +29,7 @@ mugen-shell/
 │   ├── shell.qml             # メイン Quickshell エントリ (バー + 通知)
 │   ├── yura-shell.qml        # Yura 用スタンドアロン Quickshell エントリ (別プロセス)
 │   ├── settings-shell.qml    # スタンドアロン Settings ウィンドウ
+│   ├── calendar-shell.qml    # スタンドアロン Calendar ウィンドウ
 │   └── shortcuts-shell.qml   # スタンドアロンキーボードショートカットリファレンスウィンドウ
 ├── ai/                       # mugen-ai Go バックエンド
 │   ├── cmd/                  # CLI サブコマンド (chat、serve)
@@ -39,8 +40,8 @@ mugen-shell/
 │   ├── models/               # 自作「Hey Yura」openWakeWord モデル
 │   └── train/                # wake word 訓練パイプライン (VOICEVOX ベース)
 ├── system/                   # 周辺ツール用 dotfiles
-│   ├── hypr/                 # Hyprland (configs/、scripts/、hyprland.conf など)
-│   │   └── configs/          # autostart.conf / ime.conf / keybinds.conf など
+│   ├── hypr/                 # Hyprland (hyprland.lua + legacy hyprland.conf、scripts/)
+│   │   └── configs/          # autostart.conf / keybinds.conf / ... + mugen-shell.lua / blur.lua
 │   ├── kitty/                # Kitty terminal
 │   ├── fastfetch/            # システム情報表示
 │   ├── matugen/              # Material You カラー生成 + テンプレート
@@ -48,16 +49,18 @@ mugen-shell/
 │   ├── systemd/user/         # user unit (yura-voice、voicevox-engine、event notifier)
 │   └── starship.toml         # Starship prompt
 ├── nix/
-│   └── home-manager.nix      # home-manager モジュール (Arch + Nix 経路)
+│   ├── gi-typelib-dirs.nix   # 両 Nix モジュールで共有する GI typelib dir リスト
+│   └── home-manager.nix      # home-manager モジュール (全 Nix 経路の user 層)
 ├── nixos/
 │   ├── flake.nix             # アンブレラ NixOS flake (root を再エクスポート + nixosModules 追加)
-│   └── module.nix            # NixOS システムモジュール本体
+│   ├── module.nix            # NixOS システムモジュール本体
+│   └── vm.nix                # 起動可能なデモ VM (インストール前のお試し用)
 ├── flake.nix                 # ルート Nix flake (user レベル、home-manager 用)
 ├── flake.lock
 ├── Makefile                  # Nix を使わない場合の `make install`
 ├── .zshrc
-├── README.md
-└── SETUP.md                  # このファイル
+├── README.md / README.ja.md
+└── SETUP.md / SETUP.ja.md    # このガイド (英/日)
 ```
 
 ランタイムデータはリポジトリ外、XDG ディレクトリ配下に置かれます。
@@ -124,6 +127,10 @@ NixOS では、アンブレラ flake (`?dir=nixos`) を使います。`programs.
 ```
 
 そのあと `nixos-rebuild switch --flake /etc/nixos#mybox`。
+
+先に使い捨て VM で全部試すこともできます: `cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm` (Hyprland に自動ログイン。資格情報は `mugen` / `mugen`)。
+
+shell をいじって開発するなら: `home-manager.users.YOUR_USER` ブロックの中で (このオプションは home-manager モジュール側にあり、システム側にはありません) `programs.mugen-shell.qmlDir = "/home/you/mugen-shell/shell";` を設定すると、`~/.config/quickshell/mugen-shell` がパッケージ済み (read-only な store) ツリーの代わりに live checkout を指すようになり、QML の編集が rebuild なしで hot-reload されます。
 
 #### fcitx5 で日本語入力 (他言語も)
 
@@ -196,13 +203,21 @@ yay -S hyprland quickshell hypridle hyprlock zsh kitty starship libnotify \
 
 ディスプレイマネージャやログインセッションへの Hyprland の組み込み (TTY からの `Hyprland`、sddm の session entry など) は自分でやってください。
 
-home-manager アクティベートは、`~/.config/hypr/` が空のときだけ同梱の `system/hypr/` デフォルトをコピーします。初回ユーザはそれで mugen-shell autostart 入りの Hyprland 設定がそのまま手に入ります。既に `~/.config/hypr/hyprland.conf` がある場合はコピーされません。mugen-shell の autostart を取り込むには、既存設定にこの 1 行を足してください:
+home-manager アクティベートは、`~/.config/hypr/` がまだ存在しないときだけ同梱の `system/hypr/` デフォルトをコピーします。初回ユーザはそれで mugen-shell autostart 入りの Hyprland 設定がそのまま手に入ります。既に `~/.config/hypr/hyprland.conf` がある場合はコピーされません。mugen-shell の autostart を取り込むには、既存設定にこの 1 行を足してください:
 
 ```hypr
 source = ~/.config/hypr/configs/mugen-shell.conf
 ```
 
 このファイルはパッケージ出力 (`$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.conf`) に含まれます。一度 `~/.config/hypr/configs/` にコピーすれば、`source =` 行のおかげで rebuild 後も追従します。この行がないと `quickshell -c mugen-shell` が走らず、バーも Yura パネルも立ち上がりません。
+
+**Lua config (Hyprland 0.55+)。** hyprlang は Lua への置き換えが進んでいて (deprecated)、mugen-shell は legacy な `.conf` 一式と並行して完全な Lua config を同梱しています — `hyprland.lua` (ファイル別だった conf 群を 1 本に統合) に加えて `configs/mugen-shell.lua`、生成物の `colors.lua` / `configs/blur.lua`。Hyprland は `hyprland.lua` があればそちらを優先するので両者は同居でき、`.lua` を退かせば legacy 設定に戻ります。**推奨は Lua config** — 作者の実機が日常的に動かしているのはこちらで、`.conf` 一式は素の hyprlang 環境向けの fallback として維持しています。フレッシュインストールでは同梱の `hyprland.lua` が自動で使われます。既に自前の Lua config を持っている場合は、`source =` 行の Lua 版で mugen-shell の autostart を取り込んでください:
+
+```lua
+dofile(os.getenv("HOME") .. "/.config/hypr/configs/mugen-shell.lua")
+```
+
+この snippet は `HYPR_CONFIG_LUA=1` もセットします。shell の dispatch 層がこれを読み、Lua config が拒否する legacy 文字列の代わりに Lua dispatcher (`hl.dsp.*`) を送るようになります。config 言語の切り替えには relog が必要です (`hyprctl reload` では切り替わりません)。
 
 NixOS モジュールが自動でやってくれる、Arch 固有のハマりどころが 2 つあります:
 
@@ -389,7 +404,7 @@ Yura はハンズフリーでも操作できます。**「Hey Yura」**と呼び
 mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp → mugen-ai /chat → VOICEVOX
 ```
 
-デフォルト構成は日本語ファーストですが、日本語専用ではありません (後述の「他言語で使う」参照)。**Nix flake / `make install` にはまだ含まれていません** — mugen-ai が動いている前提で、手動セットアップになります:
+デフォルト構成は日本語ファーストですが、日本語専用ではありません (後述の「他言語で使う」参照)。**Nix flake / `make install` にはまだ含まれていません** — mugen-ai が動いている前提で、手動セットアップになります。NixOS でこの手動ルートを通すには `programs.nix-ld.enable = true` が必要です (pip の wheel — onnxruntime、sounddevice — と AivisSpeech エンジンのプレビルドバイナリが FHS 前提の動的リンクなため)。音声スタックのネイティブ Nix パッケージングは今後の予定です:
 
 1. **デーモン用の Python venv** (Python 3.14 には tflite の wheel が無いので、openwakeword は `--no-deps` で入れて ONNX 経路で動かします。ピン留めしたランタイム依存は `voice/requirements.txt` にあります):
    ```bash
@@ -419,7 +434,7 @@ mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp
 - **Wake word**: `YURA_WAKEWORD` 未設定ならデーモンは openWakeWord 同梱の英語モデル `hey_jarvis` を使います。同梱の `hey_yura.onnx` は日本語発音チューニングなので、他のアクセント向けには `voice/train/` で再訓練を。
 - **返答の言語**: Settings → AI / Yura → Personality の language で指定します。
 
-環境変数ノブ (unit か drop-in で設定): `YURA_WAKEWORD` (カスタムモデルのパス。デフォルト `hey_jarvis`)、`YURA_WAKE_THRESHOLD` (自作モデル用に `0.7` を設定済み)、`YURA_WAKE_PATIENCE` (閾値を連続で超えるべきフレーム数。デフォルト `2`)、`YURA_VOICEVOX_SPEAKER` (デフォルト `14`)、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。
+環境変数ノブ (unit か drop-in で設定): `YURA_WAKEWORD` (カスタムモデルのパス。デフォルト `hey_jarvis`)、`YURA_WAKE_THRESHOLD` (自作モデル用に `0.6` を設定済み — echo-cancel ソースのノイズ抑制でスコアが下がる分を補正)、`YURA_WAKE_PATIENCE` (閾値を連続で超えるべきフレーム数。デフォルト `2`)、`YURA_VOICEVOX_SPEAKER` (デフォルト `14`)、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。
 
 **ヘッドホンじゃなくてスピーカー派?** メディア音声がマイクに入ると、誤起動の原因になる上に本物の呼びかけも埋もれます。PipeWire の WebRTC エコーキャンセルで両方解決できます — デフォルト sink の再生内容をマイク入力から差し引くので、再生中でも wake word が通ります。`~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` に以下を置いて (`target.object` は `wpctl inspect` で調べた自分のマイクの `node.name` に)、PipeWire を再起動後、`wpctl set-default <id>` で新しいソースをデフォルト入力にします:
 
@@ -551,10 +566,12 @@ sudo nano /etc/default/grub
 sudo grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
+NixOS では宣言で: `boot.kernelParams = [ "usbcore.autosuspend=-1" ];`
+
 ### ワイヤレスヘッドセット使用時に音声 / 動画がフリーズ
 
 **症状:** ワイヤレスヘッドセットに切り替えると音声が落ちる。ログに `Failed to get percentage from UPower`。
-**対処:** `sudo systemctl enable --now upower`
+**対処:** `sudo systemctl enable --now upower` (NixOS: `services.upower.enable = true;`)
 
 ### Firefox / Zen Browser が PipeWire と競合
 
