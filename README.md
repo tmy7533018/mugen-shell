@@ -51,47 +51,16 @@ Set up alongside mugen-shell via NixOS, Arch + Nix, or `make install`; see [SETU
 
 ### Features
 
-- Bar row: input pill with Yura icon. Responses stream into the placeholder. Clicking the icon opens the corner panel on the same conversation.
-- Corner panel (left or right): sidebar of past conversations with an indicator that pulses while a reply streams.
-- Bar row and corner panel stay in sync. A message sent in one appears in the other.
-- Multi-conversation history persisted on disk. Pick up old chats from the sidebar; delete via the hover trash icon.
-- Per-conversation model binding. Each conversation keeps the provider it started with, and the panel dropdown is read-only mid-conversation.
-- Markdown rendering for assistant replies. Code blocks have a copy button revealed on hover.
-- Streaming responses with a stop button and an IME-aware input placeholder.
-- Personality (name, tone, language, system prompt) is editable in the Settings GUI. Save & Apply writes the config and restarts the backend.
-- Per-conversation Thinking toggle. Routes through each provider's reasoning channel (qwen3 think, Claude extended thinking, Gemini thinkingConfig, OpenAI reasoning_effort), with a silent fallback for unsupported models.
-- Voice input (optional). Say **"Hey Yura"** — a custom openWakeWord model trained on VOICEVOX-generated Japanese speech — then talk: whisper.cpp transcribes, the reply flows through the same conversation stack and is spoken aloud sentence-by-sentence via VOICEVOX or [Piper](https://github.com/rhasspy/piper) (non-Japanese voices), mirrored live into the bar and panel. After a reply the mic stays open for follow-ups — keep talking, no wake word needed. Both UIs add a push-to-talk mic button that flips into a cancel control while listening. Setup in [SETUP.md → Voice input](SETUP.md#voice-input-optional).
-- Strict-by-default app launch allowlist. Until an app is enabled in the picker, Yura cannot launch anything. Shell metacharacters (`; | & $` etc.) are always rejected.
-- Per-category tool toggles (audio, music, brightness, theme, wallpaper, notifications, timer, calendar, panels, app launcher).
-- External [MCP](https://modelcontextprotocol.io) server support. Configured servers have their tools merged into the same gated set, with live connection status shown in Settings.
+- Bar row and corner panel share the same conversations and stay in sync; the sidebar keeps multi-conversation history on disk.
+- Per-conversation model binding, plus a per-conversation Thinking toggle routed through each provider's reasoning channel.
+- Markdown replies with code-block copy, streaming with a stop button, IME-aware input.
+- Personality, providers, and every other Yura knob editable from the Settings GUI — Save & Apply hot-restarts the backend.
+- Voice input (optional): say **"Hey Yura"**, talk, and the reply is spoken back via VOICEVOX / AivisSpeech (or Piper for non-Japanese voices). The mic stays open for follow-ups, and both UIs get a push-to-talk button. Setup in [SETUP.md → Voice input](SETUP.md#voice-input-optional).
+- Strict-by-default app allowlist, per-category tool toggles, and external [MCP](https://modelcontextprotocol.io) servers merged into the same gated set.
 
 ### Shell control by chat
 
-Tool calls from Yura are dispatched through `qs ipc call`, so the existing shell managers remain the single source of truth. Reversible tools run immediately. Built-in destructive tools (clearing notifications, deleting calendar events) ask for confirmation in chat. External MCP tools that may write are held behind an Approve / Deny prompt in the UI.
-
-| Domain | What Yura can do |
-|---|---|
-| Audio output | set / read volume, toggle mute |
-| Audio input | set / read mic volume, toggle mic mute |
-| Display | set / read brightness |
-| Theme | switch dark / light, toggle, read |
-| Wallpaper | switch, list available, read current |
-| Music (MPRIS) | play / pause, next, previous |
-| Notifications | set / toggle DnD, clear history, read unread count |
-| Apps | launch any app enabled in Settings → AI / Yura → Allowed apps (off-$PATH binaries resolved via `.desktop` Exec) |
-| Timer | start / pause / resume / cancel, read state |
-| Calendar | add / delete events, list today or a date range |
-| Panels | open named panel, close any panel |
-
-Each row above can be disabled as a category in Settings → AI / Yura → Tool categories. App launches are also gated by the Allowed apps picker, so "launch firefox" only works once firefox is enabled there.
-
-External MCP servers feed into the same gated set. Add `[mcp.servers.*]` blocks to the config (memory, filesystem, GitHub, etc.) and the tools merge with the same per-category gate, audit log, result sanitisation, and approval prompt before any write. See [SETUP.md](SETUP.md#mcp-servers).
-
-Power actions (lock, suspend, logout, reboot, shutdown) are not exposed to Yura. Use the Power Menu directly for those.
-
-Example prompts that work today: "set volume to 30", "lower the brightness", "switch to light mode", "shuffle the wallpaper", "next track", "DnD on", "open settings", "set a 25 minute timer", "add a calendar event tomorrow at 3pm", "launch firefox".
-
-Provider API keys, the config file layout, and the HTTP API are documented in [SETUP.md → Configuring mugen-ai](SETUP.md#configuring-mugen-ai).
+Yura drives the desktop through gated tool calls: volume, mic, brightness, theme, wallpaper, music, notifications, timers, calendar, panels, and an allowlisted app launcher. Reversible actions run immediately, destructive ones confirm in chat, and external MCP writes sit behind an Approve / Deny prompt. Power actions are deliberately not exposed. Try "set volume to 30", "shuffle the wallpaper", or "set a 25 minute timer" — the full domain table, gating details, and config are in [SETUP.md → Shell control by chat](SETUP.md#shell-control-by-chat).
 
 ---
 
@@ -115,13 +84,13 @@ Provider API keys, the config file layout, and the HTTP API are documented in [S
 - WiFi, Bluetooth, and IME management
 - Battery indicator (optional water-level fill inside the power menu icon) and a collapsible system tray
 - App launcher, idle inhibitor toggle, screenshot capture with clipboard copy, screenshot gallery, power menu
-- Standalone Settings window for theme, blur, animations, notification and timer sounds, lock timer, date format, plus the Yura tab (personality, providers, bar model, thinking, tool categories, allowed apps, panel side) and a Voice input section (daemon toggle, wake-open target)
+- Standalone Settings window: theme, blur, animations, sounds, lock timer, date format, plus the full Yura and Voice input sections
 
 ---
 
 ## Usage
 
-After installation (see [SETUP.md](SETUP.md)), the bar starts automatically with the Hyprland session. Press `Super + /` for the keyboard shortcut reference. Right-click the power menu icon to open Settings. Click the chevron next to the notification icon to expand the system tray. The full keybind list is in [SETUP.md → Keybindings](SETUP.md#keybindings).
+After installation (see [SETUP.md](SETUP.md)), the bar starts automatically with the Hyprland session. Press `Super + /` for the shortcut reference. Right-clicking the power menu icon opens Settings, and the chevron next to the notification icon expands the system tray. The full keybind list is in [SETUP.md → Keybindings](SETUP.md#keybindings).
 
 ---
 

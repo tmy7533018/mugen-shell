@@ -73,7 +73,7 @@ Runtime data lives outside the repo under XDG dirs:
 | `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/}` | User-supplied media |
 | `$XDG_PICTURES_DIR/mugen-screenshots/` | Captured screenshots |
 
-User-supplied media goes under the corresponding XDG path. The notification sound dropdown rescans every time Settings opens. Quickest way to get a sound working:
+User-supplied media goes under the corresponding XDG path, and the notification sound dropdown rescans every time Settings opens. Quickest way to get a sound working:
 
 ```bash
 mkdir -p ~/.local/share/mugen-shell/sounds && cp /usr/share/sounds/freedesktop/stereo/{bell,message,message-new-instant}.oga ~/.local/share/mugen-shell/sounds/
@@ -209,7 +209,7 @@ The home-manager activation copies the shipped `system/hypr/` defaults into `~/.
 source = ~/.config/hypr/configs/mugen-shell.conf
 ```
 
-That file ships in the package output (`$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.conf`). Copy it into `~/.config/hypr/configs/` once and the `source =` line keeps it up to date across rebuilds. Without that line nothing spawns `quickshell -c mugen-shell`, and the bar and Yura panels will not start.
+That file ships in the package output (`$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.conf`): copy it into `~/.config/hypr/configs/` once and the `source =` line keeps it up to date across rebuilds. Without it nothing spawns `quickshell -c mugen-shell`, and the bar and Yura panels will not start.
 
 **Lua config (Hyprland 0.55+).** hyprlang is deprecated in favour of Lua, and mugen-shell ships a complete Lua config alongside the legacy `.conf` set — `hyprland.lua` (the per-file confs consolidated into one) plus `configs/mugen-shell.lua` and the generated `colors.lua` / `configs/blur.lua`. Hyprland prefers `hyprland.lua` when it exists, so the two sit side-by-side and removing the `.lua` restores the legacy config. **The Lua config is the recommended path** — it is what the author's own machine runs daily; the `.conf` set is maintained as a fallback for stock hyprlang setups. On a fresh install the shipped `hyprland.lua` is picked up automatically. If you already keep your own Lua config, adopt the mugen-shell autostart with the Lua equivalent of the `source =` line:
 
@@ -306,6 +306,28 @@ disabled_categories = []
 - `[tools].disabled_categories`: list any of `audio music brightness theme wallpaper notification timer calendar panel app` to hide that group of tools. An MCP server name (see below) also works here as a category.
 - `[mcp.servers.<name>]`: registers an external [Model Context Protocol](https://modelcontextprotocol.io) server whose tools are merged into Yura's tool set. See *MCP servers* below.
 
+### Shell control by chat
+
+Tool calls from Yura are dispatched through `qs ipc call`, so the existing shell managers remain the single source of truth. Reversible tools run immediately. Built-in destructive tools (clearing notifications, deleting calendar events) ask for confirmation in chat, and external MCP tools that may write are held behind an Approve / Deny prompt (see *MCP servers* below).
+
+| Domain | What Yura can do |
+|---|---|
+| Audio output | set / read volume, toggle mute |
+| Audio input | set / read mic volume, toggle mic mute |
+| Display | set / read brightness |
+| Theme | switch dark / light, toggle, read |
+| Wallpaper | switch, list available, read current |
+| Music (MPRIS) | play / pause, next, previous |
+| Notifications | set / toggle DnD, clear history, read unread count |
+| Apps | launch any app enabled in Settings → AI / Yura → Allowed apps (off-$PATH binaries resolved via `.desktop` Exec) |
+| Timer | start / pause / resume / cancel, read state |
+| Calendar | add / delete events, list today or a date range |
+| Panels | open named panel, close any panel |
+
+Each row can be disabled as a category in Settings → AI / Yura → Tool categories, and app launches are additionally gated by the Allowed apps picker — "launch firefox" only works once firefox is enabled there. Power actions (lock, suspend, logout, reboot, shutdown) are not exposed to Yura; use the Power Menu directly.
+
+Example prompts that work today: "set volume to 30", "lower the brightness", "switch to light mode", "shuffle the wallpaper", "next track", "DnD on", "open settings", "set a 25 minute timer", "add a calendar event tomorrow at 3pm", "launch firefox".
+
 ### MCP servers
 
 mugen-ai can pull tools from external [Model Context Protocol](https://modelcontextprotocol.io) servers (memory, filesystem, GitHub, etc.) and expose them to Yura alongside the built-in shell tools. Add one `[mcp.servers.<name>]` block per server:
@@ -365,7 +387,7 @@ systemctl --user restart mugen-ai.service
 
 ### HTTP API
 
-`mugen-ai serve` listens on `127.0.0.1:11435` by default. The shell talks to it over plain HTTP. Conversations and messages are persisted in SQLite at `~/.local/state/mugen-ai/history.db`.
+`mugen-ai serve` listens on `127.0.0.1:11435` by default, and the shell talks to it over plain HTTP. Conversations and messages are persisted in SQLite at `~/.local/state/mugen-ai/history.db`.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -400,10 +422,29 @@ For terminal use: `mugen-ai chat`.
 Yura can also be driven hands-free: say **"Hey Yura"**, speak, and the reply is read aloud.
 
 ```
-mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp → mugen-ai /chat → VOICEVOX
+mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp → mugen-ai /chat → TTS (VOICEVOX / AivisSpeech / Piper)
 ```
 
-The default stack is Japanese-first but not Japanese-only (see *Other languages* below), and is **not covered by the Nix flake or `make install` yet** — it expects a manual setup on top of a running mugen-ai. On NixOS this manual route needs `programs.nix-ld.enable = true` (the pip wheels — onnxruntime, sounddevice — and the prebuilt AivisSpeech engine are dynamically linked FHS binaries); native Nix packaging for the voice stack is planned:
+The default stack is Japanese-first but not Japanese-only (see *Other languages* below). There are two ways to set it up; both sit on top of a running mugen-ai.
+
+### Nix path
+
+The home-manager module (Paths A and B) packages the whole stack:
+
+```nix
+programs.mugen-shell.voice.enable = true;
+# programs.mugen-shell.voice.aivis.enable = false;   # skip the AivisSpeech engine
+```
+
+This wires up two user services, both attached to `graphical-session.target`. `yura-voice` runs the daemon with a Python environment carrying openwakeword (ONNX inference; the base models are pre-seeded into the store, so nothing is fetched at runtime), a Vulkan build of whisper.cpp, and the `large-v3-turbo` model fetched into the store. `aivisspeech-engine` — on by default, disable with `voice.aivis.enable = false` — serves the VOICEVOX-compatible API on `127.0.0.1:10101` in CPU mode. Its first start downloads the default voice model plus BERT (~900 MB), so it needs the network once. `nix-ld` is not required on this path: the engine bundle is patchelf'd to run from the store as-is.
+
+The daemon runs `yurad.py` from the package, so no checkout is needed; point `programs.mugen-shell.voice.sourceDir` at a live `voice/` directory to hack on it with only a service restart, the same idea as `qmlDir`. Replies are routed at AivisSpeech automatically, so they are audible before any voice is picked in Settings. VOICEVOX is not part of the Nix wiring — set it up manually (step 3 below) if you want its voices next to the Aivis ones.
+
+Coming from the manual path below, delete the `~/.config/systemd/user/{yura-voice,voicevox-engine,aivisspeech-engine}.service` symlinks before switching: home-manager writes units under those same names and its activation refuses to overwrite files it does not own.
+
+### Manual path
+
+For non-Nix setups (and `make install` users — voice is not covered there). On NixOS this route needs `programs.nix-ld.enable = true` (the pip wheels — onnxruntime, sounddevice — and the prebuilt AivisSpeech engine are dynamically linked FHS binaries):
 
 1. **Python venv** for the daemon (Python 3.14 has no tflite wheel, so openwakeword is installed `--no-deps` and runs its ONNX path; the pinned runtime deps are listed in `voice/requirements.txt`):
    ```bash
@@ -422,7 +463,7 @@ The default stack is Japanese-first but not Japanese-only (see *Other languages*
    systemctl --user enable --now voicevox-engine.service yura-voice.service
    ```
 
-Runtime control lives in **Settings → Voice input**: an enable toggle (off releases the microphone; picked up live, no restart needed), a follow-up toggle (after a reply the mic stays open a few seconds for the next utterance — no wake word needed; silence returns to idle), a wake-open target (panel / bar / none), a voice picker with per-voice preview, a speech-speed selector, a speech-recognition language (Auto / JA / EN), and cue sound pickers for the wake / follow-up / end chimes — each can be the built-in beep, silent, or any audio file dropped into `~/.local/share/mugen-shell/sounds/` (shared with notification sounds; picking one previews it). Voice, speed, language, and cue sounds apply from the next utterance — the daemon watches `settings.json`. Both Yura UIs get a push-to-talk mic button — it works even with the wake word disabled — which flips into a cancel control while listening.
+Runtime control lives in **Settings → Voice input**. An enable toggle releases the microphone when off (picked up live, no restart needed); a follow-up toggle keeps the mic open a few seconds after a reply so the next utterance needs no wake word, returning to idle on silence. Voice enrollment teaches Yura your voice: say "Hey Yura" after each of ten beeps and it trains a speaker verifier, answering only to you from then on (Re-register redoes it). The rest: a wake-open target (panel / bar / none), a wake sensitivity slider (higher rejects more false wakes, lower catches quieter calls), a voice picker with per-voice preview, a speech-speed selector, a volume slider for spoken replies, a speech-recognition language (Auto / JA / EN), and cue sound pickers for the wake / follow-up / end chimes — the built-in beep, silence, or any audio file dropped into `~/.local/share/mugen-shell/sounds/` (shared with notification sounds; picking one previews it). Everything applies from the next utterance — the daemon watches `settings.json`. Both Yura UIs get a push-to-talk mic button that starts a turn without saying the wake word and flips into a cancel control while listening (it hides while voice input is toggled off).
 
 ### Other languages
 
@@ -430,10 +471,10 @@ Only the reply voice is engine-specific; everything else is multilingual already
 
 - **TTS**: install [Piper](https://github.com/rhasspy/piper) (`piper` on `PATH`, or `YURA_PIPER_BIN`) and drop voices (`.onnx` + `.onnx.json` pairs from [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices)) into `~/.local/share/piper/voices/`. They appear in the same Settings voice picker as `Piper: <name>` entries — the picked voice carries the engine, so there is no separate engine switch. VOICEVOX is then optional.
 - **STT**: set Speech recognition to Auto (per-utterance detection) or a fixed language; whisper covers ~100 languages.
-- **Wake word**: with `YURA_WAKEWORD` unset, the daemon uses openWakeWord's bundled English `hey_jarvis`. The shipped `hey_yura.onnx` is tuned for Japanese pronunciation; retrain via `voice/train/` for other accents.
+- **Wake word**: with `YURA_WAKEWORD` unset, the daemon falls back to openWakeWord's stock English `hey_jarvis`, downloaded on first run — manual path only; the Nix python env is read-only, so on that path point `YURA_WAKEWORD` at a downloaded model instead. The shipped `hey_yura.onnx` is tuned for Japanese pronunciation; retrain via `voice/train/` for other accents.
 - **Replies**: set the assistant's language under Settings → AI / Yura → Personality.
 
-Environment knobs, set in the unit or a drop-in: `YURA_WAKEWORD` (path to a custom model; default `hey_jarvis`), `YURA_WAKE_THRESHOLD` (ships at `0.6` for the custom model — lowered to compensate for the echo-cancelled source's noise suppression), `YURA_WAKE_PATIENCE` (consecutive frames over the threshold; default `2`), `YURA_VOICEVOX_SPEAKER` (default `14`), `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`, `YURA_AIVIS_URL`.
+Environment knobs, set in the unit or a drop-in: `YURA_WAKEWORD` (path to a custom model; default `hey_jarvis`), `YURA_WAKE_THRESHOLD` (bootstrap default, `0.85` in the shipped units to match the Wake sensitivity slider — the daemon re-reads `voice.wakeThreshold` from `settings.json` every frame, so the slider wins once the shell has saved), `YURA_WAKE_PATIENCE` (consecutive frames over the threshold; default `2`), `YURA_TTS` (voice used when `settings.json` names none, as `<engine>:<style-id>` or just `<engine>:` to take that engine's first style — the Nix path sets `aivis:`), `YURA_VOICEVOX_SPEAKER` (default `14`), `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`, `YURA_AIVIS_URL`.
 
 **Speakers instead of headphones?** Media audio reaching the mic both causes false wakes and drowns out real ones. PipeWire's WebRTC echo cancellation solves both — it subtracts whatever the default sink is playing from the mic, so the wake word works even mid-playback. Drop this into `~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` (set `target.object` to your mic's `node.name` from `wpctl inspect`), restart PipeWire, then make the new source the default input with `wpctl set-default <id>`:
 
