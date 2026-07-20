@@ -184,6 +184,21 @@ in
       )
       ++ lib.optionals cfg.ai.enable [ cfg.ai.package ];
 
+    # graphical-session.target sets RefuseManualStart, so a compositor without
+    # a session manager (no UWSM here) cannot start it directly — it has to be
+    # pulled up by a target that binds to it. Hyprland starts this one, and
+    # everything hanging off graphical-session.target comes up with the
+    # session and goes away with it.
+    systemd.user.targets.mugen-shell-session = {
+      Unit = {
+        Description = "mugen-shell graphical session";
+        BindsTo = [ "graphical-session.target" ];
+        Before = [ "graphical-session.target" ];
+        Wants = [ "graphical-session-pre.target" ];
+        After = [ "graphical-session-pre.target" ];
+      };
+    };
+
     systemd.user.services.mugen-ai = lib.mkIf cfg.ai.enable {
       Unit = {
         Description = "mugen-ai backend HTTP server";
