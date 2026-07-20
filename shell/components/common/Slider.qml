@@ -1,14 +1,9 @@
 import QtQuick
 import "../../lib" as Theme
 
-// Continuous slider with a trailing value label. `display` is an overridable
-// value formatter.
-//
-// The slider never assigns its own `value`: callers bind it to their source of
-// truth, and an imperative write here would sever that binding for good. It
-// reports the candidate through moved(newValue) instead and lets the caller's
-// write flow back in through the binding. released() fires once at the end of a
-// drag so callers can persist there rather than on every pixel.
+// Never assign `value` from in here: callers bind it to their source of truth
+// and an imperative write would sever that binding for good. Report the
+// candidate through moved(newValue) and let their write flow back in.
 Item {
     id: root
 
@@ -25,8 +20,8 @@ Item {
     implicitWidth: 180
     implicitHeight: 24
 
-    // Pointer slop around the 6px track, added back when mapping a press to a
-    // position — the MouseArea origin sits above/left of the track by this much.
+    // Pointer slop around the 6px track. The MouseArea origin sits left of the
+    // track by this much, so presses subtract it back out.
     readonly property int _grab: 8
 
     readonly property real _ratio: (to > from) ? Math.max(0, Math.min(1, (value - from) / (to - from))) : 0
@@ -68,8 +63,7 @@ Item {
             cursorShape: Qt.PointingHandCursor
             preventStealing: true
 
-            // Snapping by step count keeps the result on the step grid; the
-            // decimal re-round drops the float noise that would otherwise land
+            // The decimal re-round drops float noise that would otherwise land
             // values like 0.7000000000000001 in settings.json.
             function quantize(mx) {
                 const r = Math.max(0, Math.min(1, mx / track.width))

@@ -19,10 +19,8 @@ type Candidate struct {
 	Source  string   `json:"source"`
 }
 
-// Discover lists MCP servers already installed via npm's global root:
-// official @modelcontextprotocol/server-* packages plus common mcp-server-*
-// naming. Best-effort — no npm, no global root, or nothing installed all
-// just mean an empty list.
+// Discover lists MCP servers installed under npm's global root. Best-effort:
+// no npm, no global root, or nothing installed all yield an empty list.
 func Discover(ctx context.Context) []Candidate {
 	root := npmGlobalRoot(ctx)
 	if root == "" {

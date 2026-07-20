@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Title + description pair for a settings row.
 ColumnLayout {
     id: label
 

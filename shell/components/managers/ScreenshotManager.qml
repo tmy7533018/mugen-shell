@@ -63,8 +63,7 @@ QtObject {
 
     function openScreenshot(filePath) {
         if (!filePath) return
-        // The exec runs through /bin/sh, so a filename with a quote must be
-        // escaped just like copyScreenshot does.
+        // The exec runs through /bin/sh, so quotes in the filename must be escaped.
         let escaped = filePath.replace(/'/g, "'\"'\"'")
         openScreenshotProcess.command = Theme.Hypr.execArgv("imv '" + escaped + "'")
         openScreenshotProcess.running = true

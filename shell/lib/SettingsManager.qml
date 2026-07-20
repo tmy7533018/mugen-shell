@@ -11,8 +11,7 @@ QtObject {
         return xdg + "/mugen-shell"
     }
 
-    // defaultSettingsFile stays in shellDir — it's a read-only template
-    // shipped with the project (will become a /nix/store path under flake).
+    // Read-only template shipped with the project; never written to.
     property string defaultSettingsFile: Quickshell.shellDir + "/settings.default.json"
     property string userSettingsFile: configDir + "/settings.json"
 
@@ -20,47 +19,44 @@ QtObject {
     property int autoCloseTimerInterval: 5000
     property bool barGradientEnabled: true
     property bool batteryIndicatorEnabled: false
-    property string animationSpeed: "normal"  // "slow", "normal", "fast", "instant"
+    property string animationSpeed: "normal"  // "slow" | "normal" | "fast" | "instant"
     property real animationDurationMultiplier: 1.0
     property string notificationSound: "None"  // filename in assets/sounds/, or "None"
-    property string timerSound: "None"  // filename in assets/sounds/, played when a countdown finishes
-    property int lockTimerMinutes: 10  // hypridle screen-lock idle timeout in minutes
-    property string dateFormat: "ddd M/d"  // Qt date tokens: d, dd, ddd, dddd, M, MM, MMM, MMMM, yy, yyyy
-    property string barAiModel: ""  // "" = follow the backend default (last model selected in float)
-    property bool barThinking: false  // global default for bar chat thinking field (qwen3 etc.)
+    property string timerSound: "None"  // filename in assets/sounds/, or "None"
+    property int lockTimerMinutes: 10  // hypridle screen-lock idle timeout
+    property string dateFormat: "ddd M/d"  // Qt date tokens
+    property string barAiModel: ""  // "" = follow the backend default
+    property bool barThinking: false
     property string yuraPanelSide: "left"  // "left" | "right"
     property int yuraPanelWidth: 700
     property int yuraPanelHeight: 640
     property bool yuraSidebarCollapsed: false
     property bool yuraIdleBreath: true
-    property int yuraAutoCollapseMin: 0  // auto-close the float after idle minutes; 0 = never
+    property int yuraAutoCollapseMin: 0  // 0 = never
     property string yuraTypingSpeed: "instant"  // "instant" | "fast" | "normal" | "slow"
 
     // Voice input (yurad reads these straight from settings.json).
     property bool voiceEnabled: true
     property string voiceWakeOpens: "panel"  // "panel" | "bar" | "none"
-    property int voiceSpeaker: 14  // VOICEVOX style id (legacy fallback)
+    property int voiceSpeaker: 14  // legacy fallback for voiceTts
     property real voiceSpeed: 1.0
     property string voiceTts: "voicevox:14"  // "voicevox:<id>" | "piper:<voice>"
     property string voiceSttLang: "ja"  // whisper language, "auto" allowed
-    property bool voiceFollowUp: true  // keep listening after replies
-    // openWakeWord score gate; higher = fewer false wakes. Kept equal to the
-    // shipped units' YURA_WAKE_THRESHOLD so the first save of any setting
-    // (which persists this key) can't move the wake gate on its own.
+    property bool voiceFollowUp: true
+    // Kept equal to the shipped units' YURA_WAKE_THRESHOLD so the first save of
+    // any setting (which persists this key) can't move the wake gate on its own.
     property real voiceWakeThreshold: 0.85
-    property real voiceVolume: 1.0  // 0..1 loudness trim on spoken replies
+    property real voiceVolume: 1.0  // 0..1
     // Cue sounds from the notification sounds dir; "" = built-in beep, "none" = silent
     property string voiceSoundWake: ""
     property string voiceSoundFollowUp: ""
     property string voiceSoundEnd: ""
 
-    // Suppress save while we are applying values that just came in from disk
-    // (either initial load or an external write detected by the file watcher).
+    // Suppress save while applying values that just came in from disk.
     property bool _applyingExternal: false
 
-    // Last full settings object seen on disk. saveSettings merges the modeled
-    // values over this, so keys written by a newer process (ones this build
-    // doesn't model yet) survive our save instead of being dropped.
+    // Last full object seen on disk. saveSettings merges over it so keys this
+    // build doesn't model yet survive our save instead of being dropped.
     property var _rawSettings: ({})
 
     signal settingsChanged()
@@ -78,8 +74,6 @@ QtObject {
         return v !== null && typeof v === "object" && !Array.isArray(v)
     }
 
-    // Returns a new object: `override` applied over `base`, recursing into
-    // nested objects so keys present on only one side are preserved.
     function _deepMerge(base, override) {
         let out = _isPlainObject(base) ? JSON.parse(JSON.stringify(base)) : {}
         for (let k in override) {
@@ -151,17 +145,13 @@ QtObject {
             }
         }
 
-        // Merge over the last-seen on-disk object so keys this build doesn't
-        // model (written by a newer process) aren't dropped on save.
         let merged = _deepMerge(_rawSettings, modeled)
         _rawSettings = merged
         let jsonString = JSON.stringify(merged, null, 2)
 
-        // Atomic write (tmp + rename): every shell process re-reads this file
-        // on change, and a reader hitting a truncate-in-progress used to see
-        // an empty file and clobber the user's settings with defaults. The
-        // tmp name carries $$ so two shell processes saving at once can't
-        // interleave into the same scratch file.
+        // Atomic write: every shell process re-reads this file on change, and a
+        // reader hitting a truncate-in-progress would clobber it with defaults.
+        // $$ in the tmp name keeps two concurrent savers off the same scratch file.
         saveSettingsProcess.command = [
             "bash", "-c",
             "mkdir -p \"" + configDir + "\" && tmp=\"" + userSettingsFile + ".$$.tmp\" && cat > \"$tmp\" <<'JSON_EOF' && mv \"$tmp\" \"" + userSettingsFile + "\"\n" + jsonString + "\nJSON_EOF"
@@ -182,7 +172,6 @@ QtObject {
         try {
             let settings = JSON.parse(jsonString)
 
-            // Keep the full object so unknown keys survive our next save.
             _rawSettings = settings
 
             _applyingExternal = true
@@ -191,7 +180,7 @@ QtObject {
                 if (settings.autoCloseTimer.interval !== undefined) {
                     autoCloseTimerInterval = settings.autoCloseTimer.interval
                 }
-                // Migrate legacy "enabled: false" to interval = 0
+                // Legacy key: enabled=false meant interval 0.
                 if (settings.autoCloseTimer.enabled === false) {
                     autoCloseTimerInterval = 0
                 }
@@ -346,8 +335,7 @@ QtObject {
         }
     }
 
-    // Re-read on external writes (e.g. from the floating Settings window
-    // in a separate Quickshell process) so every shell instance stays in sync.
+    // Re-read on external writes so every shell process stays in sync.
     property FileView settingsWatcher: FileView {
         path: settingsManager.userSettingsFile
         watchChanges: true
@@ -379,9 +367,8 @@ QtObject {
                 readDefaultSettingsProcess.seed = true
                 readDefaultSettingsProcess.running = true
             } else if (settingsManager._loadRetries < 3) {
-                // Existing file read back empty — almost certainly raced a
-                // writer mid-save. Retry; never overwrite the user's file
-                // from this path.
+                // Empty read almost certainly raced a writer mid-save; retry
+                // rather than overwrite the user's file.
                 settingsManager._loadRetries++
                 retryLoadTimer.restart()
             } else {
@@ -404,8 +391,7 @@ QtObject {
         command: ["cat", settingsManager.defaultSettingsFile]
         running: false
         property string output: ""
-        // Whether applying defaults may be written back to the user file.
-        // Only true for a genuinely missing file (first run).
+        // Only a genuinely missing file may have defaults written back to it.
         property bool seed: true
 
         stdout: SplitParser {

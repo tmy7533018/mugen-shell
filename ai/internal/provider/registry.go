@@ -7,19 +7,16 @@ import (
 	"time"
 )
 
-// providerProbeTimeout bounds each provider's model-listing probe so a hung
-// backend (e.g. an Ollama daemon accepting connections but never replying)
-// can't stall model resolution for a chat routed to a different provider.
+// Bounds each model-listing probe so a hung backend can't stall resolution for
+// a chat routed to a different provider.
 const providerProbeTimeout = 5 * time.Second
 
 type Registry struct {
 	mu        sync.RWMutex
 	providers []Provider
 	model     string
-	// routeCache memoises a resolved model→provider so /chat doesn't
-	// re-probe every backend (an HTTP round-trip each) twice per turn.
-	// A model's owning provider doesn't change at runtime, so entries
-	// never need invalidation.
+	// Saves an HTTP round-trip per backend on every turn. A model's owning
+	// provider doesn't change at runtime, so entries never need invalidation.
 	routeCache map[string]Provider
 }
 
@@ -44,7 +41,7 @@ func (r *Registry) Chat(ctx context.Context, messages []Message, opts ChatOption
 }
 
 // ChatWith routes a chat through the explicit model, bypassing the registry's
-// stored default. Used by /chat to honour each conversation's bound model.
+// stored default.
 func (r *Registry) ChatWith(ctx context.Context, model string, messages []Message, opts ChatOptions, fn func(ChatChunk) error) error {
 	p, err := r.providerFor(ctx, model)
 	if err != nil {
@@ -54,8 +51,7 @@ func (r *Registry) ChatWith(ctx context.Context, model string, messages []Messag
 }
 
 // ProviderNameFor reports which provider serves the model ("ollama",
-// "anthropic", …), or "" when none claims it. Lets callers make
-// local-vs-cloud decisions (e.g. desktop-state privacy gating).
+// "anthropic", …), or "" when none claims it.
 func (r *Registry) ProviderNameFor(ctx context.Context, model string) string {
 	p, err := r.providerFor(ctx, model)
 	if err != nil {
@@ -76,8 +72,6 @@ func (r *Registry) Models(ctx context.Context) ([]string, error) {
 	return all, nil
 }
 
-// probeModels lists a provider's models under a bounded timeout so one
-// unresponsive backend can't hang model resolution for the others.
 func probeModels(ctx context.Context, p Provider) ([]string, error) {
 	probeCtx, cancel := context.WithTimeout(ctx, providerProbeTimeout)
 	defer cancel()

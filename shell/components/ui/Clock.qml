@@ -16,7 +16,7 @@ Text {
     
     text: timeString
     
-    // Brighten slightly to compensate for Text rendering appearing darker than icons at the same color
+    // Brightened: Text renders darker than icons at the same color
     color: {
         if (theme) {
             let baseColor = theme.textPrimary
@@ -41,7 +41,8 @@ Text {
     renderType: Text.QtRendering
     smooth: true
     
-    // layer.enabled always on; glow visibility controlled via color alpha
+    // Stays on and hides the glow via color alpha; toggling layer.enabled
+    // instead re-rasterizes the item and pops on every minute change.
     layer.enabled: true
     layer.effect: Glow {
         samples: 20
@@ -89,7 +90,6 @@ Text {
                 clockText.isMinuteExpanding = false;
                 clockText.minuteScaleFactor = 1.0;
             } else if (clockText.isMinuteExpanding && parseInt(ss) >= 2 && parseInt(ss) < 59) {
-                // Safety: reset if expansion state lingers outside the 59-01 window
                 clockText.isMinuteExpanding = false;
                 clockText.minuteScaleFactor = 1.0;
             }

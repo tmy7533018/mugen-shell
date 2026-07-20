@@ -4,8 +4,7 @@
 Pipeline: mic -> wake word (openWakeWord) -> VAD-endpointed capture ->
 whisper.cpp server (STT) -> mugen-ai /chat -> VOICEVOX (TTS) -> speakers.
 
-Run from a terminal inside the graphical session so `qs ipc` reaches the
-shell. All knobs are env vars; see CONFIG below.
+Run from a terminal inside the graphical session so `qs ipc` reaches the shell.
 """
 
 import glob
@@ -41,13 +40,11 @@ VOICEVOX_URL = os.environ.get("YURA_VOICEVOX_URL", "http://127.0.0.1:50021")
 AIVIS_URL = os.environ.get("YURA_AIVIS_URL", "http://127.0.0.1:10101")
 VOICEVOX_SPEAKER = int(os.environ.get("YURA_VOICEVOX_SPEAKER", "14"))
 TTS_SPEED = float(os.environ.get("YURA_VOICE_SPEED", "1.0"))
-# Fallback voice for when settings.json names none, as "<engine>:<style-id>"
-# or just "<engine>:" to take that engine's first style. Deployments that ship
-# only one engine set it so replies are audible before anything is picked.
+# Fallback voice when settings.json names none, as "<engine>:<style-id>" or
+# just "<engine>:" to take that engine's first style.
 TTS_DEFAULT = os.environ.get("YURA_TTS", "")
-# Engines master at very different loudness (Aivis ~8 dB hotter than
-# VOICEVOX); every spoken clip is RMS-normalized to this target so a
-# voice change never changes the room volume.
+# Engines master at very different loudness (Aivis ~8 dB hotter than VOICEVOX),
+# so every clip is RMS-normalized here and a voice change stays inaudible.
 TTS_TARGET_DBFS = float(os.environ.get("YURA_TTS_TARGET_DBFS", "-23"))
 # Piper is the non-Japanese TTS path; voices are bare names resolved here.
 PIPER_BIN = os.environ.get("YURA_PIPER_BIN", "piper")
@@ -57,24 +54,22 @@ PIPER_VOICES_DIR = os.path.expanduser(
 WAKEWORD = os.environ.get("YURA_WAKEWORD", "hey_jarvis")
 WAKE_THRESHOLD = float(os.environ.get("YURA_WAKE_THRESHOLD", "0.5"))
 # Consecutive frames that must clear the threshold. Real utterances hold a
-# high-score plateau across several 80 ms frames; media speech grazing the
-# boundary (anime dialogue especially) tends to spike on a single frame.
+# plateau across several 80 ms frames; media speech tends to spike on one.
 WAKE_PATIENCE = int(os.environ.get("YURA_WAKE_PATIENCE", "2"))
 # The wake model is confidently wrong on out-of-domain mechanical noise
 # (washing machines scored 0.7-0.9); a trigger only counts if the VAD saw
 # something speech-like in the last second.
 WAKE_VAD_GATE = float(os.environ.get("YURA_WAKE_VAD_GATE", "0.3"))
-# Speaker verifier: a per-user model that re-scores a wake as "was this the
-# owner's voice", the only defense against another *human* voice (a phone
-# video) saying the phrase. Enrollment (SIGRTMIN+2, or the Settings button)
-# trains it in place; dormant until the file exists.
+# Per-user model that re-scores a wake as "was this the owner's voice" — the
+# only defense against another *human* voice (a phone video) saying the phrase.
+# Enrollment (SIGRTMIN+2) trains it; dormant until the file exists.
 VERIFIER_DIR = os.path.expanduser("~/.local/share/mugen-shell/verifier")
 WAKE_VERIFIER = os.path.expanduser(os.environ.get(
     "YURA_VERIFIER", os.path.join(VERIFIER_DIR, "hey_yura_verifier.pkl")))
 WAKE_VERIFIER_THRESHOLD = float(os.environ.get("YURA_VERIFIER_THRESHOLD", "0.4"))
 ENROLL_CLIPS = int(os.environ.get("YURA_ENROLL_CLIPS", "10"))
-# Published for the Settings window, which lives in another process and can
-# only watch the filesystem: present while an enrollment is actually running.
+# The Settings window lives in another process and can only watch the
+# filesystem, so this marker exists while an enrollment is running.
 ENROLL_MARKER = os.path.join(VERIFIER_DIR, ".enrolling")
 YURA_SHELL_QML = os.path.expanduser(
     "~/.config/quickshell/mugen-shell/yura-shell.qml")
@@ -82,7 +77,7 @@ YURA_SHELL_QML = os.path.expanduser(
 # settings.json so the Settings GUI controls the daemon without a restart.
 SETTINGS_FILE = os.path.expanduser("~/.config/mugen-shell/settings.json")
 # Shared with the shell's notification sounds; the Settings voice pickers
-# (voice.soundWake / soundFollowUp / soundEnd) list files from here.
+# list files from here.
 SOUNDS_DIR = os.path.join(
     os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"),
     "mugen-shell", "sounds")
@@ -109,9 +104,8 @@ def voice_settings() -> dict:
 def voice_float(key: str, fallback: float, lo: float, hi: float) -> float:
     """Clamped float from voice settings; junk from a hand-edit falls back.
 
-    settings.json is user-editable and these are read on the audio path (the
-    wake loop reads one per frame), so a bad value must not raise there — an
-    exception in that loop takes the daemon down into a restart cycle.
+    These are read per frame on the audio path, where a raise would take the
+    daemon down into a restart cycle.
     """
     try:
         value = float(voice_settings().get(key, fallback))
@@ -120,9 +114,8 @@ def voice_float(key: str, fallback: float, lo: float, hi: float) -> float:
     return min(max(value, lo), hi)
 
 
-# Canned lines yurad speaks itself (the LLM replies already follow the
-# personality). Keyed by personality.language, hinted by voice.sttLang,
-# anything else falls back to English.
+# Canned lines yurad speaks itself. Keyed by personality.language, hinted by
+# voice.sttLang, anything else falls back to English.
 MESSAGES = {
     "ja": {
         "error": "ごめんね、エラーで返事できなかった。",
@@ -171,8 +164,7 @@ MAX_UTTERANCE_S = 15.0
 LISTEN_TIMEOUT_S = 6.0            # wake with no speech -> give up
 FOLLOWUP_TIMEOUT_S = 4.0          # post-reply window before returning to idle
 CONV_IDLE_ROTATE_S = float(os.environ.get("YURA_CONV_IDLE_ROTATE", "3600"))
-# Every wake-word trigger archives its preceding audio: false wakes become
-# retraining negatives, real ones positives. Ring-capped, ~80 KB per file.
+# Every wake archives its preceding audio for retraining, ring-capped.
 WAKE_DUMP_DIR = os.path.expanduser("~/.local/share/mugen-shell/wake-debug")
 WAKE_DUMP_KEEP = 100
 VAD_THRESHOLD = 0.35              # silero speech probability
@@ -185,9 +177,8 @@ def log(tag: str, msg: str = "") -> None:
         print(f"{time.strftime('%H:%M:%S')} [{tag:<10}] {msg}", flush=True)
 
 
-# Shell feedback: best-effort and fire-and-forget — the pipeline must
-# survive without the shell, and an inline qs client launch is slow enough
-# to delay capture start and put audible gaps between spoken sentences.
+# Fire-and-forget: the pipeline must survive without the shell, and an inline
+# qs launch is slow enough to delay capture and gap the spoken sentences.
 def _ipc_async(cmd: list[str]) -> None:
     def run():
         try:
@@ -218,21 +209,18 @@ def set_thinking(on: bool) -> None:
 def set_listening(on: bool) -> None:
     flag = "true" if on else "false"
     shell_ipc("yura", "set_listening", flag)
-    # The panel's mic button flips to a cancel button while listening.
     yura_ipc("set_listening", flag)
 
 
 def set_speaking(on: bool) -> None:
-    # The bar holds its auto-close while the spoken reply is playing, and
-    # both mic buttons flip into a stop control.
+    # The bar holds its auto-close while the spoken reply is playing.
     flag = "true" if on else "false"
     shell_ipc("yura", "set_speaking", flag)
     yura_ipc("set_speaking", flag)
 
 
 def yura_ipc(*args: str) -> None:
-    # yura-shell is a separate quickshell process, addressed by -p (same
-    # pattern the bar uses for toggleFrom).
+    # yura-shell is a separate quickshell process, addressed by -p.
     _ipc_async(["qs", "-p", YURA_SHELL_QML, "ipc", "call", "yura", *args])
 
 
@@ -271,9 +259,8 @@ def cue(kind: str, freq: float, dur: float = 0.12) -> None:
                 beep(freq, dur)
                 return
             # paplay spawns fine but exits fast and non-zero when it can't
-            # decode the file (e.g. mp3 on a libsndfile that lacks it); a guard
-            # thread reaps the child and falls back to the beep only on that
-            # quick failure, never on a normal (slow, rc 0) playback.
+            # decode the file (e.g. mp3 on a libsndfile without it), so fall
+            # back to the beep only on that quick failure.
             def _guard() -> None:
                 t0 = time.monotonic()
                 rc = proc.wait()
@@ -378,17 +365,15 @@ class Chat:
         """Every start-a-fresh-conversation policy lives here."""
         if not self.conversation_id:
             return
-        # An hour of silence usually means a new topic; a fresh conversation
-        # keeps per-turn context small. Long-term memory bridges the cut.
+        # A long silence usually means a new topic; long-term memory bridges
+        # the cut, and per-turn context stays small.
         if time.time() - self.last_turn > CONV_IDLE_ROTATE_S:
             log("chat", "idle gap, rotating to a new conversation")
             self.reset()
             return
         # The bound model always wins on the backend, so a mid-conversation
-        # change of the bar model knob would silently not apply; changing
-        # models reads as "new head, new conversation". Compare against the
-        # knob value this conversation was seeded with — the backend may
-        # echo a normalized name.
+        # knob change would silently not apply. Compare against the value this
+        # conversation was seeded with: the backend may echo a normalized name.
         if want is None:
             want = _settings().get("ai", {}).get("barModel", "")
         if want and self.model and want != self.model:
@@ -419,9 +404,8 @@ class Chat:
         parts: list[str] = []
         payload = {"message": text, "conversation_id": self.conversation_id,
                    "voice": True}
-        # Voice mirrors into the bar pill, so it follows the bar's model
-        # knob (Settings → AI / Yura → Bar Yura model); empty falls back
-        # to the backend default, exactly like the bar row does.
+        # Voice mirrors into the bar pill, so it follows the bar's model knob;
+        # empty falls back to the backend default, like the bar row does.
         if model:
             payload["model"] = model
         with requests.post(f"{AI_URL}/chat", json=payload, stream=True,
@@ -439,9 +423,8 @@ class Chat:
                     # Seed tracking from the knob we sent; the backend echo
                     # only fills in when the knob was empty.
                     self.model = model or ev.get("model", "")
-                    # Select it AND steer the panel there — selection alone
-                    # is not broadcast, so an open panel would keep showing
-                    # whatever conversation it had before.
+                    # Selection alone is not broadcast, so an open panel would
+                    # keep showing whatever conversation it had before.
                     requests.post(
                         f"{AI_URL}/conversations/{self.conversation_id}/select",
                         timeout=3)
@@ -553,10 +536,9 @@ def synth_piper(voice: str, sentence: str, speed: float) -> bytes:
 
 
 def synthesize(sentence: str) -> bytes:
-    # Voice knobs come from settings.json (Settings GUI, mtime-watched) so
-    # a change applies from the next sentence; env vars are the fallback.
-    # voice.tts is "voicevox:<style-id>" or "piper:<voice-name>"; the voice
-    # choice carries the engine, no separate engine setting.
+    # Settings.json wins over the env fallback so a change applies from the
+    # next sentence. voice.tts is "<engine>:<voice>" — the voice choice
+    # carries the engine, there is no separate engine setting.
     vs = voice_settings()
     # Clamped so a hand-edited settings.json can't zero the length_scale divisor.
     speed = voice_float("speed", TTS_SPEED, 0.5, 2.0)
@@ -589,9 +571,8 @@ def play_wav(data: bytes, should_stop=None) -> None:
         return
     rms = float(np.sqrt(np.mean(x * x)))
     if rms > 1e-4:
-        # Attenuation is free; boost stays capped so quiet styles (whisper
-        # voices) don't get their noise floor dragged up. The user-facing
-        # volume trim applies inside that cap so it can only lower it.
+        # Boost stays capped so quiet styles don't get their noise floor
+        # dragged up; the user's volume trim applies inside that cap.
         gain = min(10 ** (TTS_TARGET_DBFS / 20) / rms * vol, 3.0)
         audio = (np.clip(x * gain, -1.0, 1.0) * 32767).astype(np.int16)
     sd.play(audio, sr)
@@ -688,11 +669,9 @@ class Daemon:
         self.vad = SileroVAD()
         self.chat = Chat()
         self.running = True
-        # SIGUSR1 (the panel's mic button) starts a turn without a wake word;
-        # SIGUSR2 cancels the capture (or stops speech at a sentence break).
-        # SIGRTMIN+1 is the mic button on an empty chat: same as SIGUSR1 but
-        # into a fresh conversation instead of the running voice thread.
-        # SIGRTMIN+2 starts voice enrollment (Settings button).
+        # SIGUSR1 starts a turn without a wake word; SIGUSR2 cancels capture
+        # (or stops speech at a sentence break); SIGRTMIN+1 is SIGUSR1 into a
+        # fresh conversation; SIGRTMIN+2 starts voice enrollment.
         self.trigger = threading.Event()
         self.trigger_fresh = threading.Event()
         self.enroll = threading.Event()
@@ -744,9 +723,9 @@ class Daemon:
         silence_run = 0.0
         started = time.time()
         frame_s = CHUNK / SR
-        # The confirmation beep rides the first frames of capture; a pure
-        # tone can cross the VAD threshold on lucky frame alignment, so
-        # onset detection holds until it has passed (frames still preroll).
+        # The confirmation beep rides the first frames of capture and a pure
+        # tone can cross the VAD threshold, so hold onset detection until it
+        # has passed (frames still preroll).
         beep_guard = int(0.25 / frame_s)
         seen = 0
 
@@ -817,19 +796,17 @@ class Daemon:
         log("enroll", f"negatives ready: {have}+{made}")
 
     def _run_enrollment(self) -> None:
-        """Google-style voice registration, guided by Yura's own voice.
+        """Voice registration, guided by Yura's own voice.
 
         The cancel flag is cleared when the request arrives (see main), not
-        here: the loop can dequeue this minutes later, and a cancel sent in
-        between has to still call the enrollment off.
+        here: the loop can dequeue this minutes later.
         """
         pos_dir = os.path.join(VERIFIER_DIR, "positive")
         neg_dir = os.path.join(VERIFIER_DIR, "negative")
         os.makedirs(pos_dir, exist_ok=True)
         os.makedirs(neg_dir, exist_ok=True)
-        # Tell the Settings window an enrollment is live; the finally clears it
-        # on every exit path, which lets the UI release right after an abort
-        # instead of sitting out its own timeout.
+        # Tells the Settings window an enrollment is live; the finally clears
+        # it on every exit path so the UI releases right after an abort.
         try:
             open(ENROLL_MARKER, "w").close()
         except OSError:
@@ -897,8 +874,7 @@ class Daemon:
 
     def _handle_turn(self, from_button: bool = False) -> None:
         self.cancel.clear()
-        # Follow-up mode: after a spoken reply, keep listening without the
-        # wake word so the exchange flows like a conversation. Silence,
+        # After a spoken reply, keep listening without the wake word. Silence,
         # cancel, or an empty turn drops back to idle.
         first = True
         while self.running and not self.cancel.is_set():
@@ -919,8 +895,8 @@ class Daemon:
             cue("soundWake", 880)
         set_listening(True)
         try:
-            # The mic button means the user already has a Yura surface in
-            # front of them — only first wake-word turns open one.
+            # The mic button means a Yura surface is already in front of the
+            # user; only first wake-word turns open one.
             if open_surface:
                 opens = voice_settings().get("wakeOpens", "panel")
                 if opens == "panel":
@@ -930,8 +906,8 @@ class Daemon:
             # Rotation must run before steering, or the panel would flash
             # the stale conversation this turn is about to abandon.
             self.chat.maybe_rotate()
-            # Later turns already know the conversation; land the panel on
-            # it before the transcript arrives (first turn: Chat._ask).
+            # Land the panel on the conversation before the transcript
+            # arrives; the first turn does it in Chat._ask.
             if self.chat.conversation_id:
                 yura_ipc("show_conversation", str(self.chat.conversation_id))
             log("listen", "capturing..." + (" (follow-up)" if follow_up else ""))
@@ -966,7 +942,7 @@ class Daemon:
                 return False
             log("stt", text)
             # Mirror into the Spotlight pill whenever it's on screen, however
-            # the turn started (wake word, panel button, or the bar's own).
+            # the turn started.
             mirror_bar = shell_ipc_read("panel", "current") == "ai"
             if mirror_bar:
                 shell_ipc("yura", "voice_input", text)
@@ -1064,9 +1040,8 @@ class Daemon:
                         continue
                     log("wake", f"score={score:.2f}")
                     dump_wake_audio(wake_ring, score)
-                    # Each wake is a fresh summons: start a clean conversation.
-                    # Follow-up turns still share the one bound this session;
-                    # the panel buttons keep their continue/fresh split.
+                    # Each wake is a fresh summons. Follow-up turns still share
+                    # the conversation bound this session.
                     self.chat.reset()
                 try:
                     self._handle_turn(from_button)
@@ -1096,9 +1071,8 @@ def main() -> None:
     signal.signal(signal.SIGUSR2, lambda *_: daemon.cancel.set())
     signal.signal(signal.SIGRTMIN + 1, lambda *_: daemon.trigger_fresh.set())
     def request_enroll(*_):
-        # Clear the slate now rather than in _run_enrollment: the wake loop
-        # only dequeues this between turns, and a cancel sent during that gap
-        # must survive to call the enrollment off.
+        # Clear now rather than in _run_enrollment: the wake loop only dequeues
+        # this between turns, and a cancel sent in that gap must still land.
         daemon.cancel.clear()
         daemon.enroll.set()
 

@@ -222,8 +222,8 @@ Item {
                     Layout.preferredHeight: modeManager.scale(14)
                     visible: root.musicManager && root.musicManager.isAvailable
 
-                    // browser players (firefox/zen) report no usable position/length,
-                    // so the bar falls back to a non-seekable indeterminate mode
+                    // browser players (firefox/zen) report no usable
+                    // position/length, hence the indeterminate fallback
                     readonly property bool seekable: root.musicManager && root.musicManager.duration > 0
                     readonly property real ratio: seekable
                         ? Math.max(0, Math.min(1, root.musicManager.position / root.musicManager.duration))

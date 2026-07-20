@@ -33,8 +33,6 @@ func TestConfirmRegistrySingleUse(t *testing.T) {
 	r := newConfirmRegistry()
 	id, _ := r.register()
 
-	// First resolve consumes the id; it must not block even though nobody
-	// reads the buffered channel (the chat turn may have already moved on).
 	if !r.resolve(id, false) {
 		t.Fatal("first resolve should report true")
 	}
@@ -47,7 +45,7 @@ func TestConfirmRegistryDiscard(t *testing.T) {
 	r := newConfirmRegistry()
 	id, _ := r.register()
 
-	r.discard(id) // chat turn gave up — timeout or disconnect
+	r.discard(id)
 	if r.resolve(id, true) {
 		t.Fatal("resolve after discard should report false")
 	}

@@ -11,10 +11,9 @@ import (
 	"time"
 )
 
-// scriptedTransport is an in-process MCP server for tests. handler turns a
-// request into a response; returning ok=false models a notification (no
-// reply). The client writes and its readLoop reads on separate goroutines,
-// so out is buffered to keep send non-blocking.
+// An in-process MCP server for tests. handler returning ok=false models a
+// notification (no reply). out is buffered because the client writes and its
+// readLoop reads on separate goroutines.
 type scriptedTransport struct {
 	handler func(req rpcMessage) (rpcMessage, bool)
 	out     chan []byte
@@ -153,8 +152,7 @@ func TestClientListToolsPagination(t *testing.T) {
 	if !got[0].ReadOnly || got[1].ReadOnly {
 		t.Fatalf("readonly hints wrong: %v %v", got[0].ReadOnly, got[1].ReadOnly)
 	}
-	// A tool with no inputSchema gets a default object schema so providers
-	// always receive a valid parameter spec.
+	// Providers need a valid parameter spec even when the server omits one.
 	if got[0].InputSchema["type"] != "object" {
 		t.Fatalf("default schema not applied: %v", got[0].InputSchema)
 	}
@@ -239,8 +237,7 @@ func TestClientConnectionLost(t *testing.T) {
 	})
 	c := newClient("test", tr)
 
-	// Drop the transport mid-call; the in-flight request must unblock with
-	// an error rather than hang forever.
+	// Dropping the transport mid-call must unblock the request, not hang.
 	go func() {
 		time.Sleep(10 * time.Millisecond)
 		c.Close()

@@ -23,16 +23,16 @@ Rectangle {
     readonly property var wakeOpenOptions: ["panel", "bar", "none"]
     readonly property var speedOptions: [0.9, 1.0, 1.1, 1.2]
 
-    // Voice enrollment: the daemon owns the flow (SIGRTMIN+2); the pkl file
-    // is the source of truth for "enrolled?" across the process boundary.
+    // The daemon owns enrollment (SIGRTMIN+2); the verifier pkl is the only
+    // "enrolled?" signal across the process boundary.
     property bool enrolling: false
-    // mtime (epoch secs) of the verifier pkl; 0 = never registered. Tracked as
-    // mtime (not mere existence) so a re-register waits for a NEW file instead
-    // of stopping instantly on the previous registration's leftover pkl.
+    // mtime (epoch secs), 0 = never registered. mtime rather than existence,
+    // so a re-register waits for a NEW file instead of stopping instantly on
+    // the previous registration's leftover pkl.
     property real pklMtime: 0
     property real enrollStartTime: 0
     readonly property bool enrolled: pklMtime > 0
-    // Mirrors the daemon's .enrolling marker: it clears on every exit path,
+    // Mirrors the daemon's .enrolling marker, which clears on every exit path,
     // including an abort that never writes a verifier.
     property bool daemonEnrolling: false
     property bool sawDaemonEnrolling: false
@@ -66,8 +66,7 @@ Rectangle {
                   "--kill-whom=main", "yura-voice.service"]
     }
 
-    // Training lands the pkl a while after the last clip; poll so the row
-    // flips to "enrolled" on its own, then release the mic visualizer.
+    // Training lands the pkl a while after the last clip, with no signal back.
     Timer {
         id: enrollPoll
         interval: 2000
@@ -75,19 +74,15 @@ Rectangle {
         running: section.enrolling
         onTriggered: {
             enrollCheck.running = true
-            // Stop once a NEW pkl lands (mtime past enrollment start), not
-            // just because a prior registration's file already exists.
             if (section.pklMtime > section.enrollStartTime) {
                 section.stopEnroll()
             } else if (section.daemonEnrolling) {
                 section.sawDaemonEnrolling = true
             } else if (section.sawDaemonEnrolling) {
-                // The marker cleared without a new verifier: the daemon
-                // aborted on missed clips, a cancel, or a training error.
-                // Release now instead of waiting out enrollTimeout. Only once
-                // it has been seen, though — the daemon reads the signal
-                // between turns, which can be tens of seconds into a reply,
-                // and giving up early would leave it recording unattended.
+                // Marker cleared with no new verifier: the daemon aborted.
+                // Gated on having seen it, because the daemon only reads the
+                // signal between turns — possibly tens of seconds into a
+                // reply — and giving up early leaves it recording unattended.
                 section.stopEnroll()
             }
         }
@@ -116,8 +111,8 @@ Rectangle {
         enrollCheck.running = true
     }
 
-    // One list, two engines: the picked value carries the engine prefix
-    // ("voicevox:<style-id>" | "piper:<voice>"), matching voice.tts.
+    // Values carry an engine prefix ("voicevox:<style-id>" | "piper:<voice>")
+    // to match what voice.tts expects.
     property var voicevoxVoices: []
     property var aivisVoices: []
     property var piperVoices: []
@@ -132,8 +127,8 @@ Rectangle {
         return tts !== "" ? tts : "voicevox:14"
     }
 
-    // Cue sound pickers share the shell's notification sounds dir.
-    // "" = built-in beep, "none" = silent, anything else = a file in soundsDir.
+    // Stored cue values: "" = built-in beep, "none" = silent, anything else
+    // is a filename inside soundsDir.
     readonly property string soundsDir: Theme.Paths.soundsDir
     property var cueFiles: []
     readonly property var cueOptions: [
@@ -166,9 +161,8 @@ Rectangle {
         }
     }
 
-    // Same env fallbacks as yurad (YURA_PIPER_BIN / YURA_PIPER_VOICES /
-    // YURA_VOICEVOX_URL) so the preview follows a relocated engine, and the
-    // same -23 loudness target so previews match what yurad will play.
+    // Env fallbacks and the -23 loudness target must stay in sync with yurad,
+    // or previews drift from what actually gets played.
     readonly property string playNormalized:
         'n=$(mktemp --suffix=.wav); ffmpeg -hide_banner -loglevel error -y -i "$w" -af loudnorm=I=-23:TP=-2 "$n" && pw-play "$n"; rm -f "$n"'
 
@@ -183,8 +177,8 @@ Rectangle {
                 + '"${YURA_PIPER_BIN:-piper}" --model "${YURA_PIPER_VOICES:-$HOME/.local/share/piper/voices}/' + voice + '.onnx" --output_file "$w" && '
                 + playNormalized
         } else {
-            // Style ids arrive from a localhost engine's /speakers JSON and are
-            // spliced into the shell line below; only digits may pass.
+            // Style ids get spliced into the shell line below; only digits
+            // may pass.
             if (!/^[0-9]+$/.test(voice)) return
             const enc = encodeURIComponent("こんにちは、ユラだよ。この声はどうかな")
             const base = engine === "aivis"
@@ -328,9 +322,8 @@ Rectangle {
         property string title: ""
         property string desc: ""
         property string settingKey: ""
-        // Bound by the instances: section.cueOptions resolves as undefined
-        // from inside an inline component, so the list rides in from the
-        // normal document scope instead.
+        // Bound by each instance: section.cueOptions resolves as undefined
+        // from inside an inline component.
         property var options: []
         property bool expanded: false
         Layout.fillWidth: true

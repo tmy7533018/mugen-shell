@@ -19,9 +19,8 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
 
-// toolingSystemPrompt is prepended to the user's personality prompt so the
-// model knows the rules around calling shell tools. Centralising the
-// conventions here lets each tool's description stay short.
+// Centralising the tool-calling conventions here lets each individual tool's
+// description stay short.
 const toolingSystemPrompt = `You can control the mugen-shell desktop through function-calling tools.
 
 How to handle tool results:
@@ -58,7 +57,7 @@ type runtimeContext struct {
 	Filter *toolfilter.Filter
 }
 
-// loadRuntimeContext is the shared `serve` / `chat` bootstrap. Caller closes rt.Store.
+// Caller closes rt.Store.
 func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, error) {
 	cfg, err := config.Load()
 	if err != nil {
@@ -75,20 +74,17 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		persona = assemblePersona(cfg.Personality)
 	}
 
-	// Disabled tool categories are surfaced explicitly: filtering them out of
-	// List() saves tokens, but the model never realises they exist, so it
-	// "successfully" pivots to a different tool without telling the user. A
-	// short note makes Yura proactively explain that <category> is off.
+	// Filtering disabled categories out of List() saves tokens, but then the
+	// model never realises they exist and silently pivots to another tool
+	// instead of telling the user the category is off.
 	tooling := toolingSystemPrompt
 	if len(cfg.Tools.DisabledCategories) > 0 {
 		tooling += "\n\nCurrently disabled tool categories: " + strings.Join(cfg.Tools.DisabledCategories, ", ") +
 			". If the user asks for something in one of these categories, tell them the category is off and point them at Settings → AI / Yura → Tool categories before doing anything else (no silent pivot to another tool)."
 	}
 	// Without this note a filtered turn makes the model under-report what it
-	// can do ("I have no wallpaper tools") instead of realising the list is
-	// per-turn. Derived from the actually-enabled categories (disabled ones
-	// excluded, configured MCP servers included) so it never advertises a
-	// capability the model will refuse or omit one the user added.
+	// can do ("I have no wallpaper tools") instead of realising the visible
+	// list is per-turn.
 	if cfg.Tools.ContextFilter.Enabled {
 		if caps := enabledCapabilities(cfg); caps != "" {
 			tooling += "\n\nTool visibility: for efficiency you may be shown only the tools relevant to the current message. Your full capabilities cover: " + caps +
@@ -118,8 +114,8 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		return nil, fmt.Errorf("open history store: %w", err)
 	}
 
-	// Retention: drop conversations idle longer than retain_days before the
-	// history layer loads, so a pruned-away current pointer self-heals.
+	// Must prune before the history layer loads, so a pruned-away current
+	// pointer self-heals.
 	if cfg.History.RetainDays > 0 {
 		cutoff := time.Now().AddDate(0, 0, -cfg.History.RetainDays).Unix()
 		if n, err := st.PruneConversationsOlderThan(cutoff); err != nil {
@@ -151,17 +147,14 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 	toolReg.AttachMemory(st)
 	toolReg.AttachWeather(cfg.Weather.Place)
 
-	// Spawn any configured MCP servers and merge their tools in. Connect
-	// never fails outright — a broken server is logged and skipped — so the
-	// returned Manager is always safe to attach and to Close later.
+	// Connect never fails outright — a broken server is logged and skipped —
+	// so the returned Manager is always safe to attach and to Close later.
 	mcpMgr := mcp.Connect(context.Background(), mcpServerConfigs(cfg.MCP))
 	toolReg.AttachMCP(mcpMgr, trustedMCPServers(cfg.MCP))
 
-	// The category vectors warm lazily on the first turn that actually needs
-	// them (a local-model chat with the filter applied), so cloud-only users
-	// never spawn a doomed embed call against a non-running Ollama. The lazy
-	// path copies the tool slice, avoiding an unsynchronised read of the
-	// registry's internal slice from a background goroutine.
+	// Category vectors warm lazily on the first turn that actually needs them,
+	// so cloud-only users never spawn a doomed embed call against a
+	// non-running Ollama.
 	var filter *toolfilter.Filter
 	if fc := cfg.Tools.ContextFilter; fc.Enabled {
 		var embed toolfilter.EmbedFunc
@@ -190,8 +183,7 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 	}, nil
 }
 
-// trustedMCPServers is the set of server names the user marked trusted —
-// their destructive tools skip the per-call approval prompt.
+// Destructive tools from a trusted server skip the per-call approval prompt.
 func trustedMCPServers(c config.MCP) map[string]bool {
 	trusted := map[string]bool{}
 	for name, s := range c.Servers {
@@ -202,8 +194,8 @@ func trustedMCPServers(c config.MCP) map[string]bool {
 	return trusted
 }
 
-// mcpServerConfigs adapts the config-file shape to the mcp package's own
-// ServerConfig so that package needn't import internal/config.
+// Adapts to the mcp package's own ServerConfig so that package needn't import
+// internal/config.
 func mcpServerConfigs(c config.MCP) map[string]mcp.ServerConfig {
 	if len(c.Servers) == 0 {
 		return nil
@@ -221,10 +213,8 @@ func mcpServerConfigs(c config.MCP) map[string]mcp.ServerConfig {
 	return out
 }
 
-// expandEnv resolves ${VAR} / $VAR references in MCP server env values
-// against mugen-ai's own environment, so a secret can be kept in the real
-// environment instead of stored in plaintext in config.toml. A value with
-// no reference is passed through unchanged.
+// Resolving ${VAR} against mugen-ai's own environment lets a secret stay in
+// the environment instead of being stored in plaintext in config.toml.
 func expandEnv(in map[string]string) map[string]string {
 	if len(in) == 0 {
 		return in
@@ -248,9 +238,8 @@ func resolveScriptsDir(configured string) string {
 	return filepath.Join(xdg, "quickshell", "mugen-shell", "scripts")
 }
 
-// buildRegistry also returns the Ollama provider on its own: the tool
-// context filter needs its Embed method, which is not part of the Provider
-// interface.
+// Returns the Ollama provider separately because the tool context filter
+// needs its Embed method, which is not part of the Provider interface.
 func buildRegistry(cfg config.Config, model string) (*provider.Registry, *provider.Ollama) {
 	ollama := provider.NewOllama(cfg.Provider.Ollama.Host, cfg.Provider.Ollama.NumCtx, cfg.Provider.Ollama.KeepAlive)
 	providers := []provider.Provider{ollama}
@@ -287,10 +276,6 @@ func buildRegistry(cfg config.Config, model string) (*provider.Registry, *provid
 	return provider.NewRegistry(model, providers...), ollama
 }
 
-// assemblePersona prepends an auto-built header (name/tone/language) to the
-// user's free-form SystemPrompt. Name defaults to "Yura" when empty so the
-// assistant always has an identity; Tone and Language only contribute their
-// line when set, and an entirely-empty Personality returns SystemPrompt as-is.
 func assemblePersona(p config.Personality) string {
 	if p.Name == "" && p.Tone == "" && p.Language == "" {
 		return p.SystemPrompt
@@ -305,17 +290,17 @@ func assemblePersona(p config.Personality) string {
 	} else {
 		lines = append(lines, fmt.Sprintf("You are %s, a desktop assistant for mugen-shell.", name))
 	}
-	// Yura's visual identity is a luminous orb — pin gender-neutral pronouns
-	// so models don't default to "俺/僕" in Japanese even under casual tone.
-	// Skip this for custom names where the user has redefined the persona.
+	// Pin gender-neutral pronouns so models don't default to "俺/僕" in
+	// Japanese under a casual tone. Only for Yura: a custom name means the
+	// user has redefined the persona.
 	if name == "Yura" {
 		lines = append(lines, "You appear as a luminous orb of light and have no gender. Your first-person pronoun is わたし in Japanese (never 俺, 僕, or あたし) and I in English. This identity rule overrides any casual tone.")
 	}
 	if p.Language != "" {
 		lines = append(lines, fmt.Sprintf("Respond in %s.", p.Language))
 	} else {
-		// Auto: mirror the user. Stated explicitly because small local
-		// models drift to English/Chinese without an anchor.
+		// Stated explicitly because small local models drift to
+		// English/Chinese without an anchor.
 		lines = append(lines, "Respond in the language the user writes in.")
 	}
 	header := strings.Join(lines, "\n")
@@ -325,8 +310,6 @@ func assemblePersona(p config.Personality) string {
 	return header + "\n\n" + p.SystemPrompt
 }
 
-// builtinCapabilities maps each built-in tool category to a short human
-// phrase for the "full capabilities" prompt note, in a stable display order.
 var builtinCapabilities = []struct{ cat, phrase string }{
 	{"audio", "audio and mic volume"},
 	{"music", "music playback"},
@@ -342,10 +325,8 @@ var builtinCapabilities = []struct{ cat, phrase string }{
 	{"weather", "weather"},
 }
 
-// enabledCapabilities builds the capability sentence from the categories that
-// are actually live: built-ins minus DisabledCategories, plus every enabled,
-// non-disabled MCP server (its name is its tool category). Returns "" if
-// everything is disabled.
+// An MCP server's name is its tool category. Returns "" when everything is
+// disabled.
 func enabledCapabilities(cfg config.Config) string {
 	disabled := map[string]bool{}
 	for _, c := range cfg.Tools.DisabledCategories {

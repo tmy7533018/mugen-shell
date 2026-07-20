@@ -28,7 +28,7 @@ Item {
         smooth: true
         visible: !_overlayReady
 
-        // Load at 2x display size for sharpness when scaled on HiDPI
+        // 2x so the icon stays sharp when scaled up on HiDPI.
         sourceSize.width: Math.max(root.width, 24) * 2
         sourceSize.height: Math.max(root.height, 24) * 2
         

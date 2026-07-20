@@ -52,9 +52,8 @@ QtObject {
         connectToNetworkProcess.running = true
     }
 
-    // nmcli -t escapes literal ':' inside a field as '\:' (and '\' as '\\').
-    // A plain split(":") would over-split any SSID containing a colon, so walk
-    // the line and only break on unescaped separators.
+    // nmcli -t escapes literal ':' as '\:' (and '\' as '\\'), so a plain
+    // split(":") would over-split any SSID containing a colon.
     function splitNmcli(line) {
         let fields = []
         let cur = ""
@@ -234,7 +233,6 @@ QtObject {
                 wifiManager.currentSsid = "Not Connected"
                 wifiManager.signalStrength = 0
             } else if (!wasPowered) {
-                // WiFi just turned on; wait briefly before fetching state
                 Qt.callLater(() => {
                     fullRefresh()
                 })
@@ -247,7 +245,6 @@ QtObject {
         running: false
 
         onExited: (code, status) => {
-            // state refresh is triggered in wifiPowerStatusProcess.onExited
             wifiPowerStatusProcess.running = true
         }
     }

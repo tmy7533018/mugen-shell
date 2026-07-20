@@ -69,8 +69,8 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 			continue
 		}
 		if m.Role == "tool" {
-			// Anthropic carries tool results as a user-role message with a
-			// tool_result content block referencing the prior tool_use id.
+			// Anthropic has no tool role: results ride on a user-role message
+			// whose tool_result block references the prior tool_use id.
 			msgs = append(msgs, map[string]any{
 				"role": "user",
 				"content": []map[string]any{{
@@ -120,8 +120,8 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 
 	maxTokens := a.maxTokens
 	if opts.Thinking && maxTokens < a.thinkingBudget+2048 {
-		// budget_tokens must be < max_tokens; bump the ceiling so the model
-		// still has room to answer after spending the reasoning budget.
+		// budget_tokens must be < max_tokens, and the model still needs room
+		// to answer after spending the reasoning budget.
 		maxTokens = a.thinkingBudget + 2048
 	}
 	payload := map[string]any{
@@ -131,10 +131,9 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		"stream":     true,
 	}
 	if len(systemBlocks) > 0 {
-		// One block per system message: the first (persona + long-term
-		// memories, stable across turns) carries the cache breakpoint;
-		// later blocks (the per-turn desktop snapshot) sit after it so
-		// their churn can't invalidate the cached prefix.
+		// The breakpoint goes on the first block (persona + memories, stable
+		// across turns); the per-turn desktop snapshot sits after it so its
+		// churn can't invalidate the cached prefix.
 		systemBlocks[0]["cache_control"] = map[string]any{"type": "ephemeral"}
 		payload["system"] = systemBlocks
 	}
@@ -145,9 +144,8 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		}
 	}
 	if len(toolsPayload) > 0 {
-		// Mark the last tool with ephemeral cache_control; per Anthropic's
-		// docs that covers the entire preceding tools block for ~5 minutes,
-		// dropping input-token cost on cache hits to ~10%.
+		// cache_control on the last tool covers the entire preceding tools
+		// block, dropping input-token cost on cache hits to ~10%.
 		toolsPayload[len(toolsPayload)-1]["cache_control"] = map[string]any{"type": "ephemeral"}
 		payload["tools"] = toolsPayload
 	}
@@ -173,9 +171,8 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		// Not all Claude tiers support extended thinking (haiku-4-5 in
-		// particular). Mirror the ollama "no tools" retry: if the model
-		// rejects thinking, re-issue without it so the conversation works.
+		// Not all Claude tiers support extended thinking, so a rejection is
+		// re-issued without it rather than failing the conversation.
 		if resp.StatusCode == http.StatusBadRequest && opts.Thinking &&
 			strings.Contains(strings.ToLower(string(b)), "thinking") {
 			retry := opts
@@ -188,8 +185,8 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 
-	// tool_use blocks stream their args as input_json_delta — accumulate per
-	// content_block index until content_block_stop and assemble the call.
+	// tool_use blocks stream their args as input_json_delta, so they must be
+	// accumulated per content_block index until content_block_stop.
 	type pendingTool struct {
 		ID      string
 		Name    string

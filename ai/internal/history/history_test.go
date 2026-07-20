@@ -7,8 +7,7 @@ import (
 )
 
 func TestTruncateKeepsUserLeading(t *testing.T) {
-	// A tiny token budget forces truncation to drop into the middle of an
-	// exchange; the survivor list must still open with a user message.
+	// A tiny budget forces the drop to land mid-exchange.
 	h := &History{maxTokens: 20}
 	big := ""
 	for i := 0; i < 40; i++ {
@@ -31,8 +30,6 @@ func TestTruncateKeepsUserLeading(t *testing.T) {
 }
 
 func TestTruncateNoTokenCapLeavesUserLead(t *testing.T) {
-	// Even with the token cap off, a conversation that happens to start with
-	// an assistant message (e.g. loaded mid-stream) must be realigned.
 	h := &History{maxTokens: 0}
 	h.messages = []provider.Message{
 		{Role: "assistant", Content: "stray"},

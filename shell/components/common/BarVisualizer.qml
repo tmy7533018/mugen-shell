@@ -16,7 +16,6 @@ Row {
     property real maxBarHeight: 28
     property real heightBlend: 0.7
     property var barIndices: [14, 7, 0, 1, 8, 15]
-    // Diamond pattern: center bars are tallest, edges are shortest
     property var maxHeightMultipliers: [0.6, 0.8, 1.0, 1.0, 0.8, 0.6]
     property color barColor: Qt.rgba(0.72, 0.72, 0.82, 0.90)
     property color baseColor: Qt.rgba(0.72, 0.72, 0.82, 0.90)
@@ -30,8 +29,7 @@ Row {
     }
     
     // Levels are used as-is: cava's autosens already owns the gain range, so a
-    // second QML-side normalization on top only fights it. Keep this a plain
-    // blend of the per-bar level and the overall rms.
+    // second QML-side normalization only fights it.
     function getBarLevel(index) {
         if (!cavaManager || !cavaManager.barLevels) {
             return 0
@@ -66,8 +64,7 @@ Row {
                 property real currentLevel: 0
                 radius: root.barWidth / 2
                 
-                // 80ms: at the 60fps feed this is just enough to bridge frames
-                // without adding visible lag (120ms read as sluggish).
+                // 80ms bridges frames of the 60fps feed; 120ms reads as sluggish.
                 Behavior on height {
                     NumberAnimation {
                         duration: 80
@@ -109,7 +106,6 @@ Row {
                     )
                 }
                 
-                // Phase-offset color cycling per bar for a staggered shimmer effect
                 property int animationDuration: 800
                 property int totalCycle: animationDuration * 2
                 property int colorOffset: Math.floor((index / root.barCount) * totalCycle)

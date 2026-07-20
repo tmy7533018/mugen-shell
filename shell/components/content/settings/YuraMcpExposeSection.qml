@@ -4,10 +4,6 @@ import QtQuick.Layouts
 import Quickshell.Io
 import "../../../lib" as Theme
 
-// Expose mugen-shell's own tools as an MCP server so external clients
-// (Claude Desktop, Cursor, any Streamable HTTP client) can drive the shell.
-// Mirrors [mcp_expose] in config.toml: enabled + read-only tools + opt-in
-// writable categories.
 Rectangle {
     id: section
 
@@ -33,7 +29,10 @@ Rectangle {
     property bool exposeEnabled: false
     property bool readonlyOn: true
     property var exposedSet: ({})
-    property int dirtyTick: 0  // bump to re-evaluate bindings that read exposedSet
+    // Bumped on every mutation of exposedSet; the `let _ = dirtyTick` reads
+    // below exist to make bindings depend on it, since mutating a JS map in
+    // place doesn't notify QML.
+    property int dirtyTick: 0
 
     readonly property var categories: [
         { id: "audio",        label: "Audio",         desc: "Volume, mic, mute" },
@@ -123,7 +122,6 @@ Rectangle {
         }
     }
 
-    // Save chain: re-fetch config, splice in mcp_expose, PUT, restart.
     Process {
         id: getCurrentProcess
         running: false
@@ -265,7 +263,6 @@ Rectangle {
             wrapMode: Text.WordWrap
         }
 
-        // Master toggle + read-only toggle share one row pattern.
         Repeater {
             model: [
                 { key: "enabled",  label: "Enable",          desc: "Serve tools at /mcp and to `mugen-ai mcp-server`" },
@@ -470,7 +467,6 @@ Rectangle {
             }
         }
 
-        // Status + Save & Apply.
         RowLayout {
             Layout.fillWidth: true
             Layout.topMargin: 2

@@ -16,11 +16,8 @@ import (
 	"time"
 )
 
-// httpTransport speaks Streamable HTTP: every message is POSTed to the
-// server's MCP endpoint, and whatever comes back — a JSON body or an SSE
-// stream — is fed into recv()'s queue. The JSON-RPC client on top stays
-// transport-agnostic: it just sees messages in and messages out. Outbound
-// messages are POSTed by a single worker in the order send() was called, so
+// Speaks Streamable HTTP: whatever a POST returns — a JSON body or an SSE
+// stream — is fed into recv()'s queue. A single worker does the POSTing so
 // the initialize → initialized → tools/list handshake can't reorder on the
 // wire the way one-goroutine-per-message would.
 type httpTransport struct {
@@ -51,8 +48,8 @@ func newHTTPTransport(name, rawURL string) (*httpTransport, error) {
 		url:    rawURL,
 		ctx:    ctx,
 		cancel: cancel,
-		// Timeout bounds a single hung POST; close() also cancels ctx to abort
-		// an in-flight request (e.g. an open SSE read) immediately.
+		// Bounds a single hung POST; close() cancels ctx to abort an
+		// in-flight request (e.g. an open SSE read) immediately.
 		client:   &http.Client{Timeout: 5 * time.Minute},
 		outbound: make(chan []byte, 32),
 		queue:    make(chan []byte, 32),
@@ -73,8 +70,6 @@ func (t *httpTransport) send(data []byte) error {
 	}
 }
 
-// sendLoop POSTs queued messages one at a time so their wire order matches the
-// order send() was called in.
 func (t *httpTransport) sendLoop() {
 	for {
 		select {
@@ -123,9 +118,8 @@ func (t *httpTransport) post(data []byte) {
 	case resp.StatusCode == http.StatusAccepted:
 		return // notification/response accepted, nothing comes back
 	case resp.StatusCode >= 400:
-		// Drop a stale session so a server that restarted (and now rejects the
-		// old id) gets a fresh Mcp-Session-Id on the next request instead of
-		// being wedged behind a dead session forever.
+		// Without dropping the stale id, a restarted server that rejects it
+		// stays wedged behind a dead session forever.
 		if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusUnauthorized {
 			t.mu.Lock()
 			t.session = ""
@@ -150,10 +144,9 @@ func (t *httpTransport) post(data []byte) {
 	}
 }
 
-// pumpSSE forwards every event's data payload as one message until the stream
-// ends. A scanner error (e.g. a data line exceeding the buffer cap) is
-// surfaced as a JSON-RPC error for the pending request rather than silently
-// delivering a truncated fragment that would fail to parse downstream.
+// A scanner error (e.g. a data line over the buffer cap) is surfaced as a
+// JSON-RPC error rather than delivering a truncated fragment that would fail
+// to parse downstream.
 func (t *httpTransport) pumpSSE(r io.Reader, id json.RawMessage, hasID bool) {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 64*1024), 32<<20)
@@ -192,9 +185,8 @@ func (t *httpTransport) deliver(msg []byte) {
 	}
 }
 
-// deliverError surfaces a failed POST to the waiting caller as a JSON-RPC
-// error response — without one, a request would hang until its context
-// expires. Failures of id-less messages (notifications) only get logged.
+// Without a synthesized error response, a failed POST would leave the caller
+// hanging until its context expires. Id-less messages can only be logged.
 func (t *httpTransport) deliverError(id json.RawMessage, hasID bool, text string) {
 	if !hasID {
 		fmt.Fprintf(os.Stderr, "mcp[%s]: %s\n", t.name, text)

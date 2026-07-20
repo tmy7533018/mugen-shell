@@ -57,8 +57,7 @@ Item {
         Rectangle {
             id: waterMask
             anchors.centerIn: parent
-            // Match the SVG circle dimensions: r=6.25, stroke=1.5 in viewBox 16
-            // → outer diameter = 21 at icon size 24
+            // 21 matches the SVG circle's outer diameter (viewBox 16, r=6.25, stroke=1.5)
             width: scaled(21)
             height: scaled(21)
             radius: width / 2
@@ -129,15 +128,13 @@ Item {
         }
     }
 
-    // When the battery indicator is active we draw the outline ourselves so it
-    // shares Qt's Rectangle anti-aliasing pipeline with the water mask, keeping
-    // them sub-pixel aligned. Otherwise fall back to the SVG icon.
+    // Outline drawn as a Rectangle rather than the SVG icon so it shares Qt's
+    // anti-aliasing pipeline with the water mask and stays sub-pixel aligned.
     Rectangle {
         id: batteryOutline
         visible: powerMenuRoot.batteryActive
         anchors.centerIn: parent
-        // Match the SVG circle: viewBox 16, r=6.25, stroke=1.5 → at size 24
-        // outer diameter is 21 and stroke width is 2.25.
+        // 21 / 2.25 match the SVG circle at size 24 (viewBox 16, r=6.25, stroke=1.5)
         width: scaled(21)
         height: scaled(21)
         radius: width / 2

@@ -29,35 +29,27 @@ type Tool struct {
 	function string
 	argOrder []string
 
-	// When non-empty, the tool is dispatched by exec'ing this command
-	// instead of `qs ipc call`. Tokens of the form "{{argName}}" are
-	// substituted from the caller's arguments; "{{scripts_dir}}" expands
-	// to the registry's configured scripts dir. Used for tools that need
-	// to read stdout (Calendar DB queries, etc.) which Quickshell's async
-	// Process can't return from an IpcHandler.
+	// Exec'd instead of `qs ipc call`. "{{argName}}" tokens are substituted
+	// from the caller's arguments and "{{scripts_dir}}" from the registry.
+	// Needed by tools that read stdout, which Quickshell's async Process can't
+	// return from an IpcHandler.
 	cmdTemplate []string
 
-	// readonly tools run under an RLock so concurrent reads don't block
-	// each other. Anything that mutates shell state (set / toggle / open
-	// / launch / add / delete / clear) leaves this false and takes an
-	// exclusive write lock.
+	// readonly tools run under an RLock so concurrent reads don't block each
+	// other; anything that mutates shell state takes the exclusive lock.
 	readonly bool
 
 	// kind selects the dispatch path. Empty is a built-in tool, routed by
 	// cmdTemplate (cmd) or `qs ipc call` (ipc); "mcp" routes to an external
 	// MCP server via mcpServer/mcpTool; "native" calls fn in-process.
 	kind      string
-	mcpServer string // configured server name, for kind=="mcp"
-	mcpTool   string // un-prefixed tool name on that server
+	mcpServer string
+	mcpTool   string // un-prefixed name on that server
 
-	// fn is the in-process implementation for kind=="native" tools (memory
-	// CRUD etc. that talk straight to the store, no subprocess).
 	fn func(ctx context.Context, args map[string]any) (string, error)
 
-	// needsConfirm gates a tool behind an explicit, out-of-band user
-	// approval before the chat loop may run it — set for destructive MCP
-	// tools whose server the user has not marked trusted. The registry
-	// only reports it; handleChat is what blocks on the approval.
+	// Set for destructive MCP tools whose server the user hasn't marked
+	// trusted. The registry only reports it; handleChat blocks on the approval.
 	needsConfirm bool
 }
 
@@ -73,9 +65,7 @@ type Registry struct {
 	tools        []Tool
 	mu           sync.RWMutex
 
-	// run executes a built command (the `qs ipc call …` or cmdTemplate
-	// invocation) and returns its trimmed combined output. A field so tests
-	// can substitute a fake for the real subprocess exec.
+	// A field so tests can substitute a fake for the real subprocess exec.
 	run func(ctx context.Context, name string, args []string) (string, error)
 }
 
@@ -99,15 +89,12 @@ func New(qsConfig, scriptsDir string, allowedApps, disabledCategories []string, 
 	}
 }
 
-// execCommand is the Registry's default run func: it execs name with args
-// and returns the trimmed combined output.
 func execCommand(ctx context.Context, name string, args []string) (string, error) {
 	out, err := exec.CommandContext(ctx, name, args...).CombinedOutput()
 	return strings.TrimSpace(string(out)), err
 }
 
-// resolveQsPID finds the mugen-shell instance's pid via `qs list --all` (which,
-// unlike `qs ipc`, works with no display). Returns 0 if not found.
+// `qs list --all` is used because, unlike `qs ipc`, it works with no display.
 func (r *Registry) resolveQsPID(ctx context.Context) int {
 	out, err := r.run(ctx, "qs", []string{"list", "--all"})
 	if err != nil {
@@ -116,8 +103,6 @@ func (r *Registry) resolveQsPID(ctx context.Context) int {
 	return parseInstancePID(out, r.qsConfig)
 }
 
-// parseInstancePID returns the pid of the instance whose config path ends in
-// "<qsConfig>/shell.qml", or 0 if none matches.
 func parseInstancePID(listOutput, qsConfig string) int {
 	suffix := "/" + qsConfig + "/shell.qml"
 	pid := 0
@@ -134,15 +119,14 @@ func parseInstancePID(listOutput, qsConfig string) int {
 	return 0
 }
 
-// AttachMCP merges the tools advertised by every connected MCP server into
-// the registry. Each tool is exposed as "<server>__<tool>" so the server
-// name becomes its category — making it gateable via disabled_categories
-// like any built-in group. A tool whose prefixed name collides with an
-// existing tool is skipped. Call once, before serving.
+// AttachMCP merges the tools advertised by every connected MCP server into the
+// registry. Each is exposed as "<server>__<tool>" so the server name becomes
+// its category, gateable via disabled_categories like any built-in group. Call
+// once, before serving.
 //
-// A destructive tool from a server not in trusted is flagged needsConfirm
-// and gets a "[CONFIRM]" description prefix so the model narrates the action
-// and expects the approval dialog; a trusted server's tools fire freely.
+// A destructive tool from an untrusted server is flagged needsConfirm and gets
+// a "[CONFIRM]" description prefix so the model narrates the action and expects
+// the approval dialog.
 func (r *Registry) AttachMCP(m *mcp.Manager, trusted map[string]bool) {
 	if m == nil {
 		return
@@ -181,15 +165,14 @@ func (r *Registry) NeedsConfirm(name string) bool {
 	return t != nil && t.needsConfirm
 }
 
-// Audit records a tool decision in the audit log. handleChat uses it for
-// outcomes that never reach Call() — chiefly a confirmation the user denied.
+// Audit records a tool decision that never reached Call(), chiefly a
+// confirmation the user denied.
 func (r *Registry) Audit(name string, args map[string]any, result string, err error) {
 	r.auditor.Log(name, args, result, err)
 }
 
-// CategoryOf returns the category prefix of a tool name (everything before
-// the first underscore). Used to gate whole groups via Config.Tools.
-// DisabledCategories without enumerating each individual tool.
+// CategoryOf returns the category prefix of a tool name, everything before the
+// first underscore.
 func CategoryOf(toolName string) string {
 	if i := strings.Index(toolName, "_"); i > 0 {
 		return toolName[:i]
@@ -197,16 +180,13 @@ func CategoryOf(toolName string) string {
 	return toolName
 }
 
-// shellMetachars are the bytes that would let a cmd string break out of a
-// single-binary launch into arbitrary shell — `Hyprland.dispatch("exec "+cmd)`
-// runs cmd through /bin/sh, so any of these characters anywhere in the
-// string is a hard reject regardless of the allowlist.
+// `Hyprland.dispatch("exec "+cmd)` runs cmd through /bin/sh, so any of these
+// anywhere in the string is a hard reject regardless of the allowlist.
 const shellMetachars = ";|&$`<>(){}[]\\!*?\"'\n\r"
 
-// rejectAppLaunch returns a non-empty error string when app_launch should
-// not run the requested command. The gate is strict by default: an empty
-// allowlist means no apps are allowed (the user has to enable each app
-// explicitly), and shell metacharacters are always rejected.
+// Returns a non-empty error string when app_launch must not run. Strict by
+// default: an empty allowlist allows nothing, and shell metacharacters are
+// always rejected.
 func (r *Registry) rejectAppLaunch(args map[string]any) string {
 	cmd, _ := args["cmd"].(string)
 	if strings.ContainsAny(cmd, shellMetachars) {
@@ -225,23 +205,19 @@ func (r *Registry) rejectAppLaunch(args map[string]any) string {
 			return ""
 		}
 	}
-	// Fallback: when the typed cmd doesn't line up with a real binary
-	// (Flatpak / AppImage launchers, where every app's "binary" is the
-	// launcher itself), look up the user-supplied name against the
-	// installed apps' display names. If we find one whose underlying
-	// binary IS in the allowlist, rewrite the cmd to the full Exec line
-	// and accept. This keeps the allowlist coarse-grained on the
-	// launcher binary (one "flatpak" entry covers every flatpak app the
-	// user installed) without giving up on natural-language requests.
+	// Flatpak / AppImage apps all share one launcher binary, so matching the
+	// display name and rewriting to its Exec line keeps the allowlist
+	// coarse-grained (one "flatpak" entry covers every flatpak app) without
+	// giving up on natural-language requests.
 	if app, ok := r.apps.FindByDisplay(tokens[0]); ok {
 		aliasTokens := strings.Fields(app.Exec)
 		if len(aliasTokens) > 0 {
 			aliasBin := filepath.Base(aliasTokens[0])
 			for _, a := range r.allowedApps {
 				if a == aliasBin {
-					// The resolved .desktop Exec is dispatched through /bin/sh
-					// too, so re-gate it — a crafted entry must not smuggle
-					// metacharacters past the check the typed cmd already passed.
+					// The resolved Exec also goes through /bin/sh, so a crafted
+					// .desktop entry must not smuggle metacharacters past the
+					// check the typed cmd already passed.
 					if strings.ContainsAny(app.Exec, shellMetachars) {
 						return "error: the matched app's launch command contains shell metacharacters and was blocked for safety."
 					}
@@ -276,17 +252,14 @@ func (r *Registry) Find(name string) *Tool {
 	return nil
 }
 
-// IsCategoryDisabled reports whether the given category is gated off so
-// Call() can reject invocations even when the model somehow saw the tool
-// (e.g. an old conversation that still references it).
+// IsCategoryDisabled lets Call() reject invocations even when the model somehow
+// saw the tool, e.g. an old conversation that still references it.
 func (r *Registry) IsCategoryDisabled(category string) bool {
 	return r.disabledCats[category]
 }
 
-// Call executes the named tool with the given arguments and returns the raw
-// stdout of the underlying command. Tools without a cmdTemplate route
-// through `qs ipc call`; tools with one exec it directly so they can read
-// stdout (Calendar DB queries, etc.).
+// Call executes the named tool and returns the raw stdout of the underlying
+// command.
 func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (string, error) {
 	t := r.Find(name)
 	if t == nil {
@@ -312,9 +285,8 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 			r.auditor.Log(name, args, rejection, nil)
 			return rejection, nil
 		}
-		// Resolve a basename to the absolute Exec path from .desktop entries
-		// so off-$PATH binaries (e.g. /opt/zen-browser-bin/zen-bin) actually
-		// launch instead of Hyprland failing the exec silently.
+		// Off-$PATH binaries (e.g. /opt/zen-browser-bin/zen-bin) need the
+		// absolute Exec path, or Hyprland fails the exec silently.
 		if cmd, _ := args["cmd"].(string); cmd != "" {
 			tokens := strings.Fields(strings.TrimSpace(cmd))
 			if len(tokens) > 0 {
@@ -322,8 +294,8 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 				if resolved := r.apps.Resolve(bin); resolved != "" {
 					resolvedTokens := strings.Fields(resolved)
 					if len(resolvedTokens) > 0 {
-						// Replace just the first token (the binary path); preserve
-						// any args the model passed (e.g. "kitty -e htop").
+						// Only the binary path, so args the model passed survive
+						// (e.g. "kitty -e htop").
 						tokens[0] = resolvedTokens[0]
 						args["cmd"] = strings.Join(tokens, " ")
 					}
@@ -332,17 +304,14 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 		}
 	}
 
-	// MCP tools route to their server's JSON-RPC client. The category /
-	// audit / sanitize gates above (and below) apply unchanged — only the
-	// dispatch differs.
 	if t.kind == "mcp" {
 		if r.mcp == nil {
 			msg := fmt.Sprintf("error: MCP server %q is not connected. Tell the user the server is unavailable.", t.mcpServer)
 			r.auditor.Log(name, args, msg, nil)
 			return msg, nil
 		}
-		// Manager.Call re-dials transparently if the server has crashed
-		// since startup, so a one-off crash self-heals on next use.
+		// Re-dials transparently if the server crashed since startup, so a
+		// one-off crash self-heals on next use.
 		out, err := r.mcp.Call(ctx, t.mcpServer, t.mcpTool, args)
 		res := strings.TrimSpace(out)
 		r.auditor.Log(name, args, res, err)
@@ -352,8 +321,6 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 		return sanitizeForLLM(res), nil
 	}
 
-	// Native tools run in-process; same category / audit / sanitize gates,
-	// only the dispatch differs.
 	if t.kind == "native" {
 		out, err := t.fn(ctx, args)
 		res := strings.TrimSpace(out)
@@ -387,8 +354,8 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 			}
 			posArgs = append(posArgs, fmt.Sprint(v))
 		}
-		// Quickshell 0.3.0 filters `qs ipc` by the caller's display, which this
-		// headless service lacks; --pid bypasses it. Fall back to -c if not found.
+		// Quickshell filters `qs ipc` by the caller's display, which this
+		// headless service lacks; --pid bypasses it.
 		if pid := r.resolveQsPID(ctx); pid > 0 {
 			cmdArgs = []string{"ipc", "--pid", strconv.Itoa(pid), "call", t.target, t.function}
 		} else {
@@ -406,9 +373,8 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 	return sanitizeForLLM(res), callErr
 }
 
-// injectionSignals are substrings that — when they appear in untrusted
-// tool output (e.g. an event title typed in by a user) — make a follow-up
-// LLM turn likely to misread them as new instructions instead of data.
+// Substrings that, appearing in untrusted tool output such as a user-typed
+// event title, make a follow-up turn likely to misread them as instructions.
 var injectionSignals = []string{
 	"</message>",
 	"<instruction>",
@@ -423,9 +389,8 @@ var injectionSignals = []string{
 	"<</sys>>",
 }
 
-// sanitizeForLLM prepends a warning when the result looks like it could
-// trick the model. Content is otherwise untouched so JSON / paths /
-// volume numbers come through unchanged.
+// Prepends a warning when the result looks like it could trick the model.
+// Content is otherwise untouched so JSON and paths come through unchanged.
 func sanitizeForLLM(s string) string {
 	if s == "" {
 		return s
@@ -441,13 +406,10 @@ func sanitizeForLLM(s string) string {
 
 var placeholderRe = regexp.MustCompile(`\{\{(\w+)\}\}`)
 
-// expandTemplate substitutes "{{argName}}" / "{{scripts_dir}}" tokens in one
-// pass over the original template token: each placeholder is replaced by its
-// value, and the substituted values are never re-scanned. That way an argument
-// whose value happens to contain "{{...}}" is passed through literally instead
-// of being re-expanded from another argument or rejected as "unresolved". A
-// placeholder in the template with no matching argument is still an error, so a
-// missing argument isn't silently dropped.
+// Substituted values are never re-scanned, so an argument whose value contains
+// "{{...}}" passes through literally instead of being re-expanded or rejected
+// as unresolved. A template placeholder with no matching argument is still an
+// error, so a missing argument isn't silently dropped.
 func expandTemplate(tmpl []string, args map[string]any, scriptsDir string) ([]string, error) {
 	out := make([]string, 0, len(tmpl))
 	for _, tok := range tmpl {

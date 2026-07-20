@@ -140,8 +140,8 @@ FocusScope {
     Rectangle {
         anchors.fill: parent
         radius: Theme.Motion.radiusCard
-        // dark scrim in both modes: the menu sits over unblurred app icons,
-        // where light mode's clear-glass surfaces would be unreadable
+        // dark in light mode too: the menu sits over unblurred app icons,
+        // where clear-glass surfaces would be unreadable
         color: menuRoot.theme && menuRoot.theme.themeMode === "light"
             ? Qt.rgba(0.12, 0.10, 0.18, 0.62)
             : Qt.rgba(0.05, 0.03, 0.10, 0.85)

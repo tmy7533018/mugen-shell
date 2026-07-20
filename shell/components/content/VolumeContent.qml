@@ -25,7 +25,6 @@ Item {
         "bottomMargin": modeManager.scale(6)
     })
 
-    // 0 = speaker, 1 = mic
     property int tabIndex: 0
     readonly property bool isMicMode: tabIndex === 1
 
@@ -51,7 +50,6 @@ Item {
         return Qt.hsva((c.hsvHue + 0.2) % 1.0, c.hsvSaturation, Math.min(1.0, c.hsvValue + 0.25), c.a)
     }
 
-    // fast close after hw volume change; panel is transient
     Timer {
         id: volumeChangeTimer
         interval: 2000
@@ -102,7 +100,6 @@ Item {
         }
     }
 
-    // mic cava only runs while volume panel open + mic tab
     function updateMicCavaState() {
         if (!micCavaManager) return
         if (modeManager.isMode("volume") && root.isMicMode) {
@@ -216,7 +213,6 @@ Item {
             }
         ]
 
-        // 0% (or muted) → 80px (small), 1% jumps to 120px then scales up to 240px at 100%
         property real blobSize: (root.currentMuted || root.currentVolume === 0)
             ? modeManager.scale(80)
             : modeManager.scale(120 + (Math.min(100, root.currentVolume) - 1) * 0.9)
@@ -516,7 +512,6 @@ Item {
                         contentLayer.startInteraction()
                         root.resetAutoCloseTimer()
                     }
-                    // reset after onClicked finishes
                     Qt.callLater(() => {
                         isDragging = false
                         wasDragging = false

@@ -12,8 +12,7 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
 
-// testTools builds two dummy tools per category — enough to clear
-// minToolsToFilter with a handful of categories.
+// Two tools per category, so a handful of categories clears minToolsToFilter.
 func testTools(cats ...string) []tools.Tool {
 	var out []tools.Tool
 	for _, c := range cats {
@@ -39,11 +38,10 @@ func catsOf(ts []tools.Tool) []string {
 	return out
 }
 
-// basisEmbed returns unit basis vectors: Warm gets one axis per profile (in
-// the sorted-category order Warm uses), and utterances embed to the vector
-// configured in target at call time.
+// Returns unit basis vectors: Warm gets one axis per profile in the
+// sorted-category order it uses, and utterances embed to target.
 type basisEmbed struct {
-	axes   map[string]int // category → axis
+	axes   map[string]int
 	dim    int
 	target []float32
 	fail   bool
@@ -65,8 +63,7 @@ func (b *basisEmbed) fn(_ context.Context, texts []string) ([][]float32, error) 
 	}
 	out := make([][]float32, len(texts))
 	for i, text := range texts {
-		// Warm profiles start with the category name on the first line;
-		// utterances use the preset target vector.
+		// Warm profiles start with the category name on the first line.
 		firstLine := text
 		if j := strings.IndexByte(text, '\n'); j >= 0 {
 			firstLine = text[:j]
@@ -122,8 +119,8 @@ func TestKeywordHitsJapaneseAndEnglish(t *testing.T) {
 		{"set a TIMER for five minutes", []string{"timer"}},
 		{"明日の天気どう？", []string{"weather"}},
 		{"the dynamic range is wide", nil}, // "mic" must not fire inside "dynamic"
-		{"こんにちは", nil},                     // chat-only
-		{"開いて firefox", []string{"app"}},   // ja keyword
+		{"こんにちは", nil},
+		{"開いて firefox", []string{"app"}}, // ja keyword
 		{"volume and weather", []string{"audio", "weather"}},
 	}
 	for _, c := range cases {
@@ -135,7 +132,6 @@ func TestKeywordHitsJapaneseAndEnglish(t *testing.T) {
 }
 
 func TestKeywordHitsRespectsPresentCategories(t *testing.T) {
-	// weather keyword in the utterance, but no weather category registered.
 	got := keywordHits("天気は？", map[string]bool{"audio": true})
 	if len(got) != 0 {
 		t.Errorf("expected no hits for absent category, got %v", got)
@@ -152,7 +148,7 @@ func TestSelectSmallCatalogPassesThrough(t *testing.T) {
 }
 
 func TestSelectNoSignalFallsBackToAll(t *testing.T) {
-	f := New(Config{}, nil) // no embedder
+	f := New(Config{}, nil)
 	all := testTools("audio", "music", "theme", "wallpaper", "timer", "calendar", "weather")
 	sel, reason := f.Select(context.Background(), "こんにちは", nil, all)
 	if len(sel) != len(all) {
@@ -189,8 +185,8 @@ func TestSelectEmbeddingTrims(t *testing.T) {
 	f := New(Config{TopK: 4, MinScore: 0.4}, be.fn)
 	f.Warm(context.Background(), all)
 
-	// Utterance points squarely at gamma; no keywords exist for these fake
-	// categories, so only the embedding layer can pick it.
+	// No keywords exist for these fake categories, so only the embedding layer
+	// can pick gamma.
 	be.pointAt(t, map[string]float64{"gamma": 1})
 	sel, reason := f.Select(context.Background(), "whatever", nil, all)
 	got := names(sel)
@@ -216,8 +212,7 @@ func TestSelectEmbeddingHonorsTopKAndMinScore(t *testing.T) {
 		t.Fatalf("got %v, want %v", got, want)
 	}
 
-	// Below MinScore everywhere → embedding returns no category; with no
-	// keyword/sticky/always either, Select must fall back to all.
+	// Below MinScore everywhere, and no keyword/sticky/always either.
 	be.pointAt(t, map[string]float64{"alpha": 0.2})
 	sel, reason := f.Select(context.Background(), "whatever", nil, all)
 	if len(sel) != len(all) {
@@ -233,14 +228,12 @@ func TestSelectEmbedFailureDegradesToKeywords(t *testing.T) {
 	f.Warm(context.Background(), all)
 
 	be.fail = true
-	// Keyword still hits → trimmed selection without embedding.
 	sel, _ := f.Select(context.Background(), "音量上げて", nil, all)
 	got := names(sel)
 	want := []string{"audio_get", "audio_set"}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("got %v, want %v", got, want)
 	}
-	// No keyword → all.
 	sel, _ = f.Select(context.Background(), "こんにちは", nil, all)
 	if len(sel) != len(all) {
 		t.Fatalf("expected all on embed failure without keywords, got %d/%d", len(sel), len(all))
@@ -267,7 +260,7 @@ func TestWarmFailureThenSelectStillWorks(t *testing.T) {
 	be := newBasisEmbed(catsOf(all))
 	be.fail = true
 	f := New(Config{}, be.fn)
-	f.Warm(context.Background(), all) // fails, sets cooldown
+	f.Warm(context.Background(), all)
 
 	sel, _ := f.Select(context.Background(), "音量上げて", nil, all)
 	got := names(sel)
@@ -286,7 +279,6 @@ func TestContainsWordUTF8Boundary(t *testing.T) {
 	if !containsWord("東京はrain", "rain") {
 		t.Error(`containsWord("東京はrain","rain") should be true`)
 	}
-	// Genuine word-internal occurrences must still be rejected.
 	if containsWord("dynamic", "mic") {
 		t.Error(`"mic" must not match inside "dynamic"`)
 	}
@@ -296,8 +288,8 @@ func TestContainsWordUTF8Boundary(t *testing.T) {
 }
 
 func TestSelectKeywordOnlyKeepsBlindCategories(t *testing.T) {
-	// embed=nil → keyword-only mode. "github" has no keyword dictionary entry
-	// (stands in for an MCP server); a keyword hit for audio must not drop it.
+	// "github" stands in for an MCP server: no keyword dictionary entry, so a
+	// keyword hit for audio must not drop it.
 	f := New(Config{}, nil)
 	all := testTools("audio", "music", "theme", "wallpaper", "timer", "calendar", "github")
 	sel, reason := f.Select(context.Background(), "音量上げて", nil, all)

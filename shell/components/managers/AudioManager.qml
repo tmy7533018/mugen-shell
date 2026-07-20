@@ -19,7 +19,6 @@ QtObject {
     property string defaultSinkName: ""
     property string defaultSourceName: ""
 
-    // Replaced by D-Bus monitoring; kept as disabled fallback
     property Timer updateTimer: Timer {
         interval: 200
         running: false
@@ -295,7 +294,6 @@ QtObject {
                     if (parts.length >= 3) {
                         let name = parts[1].trim()
                         let description = parts[2].trim()
-                        // Exclude monitor sources (*.monitor)
                         if (!name.endsWith(".monitor")) {
                             newSources.push({
                                 name: name,

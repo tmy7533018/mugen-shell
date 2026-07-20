@@ -7,9 +7,8 @@ import (
 	"testing"
 )
 
-// desktopFakeRun answers the qs / calendar-cli invocations DesktopContext
-// makes with canned per-endpoint results, so the gather + format path runs
-// without subprocesses.
+// Canned per-endpoint results, so the gather + format path runs without
+// subprocesses.
 func desktopFakeRun(results map[string]string) func(context.Context, string, []string) (string, error) {
 	return func(_ context.Context, name string, args []string) (string, error) {
 		if name == "qs" && len(args) >= 2 && args[0] == "list" {

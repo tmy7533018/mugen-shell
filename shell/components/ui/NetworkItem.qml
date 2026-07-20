@@ -24,7 +24,7 @@ Rectangle {
 
     width: parent ? parent.width : (ListView.view ? ListView.view.width : 420)
 
-    // Explicit properties (not bindings) so each item animates independently
+    // Assigned, not bound, so each item animates independently
     property int targetHeight: 50
     implicitHeight: targetHeight
     height: targetHeight

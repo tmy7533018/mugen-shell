@@ -17,9 +17,7 @@ QtObject {
     property int durationSec: 0
     property real endTime: 0
     property int pausedRemainingSec: 0
-    // Set when a countdown reaches zero. Cleared when the user dismisses the
-    // alarm (or the safety timeout fires). The bar uses this to drive the
-    // looping completion sound and to auto-open the timer panel.
+    // Drives the bar's looping completion sound and timer panel auto-open.
     property bool alerting: false
 
     property real now: Date.now()
@@ -113,7 +111,6 @@ QtObject {
             if (s.running !== undefined) running = s.running
             if (s.alerting !== undefined) alerting = s.alerting
 
-            // If running with endTime in the past, treat it as already expired
             if (running && !paused && endTime > 0 && endTime <= Date.now()) {
                 running = false
                 paused = false

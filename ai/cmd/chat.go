@@ -68,8 +68,7 @@ func runChat(_ *cobra.Command, _ []string) error {
 		}
 
 		msgs := rt.History.Messages()
-		// Same injections as the HTTP server: memories inside the system
-		// message, desktop state in front of the newest user message.
+		// Must mirror the HTTP server's injections.
 		if blk := rt.Tools.MemoryBlock(); blk != "" && len(msgs) > 0 && msgs[0].Role == "system" {
 			msgs[0].Content += "\n\n" + blk
 		}
@@ -87,8 +86,8 @@ func runChat(_ *cobra.Command, _ []string) error {
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			// Persist whatever already streamed; dropping only the user
-			// message would leave two consecutive user turns in history.
+			// Dropping only the user message would leave two consecutive
+			// user turns in history.
 			if fullResponse == "" {
 				rt.History.RemoveLast()
 			} else {
@@ -103,8 +102,6 @@ func runChat(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-// runChatTurn streams one turn including the tool-call loop — the terminal
-// twin of the server's handleChat. Confirm-gated tools prompt on stdin.
 func runChatTurn(rt *runtimeContext, scanner *bufio.Scanner, msgs []provider.Message) (string, error) {
 	const maxIterations = 5
 	opts := provider.ChatOptions{Tools: cliProviderTools(rt.Tools.List())}
@@ -161,8 +158,7 @@ func runChatTurn(rt *runtimeContext, scanner *bufio.Scanner, msgs []provider.Mes
 	return fullResponse, fmt.Errorf("max tool iterations exceeded")
 }
 
-// cliConfirm is the terminal stand-in for the GUI approval dialog; EOF or
-// anything but y counts as a denial, mirroring the server's deny-by-default.
+// EOF or anything but y is a denial, mirroring the server's deny-by-default.
 func cliConfirm(scanner *bufio.Scanner, tc provider.ToolCall) bool {
 	args, _ := json.Marshal(tc.Arguments)
 	fmt.Printf("\n[confirm] %s %s — approve? [y/N]: ", tc.Name, args)

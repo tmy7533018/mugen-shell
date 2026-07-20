@@ -129,7 +129,6 @@ func TestNotificationsProduceNoResponse(t *testing.T) {
 
 func TestIDLessToolsCallDoesNotExecute(t *testing.T) {
 	h, src := newTestHandler("dark", nil)
-	// A tools/call missing its id must NOT run the tool fire-and-forget.
 	if resp := h.HandleMessage(context.Background(), []byte(`{"jsonrpc":"2.0","method":"tools/call","params":{"name":"theme_get"}}`)); resp != nil {
 		t.Errorf("id-less request must not be answered, got %s", resp)
 	}

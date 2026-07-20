@@ -4,9 +4,9 @@ import Quickshell.Io
 import Quickshell.Wayland
 import "." as Lib
 
-// External tool entry point for the MCP layer in mugen-ai. Each target maps
-// 1:1 to a tool group exposed to the LLM. Keep handlers thin — defer to the
-// underlying manager rather than reimplementing logic here.
+// Entry point for the MCP layer in mugen-ai: each target maps 1:1 to a tool
+// group exposed to the LLM. Handlers must stay thin and defer to the
+// underlying manager rather than reimplement its logic.
 Item {
     id: ipcRouter
 
@@ -23,9 +23,9 @@ Item {
         target: "audio"
 
         function set_volume(vol: int): int {
-            // Return the requested value rather than re-reading; pavucontrol
-            // updates the property asynchronously so the post-set read would
-            // race and surface the previous level.
+            // Returns the request, not a re-read: pavucontrol updates the
+            // property asynchronously, so a post-set read races and surfaces
+            // the previous level.
             ipcRouter.audioManager.setVolume(vol)
             return vol
         }
@@ -102,9 +102,8 @@ Item {
         }
     }
 
-    // settings / calendar / shortcuts run as separate quickshell processes —
-    // switchMode would just empty the bar. Route those through their toggle
-    // scripts so the actual window appears.
+    // These run as separate quickshell processes, so switchMode would only
+    // empty the bar; their toggle scripts are what make a window appear.
     readonly property var _detachedScripts: ({
         "settings": "toggle-settings.sh",
         "calendar": "toggle-calendar.sh",
@@ -124,8 +123,8 @@ Item {
         }
 
         function close(): void {
-            // Only affects the bar's inline modes; detached panels close
-            // via their own toggle (call open() again or press ESC in them).
+            // Only affects the bar's inline modes; detached panels close via
+            // their own toggle.
             ipcRouter.modeManager.closeAllModes()
         }
 
@@ -157,8 +156,6 @@ Item {
         target: "theme"
 
         function set(mode: string): string {
-            // Accept "dark" or "light"; ignore anything else so a stray
-            // call can't put the shell in an invalid state.
             if (mode !== "dark" && mode !== "light") return ipcRouter.theme.themeMode
             ipcRouter.theme.themeMode = mode
             ipcRouter.theme.saveThemeMode()
@@ -179,12 +176,10 @@ Item {
         target: "wallpaper"
 
         function set(path: string): string {
-            // Models sometimes invent paths; reject anything outside the
-            // wallpaper dir so the error flows back into the tool loop.
-            // Membership in the enumerated list is NOT required: the list
-            // refreshes only on startup/picker-open, so a just-added file
-            // would be spuriously rejected — in-dir misses apply anyway
-            // and trigger a rescan for the next list call.
+            // Models invent paths, so anything outside the wallpaper dir is
+            // rejected. Membership in the enumerated list is deliberately NOT
+            // required: it refreshes only on startup/picker-open, so a
+            // just-added file would be rejected spuriously.
             const known = ipcRouter.wallpaperManager.wallpapers || []
             if (known.indexOf(path) === -1) {
                 const dir = ipcRouter.wallpaperManager.wallpaperDir + "/"
@@ -204,7 +199,7 @@ Item {
             const known = ipcRouter.wallpaperManager.wallpapers || []
             if (known.length === 0)
                 return "error: no wallpapers found"
-            // Avoid picking the current one so "random" always visibly changes.
+            // Skip the current one so "random" always visibly changes.
             const current = ipcRouter.wallpaperManager.currentWallpaperPath
             let pick = known[Math.floor(Math.random() * known.length)]
             if (known.length > 1 && pick === current)
@@ -224,8 +219,7 @@ Item {
         function launch(cmd: string): string {
             let trimmed = (cmd || "").trim()
             if (trimmed === "") return "error: empty command"
-            // Exec inherits the user's $PATH, so plain executable names like
-            // "firefox" work — no need for absolute paths.
+            // Exec inherits the user's $PATH, so bare names need no resolving.
             Lib.Hypr.exec(trimmed)
             return "launched: " + trimmed
         }
@@ -269,7 +263,6 @@ Item {
         }
 
         function get(): string {
-            // JSON so the model can pick out whichever field it needs.
             return JSON.stringify({
                 running: ipcRouter.timerManager.running,
                 paused: ipcRouter.timerManager.paused,
@@ -284,15 +277,14 @@ Item {
         target: "notification"
 
         function toggle_dnd(): bool {
-            // "DnD on" = notifications suppressed = notificationsEnabled false.
-            // Flip and return the new DnD state so the LLM gets a clean bool.
+            // Inverted polarity: DnD on = notificationsEnabled false.
             ipcRouter.notificationManager.notificationsEnabled = !ipcRouter.notificationManager.notificationsEnabled
             return !ipcRouter.notificationManager.notificationsEnabled
         }
 
         function set_dnd(enabled: bool): bool {
-            // Idempotent setter so "turn DnD on" doesn't accidentally flip
-            // an already-on state back off via toggle_dnd.
+            // Idempotent, unlike toggle_dnd, so "turn DnD on" can't flip an
+            // already-on state back off.
             ipcRouter.notificationManager.notificationsEnabled = !enabled
             return enabled
         }

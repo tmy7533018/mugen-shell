@@ -14,11 +14,9 @@
 }:
 
 let
-  # openWakeWord 0.6.0 dropped the shared ONNX models from its dist;
-  # download_models() would fetch them into the package dir, which is
-  # read-only in the Nix store. Pre-seed the three the ONNX path needs
-  # (silero VAD + the mel/embedding feature models) so first run never
-  # reaches for the network. Released under the v0.5.1 tag upstream.
+  # 0.6.0 dropped the shared ONNX models from its dist, and download_models()
+  # would fetch them into the read-only store path. Pre-seed the three the
+  # ONNX path needs; upstream still publishes them under the v0.5.1 tag.
   modelBase = "https://github.com/dscripka/openWakeWord/releases/download/v0.5.1";
   models = {
     "silero_vad.onnx" = fetchurl {
@@ -47,9 +45,9 @@ buildPythonPackage rec {
 
   build-system = [ setuptools ];
 
-  # tflite-runtime is a hard requires_dist but has no py3.14 wheel, and the
-  # daemon only ever uses inference_framework="onnx" (tflite is a lazy import
-  # inside Model.__init__, never touched on the ONNX path).
+  # tflite-runtime is a hard requires_dist with no py3.14 wheel. Safe to drop:
+  # it is a lazy import in Model.__init__, unreachable on the ONNX path the
+  # daemon uses.
   pythonRemoveDeps = [ "tflite-runtime" ];
 
   dependencies = [

@@ -18,20 +18,17 @@ FocusScope {
     property var aiBackend
     property var settingsManager
     property bool showInternalOrb: true
-    // Daemon capture state (over IPC); the mic button becomes a cancel button.
     property bool voiceListening: false
     property bool voiceSpeaking: false
-    // Cancel is meaningful during capture AND while the reply plays.
     readonly property bool voiceActive: voiceListening || voiceSpeaking
     onVoiceListeningChanged: voiceListening ? listenCava.start() : listenCava.stop()
 
     // Private instance — the volume panel stops the shared one on its own
-    // schedule, which would kill our capture visuals mid-listen.
+    // schedule, killing our capture visuals mid-listen.
     Managers.MicCavaManager { id: listenCava }
 
-    // Emitted on any user interaction (typing, sending) so a host can treat
-    // keyboard-only use as activity — the auto-collapse timer otherwise only
-    // sees taps and pointer motion and closes the panel mid-compose.
+    // Lets a host count keyboard-only use as activity; the auto-collapse
+    // timer only sees taps and pointer motion and closes mid-compose.
     signal userActivity()
 
     property real orbEmptyScale: 0.28
@@ -43,7 +40,6 @@ FocusScope {
     readonly property real orbExternalSize: orb.width
     readonly property bool orbExternalEmptyState: orb.isInEmptyState
 
-    // Fallback used when no AiBackend is wired (e.g. legacy embedding paths).
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://127.0.0.1:11435"
 
     property var messages: []
@@ -53,15 +49,13 @@ FocusScope {
     property bool healthChecked: false
     property bool userScrolled: false
     property string currentModel: ""
-    // The model the *next* new conversation will start with — i.e. the
-    // backend registry default. Tracked separately so opening an old chat
-    // can show its bound model without clobbering this preference.
+    // Tracked separately from currentModel so opening an old chat can show
+    // its bound model without clobbering the next-new-chat preference.
     property string defaultModel: ""
     property var availableModels: []
     property bool modelDropdownOpen: false
-    // Per-conversation thinking flag — flows into the chat payload. The
-    // server persists it to conversations.thinking, so reopening an old
-    // chat restores whichever state it was last sent with.
+    // The server persists this to conversations.thinking, so reopening an
+    // old chat restores whichever state it was last sent with.
     property bool currentThinking: false
 
     property var conversations: []
@@ -71,15 +65,12 @@ FocusScope {
 
     readonly property bool isEmpty: messages.length === 0
 
-    // Set from a tool_confirm SSE event while the backend is blocked waiting
-    // for the user to approve a destructive MCP tool. Shape:
-    // { confirm_id, name, arguments }. Cleared the moment it is answered.
+    // While this is set the backend is blocked waiting on approval of a
+    // destructive MCP tool. Shape: { confirm_id, name, arguments }.
     property var pendingConfirm: null
 
-    // Typewriter reveal for the streaming reply. State lives here (not in
-    // the delegate) because each chunk reassigns `messages` and rebuilds
-    // the delegates. revealActive gates the substring so an old message is
-    // never re-revealed after a conversation switch.
+    // Reveal state lives here, not in the delegate: each chunk reassigns
+    // `messages` and rebuilds the delegates.
     readonly property string typingSpeed: settingsManager ? settingsManager.yuraTypingSpeed : "instant"
     readonly property int revealStep: typingSpeed === "slow" ? 2 : typingSpeed === "normal" ? 6 : 16
     property int streamRevealed: 0
@@ -176,9 +167,6 @@ FocusScope {
         messages = copy
     }
 
-    // resolveConfirm answers a pending tool-approval prompt: it posts the
-    // decision so the blocked chat turn can run or skip the tool, then clears
-    // the card. Fire-and-forget — a lapsed prompt just 404s harmlessly.
     function resolveConfirm(approved) {
         if (!pendingConfirm) return
         confirmProcess.payload = JSON.stringify({
@@ -208,8 +196,7 @@ FocusScope {
         if (!streaming) return
         chatProcess.signal(15)
         streaming = false
-        // A stopped turn drops its blocked tool prompt; the backend treats
-        // the disconnect as a denial, so the card must go with it.
+        // The backend reads the disconnect as a denial, so the card must go.
         pendingConfirm = null
     }
 
@@ -218,13 +205,12 @@ FocusScope {
         messages = []
         currentConvId = 0
         userScrolled = false
-        // Coming back from an old conversation may have left currentModel
-        // stuck on that conversation's bound model — restore it to the
-        // backend default so the dropdown shows what the next chat will use.
+        // Coming back from an old conversation leaves currentModel stuck on
+        // that conversation's bound model.
         if (defaultModel !== "") currentModel = defaultModel
         currentThinking = false
-        // No backend call — the conversation is auto-created on first user message,
-        // so abandoning a blank "New chat" leaves no empty row in the store.
+        // No backend call: the conversation is auto-created on the first user
+        // message, so abandoning a blank chat leaves no empty row in the store.
     }
 
     function selectConversation(convId) {
@@ -251,8 +237,6 @@ FocusScope {
         loadCurrentProcess.running = true
     }
 
-    // Voice daemon: point the panel at the voice conversation so its turns
-    // render through the normal events pipeline.
     function showConversation(convId) {
         if (streaming || !convId || convId === currentConvId) return
         selectConvProcess.payload = String(convId)
@@ -307,9 +291,8 @@ FocusScope {
         onTriggered: eventsSubscriber.running = true
     }
 
-    // Split on ``` — even parts are markdown prose, odd parts are code
-    // blocks. An unclosed ``` mid-stream still renders as a code block so
-    // partial code shows up immediately.
+    // An unclosed ``` mid-stream still yields a code block, so partial code
+    // shows up while it streams.
     function parseBlocks(content) {
         if (!content) return []
         let blocks = []
@@ -517,9 +500,8 @@ FocusScope {
             currentModel: root.currentModel
             availableModels: root.availableModels
             isOpen: root.modelDropdownOpen
-            // The selector only edits the *next* conversation's default model.
-            // While a chat is active, it shows that chat's bound model
-            // read-only so the user can't accidentally switch mid-stream.
+            // An active chat is bound to its model; only the next new
+            // conversation's default is editable.
             editable: root.currentConvId === 0
 
             onToggled: {
@@ -537,8 +519,6 @@ FocusScope {
             }
         }
 
-        // Per-conversation thinking toggle. Capable models reason internally
-        // before replying; unsupported ones fall back silently on the backend.
         Rectangle {
             id: thinkingPill
             visible: root.aiAvailable && root.currentModel !== ""
@@ -579,9 +559,6 @@ FocusScope {
         }
     }
 
-    // Morphs between empty-state (centered, large) and active-state
-    // (bottom-left of latest AI message). Position animates so during
-    // streaming the orb trails the growing text.
     Item {
         id: orb
         z: 4
@@ -744,8 +721,6 @@ FocusScope {
                     && isAssistant
                     && modelData.content === ""
                 readonly property bool showInlineOrb: isAssistant && isLatest
-                // While the typewriter is active the newest reply renders a
-                // revealed prefix instead of everything received so far.
                 readonly property string displayContent: (isAssistant && isLatest && root.revealActive)
                     ? modelData.content.substring(0, root.streamRevealed)
                     : modelData.content
@@ -860,8 +835,8 @@ FocusScope {
         TextInput {
             id: inputField
             anchors.left: parent.left
-            // Invisible items keep their geometry, so skip the mic slot
-            // when voice input is switched off.
+            // Invisible items keep their geometry, so the mic slot has to be
+            // anchored around when voice input is off.
             anchors.right: micIcon.visible ? listenViz.left : sendIcon.left
             anchors.rightMargin: modeManager.scale(12)
             anchors.verticalCenter: parent.verticalCenter
@@ -901,8 +876,6 @@ FocusScope {
             }
         }
 
-        // While the daemon listens, the input row breathes with the mic:
-        // an animating slot so the text yields the space smoothly.
         Item {
             id: listenViz
             anchors.right: micIcon.left
@@ -929,8 +902,6 @@ FocusScope {
             }
         }
 
-        // Push-to-talk: pokes the voice daemon (SIGUSR1) so it starts
-        // capturing immediately, no wake word needed.
         Item {
             id: micIcon
             anchors.right: sendIcon.left
@@ -939,9 +910,8 @@ FocusScope {
             width: modeManager.scale(34)
             height: modeManager.scale(34)
             visible: !root.settingsManager || root.settingsManager.voiceEnabled
-            // HoverHandler, not MouseArea hover: containsMouse misses leave
-            // events on Wayland when the click reflows the UI, leaving the
-            // button lit forever.
+            // HoverHandler, not MouseArea: containsMouse misses leave events
+            // on Wayland when the click reflows the UI, leaving this lit.
             opacity: (root.voiceActive || micHover.hovered) ? 1.0 : 0.5
 
             Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
@@ -986,10 +956,9 @@ FocusScope {
                 anchors.fill: parent
                 onClicked: {
                     root.userActivity()
-                    // main only — the default broadcast would signal the
-                    // whisper-server child too, which dies on it.
-                    // On an empty chat, RTMIN+1 asks the daemon for a fresh
-                    // conversation instead of yanking to its voice thread.
+                    // main only: the default broadcast would also signal the
+                    // whisper-server child, which dies on it. RTMIN+1 asks
+                    // for a fresh conversation rather than the voice thread.
                     Quickshell.execDetached(["systemctl", "--user", "kill",
                         "-s", root.voiceActive ? "SIGUSR2"
                             : (root.currentConvId === 0 ? "SIGRTMIN+1" : "SIGUSR1"),
@@ -1048,8 +1017,6 @@ FocusScope {
         }
     }
 
-    // Tool-approval card. Surfaces a tool_confirm prompt above the input bar
-    // and stays up — the backend is blocked — until Approve / Deny answers it.
     Rectangle {
         id: confirmCard
         anchors.left: inputBar.left
@@ -1064,8 +1031,6 @@ FocusScope {
 
         radius: modeManager.scale(16)
         color: root.theme ? root.theme.surfaceInsetSubtle : Qt.rgba(0.07, 0.06, 0.11, 0.97)
-        // Amber border: a deliberate break from the purple chrome so the
-        // card reads as "this needs you" without the alarm of red.
         border.width: 1
         border.color: Qt.rgba(0.95, 0.74, 0.42, 0.55)
 
@@ -1286,8 +1251,6 @@ FocusScope {
     }
     } // mainPane
 
-    // Posts an approval decision for a pending tool_confirm prompt. Fire-and-
-    // forget: the blocked chat turn reacts, and a lapsed prompt simply 404s.
     Process {
         id: confirmProcess
         property string payload: ""
@@ -1348,14 +1311,12 @@ FocusScope {
 
         onExited: (exitCode) => {
             root.streaming = false
-            // The stream can end (timeout, error) with a card still up;
-            // never leave a prompt the backend has already abandoned.
+            // A timeout or error can end the stream with a card still up, for
+            // a prompt the backend has already abandoned.
             root.pendingConfirm = null
             if (exitCode !== 0) {
                 root.updateLastMessage("\n[connection failed]")
             }
-            // Refresh the sidebar so the active conversation moves to the top
-            // and picks up its derived title once the first user message lands.
             root.refreshConversations()
         }
     }
@@ -1395,10 +1356,9 @@ FocusScope {
                 if (!sameConv) root.revealActive = false
                 root.currentConvId = obj.id || 0
                 let msgs = obj.messages || []
-                // Persisted history keeps only role/content; tool-call chips
-                // live in memory. On a same-conversation refresh (the post-turn
-                // SSE nudge) carry the chips over by matching assistant messages
-                // in order, so the reload doesn't wipe them.
+                // Persisted history keeps only role/content, so a reload would
+                // wipe the in-memory tool-call chips. Carry them over by
+                // matching assistant messages in order.
                 let prevTools = []
                 if (sameConv) {
                     for (let i = 0; i < root.messages.length; i++) {
@@ -1416,8 +1376,6 @@ FocusScope {
                     }
                     return { role: m.role, content: m.content }
                 })
-                // Sync the dropdown to the conversation's bound model so the
-                // selector reflects what's actually being used.
                 if (root.currentConvId !== 0 && obj.model) {
                     root.currentModel = obj.model
                 }
@@ -1439,7 +1397,6 @@ FocusScope {
 
         onExited: (exitCode) => {
             if (exitCode !== 0) return
-            // After selection, fetch the messages of the now-current conversation.
             loadCurrentProcess.running = true
         }
     }
@@ -1462,8 +1419,6 @@ FocusScope {
                 let obj = JSON.parse(deleteConvProcess.buf)
                 newCurrent = obj.current_id || 0
             } catch (e) {}
-            // If we deleted the active conversation, reload to reflect the new current
-            // (or empty state if none remain). Otherwise just refresh the list.
             if (parseInt(deleteConvProcess.payload) === root.currentConvId) {
                 root.currentConvId = newCurrent
                 root.messages = []
@@ -1503,8 +1458,6 @@ FocusScope {
                     root.hasModel = obj.status === "ok"
                 } catch (e) {}
                 modelsProcess.running = true
-                // Float opens in fresh-chat state to match bar AI; the sidebar
-                // still lists every past conversation so they can be picked.
                 root.refreshConversations()
             }
         }
@@ -1541,9 +1494,8 @@ FocusScope {
                   "-H", "Content-Type: application/json",
                   "-d", payload]
 
-        // PUT /model now only changes the *default* model for the next new
-        // conversation. The current view stays on whatever it was — no
-        // history wipe, no surprise empty-conversation row in the sidebar.
+        // PUT /model only sets the default for the next new conversation;
+        // the current view keeps its own model.
     }
 
     Component.onCompleted: {

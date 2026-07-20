@@ -51,9 +51,9 @@ QtObject {
     function switchMode(newMode, viaIpc) {
         let wasViaIpc = openedViaIpc
 
-        // openedViaIpc must be set before currentMode — listeners of
-        // currentModeChanged read it synchronously to decide whether to
-        // grab focus, and a stale value breaks keybind-open ESC handling.
+        // openedViaIpc must be set before currentMode: currentModeChanged
+        // listeners read it synchronously to decide whether to grab focus,
+        // and a stale value breaks keybind-open ESC handling.
         if (newMode === currentMode) {
             openedViaIpc = false
             currentMode = "normal"
@@ -93,7 +93,7 @@ QtObject {
         }
         return runtimeDir + "/mugen-shell-ipc"
     }
-    // Monitor IPC reader — if it stalls, external keybinds stop working
+    // A stalled reader takes external keybinds down with it.
     property bool ipcReadInFlight: false
     
     property Timer ipcPollTimer: Timer {
@@ -119,9 +119,8 @@ QtObject {
         
         stdout: SplitParser {
             onRead: data => {
-                // SplitParser drops the trailing newline; preserve it or
-                // queued commands concatenate (e.g. "open volume" + "open
-                // volume" → "open volumeopen volume").
+                // SplitParser drops the trailing newline; without restoring it
+                // queued commands concatenate into one unparseable line.
                 if (data) {
                     ipcReader.output += data + "\n"
                 }
@@ -164,7 +163,7 @@ QtObject {
         running: false
     }
     
-    // Watchdog: kills a stalled reader to prevent permanent IPC failure
+    // Without this a stalled reader wedges IPC permanently.
     property Timer ipcReaderTimeout: Timer {
         interval: 1200
         running: false
@@ -191,7 +190,7 @@ QtObject {
         let cmd = parts[0]
         if (!cmd || cmd.length === 0) return
 
-        // Guard against corrupted IPC strings causing the bar to get stuck
+        // A corrupted IPC string would otherwise wedge the bar in a dead mode.
         const known = {
             "normal": true,
             "launcher": true,
@@ -224,8 +223,8 @@ QtObject {
             switchMode(modeName, true)
         }
 
-        // "open" is non-toggling: stay open if already in that mode. Used by
-        // volume keys etc. so repeated key presses don't close the panel.
+        // Non-toggling, unlike safeSwitch, so repeated volume-key presses
+        // don't close the panel.
         function safeOpen(modeName) {
             if (!modeName || modeName.length === 0) return
             if (modeName === "normal") {

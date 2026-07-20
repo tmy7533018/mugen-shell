@@ -9,9 +9,8 @@ Item {
     property color orbColor: Qt.rgba(0.65, 0.55, 0.85, 0.9)
     property bool streaming: false
     property bool speaking: false
-    // Peak radius of the speaking ripple, as a multiple of the ring's base
-    // size. Lower it in height-constrained hosts (the bar) so rings stay
-    // within the visible strip instead of spilling into the margin.
+    // Multiple of the ring's base size. Height-constrained hosts (the bar)
+    // must lower it or rings spill outside the visible strip.
     property real rippleMaxScale: 2.0
     property bool active: true
     property bool breathEnabled: true
@@ -68,8 +67,6 @@ Item {
         yScale: root.pulseScale
     }
 
-    // Sonar rings ping outward while Yura speaks (TTS playback). Gated on
-    // `speaking` so a burst in flight vanishes the instant playback ends.
     Common.RippleRings {
         anchors.centerIn: parent
         width: root.width

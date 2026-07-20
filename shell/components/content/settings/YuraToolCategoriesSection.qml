@@ -25,7 +25,10 @@ Rectangle {
     property string statusText: ""
 
     property var disabledSet: ({})
-    property int dirtyTick: 0  // bump to re-evaluate bindings that read disabledSet
+    // Bumped on every mutation of disabledSet; the `let _ = dirtyTick` reads
+    // below exist to make bindings depend on it, since mutating a JS map in
+    // place doesn't notify QML.
+    property int dirtyTick: 0
 
     readonly property var categories: [
         { id: "audio",        label: "Audio",         desc: "Volume, mic, mute" },
@@ -49,7 +52,6 @@ Rectangle {
     }
 
     function isEnabled(catId) {
-        // Touch dirtyTick so the binding refreshes when we mutate the map.
         let _ = section.dirtyTick
         return !section.disabledSet[catId]
     }

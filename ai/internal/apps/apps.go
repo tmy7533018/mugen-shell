@@ -1,8 +1,6 @@
-// Package apps reads XDG desktop entries so the tools registry can resolve
-// a basename ("zen-bin") to the absolute Exec path ("/opt/zen-browser-bin/
-// zen-bin"). Without this, app_launch silently fires `exec zen-bin` via
-// Hyprland for binaries that aren't on $PATH and the user sees "launched"
-// while nothing actually opens.
+// Package apps reads XDG desktop entries so a basename ("zen-bin") resolves
+// to its absolute Exec path. Without this, app_launch reports success for
+// binaries that aren't on $PATH while nothing actually opens.
 package apps
 
 import (
@@ -12,26 +10,23 @@ import (
 	"strings"
 )
 
-// App is a parsed .desktop entry kept around so callers can do alias-style
-// resolution (e.g. user says "discord" but the underlying binary is
-// "flatpak" — the display name lets us still find the right Exec).
+// App is a parsed .desktop entry. Display is kept so callers can resolve by
+// name when the binary is a launcher shared by many apps (e.g. "flatpak").
 type App struct {
 	Binary  string // basename of the first Exec token
 	Display string // user-facing "Name=" value
 	Exec    string // full Exec line, placeholders stripped
 }
 
-// Resolver caches a basename → absolute-exec map built from .desktop
-// entries discovered under XDG data dirs, plus the parsed App list so we
-// can fall back to display-name matching when the typed cmd doesn't line
-// up with the underlying binary (Flatpak / AppImage launchers).
+// Resolver caches a basename → absolute-exec map built from the .desktop
+// entries under the XDG data dirs.
 type Resolver struct {
 	byBin map[string]string
 	apps  []App
 }
 
-// Load walks all XDG application dirs once and returns a populated
-// Resolver. Reload by calling Load again — there's no live watcher.
+// Load scans the XDG application dirs once; there is no live watcher, so
+// call it again to pick up newly installed apps.
 func Load() *Resolver {
 	r := &Resolver{byBin: map[string]string{}}
 	for _, dir := range desktopDirs() {
@@ -51,9 +46,8 @@ func Load() *Resolver {
 	return r
 }
 
-// Resolve returns the absolute Exec path (with placeholders stripped) for
-// a binary basename, or "" if no .desktop entry advertises it. Callers
-// should fall through to the original cmd when this returns empty.
+// Resolve returns the absolute Exec path for a binary basename, or "" if no
+// .desktop entry advertises it; callers then fall through to the raw cmd.
 func (r *Resolver) Resolve(basename string) string {
 	if r == nil {
 		return ""
@@ -61,12 +55,9 @@ func (r *Resolver) Resolve(basename string) string {
 	return r.byBin[basename]
 }
 
-// FindByDisplay finds an installed app whose display name matches `name`
-// case-insensitively. Used as a fallback when the user-typed command
-// doesn't match any binary basename (the common Flatpak case where the
-// "binary" is `flatpak` for every app). Returns the first exact display
-// match, then falls back to a single substring match if exactly one app
-// contains the needle in its name.
+// FindByDisplay matches an app by display name, case-insensitively: exact
+// first, then a substring match only when exactly one app contains the
+// needle. Fallback for when the typed command matches no binary basename.
 func (r *Resolver) FindByDisplay(name string) (App, bool) {
 	if r == nil {
 		return App{}, false
@@ -108,8 +99,8 @@ func parseDesktop(path string) (App, bool) {
 			continue
 		}
 		if strings.HasPrefix(line, "[") {
-			// We only care about the [Desktop Entry] group; sub-groups
-			// (Actions etc.) carry their own Exec lines we shouldn't pick up.
+			// Sub-groups (Actions etc.) carry their own Exec lines that
+			// must not be picked up.
 			if line == "[Desktop Entry]" {
 				inMain = true
 			} else if inMain {
@@ -149,10 +140,9 @@ func parseDesktop(path string) (App, bool) {
 	return App{Binary: binary, Display: name, Exec: clean}, true
 }
 
-// stripPlaceholders drops field codes defined by the XDG desktop-entry spec
-// (%u %U %f %F %i %c %k %d %D %n %N %v %m) and Flatpak's file-forwarding
-// sentinels (@@, @@u). The sentinels are inert when no payload is attached
-// but some launchers treat them as unknown args; safer to drop them.
+// Drops XDG field codes (%u, %F, ...) and Flatpak's file-forwarding
+// sentinels (@@, @@u) — the latter are inert with no payload attached, but
+// some launchers reject them as unknown args.
 func stripPlaceholders(tokens []string) string {
 	out := make([]string, 0, len(tokens))
 	for _, t := range tokens {

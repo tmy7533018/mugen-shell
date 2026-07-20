@@ -1,5 +1,3 @@
-// Standalone Quickshell entry for the floating settings window.
-
 //@ pragma UseQApplication
 
 import QtQuick

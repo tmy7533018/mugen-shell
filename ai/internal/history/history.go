@@ -23,8 +23,7 @@ type History struct {
 }
 
 // New builds the history layer. maxTokens caps the estimated token footprint
-// of the messages sent per turn (0 = no token cap); the message-count cap
-// applies regardless.
+// per turn (0 = uncapped); the message-count cap applies regardless.
 func New(s *store.Store, systemPrompt string, maxTokens int) (*History, error) {
 	h := &History{store: s, system: systemPrompt, max: defaultMaxMessages, maxTokens: maxTokens}
 	if err := h.loadCurrent(); err != nil {
@@ -33,9 +32,8 @@ func New(s *store.Store, systemPrompt string, maxTokens int) (*History, error) {
 	return h, nil
 }
 
-// estimateTokens is a deliberately conservative cross-language guess
-// (~1 token per 3 bytes): English runs ~4 bytes/token, Japanese ~3, so
-// overshooting keeps us safely inside the model's real window.
+// Deliberately overshoots: English runs ~4 bytes/token and Japanese ~3, so
+// guessing 3 keeps the result inside the model's real window either way.
 func estimateTokens(s string) int {
 	return len(s)/3 + 1
 }
@@ -193,11 +191,9 @@ func (h *History) RemoveLast() {
 	_ = h.store.RemoveLastMessage(h.convID)
 }
 
-// AddAssistantTo persists an assistant reply to a specific conversation,
-// regardless of which one is currently loaded, so a long streaming turn lands
-// in the conversation it started on even if another request switched the
-// current pointer meanwhile. The in-memory cache is only touched when that
-// conversation is still the current one.
+// AddAssistantTo targets a conversation explicitly so a long streaming turn
+// lands where it started even if another request switched the current
+// pointer meanwhile.
 func (h *History) AddAssistantTo(convID int64, content string) error {
 	if convID == 0 {
 		return nil
@@ -326,8 +322,7 @@ func (h *History) truncateLocked() {
 			h.messages = h.messages[drop:]
 		}
 	}
-	// Anthropic rejects a list that opens with an assistant message; after
-	// any trimming, make a user message lead.
+	// Anthropic rejects a list that opens with an assistant message.
 	lead := 0
 	for lead < len(h.messages)-1 && h.messages[lead].Role != "user" {
 		lead++

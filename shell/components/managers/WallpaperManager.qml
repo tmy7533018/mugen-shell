@@ -160,9 +160,8 @@ QtObject {
         mkdirProcess.command = ["mkdir", "-p", thumbDir]
         mkdirProcess.running = true
 
-        // Eagerly populate `wallpapers` so consumers (UI picker, IPC tools)
-        // don't observe an empty list until the picker is opened for the
-        // first time. The scan is a single async find — cost is negligible.
+        // Populate eagerly so IPC consumers don't see an empty list before
+        // the picker is opened for the first time.
         loadWallpapers()
 
         isInitialized = true

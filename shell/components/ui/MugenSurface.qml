@@ -7,8 +7,8 @@ Rectangle {
     property var theme
     property bool gradientEnabled: true
 
-    // Gate only on gradientEnabled: reading the surface's effective `visible`
-    // here forms a binding loop (it is opacity-driven under the Yura panel's mask).
+    // Must not read the effective `visible` here: under the Yura panel's mask it
+    // is opacity-driven, which forms a binding loop.
     readonly property bool gradientsAnimating: gradientEnabled
 
     readonly property color darkBase: Qt.rgba(20/255, 22/255, 26/255, 0.82)
@@ -20,8 +20,7 @@ Rectangle {
     property color baseColor: (theme && theme.themeMode === "light") ? lightBase : darkBase
     property color borderColor: (theme && theme.themeMode === "light") ? lightBorderColor : darkBorderColor
 
-    // Multiplied into every animated gradient stop's opacity. Used to dim the
-    // sliding accent gradients in dark mode so they don't fight the deep base.
+    // Dims the sliding accent gradients in dark mode so they don't fight the deep base.
     property real gradientStrength: (theme && theme.themeMode === "dark") ? 0.75 : 1.0
 
     property color gradientColor1: Qt.rgba(0.65, 0.55, 0.85, 1.0)
@@ -35,7 +34,7 @@ Rectangle {
         var s = Math.min(1.0, darkened.hslSaturation * 2.2);
         var l = Math.max(0.15, darkened.hslLightness);
 
-        // Shift hue (+0.08 ~29deg) to differentiate from wallpaper
+        // Hue shift (~29deg) so the surface reads as distinct from the wallpaper
         h = (h + 0.08) % 1.0;
 
         return Qt.hsla(h, s, l, 1.0);
@@ -46,7 +45,7 @@ Rectangle {
         var s = Math.min(0.6, baseColor.hslSaturation * 1.5);
         var l = Math.min(0.5, baseColor.hslLightness * 0.7);
 
-        // Shift hue (+0.08 ~29deg) to differentiate from wallpaper
+        // Hue shift (~29deg) so the surface reads as distinct from the wallpaper
         h = (h + 0.08) % 1.0;
 
         return Qt.hsla(h, s, l, 1.0);
@@ -102,7 +101,6 @@ Rectangle {
     property color enhancedGradient2: _cachedGradient2
     property color enhancedGradient3: _cachedGradient3
 
-    // Fade out opacity when gradient stop position is outside [0,1] range
     function calculateStopOpacity(position, baseOpacity) {
         var scaled = baseOpacity * gradientStrength;
 
@@ -112,11 +110,12 @@ Rectangle {
 
         var distance = position < 0.0 ? -position : position - 1.0;
 
-        // Linear fade: fully transparent beyond 0.2 distance (5.0 = 1/0.2)
+        // 5.0 = 1/0.2, so the fade reaches fully transparent at 0.2 distance
         return distance > 0.2 ? 0.0 : scaled * (1.0 - distance * 5.0);
     }
 
-    // Allow positions slightly beyond [0,1] for smooth edge transitions
+    // Overshoots [0,1] on purpose: stops must keep sliding past the edge so
+    // calculateStopOpacity can fade them out, which clamping to [0,1] prevents.
     function clampPosition(position) {
         return Math.max(-0.1, Math.min(1.1, position));
     }

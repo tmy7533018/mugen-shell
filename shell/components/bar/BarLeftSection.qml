@@ -284,8 +284,6 @@ RowLayout {
         Layout.leftMargin: 0
         Layout.rightMargin: 0
 
-        // The orb itself is the bar icon (no separate glyph), so it stays
-        // active and drives every Yura state off its own properties below.
         Ai.AmbientOrb {
             id: aiOrb
             anchors.centerIn: parent

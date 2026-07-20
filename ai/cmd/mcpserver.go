@@ -15,10 +15,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// mcpServerCmd bridges a stdio MCP client (Claude Desktop, Cursor, ...) to
-// the running daemon's /mcp endpoint. A thin proxy instead of a standalone
-// server keeps one tool registry, one SQLite handle, and one audit log — the
-// daemon stays the single place shell state is touched from.
+// A thin proxy rather than a standalone server, so there stays exactly one
+// tool registry, one SQLite handle and one audit log: the daemon is the only
+// place shell state is touched from.
 var mcpServerCmd = &cobra.Command{
 	Use:   "mcp-server",
 	Short: "Expose mugen-shell tools to stdio MCP clients via the running daemon",
@@ -46,8 +45,8 @@ func init() {
 
 func runMCPServer(_ *cobra.Command, _ []string) error {
 	endpoint := fmt.Sprintf("http://127.0.0.1:%d/mcp", mcpServerPort)
-	// Generous timeout: a tools/call can sit behind a slow qs IPC round-trip,
-	// and MCP clients apply their own deadlines on top.
+	// A tools/call can sit behind a slow qs IPC round-trip, and MCP clients
+	// apply their own deadlines on top.
 	client := &http.Client{Timeout: 120 * time.Second}
 
 	in := bufio.NewReaderSize(os.Stdin, 1<<20)
@@ -60,17 +59,15 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 		}
 		if err != nil {
 			if err == io.EOF {
-				return nil // client closed our stdin; normal shutdown
+				return nil
 			}
 			return err
 		}
 	}
 }
 
-// bridgeForward POSTs one JSON-RPC message to the daemon and returns the
-// bytes to write back to the client, nil when nothing is due. Failures reach
-// the client as JSON-RPC errors (when the message was a request) so it shows
-// a reason instead of hanging.
+// Returns nil when nothing is due back to the client. Failures are returned
+// as JSON-RPC errors so the client shows a reason instead of hanging.
 func bridgeForward(client *http.Client, endpoint string, msg []byte) []byte {
 	var probe struct {
 		ID     json.RawMessage `json:"id"`

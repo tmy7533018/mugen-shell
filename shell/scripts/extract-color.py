@@ -103,7 +103,6 @@ def extract_dominant_color(image_path):
 
     width, height = img.size
 
-    # Sample the center 20% region
     sample_ratio = 0.2
     left = int(width * (0.5 - sample_ratio))
     top = int(height * (0.5 - sample_ratio))

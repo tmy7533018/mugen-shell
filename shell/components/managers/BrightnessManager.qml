@@ -9,9 +9,8 @@ QtObject {
     property bool detected: false
     property bool hasSyncedOnce: false
 
-    // Fired only on user-initiated changes (slider/wheel/arrow/hotkey-poll),
-    // not on the initial startup sync. Used to arm the brightness panel's
-    // auto-close timer.
+    // Never fires for the initial startup sync, so the brightness panel's
+    // auto-close timer only arms on real user changes.
     signal userChanged()
 
     function refresh() {
@@ -58,8 +57,6 @@ QtObject {
             }
             let alreadySynced = brightnessManager.hasSyncedOnce
             brightnessManager.hasSyncedOnce = true
-            // External change (e.g. hardware brightness key) caught by poll
-            // counts as a user action — but suppress the initial startup sync.
             if (alreadySynced && oldValue !== brightnessManager.brightness) {
                 brightnessManager.userChanged()
             }

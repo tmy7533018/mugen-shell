@@ -94,7 +94,7 @@ Item {
         color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
         opacity: root.hovered ? 1.0 : 0.6
         
-        // Scale applied here instead of root to avoid scaling the blob
+        // Scaled here, not on root, so the blob doesn't scale with it
         scale: root.hoverScale * root.pulseScale
 
         Behavior on opacity {

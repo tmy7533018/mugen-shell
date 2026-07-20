@@ -61,7 +61,6 @@ ColumnLayout {
                 
                 PauseAnimation { duration: 2500 }
 
-                // Move by 1/3 of total width for a seamless loop
                 NumberAnimation {
                     from: 0
                     to: -(titleText.width / 3)

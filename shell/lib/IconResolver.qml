@@ -6,8 +6,8 @@ QtObject {
 
     property string iconTheme: ""
 
-    // Icon roots derived from XDG_DATA_DIRS instead of a hardcoded
-    // /usr/share, so lookup works on FHS distros and NixOS alike.
+    // From XDG_DATA_DIRS rather than a hardcoded /usr/share, so lookup works
+    // on NixOS as well as FHS distros.
     readonly property var dataDirs: {
         let dirs = []
         const home = Quickshell.env("HOME") || ""
@@ -53,7 +53,7 @@ QtObject {
                 paths.push(themeBase + "/64x64/devices/" + baseName + ".png")
                 paths.push(themeBase + "/48x48/devices/" + baseName + ".png")
 
-                // Some themes use reversed directory structure (apps/scalable/ instead of scalable/apps/)
+                // Some themes reverse the nesting: apps/scalable/, not scalable/apps/
                 paths.push(themeBase + "/apps/scalable/" + baseName + ".svg")
                 paths.push(themeBase + "/apps/48/" + baseName + ".svg")
             }

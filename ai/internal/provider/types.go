@@ -6,12 +6,10 @@ type Message struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 
-	// Set on assistant messages that requested tool calls.
 	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
 
-	// Set on role="tool" messages that report a tool result back. The id
-	// must match the ToolCall.ID assigned by the provider in the prior
-	// assistant message.
+	// Must match the ToolCall.ID the provider assigned in the prior assistant
+	// message.
 	ToolCallID string `json:"tool_call_id,omitempty"`
 	ToolName   string `json:"tool_name,omitempty"`
 }
@@ -30,8 +28,8 @@ type ToolCall struct {
 
 type ChatOptions struct {
 	Tools []Tool
-	// Thinking enables thinking models' reasoning channel (qwen3 etc.).
-	// Currently honored by ollama; other providers ignore it.
+	// Thinking enables the model's reasoning channel; models without one
+	// ignore it.
 	Thinking bool
 }
 

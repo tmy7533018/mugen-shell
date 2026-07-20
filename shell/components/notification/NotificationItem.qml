@@ -19,7 +19,6 @@ Rectangle {
     signal actionRequested(var notif)
     
     width: parent ? parent.width : 0
-    // Ignore expansion height changes while removal animation is running
     height: shouldCollapseHeight ? 0 : (isExpanded && !notificationItem.isRemoving ? contentColumn.implicitHeight + 24 : 65)
     color: theme ? theme.surfaceInsetCard : Qt.rgba(0, 0, 0, 0.65)
     radius: isExpanded ? 20 : 32.5
@@ -29,7 +28,7 @@ Rectangle {
     property bool isExpanded: notificationItem.ListView.isCurrentItem && !notificationItem.isRemoving
     property bool showFullText: isExpanded
 
-    // Delay text collapse to prevent visual flicker during hover transitions
+    // Delayed so quick hover in/out doesn't flicker the text
     Timer {
         id: collapseTextTimer
         interval: 250
@@ -60,7 +59,7 @@ Rectangle {
     
     property bool shouldCollapseHeight: false
 
-    // Brief delay before collapsing height so fade-out starts visibly first
+    // Delayed so the fade-out is visible before the height collapse eats it
     Timer {
         id: collapseHeightTimer
         interval: 150

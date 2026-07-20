@@ -12,19 +12,15 @@ import (
 	"time"
 )
 
-// DesktopContext snapshots live desktop state (active window, playing
-// media, volume, notifications, timer, today's calendar, theme) through
-// the same IPC / script layer the tools use, formatted as a compact block
-// for a transient system message. Fields whose tool category is disabled
-// are omitted — a category the user switched off should be invisible to
-// the model as data too, not just as actions. Anything that errors or
-// times out is silently dropped: a missing line is worth more than a
-// stalled chat turn. Returns "" when nothing could be collected.
+// DesktopContext snapshots live desktop state as a compact block for a
+// transient system message. Fields whose tool category is disabled are omitted:
+// a category the user switched off must be invisible as data too, not just as
+// actions. Anything that errors or times out is silently dropped, because a
+// missing line beats a stalled chat turn.
 func (r *Registry) DesktopContext(ctx context.Context) string {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	// One PID resolve shared by every qs call below.
 	pid := r.resolveQsPID(ctx)
 	ipc := func(target, fn string) (string, bool) {
 		args := []string{"-c", r.qsConfig, "ipc", "call", target, fn}
@@ -203,8 +199,7 @@ func (r *Registry) DesktopContext(ctx context.Context) string {
 	return sanitizeForLLM(strings.TrimSuffix(b.String(), "\n"))
 }
 
-// clip truncates on a rune boundary so multi-byte titles don't split
-// mid-character.
+// Truncates on a rune boundary so multi-byte titles don't split mid-character.
 func clip(s string, max int) string {
 	rs := []rune(s)
 	if len(rs) <= max {

@@ -34,8 +34,7 @@ Rectangle {
 
         ColumnLayout {
             Layout.fillWidth: true
-            // 0 minimum lets the column shrink under the long description;
-            // elide on the texts keeps the pill from being pushed off-screen.
+            // Without a 0 minimum the long description pushes the pill off-screen.
             Layout.minimumWidth: 0
             spacing: 2
 

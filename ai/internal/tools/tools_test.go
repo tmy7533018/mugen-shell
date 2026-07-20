@@ -142,9 +142,6 @@ func TestSanitizeForLLM(t *testing.T) {
 	}
 }
 
-// fakeRun stands in for the Registry's exec: it records the last command it
-// was handed and returns a canned result, so Call's dispatch and audit paths
-// can be exercised without spawning a subprocess.
 type fakeRun struct {
 	name   string
 	args   []string
@@ -160,9 +157,7 @@ func (f *fakeRun) run(_ context.Context, name string, args []string) (string, er
 	return f.result, f.err
 }
 
-// newTestRegistry builds a Registry wired for tests: a fake exec, no app
-// resolver (so app_launch never touches real .desktop files), and an auditor
-// writing to a temp file whose path is returned.
+// r.apps is nilled so app_launch never touches real .desktop files.
 func newTestRegistry(t *testing.T, allowedApps, disabledCategories []string) (*Registry, *fakeRun, string) {
 	t.Helper()
 	auditPath := filepath.Join(t.TempDir(), "audit.log")
@@ -329,8 +324,6 @@ func TestCallAppLaunchAllowed(t *testing.T) {
 
 func TestCallMCPNotConnected(t *testing.T) {
 	r, fr, _ := newTestRegistry(t, nil, nil)
-	// An MCP-kind tool with no Manager attached: the mcp dispatch path must
-	// report the server as unavailable rather than panic on a nil Manager.
 	r.tools = append(r.tools, Tool{
 		Name:       "memory__store",
 		Parameters: emptyParams(),
@@ -373,8 +366,7 @@ func TestCallAuditLog(t *testing.T) {
 }
 
 func TestCallConcurrent(t *testing.T) {
-	// A stateless run, so `go test -race` flags a race in the Registry's
-	// locking rather than in the test's own fake.
+	// Stateless run, so -race flags the Registry's locking, not the fake.
 	r := New("mugen-shell", "/scripts", nil, nil, NewAuditor(filepath.Join(t.TempDir(), "audit.log")))
 	r.apps = nil
 	r.run = func(context.Context, string, []string) (string, error) { return "ok", nil }

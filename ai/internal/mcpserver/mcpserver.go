@@ -1,9 +1,8 @@
 // Package mcpserver publishes mugen-ai's own tools as a Model Context
-// Protocol server, so external MCP clients (Claude Desktop, Cursor, generic
-// HTTP clients) can drive mugen-shell. It implements the request subset a
-// tools-only server needs — initialize / ping / tools/list / tools/call —
-// over stateless Streamable HTTP: one JSON-RPC message per POST, JSON
-// response mode, no sessions, no server-initiated streams.
+// Protocol server. It implements only the subset a tools-only server needs —
+// initialize / ping / tools/list / tools/call — over stateless Streamable
+// HTTP: one JSON-RPC message per POST, no sessions, no server-initiated
+// streams.
 package mcpserver
 
 import (
@@ -17,12 +16,11 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
 
-// protocolVersion is what we advertise when the client's requested revision
-// is unknown to us. The shapes served here are identical across recent
-// revisions, so we echo the client's version when it asks for another one.
+// Only a fallback: the shapes served here are identical across recent
+// revisions, so the client's requested revision is echoed back instead.
 const protocolVersion = "2025-06-18"
 
-const maxMessageBytes = 1 << 20 // 1MB; tool args are small, this is headroom
+const maxMessageBytes = 1 << 20 // tool args are small, this is headroom
 
 // ToolSource is the slice of tools.Registry the server needs, an interface
 // so tests can fake tool execution instead of exec'ing real commands.
@@ -46,8 +44,7 @@ func New(src ToolSource, readonly bool, categories []string, version string) *Ha
 	return &Handler{src: src, readonly: readonly, categories: categories, version: version}
 }
 
-// Exposed returns the currently publishable tools (for startup logging and
-// the tools/list reply).
+// Exposed returns the currently publishable tools.
 func (h *Handler) Exposed() []tools.Tool {
 	return h.src.ExposedTools(h.readonly, h.categories)
 }
@@ -91,16 +88,14 @@ func (h *Handler) HandleMessage(ctx context.Context, raw []byte) []byte {
 	if err := json.Unmarshal(trimmed, &msg); err != nil {
 		return marshalResponse(rpcResponse{JSONRPC: "2.0", ID: nullID(), Error: &rpcError{codeParse, "parse error: " + err.Error()}})
 	}
-	// A message without a method is a response to a server request; we never
-	// send any, so there is nothing to route it to.
+	// A message without a method is a response to a server request, and this
+	// server never sends any.
 	if msg.Method == "" {
 		return nil
 	}
-	// A request without an id is a notification. Only genuine notifications
-	// (notifications/*) are legal without an id; anything else — notably a
+	// Only notifications/* are legal without an id; anything else — notably a
 	// tools/call missing its id — must not run its side effects fire-and-
-	// forget, so reject it instead of dispatching. This gates execution, not
-	// just the reply.
+	// forget. This gates execution, not just the reply.
 	if len(msg.ID) == 0 || string(msg.ID) == "null" {
 		if strings.HasPrefix(msg.Method, "notifications/") {
 			h.dispatch(ctx, msg)
@@ -132,8 +127,8 @@ func (h *Handler) dispatch(ctx context.Context, msg rpcMessage) (any, *rpcError)
 }
 
 func (h *Handler) initialize(params json.RawMessage) map[string]any {
-	// Echo the client's requested protocol revision — the subset served here
-	// is shape-identical across revisions, so refusing one buys nothing.
+	// The subset served here is shape-identical across revisions, so
+	// refusing the client's requested one buys nothing.
 	version := protocolVersion
 	var p struct {
 		ProtocolVersion string `json:"protocolVersion"`
@@ -174,8 +169,8 @@ func (h *Handler) callTool(ctx context.Context, params json.RawMessage) (any, *r
 	if err := json.Unmarshal(params, &p); err != nil || p.Name == "" {
 		return nil, &rpcError{codeInvalidParams, "tools/call needs a tool name"}
 	}
-	// The gate that matters: only tools in the exposed subset are callable,
-	// no matter what else the registry knows about.
+	// The gate that matters: only the exposed subset is callable, no matter
+	// what else the registry knows about.
 	found := false
 	for _, t := range h.Exposed() {
 		if t.Name == p.Name {
@@ -206,9 +201,8 @@ func (h *Handler) callTool(ctx context.Context, params json.RawMessage) (any, *r
 	}, nil
 }
 
-// ServeHTTP implements the Streamable HTTP transport in its stateless JSON
-// response mode: requests answer with application/json, notifications with
-// 202. GET (server-initiated stream) is not offered.
+// Stateless JSON response mode: requests answer with application/json,
+// notifications with 202. GET (server-initiated stream) is not offered.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)

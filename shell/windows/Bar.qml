@@ -18,8 +18,8 @@ PanelWindow {
     anchors.left: true
     anchors.right: true
 
-    // Overlay layer so panels can ride above fullscreen apps; while a panel
-    // isn't open we hide entirely so the fullscreen app keeps every pixel.
+    // Overlay so panels ride above fullscreen apps; with no panel open the bar
+    // hides entirely so the fullscreen app keeps every pixel.
     WlrLayershell.layer: WlrLayer.Overlay
 
     readonly property var hyprMonitor: barWindow.screen
@@ -59,8 +59,8 @@ PanelWindow {
                 return
             }
 
-            // Music shortcuts handled here — per-panel Keys handlers don't fire
-            // because escKeyHandler owns active focus while a panel is open.
+            // Per-panel Keys handlers never fire: escKeyHandler owns active
+            // focus while a panel is open.
             if (modeManager.isMode("music") && musicPlayerManager) {
                 if (event.key === Qt.Key_Space) {
                     musicPlayerManager.playPause()
@@ -101,7 +101,7 @@ PanelWindow {
         target: modeManager
         function onCurrentModeChanged() {
             if (!modeManager.isMode("normal") && modeManager.openedViaIpc) {
-                // PanelWindow has no requestActivate() — focusable + FocusGrab
+                // PanelWindow has no requestActivate(); focusable + FocusGrab
                 // give the surface keyboard focus, then push it inward.
                 Qt.callLater(() => {
                     escKeyHandler.forceActiveFocus()
@@ -112,11 +112,8 @@ PanelWindow {
 
     property alias notificationManager: notificationManager
 
-    // Auto-close any open mode after idle. AI only counts down while the
-    // conversation is quiet — no streamed reply, no unsent draft, no voice
-    // turn — so the countdown starts fresh once the exchange finishes.
-    // yuraFloatThinking covers the voice turn's LLM phase and float-driven
-    // streams mirrored into the pill; yuraSpeaking covers TTS playback.
+    // AI only counts down toward auto-close while the conversation is quiet:
+    // no streamed reply, no unsent draft, no voice turn still in flight.
     readonly property bool aiQuiet: !yuraListening && !yuraSpeaking && !yuraFloatThinking
         && (!aiAssistantLoader.item
             || (!aiAssistantLoader.item.streaming && !aiAssistantLoader.item.hasDraft))
@@ -168,7 +165,7 @@ PanelWindow {
 
         onCompleted: {
             // Don't yank focus from another open panel. viaIpc activates
-            // HyprlandFocusGrab so the bar actually receives keyboard focus.
+            // HyprlandFocusGrab so the bar actually gets keyboard focus.
             if (modeManager.isMode("normal")) {
                 modeManager.switchMode("timer", true)
             }
@@ -235,15 +232,11 @@ PanelWindow {
         timerManager: timerManager
     }
 
-    // Float Yura runs as a separate quickshell process; it mirrors its
-    // streaming state here so the bar's assistant icon can animate while
-    // she thinks. Not an LLM tool — shell-internal only.
+    // Float Yura runs as a separate quickshell process and mirrors its state
+    // here over IPC; yurad (voice daemon) reports capture and playback the
+    // same way, so auto-close waits for a spoken read-out.
     property bool yuraFloatThinking: false
-
-    // Voice daemon (yurad) reports wake-word capture the same way.
     property bool yuraListening: false
-
-    // And the spoken-reply playback, so auto-close waits for the read-out.
     property bool yuraSpeaking: false
 
     IpcHandler {
@@ -263,9 +256,8 @@ PanelWindow {
             if (on) yuraSpeakingFailsafe.restart()
             else yuraSpeakingFailsafe.stop()
         }
-        // Voice turns run in the daemon, not the bar's own chat process;
-        // these mirror the transcript / spoken reply into the Spotlight
-        // pill so a voice exchange reads like a typed one.
+        // Voice turns run in the daemon, not the bar's own chat process, so
+        // the transcript and reply have to be mirrored into the pill.
         function voice_input(text: string): void {
             if (aiAssistantLoader.item) aiAssistantLoader.item.showVoiceInput(text)
         }
@@ -274,8 +266,8 @@ PanelWindow {
         }
     }
 
-    // If yura-shell dies mid-stream its clearing IPC never arrives; drop the
-    // icon glow after a generous ceiling instead of animating forever.
+    // If yura-shell dies mid-stream its clearing IPC never arrives, so the
+    // icon would glow forever.
     Timer {
         id: yuraThinkingFailsafe
         interval: 15 * 60 * 1000
@@ -382,7 +374,6 @@ PanelWindow {
         gradientEnabled: settingsManager.barGradientEnabled
     }
 
-    // Clip container prevents icons from overflowing during bar transitions
     Item {
         id: contentClipContainer
         anchors.fill: parent
@@ -425,8 +416,8 @@ PanelWindow {
         property bool isFirstShow: true
 
         opacity: 0
-        // NOTE: Do not bind visible directly -- it breaks the binding and causes
-        // a permanently empty bar. Use opacity for display control instead.
+        // Never bind visible here — it breaks the binding and leaves the bar
+        // permanently empty. Drive display through opacity instead.
         enabled: modeManager.isMode("normal")
 
         Component.onCompleted: {

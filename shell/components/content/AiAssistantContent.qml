@@ -18,21 +18,18 @@ FocusScope {
     property var settingsManager
     property var aiBackend
     property bool isStandalone: false
-    // Daemon capture state (over IPC); the mic button becomes a cancel button.
+    // Driven over IPC by yurad, never locally.
     property bool voiceListening: false
     property bool voiceSpeaking: false
-    // Cancel is meaningful during capture AND while the reply plays.
     readonly property bool voiceActive: voiceListening || voiceSpeaking
     onVoiceListeningChanged: voiceListening ? listenCava.start() : listenCava.stop()
 
-    // Private instance: the volume panel owns the shared one and stops it
-    // on its own schedule, which would kill our capture visuals mid-listen.
+    // Private instance: the volume panel stops the shared one on its own
+    // schedule, which would kill these capture visuals mid-listen.
     Managers.MicCavaManager { id: listenCava }
 
-    // Fallback used when no AiBackend is wired (e.g. legacy embedding paths).
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://127.0.0.1:11435"
 
-    // Spotlight-style: normal bar height, wide centered slot.
     readonly property var requiredBarSize: ({
         "height": modeManager.scale(60),
         "leftMargin": modeManager.scale(620),
@@ -42,9 +39,8 @@ FocusScope {
     })
 
     property bool streaming: false
-    // True while the input pill holds an unsent user draft (or a voice
-    // transcript mid-turn) — parked responses don't count. Bar.qml blocks
-    // the auto-close timer on this so closing never eats unsent text.
+    // Bar.qml blocks its auto-close timer on this, so closing never eats
+    // unsent text. Parked responses deliberately don't count.
     readonly property bool hasDraft: inputField.text.trim().length > 0 && !displayingResponse
     property bool aiAvailable: false
     property bool hasModel: false
@@ -52,15 +48,13 @@ FocusScope {
     property string currentModel: ""
     property int currentConvId: 0
 
-    // While streaming, partial reply lives in the placeholder. On done we
-    // shove the full text into the input field (read-only) so arrow keys
+    // A finished reply is parked in the input field read-only so arrow keys
     // scroll it; the first printable keypress flips back to typing mode.
     property string responseDisplay: ""
     property bool displayingResponse: false
 
-    // Set from a tool_confirm SSE event while the backend is blocked waiting
-    // for approval of a destructive MCP tool. Shape: { confirm_id, name,
-    // arguments }. While set, a confirm strip covers the input pill.
+    // Set from a tool_confirm SSE event while the backend blocks on approval
+    // of a destructive MCP tool. Shape: { confirm_id, name, arguments }.
     property var pendingConfirm: null
 
     readonly property string idlePlaceholder: {
@@ -71,8 +65,7 @@ FocusScope {
     }
     readonly property bool isThinking: streaming && responseDisplay.length === 0
 
-    // Mirror of yurad's clean_for_speech: the one-line pill can't render
-    // markdown, so show replies as plain prose.
+    // Mirrors yurad's clean_for_speech; the one-line pill can't render markdown.
     function mdFlat(t) {
         return t.replace(/```[\s\S]*?```/g, " ")
                 .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
@@ -84,7 +77,6 @@ FocusScope {
     readonly property string activePlaceholder: {
         if (isThinking) return "thinking"
         if (responseDisplay.length > 0) {
-            // Single-line bar: collapse newlines.
             return mdFlat(responseDisplay)
         }
         return idlePlaceholder
@@ -112,14 +104,11 @@ FocusScope {
         if (!streaming) return
         chatProcess.signal(15) // SIGTERM
         streaming = false
-        // A stopped turn drops its blocked tool prompt; the backend reads
-        // the disconnect as a denial, so the strip goes with it.
+        // The backend reads the disconnect as a denial, so the strip goes too.
         pendingConfirm = null
     }
 
-    // resolveConfirm answers a pending tool-approval prompt so the blocked
-    // chat turn can run or skip the tool. Fire-and-forget — a lapsed prompt
-    // just 404s harmlessly.
+    // Fire-and-forget: a lapsed prompt just 404s harmlessly.
     function resolveConfirm(approved) {
         if (!pendingConfirm) return
         confirmProcess.payload = JSON.stringify({
@@ -139,9 +128,6 @@ FocusScope {
         // Backend auto-creates a conversation on the first user message.
     }
 
-    // Voice mirroring (IPC from yurad): transcript sits in the input field
-    // while Yura thinks, then the reply grows sentence-by-sentence in sync
-    // with the spoken audio and parks like a typed turn's response.
     function showVoiceInput(text) {
         responseDisplay = ""
         displayingResponse = false
@@ -179,7 +165,6 @@ FocusScope {
     }
 
 
-    // Click outside the panel to dismiss the AI mode.
     MouseArea {
         anchors.fill: parent
         z: 1.5
@@ -230,7 +215,6 @@ FocusScope {
             anchors.bottomMargin: modeManager.scale(8)
             spacing: modeManager.scale(12)
 
-            // Click to detach into Yura's corner-popup window.
             Item {
                 id: orbSlot
                 Layout.preferredWidth: modeManager.scale(36)
@@ -264,10 +248,9 @@ FocusScope {
                     cursorShape: Qt.PointingHandCursor
                     enabled: !root.isStandalone
                     onClicked: {
-                        // Capture screen coords before closeAllModes starts
-                        // shrinking the bar. The bar window sits at the screen
-                        // origin and the yura window ignores exclusion zones,
-                        // so window coords map 1:1 between the two.
+                        // Must read coords before closeAllModes shrinks the bar.
+                        // The bar window sits at the screen origin and the yura
+                        // window ignores exclusion zones, so coords map 1:1.
                         const p = orbSlot.mapToItem(null, 0, 0)
                         modeManager.closeAllModes()
                         Theme.Hypr.exec("qs -p ~/.config/quickshell/mugen-shell/yura-shell.qml ipc call yura toggleFrom "
@@ -313,7 +296,7 @@ FocusScope {
                     readOnly: root.displayingResponse
                     cursorVisible: true
 
-                    // Single-char arrow moves rarely scroll the 1-row view; jump in chunks.
+                    // Single-char arrow moves rarely scroll the 1-row view.
                     readonly property int navStep: 25
 
                     Keys.onPressed: (event) => {
@@ -324,8 +307,8 @@ FocusScope {
                         }
 
                         if (root.displayingResponse) {
-                            // Scrolling a parked reply is reading, not idleness:
-                            // keep the auto-close countdown from firing mid-read.
+                            // Scrolling a parked reply is reading, not idleness;
+                            // keeps auto-close from firing mid-read.
                             modeManager.bump()
                             let pos = inputField.cursorPosition
                             let len = inputField.text.length
@@ -365,7 +348,6 @@ FocusScope {
                                     return
                                 }
                             }
-                            // Ignore modifier-only / function keys (event.text is empty).
                             if (!event.text || event.text.length === 0) {
                                 event.accepted = true
                                 return
@@ -437,8 +419,7 @@ FocusScope {
                     }
                 }
 
-                // While the daemon listens, the pill breathes with the mic:
-                // an animating slot so the input text yields the space
+                // An animating slot, so the input text yields the space
                 // smoothly instead of being painted over.
                 Item {
                     id: listenViz
@@ -466,7 +447,6 @@ FocusScope {
                     }
                 }
 
-                // Same push-to-talk / cancel control as the float panel.
                 Item {
                     id: micIcon
                     anchors.right: sendIcon.left
@@ -578,9 +558,6 @@ FocusScope {
                     }
                 }
 
-                // Tool-approval strip — covers the input pill while the
-                // backend is blocked on a destructive MCP tool. Approve /
-                // Deny answers it; the args are summarised on one line.
                 Rectangle {
                     id: confirmStrip
                     anchors.fill: parent
@@ -705,7 +682,6 @@ FocusScope {
         }
     }
 
-    // Posts an approval decision for a pending tool_confirm prompt.
     Process {
         id: confirmProcess
         property string payload: ""
@@ -742,16 +718,12 @@ FocusScope {
                         root.responseDisplay = "[error: " + obj.error + "]"
                         return
                     }
-                    // A destructive MCP tool blocks the turn until approved;
-                    // the strip must show even on the one-line bar.
                     if (obj.tool_confirm) {
                         root.pendingConfirm = obj.tool_confirm
                         return
                     }
-                    // bar Spotlight is a one-line UX; tool calls / results
-                    // are dropped here — the LLM's surrounding text already
-                    // narrates the action ("音量を 30 にしたよ"). The
-                    // floating AI surfaces them as chips instead.
+                    // Dropped on purpose: the reply text already narrates the
+                    // action, and this bar is one line. The float shows chips.
                     if (obj.tool_calls || obj.tool_result) {
                         return
                     }
@@ -764,13 +736,13 @@ FocusScope {
 
         onExited: (exitCode) => {
             root.streaming = false
-            // The stream can end (timeout, error) with the strip still up;
-            // never leave a prompt the backend has already abandoned.
+            // A timed-out stream can leave the strip up on a prompt the
+            // backend has already abandoned.
             root.pendingConfirm = null
             if (exitCode !== 0 && root.responseDisplay.length === 0) {
                 root.responseDisplay = "[connection failed]"
             }
-            // Park the response in the input field so it can be scrolled / copied.
+            // Parked in the input field so it can be scrolled / copied.
             if (root.responseDisplay.length > 0) {
                 inputField.text = root.mdFlat(root.responseDisplay)
                 inputField.cursorPosition = 0

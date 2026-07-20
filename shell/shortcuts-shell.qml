@@ -1,9 +1,5 @@
-// Standalone Quickshell entry for the keyboard shortcuts reference window.
-// Launched as a separate process so its rendering can't compete with the
-// main mugen-shell render thread.
-//
-// Run with:
-//   quickshell -p $HOME/.config/quickshell/mugen-shell/shortcuts-shell.qml -d -n
+// A separate process so its rendering can't compete with the main
+// mugen-shell render thread.
 
 //@ pragma UseQApplication
 

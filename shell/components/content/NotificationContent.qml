@@ -73,9 +73,9 @@ Item {
                     })
                 }
             } else {
-                // Same rows in the same order, but mutable fields (the relative
-                // "x mins ago" label) change on the tick — push the current
-                // objects so delegates re-read them instead of freezing.
+                // Same rows in the same order, but the relative "x mins ago"
+                // label mutates on each tick, so delegates need a re-push or
+                // they freeze.
                 for (let i = 0; i < notifications.length; i++) {
                     notificationListModel.set(i, {
                         "modelData": notifications[i]

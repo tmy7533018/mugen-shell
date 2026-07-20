@@ -294,7 +294,6 @@ QtObject {
                         }
                     }
 
-                    // Treat MAC-address-shaped names as unnamed
                     if (deviceName && deviceName.match(/^[0-9A-Fa-f]{2}(?:[:-][0-9A-Fa-f]{2}){5}$/)) {
                         deviceName = ""
                     }
@@ -306,7 +305,6 @@ QtObject {
                         "paired": isPaired
                     })
 
-                    // Reassign slice to trigger QML reactive update
                     bluetoothManager.availableDevices = bluetoothScanProcess.devices.slice()
 
                     if (!deviceName || deviceName === address || deviceName.match(/^[0-9A-Fa-f]{2}(?:[:-][0-9A-Fa-f]{2}){5}$/)) {
@@ -367,7 +365,6 @@ QtObject {
 
         onExited: (code, status) => {
             bluetoothManager.isScanning = false
-            // Reassign slice to trigger QML reactive update
             bluetoothManager.availableDevices = bluetoothScanProcess.devices.slice()
             if (bluetoothManager.availableDevices.length > 0) {
                 let devicesToFetch = []
@@ -527,7 +524,6 @@ QtObject {
                     for (let i = 0; i < bluetoothManager.availableDevices.length; i++) {
                         if (bluetoothManager.availableDevices[i].address === deviceNameProcess.deviceAddress) {
                             bluetoothManager.availableDevices[i].name = name
-                            // Reassign slice to trigger QML reactive update
                             bluetoothManager.availableDevices = bluetoothManager.availableDevices.slice()
                             break
                         }

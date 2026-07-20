@@ -1,7 +1,6 @@
-// Full self-loop test: mugen-ai's MCP *server* (mcpserver.Handler over
-// Streamable HTTP) consumed by mugen-ai's MCP *client* (Manager over
-// httpTransport). An external test package so the mcp ← tools ← mcpserver
-// import chain stays acyclic.
+// Self-loop test: mugen-ai's MCP server consumed by its own MCP client. An
+// external test package so the mcp ← tools ← mcpserver import chain stays
+// acyclic.
 package mcp_test
 
 import (

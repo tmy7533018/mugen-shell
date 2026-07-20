@@ -25,20 +25,16 @@ Rectangle {
     property bool saving: false
     property string statusText: ""
 
-    // servers: editable definitions from config — [{name, command, args[], env{}, disabled}].
-    // statusByName: live runtime status from /mcp/servers, keyed by name.
     property var servers: []
     property var statusByName: ({})
     property bool dirty: false
 
-    // Add-server form state.
     property bool addingServer: false
     property string formName: ""
     property string formCommand: ""
     property string formUrl: ""
     property string formEnv: ""
 
-    // Installed-server candidates from GET /mcp/discover.
     property var discoverCandidates: []
     property bool discovered: false
 
@@ -69,8 +65,7 @@ Rectangle {
         section.statusText = "removed — Save & Apply to confirm"
     }
 
-    // patchServer rebuilds the list with one field of one server changed,
-    // preserving every other field so a toggle never drops sibling state.
+    // Copies every field so toggling one never drops sibling state.
     function patchServer(name, key, value) {
         let next = []
         for (let i = 0; i < servers.length; i++) {
@@ -95,7 +90,6 @@ Rectangle {
     function setTrusted(name, on) { patchServer(name, "trusted", on) }
 
     function parseEnv(text) {
-        // One KEY=value per line; blank lines and lines without "=" are skipped.
         let env = {}
         let lines = text.split("\n")
         for (let i = 0; i < lines.length; i++) {
@@ -147,8 +141,6 @@ Rectangle {
         getCurrentProcess.running = true
     }
 
-    // revert discards unsaved edits by reloading the server list from the
-    // backend — the undo for a mistaken remove or toggle.
     function revert() {
         if (saveProcess.running || getCurrentProcess.running) return
         section.addingServer = false
@@ -164,7 +156,6 @@ Rectangle {
         NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
-    // Initial load: config (editable definitions) then status (runtime state).
     Process {
         id: loadConfigProcess
         running: false
@@ -219,7 +210,6 @@ Rectangle {
         }
     }
 
-    // Save chain: re-fetch config, splice in the edited mcp.servers map, PUT, restart.
     Process {
         id: getCurrentProcess
         running: false
@@ -282,16 +272,13 @@ Rectangle {
             section.saving = false
             section.dirty = false
             section.statusText = exitCode === 0 ? "applied — reloading status…" : "applied (restart pending)"
-            // The backend re-spawns its MCP servers on restart; give it a
-            // moment, then reload so the rows reflect the new state.
             reloadTimer.start()
         }
     }
 
     Timer {
         id: reloadTimer
-        // mugen-ai needs a beat to come back up and re-handshake its MCP
-        // servers after a restart; reload once it should be listening again.
+        // Wait for mugen-ai to come back up and re-handshake its MCP servers.
         interval: 4000
         onTriggered: loadConfigProcess.running = true
     }
@@ -407,8 +394,6 @@ Rectangle {
                 id: serverRow
                 required property var modelData
 
-                // Live status for this server, or null when it hasn't been
-                // applied yet (newly added, still unsaved).
                 readonly property var st: section.statusByName[modelData.name] || null
                 readonly property bool pending: st === null && !modelData.disabled
 
@@ -472,7 +457,6 @@ Rectangle {
                             horizontalAlignment: Text.AlignRight
                         }
 
-                        // Enable / disable toggle.
                         Rectangle {
                             id: pill
                             Layout.preferredWidth: 36
@@ -509,7 +493,6 @@ Rectangle {
                             }
                         }
 
-                        // Remove.
                         Rectangle {
                             Layout.preferredWidth: 22
                             Layout.preferredHeight: 22
@@ -559,8 +542,6 @@ Rectangle {
                         wrapMode: Text.WordWrap
                     }
 
-                    // Trusted toggle — on = this server's destructive tools
-                    // run without the per-call approval prompt.
                     RowLayout {
                         Layout.fillWidth: true
                         Layout.topMargin: 2
@@ -617,7 +598,6 @@ Rectangle {
             }
         }
 
-        // "+ Add server" toggle + "Discover" (installed servers) side by side.
         RowLayout {
             Layout.fillWidth: true
             visible: !section.addingServer
@@ -685,7 +665,6 @@ Rectangle {
             }
         }
 
-        // Discovered candidates — tap to prefill the add form.
         Flow {
             Layout.fillWidth: true
             visible: !section.addingServer && section.discoverCandidates.length > 0
@@ -733,7 +712,6 @@ Rectangle {
             }
         }
 
-        // Add-server form.
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: addForm.implicitHeight + 20
@@ -753,7 +731,6 @@ Rectangle {
                 anchors.topMargin: 10
                 spacing: 6
 
-                // name + command + url share the labelled-input pattern.
                 Repeater {
                     model: [
                         { key: "name", label: "Name", hint: "memory" },
@@ -932,7 +909,6 @@ Rectangle {
             }
         }
 
-        // Status line + Refresh + Save & Apply.
         RowLayout {
             Layout.fillWidth: true
             Layout.topMargin: 2
@@ -975,7 +951,6 @@ Rectangle {
                 }
             }
 
-            // Revert — discards unsaved edits; only shown when there are any.
             Rectangle {
                 Layout.preferredWidth: 72
                 Layout.preferredHeight: 28

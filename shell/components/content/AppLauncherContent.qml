@@ -89,8 +89,8 @@ FocusScope {
         }
         let df = app.desktopFile || ""
         if (df === "") return
-        // terminal route on purpose: the user sees exactly what gets removed
-        // (deps included) and confirms in the package manager itself
+        // terminal route on purpose: the user sees what gets removed (deps
+        // included) and confirms in the package manager itself
         let holdTail = "; echo; printf 'Press Enter to close...'; read _"
         if (df.indexOf("flatpak/exports/share/applications/") !== -1) {
             let appId = df.split("/").pop().replace(/\.desktop$/, "")
@@ -99,9 +99,9 @@ FocusScope {
                 "flatpak uninstall \"$1\"" + holdTail, "sh", appId
             ])
         } else {
-            // user-local .desktop copies often point at packaged binaries, so try
-            // the Exec target's owner before giving up; interpreters are excluded
-            // so an "env FOO=1 app" line can never resolve to coreutils
+            // user-local .desktop copies often point at packaged binaries, so
+            // fall back to the Exec target's owner. Interpreters are excluded
+            // so an "env FOO=1 app" line can never resolve to coreutils.
             let execFirst = (app.exec || "").split(" ")[0]
             let execBase = execFirst.split("/").pop()
             if (execFirst[0] !== "/" || ["env", "sh", "bash", "zsh", "python", "python3"].indexOf(execBase) !== -1) {
@@ -141,8 +141,8 @@ FocusScope {
         } else if (!isLoading) {
             isLoading = true
         }
-        // always re-run in the background so installs/removals show up
-        // without a shell restart; the model is only swapped when it changed
+        // always re-run so installs/removals show up without a shell restart;
+        // the model is only swapped when the JSON actually changed
         if (!appsProcess.running) {
             appsProcess.running = true
         }
@@ -448,7 +448,6 @@ FocusScope {
         }
     }
 
-    // wait for PanelWindow.forceActiveFocus()
     Timer {
         id: focusTimer
         interval: 500
@@ -731,7 +730,6 @@ FocusScope {
                         }
 
                         onEntered: {
-                            // mouse takes selection; avoids kb + hover both highlighting
                             if (delegateWrapper.GridView.view) {
                                 delegateWrapper.GridView.view.userInteracted = true
                                 delegateWrapper.GridView.view.currentIndex = index
@@ -765,7 +763,6 @@ FocusScope {
             hoverEnabled: true
             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
             onClicked: contextMenu.dismiss()
-            // keep the grid from scrolling away under the open menu
             onWheel: (wheel) => { wheel.accepted = true }
             onPositionChanged: modeManager.bump()
         }

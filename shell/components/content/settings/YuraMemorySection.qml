@@ -24,7 +24,6 @@ Rectangle {
     property string statusText: ""
     property var memories: []
 
-    // Clear all is destructive — the button arms a confirm step first.
     property bool confirmingClear: false
 
     readonly property int expandedHeight: 64 + contentColumn.implicitHeight + 16

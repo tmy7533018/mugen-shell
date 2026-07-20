@@ -9,13 +9,13 @@ import (
 	"time"
 )
 
-// handshakeTimeout bounds initialize + tools/list per server so one that
-// never replies can't hang mugen-ai's startup indefinitely.
+// Bounds initialize + tools/list per server, so one that never replies can't
+// hang mugen-ai's startup indefinitely.
 const handshakeTimeout = 15 * time.Second
 
-// ServerConfig is the subset of a configured MCP server the manager needs.
-// Kept here so the mcp package stays free of an internal/config import.
-// URL selects the Streamable HTTP transport; Command spawns a stdio server.
+// ServerConfig duplicates a subset of the config-file shape so the mcp
+// package stays free of an internal/config import. URL selects the
+// Streamable HTTP transport; Command spawns a stdio server.
 type ServerConfig struct {
 	Command  string
 	Args     []string
@@ -34,10 +34,9 @@ type ServerStatus struct {
 	Disabled  bool   `json:"disabled"`
 }
 
-// Manager owns the set of connected MCP clients for the process lifetime
-// and remembers the outcome of every configured server, connected or not.
-// A crashed server is re-dialed lazily on its next use; mu guards the
-// clients map against those concurrent swaps.
+// Manager owns the connected MCP clients for the process lifetime. A crashed
+// server is re-dialed lazily on next use; mu guards the clients map against
+// those concurrent swaps.
 type Manager struct {
 	mu       sync.Mutex
 	clients  map[string]*Client
@@ -45,10 +44,9 @@ type Manager struct {
 	statuses []ServerStatus
 }
 
-// Connect spawns every configured server and runs its handshake. A server
-// that fails to spawn or handshake is recorded with its error and skipped,
-// so one broken entry can't stop mugen-ai from starting. Servers are
-// processed in name order for deterministic startup logs.
+// Connect never fails outright: a server that can't spawn or handshake is
+// recorded with its error and skipped, so one broken entry can't stop
+// mugen-ai from starting. Name order keeps startup logs deterministic.
 func Connect(ctx context.Context, servers map[string]ServerConfig) *Manager {
 	m := &Manager{clients: map[string]*Client{}, configs: servers}
 
@@ -84,9 +82,6 @@ func Connect(ctx context.Context, servers map[string]ServerConfig) *Manager {
 	return m
 }
 
-// dial connects one server — spawning it for stdio, straight HTTP for a
-// URL — and runs its handshake, returning a ready client or the failure
-// reason.
 func dial(ctx context.Context, name string, sc ServerConfig) (*Client, error) {
 	var tr transport
 	var err error
@@ -116,14 +111,12 @@ func dial(ctx context.Context, name string, sc ServerConfig) (*Client, error) {
 	return client, nil
 }
 
-// Clients returns the servers connected at startup, keyed by configured
-// name. Intended for the one-shot tool merge right after Connect, before
-// any re-dial can race the map.
+// Reads the map without the lock, so it is only safe for the one-shot tool
+// merge right after Connect, before any re-dial can race it.
 func (m *Manager) Clients() map[string]*Client { return m.clients }
 
-// Call dispatches a tool invocation to the named server. If the server has
-// crashed since startup it is re-dialed once and the call retried, so a
-// crash self-heals on next use instead of failing until mugen-ai restarts.
+// A server that crashed since startup is re-dialed once and the call
+// retried, so a crash self-heals instead of failing until mugen-ai restarts.
 func (m *Manager) Call(ctx context.Context, server, tool string, args map[string]any) (string, error) {
 	m.mu.Lock()
 	client := m.clients[server]
@@ -144,9 +137,8 @@ func (m *Manager) Call(ctx context.Context, server, tool string, args map[string
 	return fresh.CallTool(ctx, tool, args)
 }
 
-// redial spawns a fresh client for a crashed server and swaps it into the
-// clients map. configs is immutable after Connect, so it is read lock-free;
-// the brief lock only guards the map swap and resolves a concurrent re-dial.
+// configs is immutable after Connect, so it is read lock-free; the lock only
+// guards the map swap and resolves a concurrent re-dial.
 func (m *Manager) redial(ctx context.Context, server string) (*Client, error) {
 	sc, ok := m.configs[server]
 	if !ok {
@@ -171,10 +163,9 @@ func (m *Manager) redial(ctx context.Context, server string) (*Client, error) {
 	return client, nil
 }
 
-// Statuses returns the state of every configured server, in name order.
-// Connected state is read live so a crash — or recovery — since startup is
-// reflected; the startup error / disabled / tool-count baseline is kept for
-// servers that never had a live client.
+// Statuses returns every configured server in name order. Connected state is
+// read live so a crash or recovery since startup is reflected; the startup
+// baseline is kept for servers that never had a live client.
 func (m *Manager) Statuses() []ServerStatus {
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -208,7 +208,6 @@ QtObject {
 
     function updateMetadata() {
         if (activePlayer !== "" && !metadataProcess.running) {
-            // brief wait for player init
             Qt.callLater(() => {
                 if (activePlayer !== "" && !metadataProcess.running) {
                     metadataProcess.running = true
@@ -261,7 +260,6 @@ QtObject {
         }
     }
 
-    // disabled fallback (D-Bus does the work now)
     property Timer updateTimer: Timer {
         interval: 500
         running: false

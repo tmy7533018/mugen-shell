@@ -11,8 +11,7 @@ QtObject {
     property bool isLoadingState: false
 
     readonly property string toggleScript: Quickshell.shellDir + "/scripts/idle_inhibitor.sh"
-    // Paths kept as bash-style strings because every read/write is funneled
-    // through Process bash -c invocations that expand env vars at runtime.
+    // Left unexpanded: every read/write goes through bash -c, which expands these.
     readonly property string stateDir: "${XDG_STATE_HOME:-$HOME/.local/state}/mugen-shell"
     readonly property string stateFile: stateDir + "/idle-inhibitor.json"
 
@@ -83,7 +82,6 @@ QtObject {
     }
 
     onIsInhibitedChanged: {
-        // Only auto-save after initialization, not during restore or loading
         if (isInitialized && !isLoadingState && pendingRestoreState === null) {
             saveState()
         }
@@ -110,7 +108,6 @@ QtObject {
         running: false
 
         onExited: () => {
-            // Only refresh status; no save needed since we're restoring to already-saved state
             idleInhibitorManager.refreshStatus()
         }
     }
@@ -158,7 +155,6 @@ QtObject {
         }
     }
 
-    // Polling disabled in favor of D-Bus monitoring; kept as fallback
     property Timer pollTimer: Timer {
         interval: 5000
         running: false

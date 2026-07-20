@@ -8,16 +8,15 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/store"
 )
 
-// maxMemories bounds the long-term memory list. Every entry is re-injected
-// into the system prompt each turn, so an unbounded list would let a chatty
-// model (or a prompt-injected save loop) bloat every future conversation.
+// Every entry is re-injected into the system prompt each turn, so an unbounded
+// list would let a chatty model (or a prompt-injected save loop) bloat every
+// future conversation.
 const maxMemories = 100
 
 const maxMemoryLen = 500
 
 // AttachMemory registers the long-term memory tools backed by st. Call once,
-// before serving; a nil store leaves the tools unregistered (CLI paths that
-// have no DB open).
+// before serving; a nil store leaves the tools unregistered.
 func (r *Registry) AttachMemory(st *store.Store) {
 	if st == nil {
 		return
@@ -116,10 +115,9 @@ func (r *Registry) AttachMemory(st *store.Store) {
 	)
 }
 
-// MemoryBlock formats every saved memory for injection into the system
-// prompt. Returns "" when there are none, no store is attached, or the
-// memory category is disabled — a category the user switched off should be
-// invisible as data, not just as actions.
+// MemoryBlock formats every saved memory for injection into the system prompt.
+// A disabled memory category yields "": a category the user switched off must
+// be invisible as data, not just as actions.
 func (r *Registry) MemoryBlock() string {
 	if r.memStore == nil || r.disabledCats["memory"] {
 		return ""

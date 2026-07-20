@@ -9,8 +9,8 @@
   outputs =
     { self, nixpkgs, flake-utils }:
     let
-      # Overlay that exposes mugen-ai and mugen-shell as pkgs.<name>, so the
-      # home-manager module can refer to them as defaults via `pkgs.mugen-shell`.
+      # The home-manager module defaults to `pkgs.mugen-shell`, which only
+      # resolves once this overlay is applied.
       overlay = final: prev: {
         mugen-ai = self.packages.${prev.system}.mugen-ai;
         mugen-shell = self.packages.${prev.system}.mugen-shell;
@@ -34,8 +34,8 @@
             version = "0.1.0";
             src = ./ai;
             vendorHash = "sha256-n4brPv9eZJPqdTvnjdqQK7Q8JVgZvJbD5ndKFQEfu0I=";
-            # Annotated templates so Nix-installed users can find the .env
-            # and config.toml schemas without cloning the repo.
+            # Ship the config templates so Nix users get the schemas without
+            # cloning the repo.
             postInstall = ''
               mkdir -p $out/share/mugen-ai
               cp .env.example config.toml.example $out/share/mugen-ai/
@@ -48,12 +48,8 @@
             };
           };
 
-          # The Quickshell QML tree (UI code, scripts, assets, default
-          # settings). No build step — just gets copied into the Nix
-          # store so home-manager can symlink the result into
-          # ~/.config/quickshell/mugen-shell. The hypr/ snippet is also
-          # exposed so users with their own hyprland.conf can grab it
-          # via `$(nix path-info .#mugen-shell)/hypr/configs/...`.
+          # hypr/ is exposed so users with their own hyprland.conf can grab the
+          # snippet via `$(nix path-info .#mugen-shell)/hypr/configs/...`.
           mugen-shell = pkgs.runCommand "mugen-shell-0.1.0" {
             meta = {
               description = "Quickshell desktop UI for mugen-shell";
@@ -66,7 +62,7 @@
             mkdir -p $out/hypr/configs
             cp ${./system/hypr/configs/mugen-shell.conf} $out/hypr/configs/mugen-shell.conf
             # Voice daemon runtime, so the service works without a checkout.
-            # train/ stays out — it is a separate pipeline, not runtime.
+            # train/ stays out — separate pipeline, not runtime.
             mkdir -p $out/voice/models
             cp ${./voice/yurad.py} $out/voice/yurad.py
             cp -r ${./voice/models}/. $out/voice/models/

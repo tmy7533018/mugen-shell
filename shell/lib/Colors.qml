@@ -337,8 +337,8 @@ QtObject {
     readonly property color darkSurfaceInsetCard: Qt.rgba(0, 0, 0, 0.65)
     readonly property color darkSurfaceInsetCardHover: Qt.rgba(0, 0, 0, 0.75)
 
-    // Light mode leans into a clear "frosted glass" feel: white-tinted surfaces at low opacity,
-    // wallpaper bleeds through. White text stays readable on the soft veil.
+    // Light mode is clear glass, not a white theme: low-opacity white-tinted
+    // surfaces the wallpaper bleeds through, with text staying white.
     readonly property color lightSurfaceBorder: Qt.rgba(1.0, 1.0, 1.0, 0.35)
     readonly property color lightSurfaceGlass: Qt.rgba(1.0, 1.0, 1.0, 0.15)
     readonly property color lightTextPrimary: Qt.rgba(0.92, 0.92, 0.96, 0.90)

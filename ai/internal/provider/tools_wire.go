@@ -1,8 +1,5 @@
 package provider
 
-// toolsAsOpenAI renders the registry's tools in the OpenAI / Ollama
-// `{type: "function", function: {...}}` shape. Gemini has its own format,
-// see toolsAsGemini below.
 func toolsAsOpenAI(tools []Tool) []map[string]any {
 	if len(tools) == 0 {
 		return nil
@@ -21,7 +18,6 @@ func toolsAsOpenAI(tools []Tool) []map[string]any {
 	return out
 }
 
-// toolsAsGemini wraps tools into Gemini's `function_declarations` block.
 func toolsAsGemini(tools []Tool) []map[string]any {
 	if len(tools) == 0 {
 		return nil

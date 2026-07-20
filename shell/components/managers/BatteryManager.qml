@@ -24,7 +24,6 @@ QtObject {
         onTriggered: batteryManager.refresh()
     }
 
-    // Detects the first BAT* device under /sys/class/power_supply
     property Process detectProcess: Process {
         command: ["bash", "-c", "for d in /sys/class/power_supply/BAT*; do [ -d \"$d\" ] && echo \"$d\" && exit 0; done; echo ''"]
         running: false

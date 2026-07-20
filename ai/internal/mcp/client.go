@@ -10,14 +10,12 @@ import (
 	"sync"
 )
 
-// protocolVersion is the MCP revision we advertise in initialize. The
-// initialize / tools/list / tools/call wire shapes this client relies on
-// are unchanged across recent revisions, so a server replying with an
-// older version is still usable.
+// The wire shapes this client relies on are unchanged across recent
+// revisions, so a server replying with an older version is still usable.
 const protocolVersion = "2025-06-18"
 
-// rpcMessage is a JSON-RPC 2.0 frame. A frame with a Method is a request or
-// notification (the latter has no ID); one without is a response.
+// A frame with a Method is a request or notification (the latter has no ID);
+// one without is a response.
 type rpcMessage struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      *int64          `json:"id,omitempty"`
@@ -40,10 +38,8 @@ type ToolDef struct {
 	Description string
 	InputSchema map[string]any
 	ReadOnly    bool
-	// Destructive is the resolved verdict on whether the tool may make an
-	// irreversible change and so should be confirmed. Explicit readOnlyHint
-	// / destructiveHint annotations win; many servers send neither, so it
-	// then falls back to the tool name (see resolveDestructive).
+	// Destructive is a resolved verdict, not a raw annotation: many servers
+	// send neither hint, so it can fall back to the tool name.
 	Destructive bool
 }
 
@@ -67,10 +63,9 @@ func newClient(name string, tr transport) *Client {
 	return c
 }
 
-// readLoop delivers every response to its waiting caller. Requests and
-// notifications from the server (sampling, roots, logging) are unsupported
-// in v1 and ignored — we advertise no capabilities, so a compliant server
-// won't send a request that needs a reply.
+// Server-initiated requests and notifications are ignored: this client
+// advertises no capabilities, so a compliant server won't send one that
+// needs a reply.
 func (c *Client) readLoop() {
 	for {
 		data, err := c.tr.recv()
@@ -100,7 +95,6 @@ func (c *Client) readLoop() {
 	}
 }
 
-// fail aborts every in-flight request once the connection is gone.
 func (c *Client) fail(err error) {
 	c.mu.Lock()
 	c.closed = true
@@ -118,7 +112,6 @@ func (c *Client) clearPending(id int64) {
 	c.mu.Unlock()
 }
 
-// call sends a request and blocks for its response or ctx cancellation.
 func (c *Client) call(ctx context.Context, method string, params any) (json.RawMessage, error) {
 	raw, err := marshalParams(params)
 	if err != nil {
@@ -158,7 +151,6 @@ func (c *Client) call(ctx context.Context, method string, params any) (json.RawM
 	}
 }
 
-// notify sends a request that expects no response.
 func (c *Client) notify(method string, params any) error {
 	raw, err := marshalParams(params)
 	if err != nil {
@@ -247,8 +239,7 @@ func (c *Client) ListTools(ctx context.Context) ([]ToolDef, error) {
 // Tools returns the catalog cached by the last ListTools call.
 func (c *Client) Tools() []ToolDef { return c.tools }
 
-// readOnlyVerbs are tool-name leading words that mark a tool as a read.
-// Used only when a server omits the readOnlyHint / destructiveHint
+// Only consulted when a server omits the readOnlyHint / destructiveHint
 // annotations, which most do.
 var readOnlyVerbs = map[string]bool{
 	"get": true, "list": true, "read": true, "search": true, "find": true,
@@ -256,11 +247,8 @@ var readOnlyVerbs = map[string]bool{
 	"count": true, "check": true, "lookup": true, "browse": true, "scan": true,
 }
 
-// resolveDestructive decides whether a tool should be treated as a
-// destructive write that needs user confirmation. Explicit annotations win;
-// when a server sends neither hint — common — it falls back to the tool
-// name, treating only a clearly read-shaped name as safe so an ambiguous
-// name still errs toward asking.
+// With no hints, only a clearly read-shaped name counts as safe, so an
+// ambiguous name still errs toward asking the user for confirmation.
 func resolveDestructive(name string, readOnly bool, destructiveHint *bool) bool {
 	if readOnly {
 		return false
@@ -271,9 +259,6 @@ func resolveDestructive(name string, readOnly bool, destructiveHint *bool) bool 
 	return !readOnlyVerbs[strings.ToLower(firstWord(name))]
 }
 
-// firstWord returns the leading word of a tool name, splitting on the
-// snake_case / kebab-case / camelCase boundary ("read_graph" -> "read",
-// "searchNodes" -> "search").
 func firstWord(name string) string {
 	for i := 0; i < len(name); i++ {
 		c := name[i]
@@ -327,9 +312,8 @@ func (c *Client) CallTool(ctx context.Context, name string, args map[string]any)
 
 func (c *Client) Close() error { return c.tr.close() }
 
-// Closed reports whether the connection has dropped — the server exited or
-// the transport failed. A closed client cannot be revived; the Manager
-// re-dials a fresh one in its place.
+// Closed reports whether the connection has dropped. A closed client cannot
+// be revived; the Manager re-dials a fresh one in its place.
 func (c *Client) Closed() bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()

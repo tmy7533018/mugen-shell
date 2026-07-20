@@ -1,9 +1,8 @@
 import QtQuick
 
-// GPU blob: each layer is one ShaderEffect quad evaluating the wavering
-// edge analytically (assets/shaders/blob.frag). pointCount is accepted but
-// unused — the GLSL edge is resolution-independent — so existing callers
-// that still set it keep working.
+// One ShaderEffect quad per layer; the edge is evaluated analytically in
+// assets/shaders/blob.frag. pointCount is accepted but ignored — the GLSL
+// edge is resolution-independent — so callers that still set it keep working.
 Item {
     id: root
 
@@ -17,8 +16,7 @@ Item {
     property real edgeAlpha: 0.0
 
     // Shared clock in seconds; per-layer speed scales inside the shader.
-    // Restarting on visibility keeps hidden blobs truly idle (no uniform
-    // churn), matching the old timer's behaviour.
+    // Gated on visibility so hidden blobs stop churning uniforms.
     property real time: 0
     NumberAnimation on time {
         running: root.running && root.visible
@@ -41,8 +39,7 @@ Item {
 
             property color blobColor: root.blobColor
             property real time: root.time
-            // Floor is proportional (was a fixed 15px in the Canvas days,
-            // which overflowed blobs smaller than ~34px).
+            // Floor is proportional so blobs under ~34px don't overflow.
             property real baseRadius: sizePx > 0 ? Math.max(sizePx * 0.25, sizePx / 2 - ampPx * 2) / sizePx : 0.25
             property real amplitude: sizePx > 0 ? ampPx / sizePx : 0.02
             property real centerAlpha: 0.9 - index * 0.12

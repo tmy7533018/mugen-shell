@@ -11,8 +11,7 @@ import (
 	"time"
 )
 
-// weatherAPI talks to Open-Meteo (free, no API key). Geocoding results are
-// cached per place for the process lifetime — city coordinates don't move.
+// Geocoding is cached for the process lifetime — city coordinates don't move.
 type weatherAPI struct {
 	http         *http.Client
 	geocodeBase  string
@@ -169,7 +168,6 @@ func (w *weatherAPI) getJSON(ctx context.Context, u string, out any) error {
 	return json.NewDecoder(resp.Body).Decode(out)
 }
 
-// wmoText maps WMO weather interpretation codes to short descriptions.
 func wmoText(code int) string {
 	switch {
 	case code == 0:

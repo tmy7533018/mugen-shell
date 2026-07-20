@@ -8,14 +8,9 @@
 let
   cfg = config.programs.mugen-shell;
 
-  # Packaged copy by default so the Nix path needs no checkout; voice.sourceDir
-  # points it at a live one for hacking, mirroring qmlDir.
   voiceDir =
     if cfg.voice.sourceDir != null then cfg.voice.sourceDir else "${cfg.package}/voice";
 
-  # The daemon runs from the live ~/mugen-shell checkout (same dev-mode
-  # thinking as qmlDir), so we only hand it an interpreter carrying the right
-  # libs. openwakeword is our own derivation; the rest are stock nixpkgs.
   voicePython = pkgs.python314.withPackages (ps: [
     (ps.callPackage ./voice/openwakeword.nix { })
     ps.sounddevice
@@ -26,9 +21,8 @@ let
     ps.onnxruntime
   ]);
 
-  # whisper.cpp STT model — not in nixpkgs, fetched straight from HuggingFace.
-  # Pinned to a revision rather than resolve/main: the hash would still catch a
-  # swap, but as a build failure on an unrelated rebuild instead of never.
+  # Pinned to a revision rather than resolve/main: main would only fail the
+  # hash later, on some unrelated rebuild.
   whisperModel = pkgs.fetchurl {
     url = "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo.bin";
     hash = "sha256-H8cPd0046xaZk6w5Huo1fvR8iHV+9y7llDh5t+jivGk=";
@@ -114,18 +108,14 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Symlink so `quickshell -c mugen-shell` finds the QML tree. Packaged
-    # tree by default (flake updates propagate on activation); qmlDir swaps
-    # in a live checkout via mkOutOfStoreSymlink for the edit → hot-reload
-    # dev workflow without fighting home-manager on rebuilds.
+    # mkOutOfStoreSymlink keeps a live checkout editable without home-manager
+    # reclaiming the path on every rebuild.
     xdg.configFile."quickshell/mugen-shell".source =
       if cfg.qmlDir != null
       then config.lib.file.mkOutOfStoreSymlink cfg.qmlDir
       else cfg.package;
 
-    # list-apps.py imports `gi` (PyGObject); the typelib dir list lives in
-    # gi-typelib-dirs.nix, shared with the NixOS module. Set once for the
-    # whole user session so Hyprland → quickshell → python3 inherits it.
+    # Session-wide so Hyprland → quickshell → python3 inherits it.
     home.sessionVariables = lib.mkIf cfg.includeSystemDeps {
       GI_TYPELIB_PATH =
         lib.concatStringsSep ":" (import ./gi-typelib-dirs.nix pkgs);
@@ -133,10 +123,6 @@ in
       QML2_IMPORT_PATH = "${pkgs.qt6Packages.qt5compat}/lib/qt-6/qml";
     };
 
-    # Runtime dependencies. Everything mugen-shell launches via Process or
-    # references from a script. Gated by includeSystemDeps so users whose
-    # OS already provides this stack (pacman, dpkg, NixOS module, ...)
-    # can opt out instead of double-installing 1-3 GiB into Nix.
     home.packages =
       lib.optionals cfg.includeSystemDeps (
         with pkgs;
@@ -157,19 +143,17 @@ in
           ffmpeg
           imv
           pavucontrol
-          pulseaudio   # provides `pactl` (audio panel set-sink-volume / mute / etc.)
-          brightnessctl  # backlight slider + brightness tools
+          pulseaudio   # provides `pactl`, which the audio panel shells out to
+          brightnessctl
           jq             # App Launcher running-apps filter, several shell scripts
           xdg-utils      # `xdg-open` for Settings → Personality → Edit toml
           socat
           curl
           fastfetch
-          # list-apps.py imports `gi` (PyGObject) to enumerate desktop entries;
-          # gtk3 carries the GI typelibs the script needs (Gtk / Gio 2.0).
-          # extract-color.py wants pillow+numpy for album-art accent colors.
+          # pygobject3 for list-apps.py, pillow+numpy for extract-color.py.
           (python3.withPackages (ps: [ ps.pygobject3 ps.pillow ps.numpy ]))
           gtk3
-          # .zshrc quality-of-life: prompt, splash art, fuzzy finder, fish-style plugins
+          # Referenced by the shipped .zshrc.
           starship
           jp2a
           fzf
@@ -184,11 +168,9 @@ in
       )
       ++ lib.optionals cfg.ai.enable [ cfg.ai.package ];
 
-    # graphical-session.target sets RefuseManualStart, so a compositor without
-    # a session manager (no UWSM here) cannot start it directly — it has to be
-    # pulled up by a target that binds to it. Hyprland starts this one, and
-    # everything hanging off graphical-session.target comes up with the
-    # session and goes away with it.
+    # graphical-session.target sets RefuseManualStart, so Hyprland (no session
+    # manager here) can't start it directly. It starts this target instead,
+    # which binds to it and pulls it up.
     systemd.user.targets.mugen-shell-session = {
       Unit = {
         Description = "mugen-shell graphical session";
@@ -206,10 +188,8 @@ in
       };
       Service = {
         ExecStart = "${cfg.ai.package}/bin/mugen-ai serve";
-        # Load API keys (GEMINI_API_KEY, ANTHROPIC_API_KEY, ...) from the
-        # user's mugen-ai config dir if they have written one. The leading
-        # dash makes the file optional so the service still starts when
-        # the user only uses local Ollama models.
+        # Leading dash marks the API-key file optional, so the service still
+        # starts for users on local Ollama models only.
         EnvironmentFile = "-%h/.config/mugen-ai/.env";
         Restart = "on-failure";
         RestartSec = 2;
@@ -231,21 +211,18 @@ in
       };
       Service = {
         WorkingDirectory = voiceDir;
-        # Bootstrap default only: yurad re-reads voice.wakeThreshold from
-        # settings.json every frame, and the shell writes that key on its
-        # first save of any setting. Keep this equal to the GUI default or
-        # an unrelated settings change would silently move the wake gate.
+        # Bootstrap only — yurad re-reads voice.wakeThreshold from settings.json,
+        # which the shell writes on its first save of any setting. Keep this
+        # equal to the GUI default or an unrelated change moves the wake gate.
         Environment = [
           "YURA_WAKEWORD=${voiceDir}/models/hey_yura.onnx"
           "YURA_WAKE_THRESHOLD=0.85"
           "YURA_WHISPER_BIN=${pkgs.whisper-cpp-vulkan}/bin/whisper-server"
           "YURA_WHISPER_MODEL=${whisperModel}"
         ]
-        # Route replies at the engine this module actually starts. The daemon's
-        # built-in default is VOICEVOX, which the Nix path never installs, so
-        # without this every reply is silent until a voice is picked by hand.
-        # Naming only the engine is deliberate: style ids depend on which
-        # models the engine has downloaded, so they can't be pinned here.
+        # yurad defaults to VOICEVOX, which the Nix path never installs, so
+        # without this every reply is silent. The style id is left off on
+        # purpose: it depends on which models the engine has downloaded.
         ++ lib.optional cfg.voice.aivis.enable "YURA_TTS=aivis:";
         ExecStart = "${voicePython}/bin/python ${voiceDir}/yurad.py";
         Restart = "on-failure";
@@ -264,8 +241,7 @@ in
           PartOf = [ "graphical-session.target" ];
         };
         Service = {
-          # CPU mode: the bundled onnxruntime-gpu is CUDA-only and this is an
-          # AMD box; upstream says CPU is plenty for a single user. First start
+          # CPU mode: the bundled onnxruntime-gpu is CUDA-only. First start
           # pulls the default model + BERT (~900 MB), so it needs the network.
           ExecStart = "${aivisEngine}/bin/aivisspeech-engine --host 127.0.0.1 --port 10101";
           Restart = "on-failure";
@@ -300,11 +276,8 @@ in
       };
     };
 
-    # Mutable defaults for the system/ dotfiles (Hyprland config, cava,
-    # kitty, matugen templates, starship, fastfetch). Copied from the
-    # /nix/store defaults on first activation; subsequent activations
-    # leave existing files untouched so user edits stick around (this is
-    # the personal-first / Nix-distributable balance from NIX-PLAN).
+    # Copied rather than symlinked from the store so these stay writable and
+    # user edits survive later activations.
     home.activation.installMugenSystemDefaults =
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         install_dir() {

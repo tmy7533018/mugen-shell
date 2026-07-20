@@ -56,9 +56,8 @@ def main():
                 if not data:
                     break
 
-                # Only dispatch complete newline-terminated lines; keep any
-                # partial tail for the next recv so an event straddling a
-                # 4096-byte boundary isn't split into two broken halves.
+                # Keep the partial tail for the next recv so an event straddling
+                # a 4096-byte boundary isn't split into two broken halves.
                 buf += data
                 while '\n' in buf:
                     line, buf = buf.split('\n', 1)

@@ -48,9 +48,8 @@ type ollamaToolCall struct {
 }
 
 func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opts ChatOptions, fn func(ChatChunk) error) error {
-	// Map Message → ollama wire shape. role="tool" carries the result of a
-	// previous tool call; ollama wants {role:"tool", content:"..."} with no
-	// tool_call_id.
+	// Unlike OpenAI, ollama wants tool results as plain {role:"tool", content}
+	// with no tool_call_id.
 	msgs := make([]map[string]any, 0, len(messages))
 	for _, m := range messages {
 		msg := map[string]any{
@@ -76,22 +75,19 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 		"model":    model,
 		"messages": msgs,
 		"stream":   true,
-		// Thinking models (qwen3 etc.) stream reasoning on a separate
-		// `thinking` field. Caller decides per-conversation; models without
-		// thinking ignore this field.
+		// Safe to always send: models without a thinking channel ignore it.
 		"think": opts.Thinking,
 	}
 	if tw := toolsAsOpenAI(opts.Tools); len(tw) > 0 {
 		payload["tools"] = tw
 	}
-	// Ollama's own num_ctx default (4k) is smaller than our tools + system
-	// prompt + history footprint and it truncates the overflow silently, so
-	// always request an explicit window. Ollama clamps to the model's max.
+	// Ollama's 4k num_ctx default is under our tools + prompt + history
+	// footprint and it truncates the overflow silently. Clamped to model max.
 	if o.numCtx > 0 {
 		payload["options"] = map[string]any{"num_ctx": o.numCtx}
 	}
-	// Keep the model resident between chats; the default 5m unload makes
-	// the first reply after an idle stretch pay a multi-second cold load.
+	// The default 5m unload makes the first reply after an idle stretch pay a
+	// multi-second cold load.
 	if o.keepAlive != "" {
 		payload["keep_alive"] = o.keepAlive
 	}
@@ -116,10 +112,8 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		bodyStr := string(bodyBytes)
-		// Older / smaller models (gemma3, etc.) reject tools with a 400 and
-		// "does not support tools". Retry without tools so the conversation
-		// keeps working — the user can still ask, just without the shell
-		// controls until they switch to a tool-capable model.
+		// Older / smaller models reject tools with a 400; retry without them so
+		// the conversation still works, minus the shell controls.
 		if resp.StatusCode == http.StatusBadRequest &&
 			strings.Contains(bodyStr, "does not support tools") &&
 			len(opts.Tools) > 0 {
@@ -150,10 +144,9 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 			continue
 		}
 
-		// Ollama streams a tool call on its own chunk ahead of the final
-		// done chunk, which carries none — so accumulate calls and hand
-		// the whole set over on the done chunk, where handleChat harvests
-		// ToolCalls. Emitting them on the streaming chunk would drop them.
+		// Ollama streams tool calls on their own chunks ahead of the done
+		// chunk, which carries none. handleChat only harvests ToolCalls from
+		// the done chunk, so accumulate and hand the set over there.
 		for _, tc := range raw.Message.ToolCalls {
 			toolCalls = append(toolCalls, ToolCall{
 				ID:        fmt.Sprintf("call_%d_%d", time.Now().UnixNano(), len(toolCalls)),
@@ -176,8 +169,8 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 	return scanner.Err()
 }
 
-// Embed returns one embedding vector per input text via /api/embed.
-// Used by the tool context filter; not part of the Provider interface.
+// Embed returns one embedding vector per input text. Not part of the Provider
+// interface.
 func (o *Ollama) Embed(ctx context.Context, model string, input []string) ([][]float32, error) {
 	body, err := json.Marshal(map[string]any{"model": model, "input": input})
 	if err != nil {

@@ -21,7 +21,7 @@ Item {
         smooth: true
         visible: !_overlayReady
         
-        // Load at 2x display size for crisp rendering when scaled
+        // 2x so the icon stays crisp when hover-scaled
         sourceSize.width: Math.max(root.width, 24) * 2
         sourceSize.height: Math.max(root.height, 24) * 2
         

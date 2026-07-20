@@ -23,7 +23,7 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
 
-const maxRequestBody = 64 * 1024 // 64KB
+const maxRequestBody = 64 * 1024
 
 type Server struct {
 	registry *provider.Registry
@@ -34,23 +34,17 @@ type Server struct {
 	events   *eventBus
 	confirms *confirmRegistry
 
-	// ctxCfg gates the live desktop-state snapshot injected into chat turns
-	// (config [context]).
 	ctxCfg config.Context
 
-	// filter, when non-nil, narrows the tool list per turn (config
-	// [tools.context_filter]); filterRemote extends that beyond Ollama.
-	// recent feeds it the categories each conversation touched lately.
 	filter       *toolfilter.Filter
 	filterRemote bool
 	recent       *recentCats
 
-	// mcpExpose serves POST /mcp when the user enabled [mcp_expose].
 	mcpExpose http.Handler
 
-	// chatSetupMu serializes the resolve-conversation → append-user-message
-	// window of /chat so two concurrent requests can't interleave on the
-	// shared history pointer and cross-file each other's messages.
+	// Serializes the resolve-conversation → append-user-message window of
+	// /chat so concurrent requests can't interleave on the shared history
+	// pointer and cross-file each other's messages.
 	chatSetupMu sync.Mutex
 }
 
@@ -68,16 +62,16 @@ func New(registry *provider.Registry, hist *history.History, st *store.Store, t 
 	}
 }
 
-// SetToolFilter enables per-turn tool-list narrowing. applyRemote extends it
-// to non-Ollama providers — off by default so their prompt caches keep a
+// SetToolFilter enables per-turn tool-list narrowing. applyRemote extends it to
+// non-Ollama providers, off by default so their prompt caches keep a
 // byte-stable tool block.
 func (s *Server) SetToolFilter(f *toolfilter.Filter, applyRemote bool) {
 	s.filter = f
 	s.filterRemote = applyRemote
 }
 
-// SetMCPExpose mounts the MCP server handler at POST /mcp. nil (the default)
-// keeps the endpoint returning 404.
+// SetMCPExpose mounts the MCP server handler at POST /mcp. nil keeps the
+// endpoint returning 404.
 func (s *Server) SetMCPExpose(h http.Handler) { s.mcpExpose = h }
 
 func (s *Server) handleMCPExpose(w http.ResponseWriter, r *http.Request) {
@@ -126,11 +120,10 @@ func (s *Server) Routes() http.Handler {
 	return guardMiddleware(mux)
 }
 
-// guardMiddleware keeps the loopback-only API unreachable from a browser. It
-// refuses non-loopback Host headers (DNS-rebinding) and any request that
-// carries a non-local Origin — a webpage the user is visiting can otherwise
-// POST to 127.0.0.1 and drive tools. No wildcard CORS is emitted, so a
-// cross-origin page can't read responses either.
+// Keeps the loopback-only API unreachable from a browser: without the Host
+// (DNS-rebinding) and Origin checks, any page the user visits could POST to
+// 127.0.0.1 and drive tools. No wildcard CORS is emitted, so a cross-origin
+// page can't read responses either.
 func guardMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !isLoopbackHost(r.Host) {
@@ -172,22 +165,17 @@ type chatRequest struct {
 	// Used only when ConversationID == 0; existing conversations always run
 	// on the model bound to their row.
 	Model string `json:"model,omitempty"`
-	// Pointer so absent vs. explicit-false are distinguishable. For new
-	// conversations it sets the bound value; for existing ones it updates
-	// the bound value (per-conversation toggle from the UI).
+	// Pointer so absent and explicit-false stay distinguishable.
 	Thinking *bool `json:"thinking,omitempty"`
-	// Voice turns are heard, not read; a transient style hint keeps the
-	// reply speakable. Set by yurad, never persisted.
+	// Set by yurad. Attaches a transient style hint, never persisted.
 	Voice bool `json:"voice,omitempty"`
 }
 
 const voiceStyleHint = "This is a voice conversation. Answer in short spoken-style sentences: no markdown, no bullet or numbered lists, no headings, no code blocks, no emoji. When the user asks you to do something a tool can do, emit the tool call NOW, in this same turn — a reply that only promises to act (\"やっておくね\", \"変えておくね\") with no tool call does nothing and is a failure."
 
-// beginChatTurn resolves the conversation, model, and thinking flag and
-// appends the user message under chatSetupMu, then snapshots the message list.
 // Everything downstream works off the returned request-local copies, so a
 // concurrent /chat switching the shared current pointer can't retarget this
-// turn. A non-nil error carries the HTTP status to report.
+// turn.
 func (s *Server) beginChatTurn(req chatRequest) (convID int64, model string, thinking bool, msgs []provider.Message, status int, err error) {
 	s.chatSetupMu.Lock()
 	defer s.chatSetupMu.Unlock()
@@ -196,8 +184,6 @@ func (s *Server) beginChatTurn(req chatRequest) (convID int64, model string, thi
 		return 0, "", false, nil, http.StatusBadRequest, err
 	}
 
-	// Bound model wins for existing conversations; new ones fall back
-	// req.Model → registry default.
 	model = s.history.ConvModel()
 	if model == "" {
 		model = req.Model
@@ -209,8 +195,6 @@ func (s *Server) beginChatTurn(req chatRequest) (convID int64, model string, thi
 		return 0, "", false, nil, http.StatusServiceUnavailable, fmt.Errorf("no model configured")
 	}
 
-	// Resolve thinking: explicit request wins; otherwise inherit from the
-	// bound conversation (or false for a brand-new one).
 	thinking = s.history.ConvThinking()
 	if req.Thinking != nil {
 		thinking = *req.Thinking
@@ -242,12 +226,11 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), status)
 		return
 	}
-	// [system, user] and nothing else = this turn opened the conversation;
-	// its close is when the LLM title gets generated.
+	// [system, user] and nothing else means this turn opened the conversation.
 	isFirstExchange := len(msgs) == 2
 
-	// Long-term memories ride inside the system message: they change
-	// rarely, so provider prompt caches stay warm across turns.
+	// Memories ride inside the system message: they change rarely, so provider
+	// prompt caches stay warm across turns.
 	if blk := s.tools.MemoryBlock(); blk != "" && len(msgs) > 0 && msgs[0].Role == "system" {
 		msgs[0].Content += "\n\n" + blk
 	}
@@ -265,7 +248,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Up-front sync: rapid follow-up messages otherwise raced on the
+	// Sent up front: rapid follow-up messages otherwise race on the
 	// not-yet-loaded conversation id.
 	idData, _ := json.Marshal(map[string]any{
 		"conversation_id": convID,
@@ -276,12 +259,10 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 
 	providerName := s.registry.ProviderNameFor(r.Context(), model)
 
-	// Desktop-state snapshot rides in as a transient system message just
-	// before the newest user message: it is never persisted, so stale
-	// snapshots don't pile up in history, and the earlier message prefix
-	// stays byte-stable for providers' prompt caches. Gathered after the
-	// sync event above so a slow shell IPC can't delay the UI's stream
-	// setup. Cloud providers only see it when desktop_state_remote allows.
+	// Transient rider: never persisted, so stale snapshots don't pile up in
+	// history and the earlier message prefix stays byte-stable for prompt
+	// caches. Gathered after the sync event above so a slow shell IPC can't
+	// delay the UI's stream setup.
 	if s.ctxCfg.DesktopState && len(msgs) > 0 &&
 		(s.ctxCfg.DesktopStateRemote || providerName == "ollama") {
 		if blk := s.tools.DesktopContext(r.Context()); blk != "" {
@@ -291,9 +272,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Same transient-rider trick as the desktop snapshot: the hint sits
-	// before the newest user message and is never persisted, so typed
-	// follow-ups in the panel get normal markdown again.
+	// Same transient rider as the desktop snapshot, so typed follow-ups in the
+	// panel get normal markdown again.
 	if req.Voice && len(msgs) > 0 {
 		userMsg := msgs[len(msgs)-1]
 		msgs = append(msgs[:len(msgs)-1:len(msgs)-1],
@@ -312,9 +292,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(os.Stderr, "toolfilter: %d/%d tools (%s)\n", len(selTools), len(allTools), reason)
 		}
 	}
-	// The filtered list rides the first request; once the model has actually
-	// engaged a tool and we loop, a chain step may need any category the
-	// opening message didn't hint at, so later iterations see the full list.
+	// Only the first request gets the filtered list: once we loop, a chain step
+	// may need a category the opening message didn't hint at.
 	firstTools := providerTools(selTools)
 	fullTools := firstTools
 	if len(selTools) != len(allTools) {
@@ -329,9 +308,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var fullResponse string
-	// Once we've streamed any content or fired any tool we can't safely
-	// drop the user message on error — the conversation has visible side
-	// effects, so persist what we have and surface the error instead.
+	// Once content has streamed or a tool has fired, the turn has visible side
+	// effects and the user message can no longer be dropped on error.
 	var sideEffected bool
 
 	persistOnError := func(errMsg string) {
@@ -385,7 +363,6 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Transient assistant turn carrying the tool call request.
 		msgs = append(msgs, provider.Message{
 			Role:      "assistant",
 			Content:   iterContent,
@@ -395,15 +372,14 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		sendEvent(map[string]any{"tool_calls": iterToolCalls})
 
 		for _, tc := range iterToolCalls {
-			// Even a denied or failed call marks its category as in play for
-			// this conversation, so follow-ups keep the same tools visible.
+			// Noted even for denied or failed calls, so follow-ups keep the
+			// same tools visible.
 			s.recent.note(convID, tools.CategoryOf(tc.Name))
 
 			var result string
 			var callErr error
-			// A confirm-gated tool must be approved out-of-band before it
-			// runs; a denial (or timeout) is fed back as a plain result so
-			// the model can react without the action ever happening.
+			// A denial is fed back as an ordinary result so the model can react
+			// without the action ever having happened.
 			if s.tools.NeedsConfirm(tc.Name) && !s.awaitConfirm(r.Context(), tc, sendEvent) {
 				result = "error: the user declined this action. Do not retry it; acknowledge their choice and move on."
 				s.tools.Audit(tc.Name, tc.Arguments, result, nil)
@@ -437,9 +413,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	persistOnError("max tool iterations exceeded")
 }
 
-// generateTitle asks the conversation's model for a short title once the
-// first exchange completes. Best-effort and async: any failure keeps the
-// fallback title (the first message's prefix).
+// Best-effort: any failure leaves the fallback title in place.
 func (s *Server) generateTitle(convID int64, model, userMsg, reply string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -479,11 +453,8 @@ func firstN(s string, n int) string {
 	return string(rs[:n]) + "…"
 }
 
-// awaitConfirm streams a tool_confirm event for tc and blocks until the user
-// answers it via POST /chat/confirm, the wait times out, or the client
-// disconnects. It returns whether the action was approved; a timeout or a
-// disconnect counts as a denial so an irreversible tool never runs
-// unattended.
+// Blocks until POST /chat/confirm answers. A timeout or disconnect counts as a
+// denial so an irreversible tool never runs unattended.
 func (s *Server) awaitConfirm(ctx context.Context, tc provider.ToolCall, send func(map[string]any)) bool {
 	id, ch := s.confirms.register()
 	defer s.confirms.discard(id)
@@ -511,9 +482,6 @@ type chatConfirmRequest struct {
 	Approved  bool   `json:"approved"`
 }
 
-// handleChatConfirm resolves a pending tool-approval prompt. The blocked
-// chat turn picks the answer up and either runs the tool or feeds the model
-// a decline. A 404 means the prompt already lapsed (answered or timed out).
 func (s *Server) handleChatConfirm(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBody)
 	var req chatConfirmRequest
@@ -557,8 +525,8 @@ func (s *Server) handleSwitchModel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Only updates the default for the *next* new conversation; existing
-	// rows keep their bound model.
+	// Only the default for the next new conversation; existing rows keep their
+	// bound model.
 	s.registry.SetModel(req.Model)
 	_ = state.SaveModel(req.Model)
 
@@ -698,8 +666,6 @@ func (s *Server) handleSelectConversation(w http.ResponseWriter, r *http.Request
 	writeJSON(w, map[string]any{"id": id})
 }
 
-// handleConversationStats reports where the history database lives, how many
-// conversations it holds, and its on-disk size — for the Settings GUI.
 func (s *Server) handleConversationStats(w http.ResponseWriter, _ *http.Request) {
 	count, err := s.store.ConversationCount()
 	if err != nil {
@@ -713,8 +679,6 @@ func (s *Server) handleConversationStats(w http.ResponseWriter, _ *http.Request)
 	})
 }
 
-// handleExportConversations returns every conversation with its messages as
-// one JSON document — the Settings GUI saves the response to a file.
 func (s *Server) handleExportConversations(w http.ResponseWriter, _ *http.Request) {
 	convs, err := s.store.ListConversations()
 	if err != nil {
@@ -743,8 +707,6 @@ func (s *Server) handleExportConversations(w http.ResponseWriter, _ *http.Reques
 	})
 }
 
-// handleClearConversations deletes every conversation. The chat UIs refresh
-// off the broadcast; the next message starts a fresh conversation.
 func (s *Server) handleClearConversations(w http.ResponseWriter, _ *http.Request) {
 	if err := s.history.DeleteAll(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -772,8 +734,6 @@ func (s *Server) handleListTools(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, map[string]any{"tools": s.tools.List()})
 }
 
-// handleListMCPServers reports the startup outcome of each configured MCP
-// server (connected / failed / disabled) so the Settings GUI can show it.
 func (s *Server) handleListMCPServers(w http.ResponseWriter, _ *http.Request) {
 	var statuses []mcp.ServerStatus
 	if s.mcp != nil {
@@ -785,8 +745,6 @@ func (s *Server) handleListMCPServers(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, map[string]any{"servers": statuses})
 }
 
-// handleMCPDiscover lists MCP servers already installed on this machine so
-// the Settings GUI can offer them as one-tap config entries.
 func (s *Server) handleMCPDiscover(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"candidates": mcp.Discover(r.Context())})
 }
@@ -808,8 +766,7 @@ type toolCallRequest struct {
 	Args map[string]any `json:"args"`
 }
 
-// recentCats remembers which tool categories each conversation touched
-// recently. The context filter unions them into every turn's selection so a
+// The context filter unions these into every turn's selection, so a
 // keyword-less follow-up ("もう少し上げて") keeps the tools it refers to.
 type recentCats struct {
 	mu        sync.Mutex
@@ -833,10 +790,8 @@ func (rc *recentCats) note(conv int64, cat string) {
 	rc.m[conv][cat] = time.Now()
 }
 
-// sweepLocked drops every expired entry across all conversations at most once
-// per TTL window. get() only prunes the conversation it is queried with, so
-// without this an abandoned conversation (never read again) would leak its
-// category map forever on a long-running daemon.
+// get() only prunes the conversation it is queried with, so without this an
+// abandoned conversation would leak its category map on a long-running daemon.
 func (rc *recentCats) sweepLocked() {
 	now := time.Now()
 	if now.Sub(rc.lastSweep) < recentCatTTL {
@@ -875,8 +830,6 @@ func (rc *recentCats) get(conv int64) []string {
 	return out
 }
 
-// handleToolCall is a thin debug/test path: invoke a tool by name with no
-// LLM involvement.
 func (s *Server) handleToolCall(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBody)
 	var req toolCallRequest
@@ -884,8 +837,8 @@ func (s *Server) handleToolCall(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
-	// This debug path has no user in the loop, so it must not be a way around
-	// the confirmation gate — those tools are only runnable via /chat.
+	// No user is in the loop on this debug path, so it must not become a way
+	// around the confirmation gate.
 	if s.tools.NeedsConfirm(req.Name) {
 		http.Error(w, "tool requires confirmation; invoke via /chat", http.StatusForbidden)
 		return

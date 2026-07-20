@@ -24,19 +24,15 @@ Rectangle {
     property bool loaded: false
     property string statusText: ""
 
-    // Stats from GET /conversations/stats.
     property string dbPath: ""
     property int convCount: 0
     property real dbSize: 0
 
-    // Retention: retainDays is the edited value, savedRetainDays the on-disk
-    // one; they diverge while there is an unapplied change.
     property int retainDays: 0
     property int savedRetainDays: 0
     readonly property bool retainDirty: retainDays !== savedRetainDays
     property bool saving: false
 
-    // Clear all is destructive — the button arms a confirm step first.
     property bool confirmingClear: false
 
     readonly property var retainPresets: [0, 7, 30, 90, 365]
@@ -92,7 +88,6 @@ Rectangle {
         NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
-    // Initial load: stats + the retention setting from config.
     Process {
         id: loadStatsProcess
         running: false
@@ -132,9 +127,8 @@ Rectangle {
         }
     }
 
-    // Apply chain for retain_days: re-fetch config, splice the value in, PUT,
-    // restart. The retention prune runs at mugen-ai startup, so applying the
-    // setting means bouncing the service.
+    // The retention prune only runs at mugen-ai startup, so applying
+    // retain_days means bouncing the service.
     Process {
         id: getCurrentProcess
         running: false
@@ -198,8 +192,7 @@ Rectangle {
 
     Timer {
         id: reloadTimer
-        // mugen-ai needs a beat to come back up after the restart; reload the
-        // stats once it should be listening again (a prune may have run).
+        // Wait for mugen-ai to finish coming back up before re-reading stats.
         interval: 4000
         onTriggered: {
             loadStatsProcess.running = true
@@ -314,7 +307,6 @@ Rectangle {
             wrapMode: Text.WordWrap
         }
 
-        // Stats block.
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: statsCol.implicitHeight + 16
@@ -384,7 +376,6 @@ Rectangle {
             }
         }
 
-        // Auto-delete retention.
         Text {
             Layout.fillWidth: true
             Layout.topMargin: 2
@@ -439,7 +430,6 @@ Rectangle {
             }
         }
 
-        // Apply (only while the retention value has an unsaved change).
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 30
@@ -471,7 +461,6 @@ Rectangle {
             }
         }
 
-        // Export / Clear actions.
         RowLayout {
             Layout.fillWidth: true
             Layout.topMargin: 4
@@ -534,7 +523,6 @@ Rectangle {
             }
         }
 
-        // Clear-all confirm step.
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: confirmCol.implicitHeight + 16
@@ -624,7 +612,6 @@ Rectangle {
             }
         }
 
-        // Status line + Refresh.
         RowLayout {
             Layout.fillWidth: true
             Layout.topMargin: 2

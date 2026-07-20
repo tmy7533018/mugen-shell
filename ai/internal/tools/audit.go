@@ -19,9 +19,8 @@ func NewAuditor(path string) *Auditor {
 	return &Auditor{path: path}
 }
 
-// Log appends one JSON line per tool call so LLM-driven activity can be
-// audited after the fact. Best-effort: any error (mkdir, open, encode)
-// is swallowed so a broken log file never blocks a real tool call.
+// Log appends one JSON line per tool call. Best-effort: every error is
+// swallowed so a broken log file never blocks a real tool call.
 func (a *Auditor) Log(tool string, args map[string]any, result string, callErr error) {
 	if a == nil {
 		return

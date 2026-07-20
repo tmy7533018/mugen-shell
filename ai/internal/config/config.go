@@ -20,14 +20,12 @@ type Config struct {
 	Logging     Logging     `toml:"logging" json:"logging"`
 }
 
-// MCPExpose publishes mugen-ai's own tools as an MCP server, so external
-// clients (Claude Desktop, Cursor, ...) can drive mugen-shell: over HTTP at
-// POST /mcp on the loopback-only API port, and over stdio via the
-// `mugen-ai mcp-server` bridge subcommand. Tools sourced from external MCP
-// servers are never re-exported. Default when enabled is read-only tools
-// only; Categories opts whole tool groups (theme, wallpaper, timer, ...)
-// into being writable from outside — each named category is a deliberate
-// user decision, since external clients skip Yura's confirmation flow.
+// MCPExpose publishes mugen-ai's own tools as an MCP server, over HTTP at
+// POST /mcp on the loopback-only API port and over stdio via the
+// `mugen-ai mcp-server` bridge. Tools sourced from external MCP servers are
+// never re-exported. Enabled means read-only unless Categories names groups
+// to make writable — a deliberate decision per category, since external
+// clients skip Yura's confirmation flow.
 type MCPExpose struct {
 	Enabled  bool `toml:"enabled" json:"enabled"`
 	Readonly bool `toml:"readonly" json:"readonly"`
@@ -50,12 +48,9 @@ type Weather struct {
 }
 
 // Context controls extra, non-conversation information injected into chat
-// turns. DesktopState adds a transient system message with a live snapshot
-// of the desktop (active window, playing media, volume, notifications,
-// timer, today's events) — never persisted to history, so old snapshots
-// don't accumulate. Fields whose tool category is disabled are omitted.
-// DesktopStateRemote extends that to non-Ollama (cloud) providers; turn it
-// off to keep window titles and media names from leaving the machine.
+// turns. DesktopState adds a transient system message with a live desktop
+// snapshot, never persisted to history. DesktopStateRemote extends that to
+// cloud providers; off keeps window titles and media names on the machine.
 type Context struct {
 	DesktopState       bool `toml:"desktop_state" json:"desktop_state"`
 	DesktopStateRemote bool `toml:"desktop_state_remote" json:"desktop_state_remote"`
@@ -74,19 +69,16 @@ type History struct {
 }
 
 // MCP configures external Model Context Protocol servers whose tools are
-// merged into the registry alongside the built-in shell tools. Each server
-// is spawned as a subprocess at startup and its tools exposed under a
-// "<name>__<tool>" prefix so the server name doubles as a tool category.
+// merged into the registry. Tools are exposed under a "<name>__<tool>"
+// prefix, so the server name doubles as a tool category.
 type MCP struct {
 	Servers map[string]MCPServer `toml:"servers" json:"servers"`
 }
 
-// MCPServer is one MCP server entry. Command (plus Args / Env, layered onto
-// the inherited environment) spawns a stdio server; URL connects to a remote
-// Streamable HTTP server instead — when both are set, URL wins. Disabled
-// keeps the entry in the file but skips connecting it. Trusted skips the
-// per-call approval prompt for this server's destructive tools — opt-in,
-// since it removes the only gate on irreversible writes.
+// MCPServer is one MCP server entry. Command spawns a stdio server, URL
+// connects to a remote Streamable HTTP one; when both are set, URL wins.
+// Trusted skips the per-call approval prompt for this server's destructive
+// tools — opt-in, since it removes the only gate on irreversible writes.
 type MCPServer struct {
 	Command  string            `toml:"command" json:"command"`
 	Args     []string          `toml:"args" json:"args"`
@@ -106,11 +98,10 @@ type Tools struct {
 }
 
 // ContextFilter narrows the tool list sent per chat turn to the categories
-// relevant to the user's message. Local models pick the wrong tool — or
-// hallucinate calls — more often as the tool count grows, so fewer, on-topic
-// tools make them measurably more reliable. Selection is keyword match plus
-// embedding similarity; when neither produces a confident signal the full
-// list is sent, so filtering can only trim, never brick a request.
+// relevant to the user's message, because local models pick the wrong tool
+// more often as the tool count grows. When neither the keyword nor the
+// embedding layer is confident the full list is sent, so filtering can only
+// trim, never brick a request.
 type ContextFilter struct {
 	Enabled bool `toml:"enabled" json:"enabled"`
 	// ApplyToRemote extends filtering to cloud providers. Off by default:
@@ -263,9 +254,9 @@ func filePath() string {
 // Path returns the canonical config file path.
 func Path() string { return filePath() }
 
-// Save writes cfg to disk atomically (write to tmp, rename) so a crash mid-
-// write can't corrupt the file. BurntSushi's encoder does not preserve user
-// comments — callers should warn users that hand-written comments are lost.
+// Save writes cfg atomically so a crash mid-write can't corrupt the file.
+// BurntSushi's encoder drops user comments — callers should warn that
+// hand-written comments are lost.
 func Save(cfg Config) error {
 	path := filePath()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

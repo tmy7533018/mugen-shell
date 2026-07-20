@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""Collect installed desktop applications and resolve icons using GTK/GIO.
-Outputs JSON compatible with the previous shell implementation.
-"""
+"""Collect installed desktop applications and resolve icons using GTK/GIO."""
 
 import hashlib
 import json

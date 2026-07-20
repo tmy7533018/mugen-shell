@@ -10,8 +10,6 @@ Rectangle {
     required property var modeManager
     required property var settingsManager
 
-    // Local instance — AiBackend is stateless, threading it through the
-    // Settings Loader chain just to share one would be noisier than this.
     Theme.AiBackend { id: aiBackend }
 
     width: parent ? parent.width : 420
@@ -25,9 +23,7 @@ Rectangle {
     property bool isExpanded: false
     property var availableModels: []
 
-    // The dropdown lists "Default" (= follow the backend's last-set model)
-    // plus every available model. Keyed by the saved barAiModel value: ""
-    // means "default".
+    // "" is the stored barAiModel value for "follow the backend default".
     readonly property var options: ["", ...availableModels]
 
     function bump() {

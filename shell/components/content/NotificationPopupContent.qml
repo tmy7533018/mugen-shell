@@ -42,7 +42,6 @@ Item {
             
             root.currentNotification = notification
 
-            // Only show popup if no other mode is active to avoid disrupting user interaction
             if (modeManager.isMode("normal")) {
                 modeManager.switchMode("notification-popup")
                 autoCloseTimer.restart()
@@ -144,9 +143,8 @@ Item {
                     Layout.alignment: Qt.AlignVCenter
 
                     // Quickshell already resolves notify-send's -i hint into
-                    // an `image://icon/<name>` URL on `image`. Prefer that;
-                    // fall back to walking IconResolver paths from desktopEntry
-                    // / appName for senders that only set those.
+                    // an `image://icon/<name>` URL on `image`; these paths are
+                    // only for senders that set desktopEntry / appName instead.
                     property var iconPaths: {
                         if (!root.currentNotification) return []
                         let n = root.currentNotification
@@ -224,8 +222,8 @@ Item {
                         font.pixelSize: modeManager.scale(11)
                         font.family: "M PLUS 2"
                         elide: Text.ElideRight
-                        // Title + one body line is all the 70px pill can fit;
-                        // two wrapped lines spill past the rounded bottom edge.
+                        // A second wrapped line spills past the 70px pill's
+                        // rounded bottom edge.
                         maximumLineCount: 1
                         visible: text.length > 0
                     }

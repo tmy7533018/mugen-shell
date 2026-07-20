@@ -1,9 +1,7 @@
-# Single source of truth for the launcher's GI typelib path — imported by
-# both the NixOS module and the home-manager module so they can't drift.
-# Gtk-3.0.typelib transitively needs namespaces scattered across all of
-# these closures (xlib/cairo ship with gobject-introspection, Atk with
-# at-spi2-core); missing any one of them makes list-apps.py's gi import
-# throw and the launcher list come back empty.
+# Imported by both the NixOS and home-manager modules so they can't drift.
+# Gtk-3.0.typelib needs namespaces spread across every one of these closures
+# (xlib/cairo ship with gobject-introspection, Atk with at-spi2-core); drop
+# one and list-apps.py's gi import throws, leaving the launcher list empty.
 pkgs:
 map (p: "${p}/lib/girepository-1.0") [
   pkgs.gtk3

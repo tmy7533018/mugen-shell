@@ -1,9 +1,8 @@
 import QtQuick
 import Quickshell
 
-// Single source of truth for the mugen-ai backend address. Honours
-// MUGEN_AI_HOST / MUGEN_AI_PORT so the systemd unit's EnvironmentFile
-// keeps the backend's --port and the shell client in sync.
+// MUGEN_AI_HOST / MUGEN_AI_PORT are honoured so the systemd unit's
+// EnvironmentFile keeps the backend's --port and this client in sync.
 QtObject {
     id: aiBackend
 

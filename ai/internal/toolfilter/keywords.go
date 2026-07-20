@@ -7,12 +7,10 @@ import (
 	"unicode/utf8"
 )
 
-// categoryKeywords maps each built-in tool category to utterance words that
-// clearly signal it, Japanese and English mixed. Deliberately conservative:
-// a hit only ever adds a category, and anything ambiguous is left to the
-// embedding layer, so precision matters more than recall here. MCP server
-// categories have no entries — their vocabulary is unknown at compile time —
-// and are covered by embeddings alone.
+// Deliberately conservative: a hit only ever adds a category and anything
+// ambiguous is left to the embedding layer, so precision matters more than
+// recall. MCP categories have no entries — their vocabulary is unknown at
+// compile time — and rely on embeddings alone.
 var categoryKeywords = map[string][]string{
 	"audio": {
 		"音量", "ボリューム", "ミュート", "消音", "うるさい", "静かに", "マイク",
@@ -64,10 +62,9 @@ var categoryKeywords = map[string][]string{
 	},
 }
 
-// keywordHits returns the categories whose keywords appear in the utterance,
-// restricted to categories actually present in the registry. ASCII keywords
-// match on word boundaries so "mic" can't fire inside "dynamic"; Japanese
-// keywords match as plain substrings (no word boundaries to lean on).
+// ASCII keywords match on word boundaries so "mic" can't fire inside
+// "dynamic"; Japanese keywords have no boundaries to lean on and match as
+// plain substrings.
 func keywordHits(utterance string, cats map[string]bool) []string {
 	low := strings.ToLower(utterance)
 	var out []string
@@ -102,12 +99,9 @@ func isASCII(s string) bool {
 	return true
 }
 
-// containsWord reports whether the ASCII keyword w occurs in s not glued to
-// another ASCII alphanumeric (so "mic" doesn't match inside "dynamic"). A
-// non-ASCII neighbour — any CJK character — counts as a boundary, since it
-// can't be part of the same English token; neighbours are decoded as full
-// runes rather than single bytes so a multibyte char's trailing byte isn't
-// mistaken for a boundary of its own.
+// A non-ASCII neighbour counts as a boundary: it can't be part of the same
+// English token. Neighbours are decoded as full runes, since a byte-wise check
+// mistakes a multibyte char's trailing byte for a letter.
 func containsWord(s, w string) bool {
 	for from := 0; ; {
 		i := strings.Index(s[from:], w)
@@ -133,16 +127,12 @@ func containsWord(s, w string) bool {
 	}
 }
 
-// isASCIIWord reports whether r continues an ASCII word token. Only ASCII
-// letters/digits qualify: an adjacent CJK rune ends the English token.
 func isASCIIWord(r rune) bool {
 	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
 }
 
-// categoryHasKeywords reports whether a category can be assessed by the
-// keyword layer at all. Categories with no dictionary entry — every MCP
-// server, whose vocabulary is unknown at compile time — can only be scored
-// by embeddings, so in keyword-only mode they must never be trimmed away.
+// A category with no dictionary entry can only be scored by embeddings, so
+// keyword-only mode must never trim it away.
 func categoryHasKeywords(cat string) bool {
 	_, ok := categoryKeywords[cat]
 	return ok

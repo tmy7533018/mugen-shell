@@ -158,7 +158,7 @@ Item {
         }
 
         onTargetXChanged: {
-            // Only update previousX when not already animating to get correct trail origin.
+            // Overwriting mid-animation would give the trail a wrong origin.
             if (!moveAnimation.running) {
                 previousX = currentX;
             }
@@ -239,8 +239,8 @@ Item {
 
                 property real pulseScale: 1.0
 
-                // A binding (not cached) so theme changes and the transient
-                // brightnessBoost both propagate to the blob live.
+                // Must stay a binding: theme changes and the transient
+                // brightnessBoost both need to reach the blob live.
                 readonly property color layerColor: {
                     var ac = workspacesRoot.activeColor
                     var base
@@ -307,8 +307,8 @@ Item {
                     }
 
                     function onTargetXChanged() {
-                        // Stop in-flight scale animations on workspace change to avoid visual glitches
-                        // during rapid switching while expand/shrink is still running
+                        // Rapid switching would otherwise stack a new scale
+                        // animation on an in-flight one and glitch visually.
                         if (layerExpandAnimation.running || layerShrinkAnimation.running) {
                             layerShrinkAnimation.stop();
                             layerExpandAnimation.stop();
@@ -376,8 +376,8 @@ Item {
                     blobColor: blobLayer.layerColor
                     baseOpacity: 0.9 - index * 0.12
                     waveAmplitude: scaled(2) + index * scaled(2.0)
-                    // Speed coefficient matches the inactive blobs so the
-                    // active and idle rings never drift out of phase.
+                    // Must match the inactive blobs' coefficient or the active
+                    // and idle rings drift out of phase.
                     animationSpeed: 0.08 + index * 0.15 + workspacesRoot.activeWorkspaceId * 0.015
                     running: workspacesRoot.visible
                 }

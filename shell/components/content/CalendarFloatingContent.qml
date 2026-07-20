@@ -290,7 +290,6 @@ Item {
                         y: Math.random() * ceiling,
                         r: 0.4 + Math.random() * 1.4,
                         a: 0.18 + Math.random() * 0.55,
-                        // ~35% of stars breathe at varied speeds
                         twinkle: Math.random() < 0.35,
                         phase: Math.random() * Math.PI * 2,
                         speed: 0.7 + Math.random() * 0.9
@@ -323,10 +322,8 @@ Item {
                     let radius = s.r
                     if (s.twinkle) {
                         const phase = Math.sin(twinkleTime * s.speed + s.phase)
-                        // Alpha breathes 0.4 → 1.0 of base for a subtle shimmer
                         const m = 0.7 + 0.3 * phase
                         alpha = s.a * m
-                        // Tiny size pulse only on bright peaks
                         radius = s.r * (1 + 0.2 * Math.max(0, phase))
                     }
                     ctx.beginPath()

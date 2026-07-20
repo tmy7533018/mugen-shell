@@ -58,9 +58,8 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 			continue
 		}
 		if m.Role == "tool" {
-			// Gemini doesn't have a "tool" role; tool results ride back on a
-			// user-role part with functionResponse. response must be an
-			// object, so wrap non-JSON output.
+			// Gemini has no tool role: results ride back on a user-role part
+			// with functionResponse, whose response must be an object.
 			var responseObj any
 			if err := json.Unmarshal([]byte(m.Content), &responseObj); err != nil {
 				responseObj = map[string]any{"result": m.Content}
@@ -119,9 +118,8 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 		payload["tools"] = tg
 	}
 	if opts.Thinking {
-		// thinkingBudget=-1 = dynamic; the model decides how long to think.
-		// Only the 2.5 family supports this; older models return 400 and we
-		// fall through to a retry without the field below.
+		// -1 lets the model decide how long to think. Only the 2.5 family
+		// supports it; older models 400 and hit the retry below.
 		payload["generationConfig"] = map[string]any{
 			"thinkingConfig": map[string]any{"thinkingBudget": -1},
 		}
@@ -176,8 +174,6 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 		} `json:"candidates"`
 	}
 
-	// Accumulate function calls across stream chunks so a single final
-	// ChatChunk surfaces them with Done=true.
 	var accumulated []ToolCall
 
 	for scanner.Scan() {

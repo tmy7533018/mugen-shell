@@ -1,10 +1,9 @@
 // Package toolfilter narrows the tool list sent to the LLM to the categories
-// relevant to the current user message. Local models mis-pick or hallucinate
-// tool calls more as the catalog grows, so the filter keeps each turn's list
-// short. Selection is a cascade — keyword match, embedding similarity,
-// recently-used categories, always-included categories — and any turn without
-// a confident signal falls back to the full list, so filtering can only trim,
-// never remove a capability outright.
+// relevant to the current user message, because local models mis-pick tool
+// calls more as the catalog grows. Selection cascades over keyword match,
+// embedding similarity, recently-used and always-included categories; a turn
+// without a confident signal falls back to the full list, so filtering can only
+// trim, never remove a capability outright.
 package toolfilter
 
 import (
@@ -30,21 +29,18 @@ type Config struct {
 	AlwaysInclude []string
 }
 
-// minToolsToFilter skips filtering for small catalogs where trimming isn't
-// worth the extra moving parts.
+// Below this, trimming isn't worth the extra moving parts.
 const minToolsToFilter = 12
 
-// utteranceEmbedBudget bounds the per-turn embedding call so a cold model
-// load can't stall the chat; the turn degrades to keyword-only instead.
+// Bounds the per-turn embedding call so a cold model load can't stall the
+// chat; the turn degrades to keyword-only instead.
 const utteranceEmbedBudget = 800 * time.Millisecond
 
-// warmRetryCooldown spaces re-attempts at building category vectors after a
-// failure (Ollama down, model not pulled) so we don't hammer a dead backend.
+// Spaces re-attempts after a failure so we don't hammer a dead backend.
 const warmRetryCooldown = 5 * time.Minute
 
-// warmBudget bounds the startup category-embedding call. Without it a backend
-// that accepts the connection but never replies would leave warming=true
-// forever, wedging the embedding layer in keyword-only mode permanently.
+// Without this, a backend that accepts the connection but never replies would
+// leave warming=true forever, wedging the embedding layer in keyword-only mode.
 // Generous because a cold embed model can take several seconds to load.
 const warmBudget = 30 * time.Second
 
@@ -66,16 +62,16 @@ func New(cfg Config, embed EmbedFunc) *Filter {
 		cfg.TopK = 4
 	}
 	// A 0 MinScore would treat every positive cosine as a hit, defeating the
-	// threshold, so it always falls back to the default.
+	// threshold.
 	if cfg.MinScore <= 0 {
 		cfg.MinScore = 0.4
 	}
 	return &Filter{cfg: cfg, embed: embed}
 }
 
-// Warm builds and embeds one profile text per tool category so Select can
-// score utterances against them. Safe to call concurrently; only one build
-// runs at a time. A failure is remembered and retried lazily by Select.
+// Warm builds and embeds one profile text per tool category so Select can score
+// utterances against them. Safe to call concurrently; a failure is remembered
+// and retried lazily by Select.
 func (f *Filter) Warm(ctx context.Context, all []tools.Tool) {
 	if f == nil || f.embed == nil {
 		return
@@ -119,9 +115,9 @@ func (f *Filter) Warm(ctx context.Context, all []tools.Tool) {
 	}
 }
 
-// Select returns the tools to present for this utterance plus a short
-// human-readable reason for the decision (for the stderr log). sticky is the
-// set of categories the conversation used recently.
+// Select returns the tools to present for this utterance plus a reason string
+// for the stderr log. sticky is the set of categories the conversation used
+// recently.
 func (f *Filter) Select(ctx context.Context, utterance string, sticky []string, all []tools.Tool) ([]tools.Tool, string) {
 	if f == nil || len(all) <= minToolsToFilter {
 		return all, "small toolset"
@@ -135,10 +131,9 @@ func (f *Filter) Select(ctx context.Context, utterance string, sticky []string, 
 	kw := keywordHits(utterance, cats)
 	emb, embOK := f.embedHits(ctx, utterance, cats, all)
 
-	// The only evidence that a category is actually relevant to THIS turn is a
-	// keyword or embedding hit; sticky/always merely ride along. With neither,
-	// there is no confident signal, so send the full list rather than trim to
-	// sticky/always and silently strip a capability the user just asked for.
+	// Only a keyword or embedding hit is evidence about THIS turn; sticky and
+	// always merely ride along. Trimming to those alone would silently strip a
+	// capability the user just asked for.
 	if len(kw) == 0 && len(emb) == 0 {
 		return all, "no signal"
 	}
@@ -160,10 +155,8 @@ func (f *Filter) Select(ctx context.Context, utterance string, sticky []string, 
 			selected[c] = true
 		}
 	}
-	// In keyword-only mode (embeddings unavailable) we cannot assess a
-	// category that has no keyword dictionary — every MCP server. Dropping it
-	// on a keyword hit for some other category would make the user's MCP tools
-	// silently vanish, so never trim a keyword-blind category here.
+	// Keyword-only mode can't assess a category with no keyword dictionary —
+	// every MCP server. Trimming those would make the user's MCP tools vanish.
 	if !embOK {
 		for c := range cats {
 			if !categoryHasKeywords(c) {
@@ -186,10 +179,9 @@ func (f *Filter) Select(ctx context.Context, utterance string, sticky []string, 
 	return out, reason
 }
 
-// embedHits scores the utterance against every category profile and returns
-// the confident matches. ok=false means the embedding layer produced no
-// verdict (disabled, not warmed, or the call failed) — distinct from "ran
-// and found nothing related", which returns an empty slice with ok=true.
+// ok=false means the embedding layer produced no verdict at all (disabled, not
+// warmed, or the call failed) — distinct from "ran and found nothing related",
+// which is an empty slice with ok=true.
 func (f *Filter) embedHits(ctx context.Context, utterance string, cats map[string]bool, all []tools.Tool) ([]string, bool) {
 	if f.embed == nil {
 		return nil, false
@@ -200,8 +192,7 @@ func (f *Filter) embedHits(ctx context.Context, utterance string, cats map[strin
 	f.mu.Unlock()
 
 	if vecs == nil {
-		// Heal a failed startup warm in the background; this turn still
-		// degrades to keyword-only.
+		// Heals a failed startup warm; this turn still degrades to keyword-only.
 		if needWarm {
 			toolsCopy := append([]tools.Tool(nil), all...)
 			go f.Warm(context.Background(), toolsCopy)
@@ -241,9 +232,8 @@ func (f *Filter) embedHits(ctx context.Context, utterance string, cats map[strin
 	return out, true
 }
 
-// categoryProfiles builds the text embedded per category: the category name
-// followed by every tool's name and description, so the vector reflects the
-// category's whole vocabulary (including MCP servers we have no keywords for).
+// Folding in every tool's name and description gives the vector the category's
+// whole vocabulary, including MCP servers we have no keywords for.
 func categoryProfiles(all []tools.Tool) map[string]string {
 	var b = map[string]*strings.Builder{}
 	for _, t := range all {

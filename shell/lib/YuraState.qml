@@ -30,8 +30,7 @@ QtObject {
     property real aiOrbY: -1
     property real aiOrbSize: -1
 
-    // Screen position the bar spotlight orb was launched from; -1 = plain
-    // open with no flight animation.
+    // Screen position the bar spotlight orb flew from; -1 = plain open.
     property real flyFromX: -1
     property real flyFromY: -1
     property real flyFromSize: -1

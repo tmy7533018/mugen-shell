@@ -76,7 +76,6 @@ Item {
         const buf = inputBuffer
         if (buf === "") return ""
         if (buf.indexOf(":") >= 0) return buf
-        // Plain minutes; show as M:00 once at least one digit typed
         return buf + ":00"
     }
 
@@ -254,11 +253,8 @@ Item {
             }
 
 
-                // Dial: scroll (or ↑↓ / drag the knob) sets minutes; click
-                // the center or press Enter to start. Typing digits still
-                // works — the center display switches to the typed buffer.
-                // Same 116px circle the running progress ring uses, so the
-                // dial you set becomes the ring that counts down.
+                // Size must match the running progress ring so the dial you set
+                // visually becomes the ring that counts down.
                 Item {
                     id: dial
                     Layout.preferredWidth: modeManager.scale(116)
@@ -403,9 +399,8 @@ Item {
                     }
                 }
 
-                // Free-typed duration (the dial tops out at 60m): digits or
-                // m:ss, Enter starts. Just a mirror of the key handler's
-                // buffer — focus already lives on the mode's FocusScope.
+                // Displays the key handler's buffer rather than taking input
+                // itself; focus stays on the mode's FocusScope.
                 Rectangle {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.preferredWidth: modeManager.scale(152)
@@ -492,7 +487,6 @@ Item {
                 Layout.preferredHeight: modeManager.scale(116)
                 Layout.alignment: Qt.AlignHCenter
 
-                // Ignition pop when the timer starts.
                 NumberAnimation {
                     id: ignitePop
                     target: ringWrap
@@ -567,8 +561,6 @@ Item {
                     }
                 }
 
-                // The lit ember: flickers faster as time runs down, freezes
-                // while paused, turns urgent-red with the ring.
                 Common.BlobEffect {
                     anchors.centerIn: parent
                     width: modeManager.scale(72)
@@ -731,8 +723,8 @@ Item {
                 Layout.preferredHeight: modeManager.scale(116)
                 Layout.alignment: Qt.AlignHCenter
 
-                // Ripples radiating from the burst ember, staggered half a
-                // period apart (equal cycle lengths keep them from drifting).
+                // The leading and trailing pauses must sum to the same total
+                // per ripple, or the two drift apart over time.
                 Repeater {
                     model: 2
 
@@ -765,7 +757,6 @@ Item {
                     }
                 }
 
-                // Burst ember at full agitation.
                 Common.BlobEffect {
                     anchors.centerIn: parent
                     width: modeManager.scale(84)

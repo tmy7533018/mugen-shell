@@ -2,8 +2,6 @@ pragma Singleton
 import QtQuick
 import Quickshell
 
-// Single source for the shell's XDG base dirs, so the same
-// XDG_DATA_HOME/HOME fallback isn't re-derived in every manager and section.
 QtObject {
     readonly property string dataDir: {
         let xdg = Quickshell.env("XDG_DATA_HOME")

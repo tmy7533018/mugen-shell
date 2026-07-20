@@ -72,10 +72,9 @@ in
       programs.hyprland.enable = true;
       programs.hyprlock.enable = true;
 
-      # Thunar is what Super+N opens, so it comes from the module rather than
-      # the package list: on NixOS the bare package has no xfconf D-Bus
-      # service, and without it every preference Thunar writes is gone by the
-      # next launch. tumbler draws thumbnails, gvfs gives it trash and mounts.
+      # Thunar (what Super+N opens) needs the module, not the bare package: the
+      # package has no xfconf D-Bus service, so every preference it writes is
+      # lost by the next launch. tumbler adds thumbnails, gvfs trash and mounts.
       programs.thunar.enable = true;
       programs.xfconf.enable = true;
       services.tumbler.enable = true;
@@ -85,9 +84,8 @@ in
       # explicit default `xdg-open <dir>` — what the shell's folder buttons
       # call — opens a terminal instead of the file manager.
       xdg.mime.defaultApplications."inode/directory" = "thunar.desktop";
-      # The portal stack hyprland pulls in includes xdg-document-portal,
-      # which FUSE-mounts /run/user/*/doc; without the setuid fusermount3
-      # wrapper it fails every boot.
+      # xdg-document-portal (pulled in by hyprland) FUSE-mounts /run/user/*/doc
+      # and fails every boot without the setuid fusermount3 wrapper.
       programs.fuse.enable = true;
 
       services.pipewire = {
@@ -106,15 +104,13 @@ in
         noto-fonts-color-emoji
       ];
 
-      # list-apps.py needs GTK 3.0 / Gio 2.0 typelibs at runtime. Setting
-      # this as a session variable propagates into Hyprland → quickshell →
-      # the python invocation that calls gi.require_version(). The dir list
-      # is shared with the home-manager module via gi-typelib-dirs.nix.
+      # Session-wide so it reaches the python that list-apps.py runs in,
+      # via Hyprland → quickshell.
       environment.sessionVariables.GI_TYPELIB_PATH =
         import ../nix/gi-typelib-dirs.nix pkgs;
 
       # The QML tree imports Qt5Compat.GraphicalEffects, which nixpkgs'
-      # quickshell doesn't bundle (Arch splits it out as qt6-5compat too).
+      # quickshell doesn't bundle.
       environment.sessionVariables.QML2_IMPORT_PATH = [
         "${pkgs.qt6Packages.qt5compat}/lib/qt-6/qml"
       ];
@@ -136,22 +132,20 @@ in
         ffmpeg
         imv
         pavucontrol
-        pulseaudio    # provides `pactl` (audio panel set-sink-volume / mute / etc.)
-        brightnessctl # backlight slider + brightness tools
+        pulseaudio    # provides `pactl`, which the audio panel shells out to
+        brightnessctl
         jq            # App Launcher running-apps filter, several shell scripts
         xdg-utils     # `xdg-open` for Settings → Personality → Edit toml
         socat
         curl
         fastfetch
         hyprpolkitagent # mugen-shell.conf starts its user unit via exec-once
-        # list-apps.py imports `gi` (PyGObject) to enumerate desktop entries;
-        # gtk3 carries the GI typelibs the script needs (Gtk / Gio 2.0).
-        # extract-color.py wants pillow+numpy for album-art accent colors.
+        # pygobject3 for list-apps.py, pillow+numpy for extract-color.py.
         (python3.withPackages (ps: [ ps.pygobject3 ps.pillow ps.numpy ]))
         gtk3
         kitty
         firefox
-        # .zshrc quality-of-life: prompt, splash art, fuzzy finder, fish-style plugins
+        # Referenced by the shipped .zshrc.
         starship
         jp2a
         fzf
@@ -160,8 +154,8 @@ in
         zsh-history-substring-search
       ];
 
-      # The hypr configs start these with `systemctl --user start`;
-      # systemPackages alone doesn't register a package's user units.
+      # systemPackages alone doesn't register a package's user units, which the
+      # hypr configs start with `systemctl --user start`.
       systemd.packages = with pkgs; [
         hypridle
         hyprpolkitagent

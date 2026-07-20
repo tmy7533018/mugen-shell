@@ -2,16 +2,15 @@ package tools
 
 import "strings"
 
-// IsReadOnly reports whether the tool only reads state. Exported for the
-// MCP expose layer, which advertises it as the readOnlyHint annotation.
+// IsReadOnly reports whether the tool only reads state. The MCP expose layer
+// advertises it as the readOnlyHint annotation.
 func (t Tool) IsReadOnly() bool { return t.readonly }
 
-// ExposedTools returns the subset of the registry publishable through the
-// MCP expose endpoint: read-only tools when readonly is set, plus every tool
-// of the listed categories. Tools sourced from external MCP servers are
-// never included — re-exporting another server's tools through us would
-// invite dispatch loops and mislead clients about who executes what.
-// Disabled categories stay excluded, same as for the LLM.
+// ExposedTools returns the subset publishable through the MCP expose endpoint:
+// read-only tools when readonly is set, plus every tool of the listed
+// categories. Tools from external MCP servers are never included —
+// re-exporting them would invite dispatch loops and mislead clients about who
+// executes what.
 func (r *Registry) ExposedTools(readonly bool, categories []string) []Tool {
 	cats := make(map[string]bool, len(categories))
 	for _, c := range categories {

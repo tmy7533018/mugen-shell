@@ -1,16 +1,15 @@
 import QtQuick
 
-// Sonar rings pinging outward from center. Shared by the notification icon's
-// unread pulse and Yura's orb while she speaks. Opacity is gated on `running`
-// so a burst in flight vanishes the instant it clears instead of finishing.
+// Opacity is gated on `running` so a burst in flight vanishes the instant it
+// clears, rather than finishing its cycle.
 Item {
     id: rings
 
     property color color: "white"
-    property real ringSize: 20        // base diameter before it scales out
+    property real ringSize: 20
     property real borderWidth: 1
     property real maxScale: 2.0
-    property int cycleMs: 2000         // full ping period per ring
+    property int cycleMs: 2000         // full period per ring, animation included
     property int ringCount: 3
     property bool running: false
 

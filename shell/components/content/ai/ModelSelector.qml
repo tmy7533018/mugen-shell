@@ -11,8 +11,6 @@ Item {
     required property string currentModel
     required property var availableModels
     property bool isOpen: false
-    // When false the chip is a read-only label — used mid-conversation so
-    // the bound model can't be swapped accidentally.
     property bool editable: true
 
     signal toggled()
@@ -66,10 +64,8 @@ Item {
         }
     }
 
-    // Popup sits in the window's overlay layer so its mouse hits aren't
-    // gated by the parent Item's preferredHeight. The previous Column-on-
-    // anchors approach rendered correctly but Qt Quick's hit testing
-    // refused to route clicks below the chip's 26px box.
+    // Popup, not an anchored Column: hit testing refuses to route clicks
+    // below the chip's box, so the list needs the overlay layer.
     Popup {
         id: dropdown
         x: selector.width - width

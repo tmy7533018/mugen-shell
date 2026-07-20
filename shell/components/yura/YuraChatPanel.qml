@@ -82,28 +82,23 @@ PanelWindow {
         right: true
     }
 
-    // Ignore other zones (not just reserve none): the window must start at
-    // the true screen origin so bar-relative fly coordinates line up, and
-    // must not shift when the bar hides under fullscreen.
+    // Ignore, not just reserve none: the window must start at the true screen
+    // origin so bar-relative fly coordinates line up, and must not shift when
+    // the bar hides under fullscreen.
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Top
-    // OnDemand only lets a click focus the panel; the HyprlandFocusGrab
-    // below is what actually holds the keyboard while the panel is in use,
-    // so an IME switch under follow_mouse can't hand focus to whatever
-    // window the cursor sits over.
+    // OnDemand only lets a click focus the panel. The HyprlandFocusGrab below
+    // is what holds the keyboard, so an IME switch under follow_mouse can't
+    // hand focus to whatever window the cursor sits over.
     WlrLayershell.keyboardFocus: yuraState.expanded
         ? WlrKeyboardFocus.OnDemand
         : WlrKeyboardFocus.None
 
-    // grabWanted drives the focus grab: armed when the panel opens and
-    // re-armed by a tap inside it (see chatBox). A click outside breaks the
-    // grab — onCleared clears the flag, releasing the keyboard to the
-    // clicked window without closing the panel, so it still works as a
-    // docked sidebar you click in and out of.
+    // Re-armed by a tap inside the panel (see chatBox). A click outside breaks
+    // the grab and onCleared clears this, releasing the keyboard without
+    // closing the panel, so it stays usable as a docked sidebar.
     property bool grabWanted: false
 
-    // True while the stand-in orb is flying in from the bar; hides the real
-    // panel orb until the crossfade.
     property bool flying: false
 
     HyprlandFocusGrab {
@@ -121,8 +116,8 @@ PanelWindow {
 
     property bool _sizeReady: false
 
-    // A fresh yura-shell can't be mid-stream; clear any glow left stale on
-    // the bar if the previous process died while streaming.
+    // A fresh yura-shell can't be mid-stream, so clear any bar glow left stale
+    // by a previous process that died while streaming.
     Component.onCompleted: Theme.Hypr.exec("qs -c mugen-shell ipc call yura set_thinking false")
 
     function syncScreenSize() {
@@ -164,10 +159,9 @@ PanelWindow {
 
         Component.onCompleted: x = yuraState.panelHiddenX
 
-        // Re-arm the focus grab on any tap inside the panel, so clicking
-        // back in after using another window restores keyboard focus here.
-        // Passive — it monitors taps without stealing them from the input
-        // field or buttons underneath.
+        // Re-arms the focus grab so clicking back in after using another window
+        // restores keyboard focus. Passive, so taps still reach the input field
+        // and buttons underneath.
         TapHandler {
             onPressedChanged: if (pressed) {
                 chatWindow.grabWanted = true
@@ -340,8 +334,8 @@ PanelWindow {
                     if (yuraState.expanded) {
                         orbCloseAnim.stop()
                         if (yuraState.flyFromX >= 0) {
-                            // Flight open: the stand-in orb performs the
-                            // entrance, so the real one waits fully grown.
+                            // The stand-in orb performs the entrance, so the
+                            // real one must already be fully grown.
                             orbOpenAnim.stop()
                             orb.expandGate = 1.0
                         } else {
@@ -391,11 +385,8 @@ PanelWindow {
             }
         }
 
-        // Mouse movement counts as activity for the idle auto-collapse. A
-        // HoverHandler, not a full-fill hoverEnabled MouseArea: the latter sat
-        // above the content and swallowed hover, so row hover states (the
-        // Recent list's delete icon) only lit up after a click. HoverHandler
-        // is passive and lets hover reach the items below.
+        // Not a full-fill hoverEnabled MouseArea: that sits above the content
+        // and swallows hover, leaving row hover states dead until a click.
         HoverHandler {
             onPointChanged: idleCollapse.restart()
         }
@@ -455,8 +446,6 @@ PanelWindow {
         }
     }
 
-    // Close the panel after idle minutes (Settings → Yura UI). Streaming
-    // pauses the countdown; taps and mouse movement inside restart it.
     Timer {
         id: idleCollapse
         interval: Math.max(1, chatWindow.settingsManager ? chatWindow.settingsManager.yuraAutoCollapseMin : 0) * 60 * 1000
@@ -466,10 +455,9 @@ PanelWindow {
         onTriggered: yuraState.close()
     }
 
-    // "One orb" illusion: a stand-in orb flies from the bar spotlight's
-    // position to the panel orb's spot, then crossfades into the real one.
-    // Progress-driven bindings (not to:-captured coords) keep the target
-    // live while the async content loader settles the real orb position.
+    // Stand-in orb that flies from the bar spotlight, then crossfades into the
+    // real one. Progress-driven bindings, not to:-captured coords, so the
+    // target stays live while the async content loader settles the real orb.
     Item {
         id: flyOrb
 
@@ -501,14 +489,13 @@ PanelWindow {
     SequentialAnimation {
         id: flyAnim
 
-        // Different x/y easings bend the path slightly so the flight reads
-        // as organic rather than a straight interpolation.
+        // x and y easings differ on purpose: it bends the flight path.
         ParallelAnimation {
             NumberAnimation { target: flyOrb; property: "px"; from: 0; to: 1; duration: Theme.Motion.drift; easing.type: Easing.InOutCubic }
             NumberAnimation { target: flyOrb; property: "py"; from: 0; to: 1; duration: Theme.Motion.drift; easing.type: Easing.InOutSine }
         }
-        // Reveal the real orb (320ms opacity Behavior) under the fading
-        // stand-in; identical geometry makes the swap invisible.
+        // Must reveal the real orb before the stand-in fades, so its opacity
+        // Behavior runs underneath and the swap stays invisible.
         ScriptAction { script: chatWindow.flying = false }
         NumberAnimation { target: flyOrb; property: "opacity"; from: 1; to: 0; duration: Theme.Motion.standard; easing.type: Easing.InOutCubic }
         ScriptAction { script: { flyOrb.shown = false; flyOrb.opacity = 1 } }
@@ -533,8 +520,8 @@ PanelWindow {
         }
     }
 
-    // Mirror the float's streaming state to the main shell over IPC so the
-    // bar's assistant icon can animate while Yura thinks (separate process).
+    // The bar lives in a separate process, so its assistant icon only learns
+    // about streaming over IPC.
     Connections {
         target: contentLoader.item
         ignoreUnknownSignals: true

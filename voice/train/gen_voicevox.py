@@ -1,8 +1,7 @@
 """Generate "hey yura" wake word training clips with VOICEVOX.
 
-Replaces openWakeWord's piper-sample-generator step: the user says the wake
-word with Japanese pronunciation, so VOICEVOX speakers (127 styles) are a
-better match than English LibriTTS voices. Writes 16 kHz mono wavs into the
+The wake word is pronounced in Japanese, so VOICEVOX styles fit it better than
+openWakeWord's English LibriTTS voices. Writes 16 kHz mono wavs into the
 directory layout train.py expects, so --augment_clips / --train_model work
 as-is. Resumable: existing files are skipped, params are per-index seeded.
 """

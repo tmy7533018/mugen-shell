@@ -10,7 +10,6 @@ Rectangle {
     required property var theme
     required property var modeManager
 
-    // Reuse the escape-hatch actions already plumbed to settings-shell.
     signal editConfig()
     signal restartService()
 
@@ -74,8 +73,8 @@ Rectangle {
         section.bump()
     }
 
-    // Re-fetch before save so the toggle patches a fresh config instead of
-    // clobbering edits made elsewhere since this panel loaded.
+    // Re-fetch before save, or the toggle clobbers edits made elsewhere since
+    // this panel loaded.
     Process {
         id: auditGetProc
         running: false

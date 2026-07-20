@@ -7,10 +7,8 @@
   zlib,
 }:
 
-# The official Linux build is a PyInstaller onedir bundle (everything under
-# _internal/), shipped as a split 7-Zip. We just unpack it and let
-# autoPatchelf rewrite the interpreter + RPATH of `run` and the bundled .so
-# set so it runs without the nix-ld shim.
+# A PyInstaller onedir bundle in a split 7-Zip: unpacked as-is, with
+# autoPatchelf rewriting the interpreter and RPATHs so it runs without nix-ld.
 stdenv.mkDerivation rec {
   pname = "aivisspeech-engine";
   version = "1.2.0";
@@ -25,18 +23,17 @@ stdenv.mkDerivation rec {
     _7zz
   ];
 
-  # `run` only misses libz; the bundled onnxruntime/soundfile/etc. pull
-  # libstdc++/libgcc_s, so give autoPatchelf the cc runtime too.
+  # `run` only misses libz, but the bundled onnxruntime/soundfile/etc. pull
+  # libstdc++/libgcc_s.
   buildInputs = [
     stdenv.cc.cc.lib
     zlib
   ];
 
-  # The bundled onnxruntime-gpu provider references CUDA/cuDNN/TensorRT libs
-  # (and _tkinter wants Tcl/Tk) that don't exist here. Only reached in GPU
-  # mode / the unused GUI, so they are ignored by name — a wildcard would also
-  # swallow a genuinely required lib appearing in a future bundle and turn a
-  # build error into a runtime crash loop.
+  # CUDA/cuDNN/TensorRT (onnxruntime-gpu) and Tcl/Tk (_tkinter) are only
+  # reached in GPU mode and the unused GUI. Listed by name, not by wildcard:
+  # a wildcard would swallow a genuinely required lib in a future bundle and
+  # turn a build error into a runtime crash loop.
   autoPatchelfIgnoreMissingDeps = [
     "libcublas.so.12"
     "libcublasLt.so.12"

@@ -117,7 +117,6 @@ Item {
         
         var filePath = imageSource.toString()
         
-        // Color extraction only works on local files
         if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
             applyExtractedColor(defaultAccentColor())
             return
@@ -204,7 +203,8 @@ Item {
     Connections {
         target: root.musicManager
         function onArtUrlChanged() {
-            // Actual color extraction happens in Image.onStatusChanged after source updates
+            // Only the cleared case is handled here; extraction itself runs
+            // from Image.onStatusChanged once the new source loads.
             if (!root.musicManager || !root.musicManager.artUrl || root.musicManager.artUrl === "") {
                 applyExtractedColor(defaultAccentColor())
             }

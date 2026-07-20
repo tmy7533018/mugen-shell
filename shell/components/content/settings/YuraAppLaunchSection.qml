@@ -25,15 +25,15 @@ Rectangle {
     property bool saving: false
     property string statusText: ""
 
-    property var allowedSet: ({})  // map: binary → true
+    property var allowedSet: ({})
+    // Bumped on every mutation of allowedSet; the `let _ = dirtyTick` reads
+    // below exist to make bindings depend on it, since mutating a JS map in
+    // place doesn't notify QML.
     property int dirtyTick: 0
-    property var installedApps: []  // [{ binary, display }]
+    property var installedApps: []
     property string filterText: ""
 
     readonly property var allRows: {
-        // Apps that exist on disk first (sorted by display name), then any
-        // legacy/custom entries from the user's allowlist that aren't in the
-        // installed-apps list (CLI tools like htop, hand-edited entries).
         let _ = section.dirtyTick
         let known = {}
         let rows = []
@@ -93,9 +93,8 @@ Rectangle {
         section.dirtyTick++
     }
 
-    // Bulk on/off applies to whatever is currently visible after the search
-    // filter — keeps "All on" from accidentally allowing 200 desktop apps
-    // when the user just wanted to grant a subset.
+    // Scoped to the filtered rows so "All on" can't silently allow every
+    // installed app when the user meant a subset.
     function bulkAllow(on) {
         let next = Object.assign({}, section.allowedSet)
         let rows = section.filteredRows

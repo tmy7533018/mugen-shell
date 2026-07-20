@@ -10,8 +10,7 @@ RowLayout {
     property var modeManager
     property var theme
 
-    // Items whose id or title contains any of these (case-insensitive) are hidden
-    // because mugen-shell already exposes them as dedicated bar widgets.
+    // Hidden because mugen-shell already exposes these as dedicated bar widgets.
     property var blockedKeywords: ["nm-applet", "networkmanager", "blueman", "bluetooth", "fcitx"]
 
     property bool expanded: false
@@ -29,9 +28,8 @@ RowLayout {
 
     function scaled(v) { return modeManager ? modeManager.scale(v) : v }
 
-    // Position among the *shown* items, skipping blocked entries, so the
-    // reveal stagger stays contiguous (no dead beat when a blocked item like
-    // fcitx holds a low model index).
+    // Skips blocked entries so the reveal stagger has no dead beat when a
+    // blocked item holds a low model index.
     function visiblePosition(modelIndex) {
         let items = SystemTray.items.values
         let n = 0
@@ -55,24 +53,19 @@ RowLayout {
             readonly property bool blocked: root.isBlocked(modelData)
             readonly property bool shouldShow: root.expanded && !blocked
 
-            // Cascade only the bloom (scale/opacity); the slots all open
-            // together so the row doesn't shove its icons around as each width
-            // animates in turn (the jumpy multi-icon behaviour).
+            // Only the bloom cascades; widths open together, otherwise each
+            // width animating in turn shoves the row's icons around.
             readonly property int revealDelay: shouldShow ? root.visiblePosition(index) * 50 : 0
 
             Layout.preferredWidth: shouldShow ? root.scaled(20) : 0
             Layout.preferredHeight: root.scaled(20)
             Layout.alignment: Qt.AlignVCenter
             opacity: shouldShow ? 1.0 : 0.0
-            // Stay in the layout for the whole reveal (shouldShow), so a
-            // still-fading-in icon already holds its slot instead of popping
-            // into the row mid-animation and shoving its neighbour. Falls back
-            // to opacity while collapsing so the fade-out is still seen.
+            // shouldShow, not opacity, so a still-fading-in icon already holds
+            // its slot instead of popping in mid-animation and shoving its
+            // neighbour. Opacity only keeps it alive through the collapse.
             visible: shouldShow || opacity > 0.01
 
-            // Blooms in with a spring overshoot as it materializes — reads as
-            // organic rather than a mechanical width-squish. Multiplies with
-            // the inner hover scale.
             property real revealScale: shouldShow ? 1.0 : 0.3
             scale: revealScale
             transformOrigin: Item.Center

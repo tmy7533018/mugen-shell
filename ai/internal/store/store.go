@@ -32,8 +32,8 @@ type Message struct {
 	Content string `json:"content"`
 }
 
-// Memory is one durable fact Yura saved about the user; the full list is
-// injected into the system prompt each turn.
+// Memory is one durable fact about the user. The full list is injected into
+// the system prompt each turn.
 type Memory struct {
 	ID        int64  `json:"id"`
 	Content   string `json:"content"`
@@ -96,7 +96,6 @@ func (s *Store) migrate() error {
 			return err
 		}
 	}
-	// Backfill: older databases were created before the model column existed.
 	if err := s.ensureColumn("conversations", "model", "TEXT NOT NULL DEFAULT ''"); err != nil {
 		return err
 	}
@@ -260,11 +259,10 @@ func (s *Store) ConversationCount() (int, error) {
 	return n, err
 }
 
-// DeleteAllConversations removes every conversation; messages cascade. It
-// then VACUUMs so the freed pages are returned to the filesystem. A VACUUM
-// under WAL leaves that space in the file until the last connection closes,
-// so the journal is dropped to rollback mode for the VACUUM — which does
-// truncate the file — and restored to WAL afterwards.
+// DeleteAllConversations removes every conversation; messages cascade, then a
+// VACUUM returns the freed pages to the filesystem. A VACUUM under WAL keeps
+// that space until the last connection closes, hence the drop to rollback mode
+// and back.
 func (s *Store) DeleteAllConversations() error {
 	if _, err := s.db.Exec(`DELETE FROM conversations`); err != nil {
 		return err
@@ -295,9 +293,9 @@ func (s *Store) PruneConversationsOlderThan(cutoff int64) (int, error) {
 // Path is the database file's path.
 func (s *Store) Path() string { return s.path }
 
-// SizeBytes is the on-disk size of the database file. The transient -wal
-// and -shm sidecars are excluded so the figure stays stable as the WAL
-// grows and checkpoints, rather than jumping around during normal use.
+// SizeBytes is the on-disk size of the database file. The -wal and -shm
+// sidecars are excluded so the figure doesn't jump around as the WAL grows and
+// checkpoints.
 func (s *Store) SizeBytes() int64 {
 	info, err := os.Stat(s.path)
 	if err != nil {
@@ -345,8 +343,8 @@ func (s *Store) ListMessages(convID int64) ([]Message, error) {
 	return out, rows.Err()
 }
 
-// RemoveLastMessage drops the most recent message (called when a chat fails
-// after the user message was already persisted).
+// RemoveLastMessage drops the most recent message, for when a chat fails after
+// the user message was already persisted.
 func (s *Store) RemoveLastMessage(convID int64) error {
 	_, err := s.db.Exec(`DELETE FROM messages WHERE id = (
 		SELECT id FROM messages WHERE conversation_id = ? ORDER BY created_at DESC, id DESC LIMIT 1
