@@ -20,6 +20,9 @@ QtObject {
     // Drives the bar's looping completion sound and timer panel auto-open.
     property bool alerting: false
 
+    // Reactive clock for remainingSec. The tick Timer advances it, but every
+    // function that changes the countdown must refresh it first: tick only
+    // runs while the timer does, so until it fires this holds a stale reading.
     property real now: Date.now()
 
     readonly property int remainingSec: {
@@ -34,9 +37,10 @@ QtObject {
 
     function start(seconds) {
         if (seconds <= 0) return
+        now = Date.now()
         alerting = false
         durationSec = seconds
-        endTime = Date.now() + seconds * 1000
+        endTime = now + seconds * 1000
         running = true
         paused = false
         pausedRemainingSec = 0
@@ -52,6 +56,7 @@ QtObject {
 
     function pause() {
         if (!running || paused) return
+        now = Date.now()
         pausedRemainingSec = remainingSec
         paused = true
         save()
@@ -59,7 +64,8 @@ QtObject {
 
     function resume() {
         if (!running || !paused) return
-        endTime = Date.now() + pausedRemainingSec * 1000
+        now = Date.now()
+        endTime = now + pausedRemainingSec * 1000
         paused = false
         pausedRemainingSec = 0
         save()
@@ -103,6 +109,7 @@ QtObject {
         try {
             let s = JSON.parse(jsonString)
             _applyingExternal = true
+            now = Date.now()
 
             if (s.durationSec !== undefined) durationSec = s.durationSec
             if (s.endTime !== undefined) endTime = s.endTime
@@ -111,7 +118,7 @@ QtObject {
             if (s.running !== undefined) running = s.running
             if (s.alerting !== undefined) alerting = s.alerting
 
-            if (running && !paused && endTime > 0 && endTime <= Date.now()) {
+            if (running && !paused && endTime > 0 && endTime <= now) {
                 running = false
                 paused = false
                 endTime = 0
