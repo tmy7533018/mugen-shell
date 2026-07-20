@@ -17,7 +17,16 @@ Rectangle {
 
     signal removeRequested(var notificationId)
     signal actionRequested(var notif)
-    
+    signal groupToggleRequested(var groupKey)
+    signal groupDismissRequested(var memberIds)
+
+    // Set only on the row standing in for a collapsed/expanded group; ordinary
+    // rows and group members leave these undefined and behave as before.
+    readonly property int groupCount: modelData && modelData.groupCount ? modelData.groupCount : 1
+    readonly property bool isGroupHeader: groupCount > 1
+    readonly property bool groupExpanded: !!(modelData && modelData.groupExpanded)
+    readonly property bool isCollapsedGroup: isGroupHeader && !groupExpanded
+
     width: parent ? parent.width : 0
     height: shouldCollapseHeight ? 0 : (isExpanded && !notificationItem.isRemoving ? contentColumn.implicitHeight + 24 : 65)
     color: theme ? theme.surfaceInsetCard : Qt.rgba(0, 0, 0, 0.65)
@@ -199,6 +208,35 @@ Rectangle {
                 wrapMode: notificationItem.showFullText ? Text.WordWrap : Text.NoWrap
             }
 
+            // Deliberately has no MouseArea: the whole card is the toggle, and a
+            // hoverEnabled child here would steal the hover that drives currentIndex.
+            Rectangle {
+                visible: notificationItem.isGroupHeader
+                Layout.alignment: Qt.AlignVCenter
+                implicitWidth: groupCountText.implicitWidth + 14
+                implicitHeight: 18
+                radius: 9
+                color: theme
+                    ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, notificationItem.groupExpanded ? 0.32 : 0.18)
+                    : Qt.rgba(0.65, 0.55, 0.85, notificationItem.groupExpanded ? 0.32 : 0.18)
+                border.width: 1
+                border.color: theme
+                    ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.45)
+                    : Qt.rgba(0.65, 0.55, 0.85, 0.45)
+
+                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+
+                Text {
+                    id: groupCountText
+                    anchors.centerIn: parent
+                    text: notificationItem.groupExpanded ? "▾ " + notificationItem.groupCount : notificationItem.groupCount
+                    color: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1)
+                    font.pixelSize: 10
+                    font.weight: Font.Medium
+                    font.family: "M PLUS 2"
+                }
+            }
+
             Text {
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
                 text: modelData.time
@@ -304,7 +342,13 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: notificationItem.removeRequested(modelData.id)
+                    onClicked: {
+                        if (notificationItem.isCollapsedGroup) {
+                            notificationItem.groupDismissRequested(modelData.groupMemberIds)
+                        } else {
+                            notificationItem.removeRequested(modelData.id)
+                        }
+                    }
                 }
             }
         }
@@ -344,9 +388,20 @@ Rectangle {
 
         onClicked: function(mouse) {
             if (mouse.button === Qt.LeftButton) {
-                actionRequested(modelData)
+                // A group header toggles instead of launching — launching an app
+                // and destroying N notifications from one ambiguous click is the
+                // worst outcome. Its own notification stays reachable via Open.
+                if (notificationItem.isGroupHeader) {
+                    notificationItem.groupToggleRequested(modelData.groupKey)
+                } else {
+                    actionRequested(modelData)
+                }
             } else if (mouse.button === Qt.RightButton) {
-                removeRequested(modelData.id)
+                if (notificationItem.isCollapsedGroup) {
+                    notificationItem.groupDismissRequested(modelData.groupMemberIds)
+                } else {
+                    removeRequested(modelData.id)
+                }
             }
         }
     }

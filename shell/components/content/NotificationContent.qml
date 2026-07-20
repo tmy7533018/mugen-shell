@@ -27,121 +27,189 @@ Item {
     
     property var notifications: notificationManager.notifications
     property var removingNotifications: ({})
-    
-    onNotificationsChanged: {
+
+    // Keys are prefixed so they can never collide with a notification id, which
+    // the removal paths round-trip through Number().
+    property var expandedGroups: ({})
+
+    function groupKeyOf(n) {
+        if (n.desktopEntry && String(n.desktopEntry).length > 0) return "d:" + String(n.desktopEntry).toLowerCase()
+        if (n.appName && String(n.appName).length > 0) return "a:" + String(n.appName).toLowerCase()
+        // No app identity: stay a singleton rather than merge with strangers.
+        return "n:" + n.id
+    }
+
+    // A collapsed group is rendered as a decorated copy of its newest member
+    // rather than a group object, so every row's modelData keeps the plain
+    // notification shape and modelData.id stays a real id — which is what lets
+    // removingNotifications, removalIndex and the clear-all walk work unchanged.
+    readonly property var displayRows: {
+        let src = notifications
+        let counts = ({})
+        let members = ({})
+        for (let i = 0; i < src.length; i++) {
+            let k = groupKeyOf(src[i])
+            counts[k] = (counts[k] || 0) + 1
+            if (!members[k]) members[k] = []
+            members[k].push(src[i].id)
+        }
+
+        let rows = []
+        let seen = ({})
+        for (let i = 0; i < src.length; i++) {
+            let n = src[i]
+            let k = groupKeyOf(n)
+            if (!seen[k]) {
+                seen[k] = true
+                let head = Object.assign({}, n)
+                head.groupKey = k
+                head.groupCount = counts[k]
+                head.groupMemberIds = members[k]
+                head.groupExpanded = expandedGroups[k] === true
+                rows.push(head)
+            } else if (expandedGroups[k] === true) {
+                rows.push(n)
+            }
+        }
+        return rows
+    }
+
+    onDisplayRowsChanged: {
         if (!isClearingAll) {
             syncNotificationsToModel()
         }
     }
-    
+
+    function toggleGroup(key) {
+        let next = Object.assign({}, expandedGroups)
+        if (next[key] === true) delete next[key]
+        else next[key] = true
+        expandedGroups = next
+        resetAutoCloseTimer()
+    }
+
     function syncNotificationsToModel() {
-        if (notifications.length > notificationListModel.count) {
-            let newCount = notifications.length - notificationListModel.count
-            for (let i = newCount - 1; i >= 0; i--) {
-                notificationListModel.insert(0, {
-                    "modelData": notifications[i]
-                })
+        let rows = displayRows
+
+        // Row count and notification count are decoupled once grouping is on
+        // (a second notification for an existing app adds no row, expanding one
+        // inserts several), so this diffs by id instead of by length.
+        let want = ({})
+        for (let i = 0; i < rows.length; i++) {
+            let k = String(rows[i].id)
+            want[k] = (want[k] || 0) + 1
+        }
+
+        // Counted rather than set-based: the manager does not dedupe ids, and a
+        // notification server reusing one must not make two rows match at random.
+        let keep = []
+        for (let i = 0; i < notificationListModel.count; i++) {
+            let k = String(notificationListModel.get(i).modelData.id)
+            if (want[k] > 0) {
+                want[k]--
+                keep.push(true)
+            } else {
+                keep.push(false)
             }
         }
-        else if (notifications.length < notificationListModel.count) {
-            for (let i = notificationListModel.count - 1; i >= 0; i--) {
-                let modelId = notificationListModel.get(i).modelData.id
-                let found = false
-                for (let j = 0; j < notifications.length; j++) {
-                    if (notifications[j].id === modelId) {
-                        found = true
-                        break
-                    }
-                }
-                if (!found) {
-                    notificationListModel.remove(i)
-                }
-            }
+        for (let i = keep.length - 1; i >= 0; i--) {
+            if (!keep[i]) notificationListModel.remove(i)
         }
-        else if (notifications.length > 0) {
-            let needsSync = false
-            for (let i = 0; i < notifications.length && i < notificationListModel.count; i++) {
-                if (notifications[i].id !== notificationListModel.get(i).modelData.id) {
-                    needsSync = true
+
+        for (let i = 0; i < rows.length; i++) {
+            let id = String(rows[i].id)
+            if (i < notificationListModel.count && String(notificationListModel.get(i).modelData.id) === id) {
+                // Re-push even when unchanged: the relative "x mins ago" label
+                // mutates on each tick and delegates freeze without it.
+                notificationListModel.set(i, { "modelData": rows[i] })
+                continue
+            }
+            let at = -1
+            for (let j = i + 1; j < notificationListModel.count; j++) {
+                if (String(notificationListModel.get(j).modelData.id) === id) {
+                    at = j
                     break
                 }
             }
-            if (needsSync) {
-                notificationListModel.clear()
-                for (let i = 0; i < notifications.length; i++) {
-                    notificationListModel.append({
-                        "modelData": notifications[i]
-                    })
-                }
+            if (at >= 0) {
+                notificationListModel.move(at, i, 1)
+                notificationListModel.set(i, { "modelData": rows[i] })
             } else {
-                // Same rows in the same order, but the relative "x mins ago"
-                // label mutates on each tick, so delegates need a re-push or
-                // they freeze.
-                for (let i = 0; i < notifications.length; i++) {
-                    notificationListModel.set(i, {
-                        "modelData": notifications[i]
-                    })
-                }
+                notificationListModel.insert(i, { "modelData": rows[i] })
             }
+        }
+        while (notificationListModel.count > rows.length) {
+            notificationListModel.remove(notificationListModel.count - 1)
         }
     }
     
     function removeNotification(notificationId) {
-        let notifIdStr = String(notificationId)
-        
-        if (removingNotifications[notifIdStr] !== undefined) {
-            return
-        }
-        
-        let newRemoving = Object.assign({}, removingNotifications)
-        newRemoving[notifIdStr] = Date.now()
-        removingNotifications = newRemoving
-        
-        removeTimer.notificationId = notifIdStr
-        removeTimer.restart()
+        removeNotificationIds([notificationId])
     }
-    
+
+    function removeNotificationIds(ids) {
+        let pending = []
+        let newRemoving = Object.assign({}, removingNotifications)
+        for (let i = 0; i < ids.length; i++) {
+            let s = String(ids[i])
+            if (newRemoving[s] !== undefined) continue
+            newRemoving[s] = Date.now()
+            pending.push(s)
+        }
+        if (pending.length === 0) return
+        removingNotifications = newRemoving
+
+        // Queued, not overwritten: a second dismissal inside the 500ms window
+        // used to drop the first id, leaving its row flagged forever at height 0.
+        removeTimer.notificationIds = removeTimer.notificationIds.concat(pending)
+        if (!removeTimer.running) removeTimer.restart()
+    }
+
     Timer {
         id: removeTimer
-        property string notificationId: ""
+        property var notificationIds: []
         interval: 500
         onTriggered: {
-            if (!notificationId) return
-            
-            let notifId = isNaN(notificationId) ? notificationId : Number(notificationId)
-            notificationManager.removeNotification(notifId)
-            
-            removeFlagTimer.notificationId = notificationId
-            removeFlagTimer.restart()
-            
-            notificationId = ""
+            let ids = notificationIds
+            notificationIds = []
+            if (ids.length === 0) return
+
+            for (let i = 0; i < ids.length; i++) {
+                notificationManager.removeNotification(isNaN(ids[i]) ? ids[i] : Number(ids[i]))
+            }
+
+            removeFlagTimer.notificationIds = removeFlagTimer.notificationIds.concat(ids)
+            if (!removeFlagTimer.running) removeFlagTimer.restart()
         }
     }
-    
+
     Timer {
         id: removeFlagTimer
-        property string notificationId: ""
+        property var notificationIds: []
         interval: 450
         onTriggered: {
-            if (!notificationId) return
-            
-            let stillExists = false
-            for (let i = 0; i < notifications.length; i++) {
-                if (String(notifications[i].id) === notificationId) {
-                    stillExists = true
-                    break
+            let ids = notificationIds
+            notificationIds = []
+            if (ids.length === 0) return
+
+            let gone = []
+            for (let i = 0; i < ids.length; i++) {
+                let stillExists = false
+                for (let j = 0; j < notifications.length; j++) {
+                    if (String(notifications[j].id) === ids[i]) {
+                        stillExists = true
+                        break
+                    }
                 }
+                if (!stillExists) gone.push(ids[i])
             }
-            
-            if (!stillExists) {
-                Qt.callLater(() => {
-                    let updatedRemoving = Object.assign({}, removingNotifications)
-                    delete updatedRemoving[notificationId]
-                    removingNotifications = updatedRemoving
-                })
-            }
-            
-            notificationId = ""
+            if (gone.length === 0) return
+
+            Qt.callLater(() => {
+                let updatedRemoving = Object.assign({}, removingNotifications)
+                for (let i = 0; i < gone.length; i++) delete updatedRemoving[gone[i]]
+                removingNotifications = updatedRemoving
+            })
         }
     }
     
@@ -316,22 +384,30 @@ Item {
                 event.accepted = true
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                 let idx = notificationList.currentIndex
-                if (idx >= 0 && idx < notifications.length) {
-                    let notif = notifications[idx]
-                    if (notif && notif.desktopEntry && notif.desktopEntry.length > 0) {
-                        launchAppProcess.command = ["python3", Quickshell.shellDir + "/scripts/focus_or_launch.py", notif.desktopEntry]
-                        launchAppProcess.running = true
-                    }
-                    if (notif && notif.id !== undefined) {
-                        root.removeNotification(notif.id)
+                if (idx >= 0 && idx < root.displayRows.length) {
+                    let notif = root.displayRows[idx]
+                    if (notif && notif.groupCount > 1) {
+                        // Mirrors left-click: reach the members first, then Enter
+                        // on the header launches like any other row.
+                        root.toggleGroup(notif.groupKey)
+                    } else {
+                        if (notif && notif.desktopEntry && notif.desktopEntry.length > 0) {
+                            launchAppProcess.command = ["python3", Quickshell.shellDir + "/scripts/focus_or_launch.py", notif.desktopEntry]
+                            launchAppProcess.running = true
+                        }
+                        if (notif && notif.id !== undefined) {
+                            root.removeNotification(notif.id)
+                        }
                     }
                 }
                 event.accepted = true
             } else if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
                 let idx = notificationList.currentIndex
-                if (idx >= 0 && idx < notifications.length) {
-                    let notif = notifications[idx]
-                    if (notif && notif.id !== undefined) {
+                if (idx >= 0 && idx < root.displayRows.length) {
+                    let notif = root.displayRows[idx]
+                    if (notif && notif.groupCount > 1 && notif.groupExpanded !== true) {
+                        root.removeNotificationIds(notif.groupMemberIds)
+                    } else if (notif && notif.id !== undefined) {
                         root.removeNotification(notif.id)
                     }
                 }
@@ -606,7 +682,17 @@ Item {
                             easing.type: Easing.OutCubic
                         }
                     }
-                    
+
+                    // displaced only animates the rows pushed aside; without this
+                    // a group bumped to the top by a new member would teleport.
+                    move: Transition {
+                        NumberAnimation {
+                            properties: "y"
+                            duration: Theme.Motion.gentle
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+
                     delegate: NotificationComponents.NotificationItem {
                         modelData: model.modelData
                         theme: root.theme
@@ -617,6 +703,15 @@ Item {
                         
                         onRemoveRequested: (notificationId) => {
                             root.removeNotification(notificationId)
+                            root.resetAutoCloseTimer()
+                        }
+
+                        onGroupToggleRequested: (groupKey) => {
+                            root.toggleGroup(groupKey)
+                        }
+
+                        onGroupDismissRequested: (memberIds) => {
+                            root.removeNotificationIds(memberIds)
                             root.resetAutoCloseTimer()
                         }
                         
