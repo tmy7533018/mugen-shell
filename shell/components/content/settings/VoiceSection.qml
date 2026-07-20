@@ -25,16 +25,33 @@ Rectangle {
 
     // Voice enrollment: the daemon owns the flow (SIGRTMIN+2); the pkl file
     // is the source of truth for "enrolled?" across the process boundary.
-    property bool enrolled: false
     property bool enrolling: false
+    // mtime (epoch secs) of the verifier pkl; 0 = never registered. Tracked as
+    // mtime (not mere existence) so a re-register waits for a NEW file instead
+    // of stopping instantly on the previous registration's leftover pkl.
+    property real pklMtime: 0
+    property real enrollStartTime: 0
+    readonly property bool enrolled: pklMtime > 0
+    // Mirrors the daemon's .enrolling marker: it clears on every exit path,
+    // including an abort that never writes a verifier.
+    property bool daemonEnrolling: false
+    property bool sawDaemonEnrolling: false
 
     Managers.MicCavaManager { id: enrollCava }
 
     Process {
         id: enrollCheck
         command: ["bash", "-c",
-            "test -f \"$HOME/.local/share/mugen-shell/verifier/hey_yura_verifier.pkl\" && echo yes || echo no"]
-        stdout: SplitParser { onRead: d => { section.enrolled = d.trim() === "yes" } }
+            "d=\"$HOME/.local/share/mugen-shell/verifier\"; "
+            + "echo \"$(stat -c %Y \"$d/hey_yura_verifier.pkl\" 2>/dev/null || echo 0) "
+            + "$(test -e \"$d/.enrolling\" && echo 1 || echo 0)\""]
+        stdout: SplitParser {
+            onRead: d => {
+                const parts = d.trim().split(/\s+/)
+                section.pklMtime = parseInt(parts[0]) || 0
+                section.daemonEnrolling = parts[1] === "1"
+            }
+        }
     }
 
     Process {
@@ -58,7 +75,21 @@ Rectangle {
         running: section.enrolling
         onTriggered: {
             enrollCheck.running = true
-            if (section.enrolled) section.stopEnroll()
+            // Stop once a NEW pkl lands (mtime past enrollment start), not
+            // just because a prior registration's file already exists.
+            if (section.pklMtime > section.enrollStartTime) {
+                section.stopEnroll()
+            } else if (section.daemonEnrolling) {
+                section.sawDaemonEnrolling = true
+            } else if (section.sawDaemonEnrolling) {
+                // The marker cleared without a new verifier: the daemon
+                // aborted on missed clips, a cancel, or a training error.
+                // Release now instead of waiting out enrollTimeout. Only once
+                // it has been seen, though — the daemon reads the signal
+                // between turns, which can be tens of seconds into a reply,
+                // and giving up early would leave it recording unattended.
+                section.stopEnroll()
+            }
         }
     }
 
@@ -71,6 +102,9 @@ Rectangle {
     }
 
     function startEnroll() {
+        section.enrollStartTime = Math.floor(Date.now() / 1000)
+        section.daemonEnrolling = false
+        section.sawDaemonEnrolling = false
         section.enrolling = true
         enrollCava.start()
         enrollStart.running = true
@@ -149,6 +183,9 @@ Rectangle {
                 + '"${YURA_PIPER_BIN:-piper}" --model "${YURA_PIPER_VOICES:-$HOME/.local/share/piper/voices}/' + voice + '.onnx" --output_file "$w" && '
                 + playNormalized
         } else {
+            // Style ids arrive from a localhost engine's /speakers JSON and are
+            // spliced into the shell line below; only digits may pass.
+            if (!/^[0-9]+$/.test(voice)) return
             const enc = encodeURIComponent("こんにちは、ユラだよ。この声はどうかな")
             const base = engine === "aivis"
                 ? 'vv="${YURA_AIVIS_URL:-http://127.0.0.1:10101}"; '
@@ -528,6 +565,31 @@ Rectangle {
             }
         }
 
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Common.SettingLabel { theme: section.theme;
+                title: "Wake sensitivity"
+                desc: "Higher rejects more false wakes; lower catches quiet calls"
+            }
+
+            Common.Slider {
+                Layout.alignment: Qt.AlignVCenter
+                Layout.preferredWidth: 180
+                theme: section.theme
+                from: 0.5
+                to: 0.95
+                stepSize: 0.01
+                value: section.settingsManager ? section.settingsManager.voiceWakeThreshold : 0.85
+                display: value.toFixed(2)
+                onMoved: nv => {
+                    if (section.settingsManager) section.settingsManager.voiceWakeThreshold = nv
+                }
+                onReleased: section.save()
+            }
+        }
+
         Item {
             Layout.fillWidth: true
             implicitHeight: voiceHeader.implicitHeight
@@ -692,6 +754,31 @@ Rectangle {
                         }
                     }
                 }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Common.SettingLabel { theme: section.theme;
+                title: "Yura volume"
+                desc: "Loudness of spoken replies"
+            }
+
+            Common.Slider {
+                Layout.alignment: Qt.AlignVCenter
+                Layout.preferredWidth: 180
+                theme: section.theme
+                from: 0.0
+                to: 1.0
+                stepSize: 0.05
+                value: section.settingsManager ? section.settingsManager.voiceVolume : 1.0
+                display: Math.round(value * 100) + "%"
+                onMoved: nv => {
+                    if (section.settingsManager) section.settingsManager.voiceVolume = nv
+                }
+                onReleased: section.save()
             }
         }
 

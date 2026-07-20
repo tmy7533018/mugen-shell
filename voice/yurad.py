@@ -41,6 +41,10 @@ VOICEVOX_URL = os.environ.get("YURA_VOICEVOX_URL", "http://127.0.0.1:50021")
 AIVIS_URL = os.environ.get("YURA_AIVIS_URL", "http://127.0.0.1:10101")
 VOICEVOX_SPEAKER = int(os.environ.get("YURA_VOICEVOX_SPEAKER", "14"))
 TTS_SPEED = float(os.environ.get("YURA_VOICE_SPEED", "1.0"))
+# Fallback voice for when settings.json names none, as "<engine>:<style-id>"
+# or just "<engine>:" to take that engine's first style. Deployments that ship
+# only one engine set it so replies are audible before anything is picked.
+TTS_DEFAULT = os.environ.get("YURA_TTS", "")
 # Engines master at very different loudness (Aivis ~8 dB hotter than
 # VOICEVOX); every spoken clip is RMS-normalized to this target so a
 # voice change never changes the room volume.
@@ -69,6 +73,9 @@ WAKE_VERIFIER = os.path.expanduser(os.environ.get(
     "YURA_VERIFIER", os.path.join(VERIFIER_DIR, "hey_yura_verifier.pkl")))
 WAKE_VERIFIER_THRESHOLD = float(os.environ.get("YURA_VERIFIER_THRESHOLD", "0.4"))
 ENROLL_CLIPS = int(os.environ.get("YURA_ENROLL_CLIPS", "10"))
+# Published for the Settings window, which lives in another process and can
+# only watch the filesystem: present while an enrollment is actually running.
+ENROLL_MARKER = os.path.join(VERIFIER_DIR, ".enrolling")
 YURA_SHELL_QML = os.path.expanduser(
     "~/.config/quickshell/mugen-shell/yura-shell.qml")
 # Live knobs (voice.enabled, voice.wakeOpens) come from the shell's
@@ -97,6 +104,20 @@ def _settings() -> dict:
 
 def voice_settings() -> dict:
     return _settings().get("voice", {})
+
+
+def voice_float(key: str, fallback: float, lo: float, hi: float) -> float:
+    """Clamped float from voice settings; junk from a hand-edit falls back.
+
+    settings.json is user-editable and these are read on the audio path (the
+    wake loop reads one per frame), so a bad value must not raise there — an
+    exception in that loop takes the daemon down into a restart cycle.
+    """
+    try:
+        value = float(voice_settings().get(key, fallback))
+    except (TypeError, ValueError):
+        value = fallback
+    return min(max(value, lo), hi)
 
 
 # Canned lines yurad speaks itself (the LLM replies already follow the
@@ -486,6 +507,28 @@ def _style_id(voice: str) -> int | None:
         return None
 
 
+_engine_sid_cache: dict[str, int] = {}
+
+
+def _engine_default_sid(base_url: str) -> int | None:
+    """First style the engine reports, cached per engine.
+
+    Lets a voice setting name only the engine ("aivis:"): the style ids depend
+    on which models are installed, so a deployment can't pin one up front.
+    """
+    if base_url in _engine_sid_cache:
+        return _engine_sid_cache[base_url]
+    try:
+        r = requests.get(f"{base_url}/speakers", timeout=3)
+        r.raise_for_status()
+        sid = int(r.json()[0]["styles"][0]["id"])
+    except Exception as e:
+        log("tts", f"no default style from {base_url}: {e}")
+        return None
+    _engine_sid_cache[base_url] = sid
+    return sid
+
+
 def synth_voicevox(base_url: str, speaker: int, sentence: str, speed: float) -> bytes:
     q = requests.post(f"{base_url}/audio_query",
                       params={"text": sentence, "speaker": speaker},
@@ -515,16 +558,19 @@ def synthesize(sentence: str) -> bytes:
     # voice.tts is "voicevox:<style-id>" or "piper:<voice-name>"; the voice
     # choice carries the engine, no separate engine setting.
     vs = voice_settings()
-    # Clamp so a hand-edited settings.json can't zero the length_scale divisor.
-    speed = min(max(float(vs.get("speed", TTS_SPEED)), 0.5), 2.0)
-    engine, _, voice = str(vs.get("tts", "")).partition(":")
+    # Clamped so a hand-edited settings.json can't zero the length_scale divisor.
+    speed = voice_float("speed", TTS_SPEED, 0.5, 2.0)
+    engine, _, voice = str(vs.get("tts", "") or TTS_DEFAULT).partition(":")
     if engine == "piper" and voice:
         return synth_piper(voice, sentence, speed)
     sid = _style_id(voice) if voice else None
-    if engine == "aivis" and sid is not None:
-        return synth_voicevox(AIVIS_URL, sid, sentence, speed)
+    if engine == "aivis":
+        if sid is None:
+            sid = _engine_default_sid(AIVIS_URL)
+        if sid is not None:
+            return synth_voicevox(AIVIS_URL, sid, sentence, speed)
     if engine != "voicevox" or sid is None:
-        sid = int(vs.get("speaker", VOICEVOX_SPEAKER))
+        sid = int(voice_float("speaker", VOICEVOX_SPEAKER, 0, 2 ** 31 - 1))
     return synth_voicevox(VOICEVOX_URL, sid, sentence, speed)
 
 
@@ -536,11 +582,17 @@ def play_wav(data: bytes, should_stop=None) -> None:
     if channels > 1:
         audio = audio.reshape(-1, channels)
     x = audio.astype(np.float32) / 32768.0
+    vol = voice_float("volume", 1.0, 0.0, 1.0)
+    if vol <= 0.0:
+        # Muted: return instead of pushing a silent buffer, which would hold
+        # the speaking state for the sentence's full duration for nothing.
+        return
     rms = float(np.sqrt(np.mean(x * x)))
     if rms > 1e-4:
-        # Attenuation is free; boost is capped so quiet styles (whisper
-        # voices) don't get their noise floor dragged up.
-        gain = min(10 ** (TTS_TARGET_DBFS / 20) / rms, 3.0)
+        # Attenuation is free; boost stays capped so quiet styles (whisper
+        # voices) don't get their noise floor dragged up. The user-facing
+        # volume trim applies inside that cap so it can only lower it.
+        gain = min(10 ** (TTS_TARGET_DBFS / 20) / rms * vol, 3.0)
         audio = (np.clip(x * gain, -1.0, 1.0) * 32767).astype(np.int16)
     sd.play(audio, sr)
     if should_stop is None:
@@ -765,12 +817,23 @@ class Daemon:
         log("enroll", f"negatives ready: {have}+{made}")
 
     def _run_enrollment(self) -> None:
-        """Google-style voice registration, guided by Yura's own voice."""
-        self.cancel.clear()
+        """Google-style voice registration, guided by Yura's own voice.
+
+        The cancel flag is cleared when the request arrives (see main), not
+        here: the loop can dequeue this minutes later, and a cancel sent in
+        between has to still call the enrollment off.
+        """
         pos_dir = os.path.join(VERIFIER_DIR, "positive")
         neg_dir = os.path.join(VERIFIER_DIR, "negative")
         os.makedirs(pos_dir, exist_ok=True)
         os.makedirs(neg_dir, exist_ok=True)
+        # Tell the Settings window an enrollment is live; the finally clears it
+        # on every exit path, which lets the UI release right after an abort
+        # instead of sitting out its own timeout.
+        try:
+            open(ENROLL_MARKER, "w").close()
+        except OSError:
+            pass
         log("enroll", f"starting ({ENROLL_CLIPS} clips)")
         try:
             speak_guarded(msg("enroll_start", n=ENROLL_CLIPS),
@@ -825,6 +888,11 @@ class Daemon:
             try:
                 speak_guarded(msg("enroll_fail"))
             except Exception:
+                pass
+        finally:
+            try:
+                os.remove(ENROLL_MARKER)
+            except OSError:
                 pass
 
     def _handle_turn(self, from_button: bool = False) -> None:
@@ -919,8 +987,16 @@ class Daemon:
         return not self.cancel.is_set()
 
     def run(self) -> None:
+        # SIGTERM exits hard (os._exit skips finally), so a kill mid-enrollment
+        # leaves the marker behind and the UI would read it as still running.
+        try:
+            os.remove(ENROLL_MARKER)
+        except OSError:
+            pass
         self.whisper_proc = ensure_whisper_server()
-        log("wake", f"model={self.wake_name} threshold={WAKE_THRESHOLD}")
+        # Report the effective gate, not the env fallback it may be shadowing.
+        log("wake", f"model={self.wake_name} "
+                    f"threshold={voice_float('wakeThreshold', WAKE_THRESHOLD, 0.05, 1.0)}")
         try:
             while self.running:
                 if not voice_settings().get("enabled", True):
@@ -968,7 +1044,9 @@ class Daemon:
                     wake_ring.append(frame)
                     vad_recent.append(self.vad.prob(frame))
                     score = self.wake.predict(frame)[self.wake_name]
-                    if score < WAKE_THRESHOLD:
+                    # Floor above zero: a 0 threshold would wake on every frame.
+                    threshold = voice_float("wakeThreshold", WAKE_THRESHOLD, 0.05, 1.0)
+                    if score < threshold:
                         wake_streak = 0
                         if time.time() - last_check > 2:
                             last_check = time.time()
@@ -1017,7 +1095,14 @@ def main() -> None:
     signal.signal(signal.SIGUSR1, lambda *_: daemon.trigger.set())
     signal.signal(signal.SIGUSR2, lambda *_: daemon.cancel.set())
     signal.signal(signal.SIGRTMIN + 1, lambda *_: daemon.trigger_fresh.set())
-    signal.signal(signal.SIGRTMIN + 2, lambda *_: daemon.enroll.set())
+    def request_enroll(*_):
+        # Clear the slate now rather than in _run_enrollment: the wake loop
+        # only dequeues this between turns, and a cancel sent during that gap
+        # must survive to call the enrollment off.
+        daemon.cancel.clear()
+        daemon.enroll.set()
+
+    signal.signal(signal.SIGRTMIN + 2, request_enroll)
     daemon.run()
 
 

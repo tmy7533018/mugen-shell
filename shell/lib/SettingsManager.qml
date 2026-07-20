@@ -44,6 +44,11 @@ QtObject {
     property string voiceTts: "voicevox:14"  // "voicevox:<id>" | "piper:<voice>"
     property string voiceSttLang: "ja"  // whisper language, "auto" allowed
     property bool voiceFollowUp: true  // keep listening after replies
+    // openWakeWord score gate; higher = fewer false wakes. Kept equal to the
+    // shipped units' YURA_WAKE_THRESHOLD so the first save of any setting
+    // (which persists this key) can't move the wake gate on its own.
+    property real voiceWakeThreshold: 0.85
+    property real voiceVolume: 1.0  // 0..1 loudness trim on spoken replies
     // Cue sounds from the notification sounds dir; "" = built-in beep, "none" = silent
     property string voiceSoundWake: ""
     property string voiceSoundFollowUp: ""
@@ -138,6 +143,8 @@ QtObject {
                 "tts": voiceTts,
                 "sttLang": voiceSttLang,
                 "followUp": voiceFollowUp,
+                "wakeThreshold": voiceWakeThreshold,
+                "volume": voiceVolume,
                 "soundWake": voiceSoundWake,
                 "soundFollowUp": voiceSoundFollowUp,
                 "soundEnd": voiceSoundEnd
@@ -291,6 +298,12 @@ QtObject {
                 }
                 if (settings.voice.followUp !== undefined) {
                     voiceFollowUp = settings.voice.followUp
+                }
+                if (settings.voice.wakeThreshold !== undefined) {
+                    voiceWakeThreshold = settings.voice.wakeThreshold
+                }
+                if (settings.voice.volume !== undefined) {
+                    voiceVolume = settings.voice.volume
                 }
                 if (settings.voice.soundWake !== undefined) {
                     voiceSoundWake = settings.voice.soundWake
