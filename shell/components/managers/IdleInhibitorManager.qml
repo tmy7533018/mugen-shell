@@ -155,13 +155,6 @@ QtObject {
         }
     }
 
-    property Timer pollTimer: Timer {
-        interval: 5000
-        running: false
-        repeat: true
-        onTriggered: idleInhibitorManager.refreshStatus()
-    }
-
     property bool isInitialized: false
 
     property Process dbusMonitor: Process {

@@ -260,26 +260,6 @@ QtObject {
         }
     }
 
-    property Timer updateTimer: Timer {
-        interval: 500
-        running: false
-        repeat: true
-        onTriggered: {
-            if (musicManager.activePlayer !== "") {
-                musicManager.updateMetadata()
-            }
-        }
-    }
-
-    property Timer refreshTimer: Timer {
-        interval: 3000
-        running: false
-        repeat: true
-        onTriggered: {
-            musicManager.refreshPlayerList()
-        }
-    }
-
     property Process dbusMonitor: Process {
         command: [
             "dbus-monitor",

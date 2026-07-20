@@ -19,17 +19,6 @@ QtObject {
     property string defaultSinkName: ""
     property string defaultSourceName: ""
 
-    property Timer updateTimer: Timer {
-        interval: 200
-        running: false
-        repeat: true
-        onTriggered: {
-            audioManager.updateVolume()
-            audioManager.updateMuteStatus()
-            audioManager.updateHeadphoneStatus()
-        }
-    }
-
     property Process volumeProcess: Process {
         running: false
         command: ["bash", "-c", "pactl get-sink-volume @DEFAULT_SINK@ | grep -oP '\\d+%' | head -1 | tr -d '%'"]

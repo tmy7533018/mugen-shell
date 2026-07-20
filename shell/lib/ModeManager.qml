@@ -49,8 +49,6 @@ QtObject {
     }
     
     function switchMode(newMode, viaIpc) {
-        let wasViaIpc = openedViaIpc
-
         // openedViaIpc must be set before currentMode: currentModeChanged
         // listeners read it synchronously to decide whether to grab focus,
         // and a stale value breaks keybind-open ESC handling.
@@ -257,11 +255,8 @@ QtObject {
         }
     }
     
-    Component.onCompleted: {
-    }
-    
     Component.onDestruction: {
-        let cleanupProcess = Qt.createQmlObject('
+        Qt.createQmlObject('
             import QtQuick
             import Quickshell.Io
             Process {

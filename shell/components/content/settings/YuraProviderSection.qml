@@ -58,7 +58,6 @@ Rectangle {
                 let key = obj.api_key_configured || {}
                 let prov = cfg.provider || {}
 
-                let ollamaModels = prov.ollama && prov.ollama.host ? "configured" : "default host"
                 let ollamaHost = (prov.ollama && prov.ollama.host) || "http://localhost:11434"
 
                 let google = prov.google || {}

@@ -36,14 +36,14 @@ func desktopFakeRun(results map[string]string) func(context.Context, string, []s
 
 func fullDesktopResults() map[string]string {
 	return map[string]string{
-		"window/active":         `{"app_id":"zen","title":"Some Page"}`,
-		"music/now_playing":     `{"available":true,"status":"Playing","title":"Song","artist":"Artist"}`,
-		"audio/get_volume":      "45",
-		"notification/unread":   "3",
-		"notification/get_dnd":  "false",
-		"timer/get":             `{"running":true,"paused":false,"duration_sec":600,"remaining_sec":83,"alerting":false}`,
-		"calendar":              `{"events":[{"id":"1","date":"2026-07-02","time":"14:00","title":"mtg"},{"id":"2","date":"2026-07-02","time":"","title":"errand"}]}`,
-		"theme/get":             "dark",
+		"window/active":        `{"app_id":"zen","title":"Some Page"}`,
+		"music/now_playing":    `{"available":true,"status":"Playing","title":"Song","artist":"Artist"}`,
+		"audio/get_volume":     "45",
+		"notification/unread":  "3",
+		"notification/get_dnd": "false",
+		"timer/get":            `{"running":true,"paused":false,"duration_sec":600,"remaining_sec":83,"alerting":false}`,
+		"calendar":             `{"events":[{"id":"1","date":"2026-07-02","time":"14:00","title":"mtg"},{"id":"2","date":"2026-07-02","time":"","title":"errand"}]}`,
+		"theme/get":            "dark",
 	}
 }
 
