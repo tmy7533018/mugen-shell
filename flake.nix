@@ -65,6 +65,11 @@
             cp -r ${./shell}/. $out/
             mkdir -p $out/hypr/configs
             cp ${./system/hypr/configs/mugen-shell.conf} $out/hypr/configs/mugen-shell.conf
+            # Voice daemon runtime, so the service works without a checkout.
+            # train/ stays out — it is a separate pipeline, not runtime.
+            mkdir -p $out/voice/models
+            cp ${./voice/yurad.py} $out/voice/yurad.py
+            cp -r ${./voice/models}/. $out/voice/models/
           '';
 
           default = mugen-shell;

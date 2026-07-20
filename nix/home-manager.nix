@@ -7,6 +7,34 @@
 
 let
   cfg = config.programs.mugen-shell;
+
+  # Packaged copy by default so the Nix path needs no checkout; voice.sourceDir
+  # points it at a live one for hacking, mirroring qmlDir.
+  voiceDir =
+    if cfg.voice.sourceDir != null then cfg.voice.sourceDir else "${cfg.package}/voice";
+
+  # The daemon runs from the live ~/mugen-shell checkout (same dev-mode
+  # thinking as qmlDir), so we only hand it an interpreter carrying the right
+  # libs. openwakeword is our own derivation; the rest are stock nixpkgs.
+  voicePython = pkgs.python314.withPackages (ps: [
+    (ps.callPackage ./voice/openwakeword.nix { })
+    ps.sounddevice
+    ps.numpy
+    ps.scipy
+    ps.scikit-learn
+    ps.requests
+    ps.onnxruntime
+  ]);
+
+  # whisper.cpp STT model — not in nixpkgs, fetched straight from HuggingFace.
+  # Pinned to a revision rather than resolve/main: the hash would still catch a
+  # swap, but as a build failure on an unrelated rebuild instead of never.
+  whisperModel = pkgs.fetchurl {
+    url = "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo.bin";
+    hash = "sha256-H8cPd0046xaZk6w5Huo1fvR8iHV+9y7llDh5t+jivGk=";
+  };
+
+  aivisEngine = pkgs.callPackage ./voice/aivisspeech-engine.nix { };
 in
 {
   options.programs.mugen-shell = {
@@ -60,6 +88,27 @@ in
         default = pkgs.mugen-ai or null;
         defaultText = lib.literalExpression "pkgs.mugen-ai";
         description = "The mugen-ai package (Go backend binary).";
+      };
+    };
+
+    voice = {
+      enable = lib.mkEnableOption "the Yura voice input daemon (wake word → STT → chat → TTS)";
+
+      sourceDir = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        example = "/home/you/mugen-shell/voice";
+        description = ''
+          Absolute path to a live checkout's voice/ directory. When set the
+          daemon runs yurad.py from there instead of the packaged copy, so
+          edits need a service restart rather than a rebuild.
+        '';
+      };
+
+      aivis.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Run the AivisSpeech engine (primary Japanese TTS) as a user service.";
       };
     };
   };
@@ -154,6 +203,63 @@ in
         WantedBy = [ "default.target" ];
       };
     };
+
+    systemd.user.services.yura-voice = lib.mkIf cfg.voice.enable {
+      Unit = {
+        Description = "Yura voice input daemon (wake word → STT → chat → TTS)";
+        After = [
+          "graphical-session.target"
+          "aivisspeech-engine.service"
+          "mugen-ai.service"
+        ];
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        WorkingDirectory = voiceDir;
+        # Bootstrap default only: yurad re-reads voice.wakeThreshold from
+        # settings.json every frame, and the shell writes that key on its
+        # first save of any setting. Keep this equal to the GUI default or
+        # an unrelated settings change would silently move the wake gate.
+        Environment = [
+          "YURA_WAKEWORD=${voiceDir}/models/hey_yura.onnx"
+          "YURA_WAKE_THRESHOLD=0.85"
+          "YURA_WHISPER_BIN=${pkgs.whisper-cpp-vulkan}/bin/whisper-server"
+          "YURA_WHISPER_MODEL=${whisperModel}"
+        ]
+        # Route replies at the engine this module actually starts. The daemon's
+        # built-in default is VOICEVOX, which the Nix path never installs, so
+        # without this every reply is silent until a voice is picked by hand.
+        # Naming only the engine is deliberate: style ids depend on which
+        # models the engine has downloaded, so they can't be pinned here.
+        ++ lib.optional cfg.voice.aivis.enable "YURA_TTS=aivis:";
+        ExecStart = "${voicePython}/bin/python ${voiceDir}/yurad.py";
+        Restart = "on-failure";
+        RestartSec = 3;
+      };
+      Install = {
+        WantedBy = [ "graphical-session.target" ];
+      };
+    };
+
+    systemd.user.services.aivisspeech-engine =
+      lib.mkIf (cfg.voice.enable && cfg.voice.aivis.enable) {
+        Unit = {
+          Description = "AivisSpeech TTS engine (VOICEVOX-compatible API on :10101)";
+          After = [ "graphical-session.target" ];
+          PartOf = [ "graphical-session.target" ];
+        };
+        Service = {
+          # CPU mode: the bundled onnxruntime-gpu is CUDA-only and this is an
+          # AMD box; upstream says CPU is plenty for a single user. First start
+          # pulls the default model + BERT (~900 MB), so it needs the network.
+          ExecStart = "${aivisEngine}/bin/aivisspeech-engine --host 127.0.0.1 --port 10101";
+          Restart = "on-failure";
+          RestartSec = 5;
+        };
+        Install = {
+          WantedBy = [ "graphical-session.target" ];
+        };
+      };
 
     systemd.user.services.mugen-event-notifier = {
       Unit = {

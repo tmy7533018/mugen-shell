@@ -7,13 +7,13 @@ PartOf=graphical-session.target
 
 [Service]
 WorkingDirectory=%h/mugen-shell/voice
-# Custom model trained in voice/train. The echo-cancelled source
-# (pipewire.conf.d/99-yura-echo-cancel.conf) both kills media false
-# wakes and shaves ~0.2 off true-positive scores (its noise suppression
-# colors the voice), so the threshold sits lower than the clean-mic
-# scores would suggest; YURA_WAKE_PATIENCE still gates single-frame spikes.
+# Custom model trained in voice/train. The threshold here is only the
+# bootstrap default: yurad re-reads voice.wakeThreshold from settings.json
+# every frame and the shell writes that key on its first save, so this must
+# match the GUI default (Settings -> Voice input -> Wake sensitivity is the
+# place to tune it). YURA_WAKE_PATIENCE still gates single-frame spikes.
 Environment=YURA_WAKEWORD=%h/mugen-shell/voice/models/hey_yura.onnx
-Environment=YURA_WAKE_THRESHOLD=0.6
+Environment=YURA_WAKE_THRESHOLD=0.85
 ExecStart=%h/mugen-shell/voice/.venv/bin/python %h/mugen-shell/voice/yurad.py
 Restart=on-failure
 RestartSec=3
