@@ -71,6 +71,20 @@ in
     (lib.mkIf cfg.includeSystemDeps {
       programs.hyprland.enable = true;
       programs.hyprlock.enable = true;
+
+      # Thunar is what Super+N opens, so it comes from the module rather than
+      # the package list: on NixOS the bare package has no xfconf D-Bus
+      # service, and without it every preference Thunar writes is gone by the
+      # next launch. tumbler draws thumbnails, gvfs gives it trash and mounts.
+      programs.thunar.enable = true;
+      programs.xfconf.enable = true;
+      services.tumbler.enable = true;
+      services.gvfs.enable = true;
+
+      # kitty ships a desktop entry claiming inode/directory, so without an
+      # explicit default `xdg-open <dir>` — what the shell's folder buttons
+      # call — opens a terminal instead of the file manager.
+      xdg.mime.defaultApplications."inode/directory" = "thunar.desktop";
       # The portal stack hyprland pulls in includes xdg-document-portal,
       # which FUSE-mounts /run/user/*/doc; without the setuid fusermount3
       # wrapper it fails every boot.
@@ -136,7 +150,6 @@ in
         (python3.withPackages (ps: [ ps.pygobject3 ps.pillow ps.numpy ]))
         gtk3
         kitty
-        thunar
         firefox
         # .zshrc quality-of-life: prompt, splash art, fuzzy finder, fish-style plugins
         starship
