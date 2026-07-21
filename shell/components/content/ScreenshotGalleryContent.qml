@@ -16,8 +16,8 @@ FocusScope {
         "height": modeManager.scale(450),
         "leftMargin": modeManager.scale(550),
         "rightMargin": modeManager.scale(550),
-        "topMargin": modeManager.scale(6),
-        "bottomMargin": modeManager.scale(6)
+        "topMargin": modeManager.normalBarSize.topMargin,
+        "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
 
     Item {

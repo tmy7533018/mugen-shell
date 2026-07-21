@@ -8,6 +8,7 @@ Item {
     
     required property var modeManager
     required property var notificationManager
+    property var settingsManager
     property var theme
     property var icons
     
@@ -15,15 +16,15 @@ Item {
         "height": modeManager.scale(70),
         "leftMargin": modeManager.scale(650),
         "rightMargin": modeManager.scale(650),
-        "topMargin": modeManager.scale(6),
-        "bottomMargin": modeManager.scale(6)
+        "topMargin": modeManager.normalBarSize.topMargin,
+        "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
     
     property var currentNotification: null
 
     Timer {
         id: autoCloseTimer
-        interval: 5000
+        interval: settingsManager ? settingsManager.notificationPopupTimeout : 5000
         running: false
         repeat: false
         onTriggered: {
@@ -32,28 +33,37 @@ Item {
             }
         }
     }
-    
+
+    function restartAutoClose() {
+        // 0 = never auto-close.
+        if (autoCloseTimer.interval > 0) {
+            autoCloseTimer.restart()
+        } else {
+            autoCloseTimer.stop()
+        }
+    }
+
     Connections {
         target: notificationManager
         function onNotificationReceived(notification) {
             if (!notificationManager.notificationsEnabled) {
                 return
             }
-            
+
             root.currentNotification = notification
 
             if (modeManager.isMode("normal")) {
                 modeManager.switchMode("notification-popup")
-                autoCloseTimer.restart()
+                root.restartAutoClose()
             }
         }
     }
-    
+
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
             if (modeManager.isMode("notification-popup")) {
-                autoCloseTimer.restart()
+                root.restartAutoClose()
             } else {
                 autoCloseTimer.stop()
             }
@@ -73,7 +83,7 @@ Item {
         
         onPositionChanged: {
             if (modeManager.isMode("notification-popup")) {
-                autoCloseTimer.restart()
+                root.restartAutoClose()
             }
         }
     }

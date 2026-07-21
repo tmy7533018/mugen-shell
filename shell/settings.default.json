@@ -10,10 +10,16 @@
   },
   "animations": {
     "speed": "normal",
-    "durationMultiplier": 1.0
+    "durationMultiplier": 1.0,
+    "reduceMotion": false
   },
   "notification": {
-    "sound": "None"
+    "sound": "None",
+    "enabled": true,
+    "popupTimeout": 5000
+  },
+  "launcher": {
+    "terminal": "kitty"
   },
   "timer": {
     "sound": "None"
@@ -21,8 +27,31 @@
   "lockTimer": {
     "minutes": 10
   },
+  "idle": {
+    "suspendMinutes": 30,
+    "dpmsMinutes": 0
+  },
   "date": {
     "format": "ddd M/d"
+  },
+  "clock": {
+    "show24Hour": true,
+    "showSeconds": false
+  },
+  "calendar": {
+    "weekStart": 0
+  },
+  "bar": {
+    "height": 60,
+    "radius": 50,
+    "marginH": 10,
+    "marginV": 6
+  },
+  "workspaces": {
+    "count": 5
+  },
+  "display": {
+    "monitor": ""
   },
   "ai": {
     "barModel": "",

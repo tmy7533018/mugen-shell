@@ -17,8 +17,8 @@ Item {
         "height": modeManager.scale(60),
         "leftMargin": modeManager.scale(800),
         "rightMargin": modeManager.scale(800),
-        "topMargin": modeManager.scale(6),
-        "bottomMargin": modeManager.scale(6)
+        "topMargin": modeManager.normalBarSize.topMargin,
+        "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
 
     readonly property int currentBrightness: brightnessManager ? brightnessManager.brightness : 0

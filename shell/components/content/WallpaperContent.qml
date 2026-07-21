@@ -17,8 +17,8 @@ FocusScope {
         "height": modeManager.scale(240),
         "leftMargin": modeManager.scale(550),
         "rightMargin": modeManager.scale(550),
-        "topMargin": modeManager.scale(6),
-        "bottomMargin": modeManager.scale(6)
+        "topMargin": modeManager.normalBarSize.topMargin,
+        "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
 
     function setWallpaper(path) {

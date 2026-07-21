@@ -9,6 +9,8 @@ Text {
     property var typo
     property var modeManager
     property bool showSeconds: false
+    property bool use24Hour: true
+    property bool reduceMotion: false
     property bool isHovered: false
     property color glowColor: Qt.rgba(0.65, 0.55, 0.85, 0.6)
     
@@ -78,12 +80,19 @@ Text {
         running: clockText.visible && parent.visible
         onTriggered: {
             const now = new Date();
-            let hh = now.getHours().toString().padStart(2, "0");
+            let hours24 = now.getHours();
+            let suffix = "";
+            if (!clockText.use24Hour) {
+                suffix = hours24 >= 12 ? " PM" : " AM";
+                hours24 = hours24 % 12;
+                if (hours24 === 0) hours24 = 12;
+            }
+            let hh = clockText.use24Hour ? hours24.toString().padStart(2, "0") : hours24.toString();
             let mm = now.getMinutes().toString().padStart(2, "0");
             let ss = now.getSeconds().toString().padStart(2, "0");
-            clockText.timeString = showSeconds ? (hh + ":" + mm + ":" + ss) : (hh + ":" + mm);
+            clockText.timeString = (showSeconds ? (hh + ":" + mm + ":" + ss) : (hh + ":" + mm)) + suffix;
 
-            if (ss === "59" && !clockText.isMinuteExpanding) {
+            if (ss === "59" && !clockText.isMinuteExpanding && !clockText.reduceMotion) {
                 clockText.isMinuteExpanding = true;
                 clockText.minuteScaleFactor = clockText.computeMinuteScaleFactor();
             } else if (ss === "01" && clockText.isMinuteExpanding) {

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import "../../common" as Common
 import "../../../lib" as Theme
 
 Rectangle {
@@ -11,7 +12,7 @@ Rectangle {
     required property var settingsManager
 
     width: parent ? parent.width : 420
-    height: section.isExpanded ? 120 : 64
+    height: (section.isExpanded ? 120 : 64) + 52
     color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
     radius: 20
     border.width: 1
@@ -172,6 +173,45 @@ Rectangle {
                         implicitWidth: 4
                         radius: 2
                         color: section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4)
+                    }
+                }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 40
+            spacing: 12
+
+            Text {
+                Layout.fillWidth: true
+                text: "Reduce Motion"
+                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                font.pixelSize: 12
+                font.family: "M PLUS 2"
+                font.weight: Font.Normal
+                font.letterSpacing: 0.5
+            }
+
+            Common.Switch {
+                id: reduceMotionSwitch
+                checked: section.settingsManager ? section.settingsManager.reduceMotion : false
+                theme: section.theme
+
+                Connections {
+                    target: section.settingsManager
+                    function onReduceMotionChanged() {
+                        if (section.settingsManager) {
+                            reduceMotionSwitch.checked = section.settingsManager.reduceMotion
+                        }
+                    }
+                }
+
+                onToggled: {
+                    if (section.settingsManager) {
+                        section.settingsManager.reduceMotion = checked
+                        section.settingsManager.saveSettings()
+                        section.bump()
                     }
                 }
             }

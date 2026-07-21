@@ -16,6 +16,7 @@ ShellRoot {
 
     Theme.YuraState {
         id: yuraState
+        settingsManager: settingsManager
         panelSide: settingsManager.yuraPanelSide
         panelWidth: settingsManager.yuraPanelWidth
         panelHeight: settingsManager.yuraPanelHeight

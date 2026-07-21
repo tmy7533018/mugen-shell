@@ -6,9 +6,21 @@ QtObject {
 
     property bool expanded: false
     property string panelSide: "left"
+    property var settingsManager
 
-    property int screenWidth: Quickshell.screens.length > 0 ? Quickshell.screens[0].width : 1920
-    property int screenHeight: Quickshell.screens.length > 0 ? Quickshell.screens[0].height : 1080
+    function screenByName(name) {
+        if (!name || name === "") return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+        for (let i = 0; i < Quickshell.screens.length; i++) {
+            if (Quickshell.screens[i].name === name) return Quickshell.screens[i]
+        }
+        return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+    }
+    readonly property var boundScreen: screenByName(settingsManager ? settingsManager.displayMonitor : "")
+
+    // Overwritten at runtime by YuraChatPanel.qml once the window is sized;
+    // these are only the initial defaults before that happens.
+    property int screenWidth: boundScreen ? boundScreen.width : 1920
+    property int screenHeight: boundScreen ? boundScreen.height : 1080
 
     readonly property bool isLeft: panelSide !== "right"
 

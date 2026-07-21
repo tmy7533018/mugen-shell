@@ -53,7 +53,15 @@ PanelWindow {
     color: "transparent"
 
     visible: false
-    screen: Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+    screen: chatWindow.screenByName(chatWindow.settingsManager ? chatWindow.settingsManager.displayMonitor : "")
+
+    function screenByName(name) {
+        if (!name || name === "") return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+        for (let i = 0; i < Quickshell.screens.length; i++) {
+            if (Quickshell.screens[i].name === name) return Quickshell.screens[i]
+        }
+        return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+    }
 
     Connections {
         target: yuraState

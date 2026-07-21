@@ -14,6 +14,18 @@ import "../lib" as Theme
 PanelWindow {
     id: barWindow
 
+    // SettingsManager lives inside this window (below), so the monitor
+    // choice can only be resolved here, not from the shell root — the
+    // binding re-evaluates once settings finish their first async load.
+    function screenByName(name) {
+        if (!name || name === "") return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+        for (let i = 0; i < Quickshell.screens.length; i++) {
+            if (Quickshell.screens[i].name === name) return Quickshell.screens[i]
+        }
+        return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+    }
+    screen: screenByName(settingsManager.displayMonitor)
+
     anchors.top: true
     anchors.left: true
     anchors.right: true
@@ -31,7 +43,7 @@ PanelWindow {
     readonly property bool barHidden: fullscreenActive && modeManager.isMode("normal")
 
     implicitHeight: modeManager.currentBarSize.height
-    exclusiveZone: barHidden ? 0 : modeManager.scale(60)
+    exclusiveZone: barHidden ? 0 : modeManager.normalBarSize.height
     visible: !barHidden
     // Release keyboard focus in normal mode so launched apps can receive it.
     focusable: !modeManager.isMode("normal")
@@ -118,6 +130,7 @@ PanelWindow {
         && (!aiAssistantLoader.item
             || (!aiAssistantLoader.item.streaming && !aiAssistantLoader.item.hasDraft))
     readonly property bool autoCloseEligible: !modeManager.isMode("normal")
+        && !modeManager.isMode("notification-popup")
         && settingsManager.autoCloseTimerInterval > 0
         && (!modeManager.isMode("ai") || aiQuiet)
 
@@ -145,7 +158,7 @@ PanelWindow {
         }
     }
 
-    Theme.ModeManager { id: modeManager; screenWidth: barWindow.width }
+    Theme.ModeManager { id: modeManager; screenWidth: barWindow.width; settingsManager: settingsManager }
 
     Theme.Colors { id: theme }
 
@@ -230,6 +243,7 @@ PanelWindow {
         notificationManager: notificationManager
         theme: theme
         timerManager: timerManager
+        settingsManager: settingsManager
     }
 
     // Float Yura runs as a separate quickshell process and mirrors its state
@@ -327,13 +341,14 @@ PanelWindow {
         id: surface
 
         anchors.fill: parent
-        anchors.topMargin: 6
+        anchors.topMargin: modeManager.currentBarSize.topMargin
         anchors.bottomMargin: modeManager.currentBarSize.bottomMargin
         anchors.leftMargin: modeManager.currentBarSize.leftMargin
         anchors.rightMargin: modeManager.currentBarSize.rightMargin
 
         z: 0
-        baseRadius: 50
+        baseRadius: settingsManager.barRadius
+        reduceMotion: settingsManager.reduceMotion
 
         theme: theme
 
@@ -377,12 +392,19 @@ PanelWindow {
     Item {
         id: contentClipContainer
         anchors.fill: parent
-        anchors.topMargin: 6
+        anchors.topMargin: modeManager.currentBarSize.topMargin
         anchors.bottomMargin: modeManager.currentBarSize.bottomMargin
         anchors.leftMargin: modeManager.currentBarSize.leftMargin
         anchors.rightMargin: modeManager.currentBarSize.rightMargin
         clip: true
         z: 1
+
+        Behavior on anchors.topMargin {
+            NumberAnimation {
+                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
+                easing.type: Easing.OutExpo
+            }
+        }
 
         Behavior on anchors.bottomMargin {
             NumberAnimation {
@@ -518,6 +540,7 @@ PanelWindow {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         z: 1.5
+        settingsManager: settingsManager
         activeColor: theme.glowPrimary
         hasWindowsColor: Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.5)
         modeManager: modeManager
@@ -617,6 +640,7 @@ PanelWindow {
         property var themeRef: theme
         property var iconsRef: icons
         property var typoRef: typo
+        property var settingsManagerRef: settingsManager
         active: modeManagerRef.isMode("launcher")
         sourceComponent: Content.AppLauncherContent {
             anchors.fill: parent
@@ -625,6 +649,7 @@ PanelWindow {
             theme: appLauncherLoader.themeRef
             icons: appLauncherLoader.iconsRef
             typo: appLauncherLoader.typoRef
+            settingsManager: appLauncherLoader.settingsManagerRef
         }
     }
 
@@ -680,6 +705,7 @@ PanelWindow {
         property var themeRef: theme
         property var iconsRef: icons
         property var notificationManagerRef: notificationManager
+        property var settingsManagerRef: settingsManager
         active: modeManagerRef.isMode("notification")
         sourceComponent: Content.NotificationContent {
             anchors.fill: parent
@@ -688,6 +714,7 @@ PanelWindow {
             notificationManager: notificationLoader.notificationManagerRef
             theme: notificationLoader.themeRef
             icons: notificationLoader.iconsRef
+            settingsManager: notificationLoader.settingsManagerRef
         }
     }
 
@@ -791,6 +818,7 @@ PanelWindow {
         visible: modeManager.isMode("notification-popup")
         modeManager: modeManager
         notificationManager: notificationManager
+        settingsManager: settingsManager
         theme: theme
         icons: icons
     }

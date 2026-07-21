@@ -15,8 +15,8 @@ Item {
         "height": modeManager.scale(188),
         "leftMargin": modeManager.scale(860),
         "rightMargin": modeManager.scale(860),
-        "topMargin": modeManager.scale(6),
-        "bottomMargin": modeManager.scale(6)
+        "topMargin": modeManager.normalBarSize.topMargin,
+        "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
 
     readonly property string visualState: {

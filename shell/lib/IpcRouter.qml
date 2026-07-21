@@ -18,6 +18,7 @@ Item {
     required property var notificationManager
     required property var theme
     required property var timerManager
+    required property var settingsManager
 
     IpcHandler {
         target: "audio"
@@ -277,20 +278,25 @@ Item {
         target: "notification"
 
         function toggle_dnd(): bool {
-            // Inverted polarity: DnD on = notificationsEnabled false.
-            ipcRouter.notificationManager.notificationsEnabled = !ipcRouter.notificationManager.notificationsEnabled
-            return !ipcRouter.notificationManager.notificationsEnabled
+            // Inverted polarity: DnD on = notificationsEnabled false. Goes
+            // through settingsManager (not notificationManager directly) so
+            // notificationManager's binding to settingsManager.notificationsEnabled
+            // never gets severed by a direct assignment.
+            ipcRouter.settingsManager.notificationsEnabled = !ipcRouter.settingsManager.notificationsEnabled
+            ipcRouter.settingsManager.saveSettings()
+            return !ipcRouter.settingsManager.notificationsEnabled
         }
 
         function set_dnd(enabled: bool): bool {
             // Idempotent, unlike toggle_dnd, so "turn DnD on" can't flip an
             // already-on state back off.
-            ipcRouter.notificationManager.notificationsEnabled = !enabled
+            ipcRouter.settingsManager.notificationsEnabled = !enabled
+            ipcRouter.settingsManager.saveSettings()
             return enabled
         }
 
         function get_dnd(): bool {
-            return !ipcRouter.notificationManager.notificationsEnabled
+            return !ipcRouter.settingsManager.notificationsEnabled
         }
 
         function clear_all(): int {

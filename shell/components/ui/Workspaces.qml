@@ -14,12 +14,15 @@ Item {
     property color emptyColor: Qt.rgba(0.85, 0.85, 0.85, 0.95)
 
     property var existingWorkspaces: []
+    property var settingsManager: null
+    readonly property int workspaceCount: settingsManager ? settingsManager.workspaceCount : 5
+    readonly property bool reduceMotion: settingsManager ? settingsManager.reduceMotion : false
 
     property int activeWorkspaceId: {
         if (!Hyprland.focusedWorkspace) return 1
         let id = Hyprland.focusedWorkspace.id
         if (id < 1) return 1
-        if (id > 5) return 5
+        if (id > workspacesRoot.workspaceCount) return workspacesRoot.workspaceCount
         return id
     }
 
@@ -30,7 +33,7 @@ Item {
         return val
     }
 
-    implicitWidth: scaled(230)
+    implicitWidth: 2 * scaled(25) + (workspaceCount - 1) * scaled(45)
     implicitHeight: scaled(24)
 
     function updateWorkspaces() {
@@ -129,7 +132,7 @@ Item {
         property real targetX: {
             if (!Hyprland.focusedWorkspace) return scaled(25);
             let wsId = Hyprland.focusedWorkspace.id;
-            if (wsId < 1 || wsId > 5) return scaled(25);
+            if (wsId < 1 || wsId > workspacesRoot.workspaceCount) return scaled(25);
             return scaled(25) + (wsId - 1) * scaled(45);
         }
 
@@ -255,7 +258,7 @@ Item {
 
                 SequentialAnimation on pulseScale {
                     loops: Animation.Infinite
-                    running: !activeSmokeContainer.isMoving
+                    running: !activeSmokeContainer.isMoving && !workspacesRoot.reduceMotion
 
                     NumberAnimation {
                         to: 1.3
@@ -386,7 +389,7 @@ Item {
     }
 
     Repeater {
-        model: 5
+        model: workspacesRoot.workspaceCount
 
         Item {
             id: inactiveSmokeContainer
@@ -431,7 +434,7 @@ Item {
 
                     SequentialAnimation on pulseScale {
                         loops: Animation.Infinite
-                        running: workspacesRoot.visible && parent.visible
+                        running: workspacesRoot.visible && parent.visible && !workspacesRoot.reduceMotion
 
                         NumberAnimation {
                             to: 1.5
@@ -467,7 +470,7 @@ Item {
     }
 
     Repeater {
-        model: 5
+        model: workspacesRoot.workspaceCount
 
         MouseArea {
             property int workspaceId: index + 1

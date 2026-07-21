@@ -22,9 +22,24 @@ QtObject {
     property string animationSpeed: "normal"  // "slow" | "normal" | "fast" | "instant"
     property real animationDurationMultiplier: 1.0
     property string notificationSound: "None"  // filename in assets/sounds/, or "None"
+    property bool notificationsEnabled: true  // DnD = !notificationsEnabled
+    property int notificationPopupTimeout: 5000  // ms, 0 = never auto-close
+    property string launcherTerminal: "kitty"  // command used to launch Terminal=true apps
     property string timerSound: "None"  // filename in assets/sounds/, or "None"
     property int lockTimerMinutes: 10  // hypridle screen-lock idle timeout
+    property int idleSuspendMinutes: 30  // hypridle suspend timeout, 0 = disabled
+    property int idleDpmsMinutes: 0  // hypridle screen-off timeout, 0 = disabled
     property string dateFormat: "ddd M/d"  // Qt date tokens
+    property bool clockShow24Hour: true
+    property bool clockShowSeconds: false
+    property int calendarWeekStart: 0  // 0 = Sunday, 1 = Monday
+    property bool reduceMotion: false  // silences looping ambient animation, separate from animationSpeed
+    property int barHeight: 60
+    property int barRadius: 50
+    property int barMarginH: 10
+    property int barMarginV: 6
+    property int workspaceCount: 5
+    property string displayMonitor: ""  // Quickshell screen name; "" = first screen
     property string barAiModel: ""  // "" = follow the backend default
     property bool barThinking: false
     property string yuraPanelSide: "left"  // "left" | "right"
@@ -102,10 +117,16 @@ QtObject {
             },
             "animations": {
                 "speed": animationSpeed,
-                "durationMultiplier": animationDurationMultiplier
+                "durationMultiplier": animationDurationMultiplier,
+                "reduceMotion": reduceMotion
             },
             "notification": {
-                "sound": notificationSound
+                "sound": notificationSound,
+                "enabled": notificationsEnabled,
+                "popupTimeout": notificationPopupTimeout
+            },
+            "launcher": {
+                "terminal": launcherTerminal
             },
             "timer": {
                 "sound": timerSound
@@ -113,8 +134,31 @@ QtObject {
             "lockTimer": {
                 "minutes": lockTimerMinutes
             },
+            "idle": {
+                "suspendMinutes": idleSuspendMinutes,
+                "dpmsMinutes": idleDpmsMinutes
+            },
             "date": {
                 "format": dateFormat
+            },
+            "clock": {
+                "show24Hour": clockShow24Hour,
+                "showSeconds": clockShowSeconds
+            },
+            "calendar": {
+                "weekStart": calendarWeekStart
+            },
+            "bar": {
+                "height": barHeight,
+                "radius": barRadius,
+                "marginH": barMarginH,
+                "marginV": barMarginV
+            },
+            "workspaces": {
+                "count": workspaceCount
+            },
+            "display": {
+                "monitor": displayMonitor
             },
             "ai": {
                 "barModel": barAiModel,
@@ -205,11 +249,26 @@ QtObject {
                 if (settings.animations.durationMultiplier !== undefined) {
                     animationDurationMultiplier = settings.animations.durationMultiplier
                 }
+                if (settings.animations.reduceMotion !== undefined) {
+                    reduceMotion = settings.animations.reduceMotion
+                }
             }
 
             if (settings.notification) {
                 if (settings.notification.sound !== undefined) {
                     notificationSound = settings.notification.sound
+                }
+                if (settings.notification.enabled !== undefined) {
+                    notificationsEnabled = settings.notification.enabled
+                }
+                if (settings.notification.popupTimeout !== undefined) {
+                    notificationPopupTimeout = settings.notification.popupTimeout
+                }
+            }
+
+            if (settings.launcher) {
+                if (settings.launcher.terminal !== undefined) {
+                    launcherTerminal = settings.launcher.terminal
                 }
             }
 
@@ -225,9 +284,60 @@ QtObject {
                 }
             }
 
+            if (settings.idle) {
+                if (settings.idle.suspendMinutes !== undefined) {
+                    idleSuspendMinutes = settings.idle.suspendMinutes
+                }
+                if (settings.idle.dpmsMinutes !== undefined) {
+                    idleDpmsMinutes = settings.idle.dpmsMinutes
+                }
+            }
+
             if (settings.date) {
                 if (settings.date.format !== undefined) {
                     dateFormat = settings.date.format
+                }
+            }
+
+            if (settings.clock) {
+                if (settings.clock.show24Hour !== undefined) {
+                    clockShow24Hour = settings.clock.show24Hour
+                }
+                if (settings.clock.showSeconds !== undefined) {
+                    clockShowSeconds = settings.clock.showSeconds
+                }
+            }
+
+            if (settings.calendar) {
+                if (settings.calendar.weekStart !== undefined) {
+                    calendarWeekStart = settings.calendar.weekStart
+                }
+            }
+
+            if (settings.bar) {
+                if (settings.bar.height !== undefined) {
+                    barHeight = settings.bar.height
+                }
+                if (settings.bar.radius !== undefined) {
+                    barRadius = settings.bar.radius
+                }
+                if (settings.bar.marginH !== undefined) {
+                    barMarginH = settings.bar.marginH
+                }
+                if (settings.bar.marginV !== undefined) {
+                    barMarginV = settings.bar.marginV
+                }
+            }
+
+            if (settings.workspaces) {
+                if (settings.workspaces.count !== undefined) {
+                    workspaceCount = settings.workspaces.count
+                }
+            }
+
+            if (settings.display) {
+                if (settings.display.monitor !== undefined) {
+                    displayMonitor = settings.display.monitor
                 }
             }
 

@@ -27,11 +27,12 @@ Item {
     signal restartAi()
 
     readonly property var categories: [
-        { id: "appearance", label: "Appearance",   types: ["theme", "gradient", "blur", "animation", "dateFormat"] },
+        { id: "appearance", label: "Appearance",   types: ["theme", "gradient", "blur", "animation", "dateFormat", "clock", "calendarWeekStart", "barLayout"] },
         { id: "sound",      label: "Sound",        types: ["notificationSound", "timerSound"] },
-        { id: "timer",      label: "Timer & Lock", types: ["timer", "lockTimer"] },
+        { id: "notifications", label: "Notifications", types: ["doNotDisturb", "notificationTimeout"] },
+        { id: "timer",      label: "Timer & Lock", types: ["timer", "lockTimer", "idlePower"] },
         { id: "ai",         label: "AI / Yura",    types: ["yuraPersonality", "yuraProvider", "yuraMcp", "yuraMcpExpose", "aiBarModel", "yuraThinking", "yuraToolCategories", "yuraAppLaunch", "yuraPanelSide", "yuraUi", "voice", "yuraMemory", "yuraHistory", "yuraAdvanced"] },
-        { id: "system",     label: "System",       types: ["battery", "shortcuts"] },
+        { id: "system",     label: "System",       types: ["battery", "workspaces", "launcherTerminal", "displayMonitor", "shortcuts"] },
         { id: "reset",      label: "Reset",        types: ["reset"], danger: true }
     ]
 
@@ -175,7 +176,16 @@ Item {
                                 case "notificationSound": return notificationSoundSection
                                 case "timerSound":        return timerSoundSection
                                 case "lockTimer":         return lockTimerSection
+                                case "idlePower":         return idlePowerSection
                                 case "dateFormat":        return dateFormatSection
+                                case "clock":              return clockSection
+                                case "calendarWeekStart": return calendarWeekStartSection
+                                case "barLayout":         return barLayoutSection
+                                case "doNotDisturb":      return doNotDisturbSection
+                                case "notificationTimeout": return notificationTimeoutSection
+                                case "launcherTerminal":  return launcherTerminalSection
+                                case "workspaces":        return workspaceSection
+                                case "displayMonitor":    return displayMonitorSection
                                 case "aiBarModel":        return aiBarModelSection
                                 case "yuraPanelSide":     return yuraPanelSideSection
                                 case "yuraPersonality":   return yuraPersonalitySection
@@ -277,6 +287,51 @@ Item {
         settingsManager: root.settingsManager
     }}
     Component { id: dateFormatSection; Settings.DateFormatSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: clockSection; Settings.ClockSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: calendarWeekStartSection; Settings.CalendarWeekStartSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: barLayoutSection; Settings.BarLayoutSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: idlePowerSection; Settings.IdlePowerSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: doNotDisturbSection; Settings.DoNotDisturbSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: notificationTimeoutSection; Settings.NotificationTimeoutSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: launcherTerminalSection; Settings.LauncherTerminalSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: workspaceSection; Settings.WorkspaceSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: displayMonitorSection; Settings.DisplayMonitorSection {
         theme: root.theme
         modeManager: root.modeManager
         settingsManager: root.settingsManager

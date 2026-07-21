@@ -18,8 +18,8 @@ FocusScope {
         "height": modeManager.scale(420),
         "leftMargin": modeManager.scale(700),
         "rightMargin": modeManager.scale(700),
-        "topMargin": modeManager.scale(6),
-        "bottomMargin": modeManager.scale(6)
+        "topMargin": modeManager.normalBarSize.topMargin,
+        "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
     
     property var history: clipboardManager ? clipboardManager.history : []

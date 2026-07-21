@@ -6,10 +6,11 @@ Rectangle {
 
     property var theme
     property bool gradientEnabled: true
+    property bool reduceMotion: false
 
     // Must not read the effective `visible` here: under the Yura panel's mask it
     // is opacity-driven, which forms a binding loop.
-    readonly property bool gradientsAnimating: gradientEnabled
+    readonly property bool gradientsAnimating: gradientEnabled && !reduceMotion
 
     readonly property color darkBase: Qt.rgba(20/255, 22/255, 26/255, 0.82)
     readonly property color darkBorderColor: Qt.rgba(0.35, 0.35, 0.40, 0.40)

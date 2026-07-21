@@ -34,8 +34,8 @@ FocusScope {
         "height": modeManager.scale(60),
         "leftMargin": modeManager.scale(620),
         "rightMargin": modeManager.scale(620),
-        "topMargin": modeManager.scale(6),
-        "bottomMargin": modeManager.scale(6)
+        "topMargin": modeManager.normalBarSize.topMargin,
+        "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
 
     property bool streaming: false

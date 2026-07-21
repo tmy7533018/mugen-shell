@@ -17,6 +17,10 @@ ShellRoot {
         id: themeColors
     }
 
+    Theme.SettingsManager {
+        id: settingsManager
+    }
+
     QtObject {
         id: modeStub
 
@@ -46,6 +50,7 @@ ShellRoot {
             anchors.fill: parent
             modeManager: modeStub
             theme: themeColors
+            settingsManager: settingsManager
         }
     }
 }

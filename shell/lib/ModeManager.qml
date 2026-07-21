@@ -8,21 +8,22 @@ QtObject {
     property string currentMode: "normal"
     property bool openedViaIpc: false
     property var modes: ({})
-    
+    property var settingsManager
+
     property real screenWidth: 1920
     readonly property real baseWidth: 1920
     readonly property real scaleFactor: screenWidth / baseWidth
-    
+
     function scale(value) {
         return Math.round(value * scaleFactor)
     }
-    
+
     readonly property var normalBarSize: ({
-        "height": scale(60),
-        "leftMargin": scale(10),
-        "rightMargin": scale(10),
-        "topMargin": scale(6),
-        "bottomMargin": scale(6)
+        "height": scale(settingsManager ? settingsManager.barHeight : 60),
+        "leftMargin": scale(settingsManager ? settingsManager.barMarginH : 10),
+        "rightMargin": scale(settingsManager ? settingsManager.barMarginH : 10),
+        "topMargin": scale(settingsManager ? settingsManager.barMarginV : 6),
+        "bottomMargin": scale(settingsManager ? settingsManager.barMarginV : 6)
     })
     
     property var currentBarSize: {

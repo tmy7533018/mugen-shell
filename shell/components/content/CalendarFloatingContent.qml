@@ -11,6 +11,16 @@ Item {
 
     required property var modeManager
     property var theme
+    property var settingsManager
+
+    readonly property int weekStart: settingsManager ? settingsManager.calendarWeekStart : 0
+    readonly property bool reduceMotion: settingsManager ? settingsManager.reduceMotion : false
+    readonly property var weekdayLabels: {
+        const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        let rotated = []
+        for (let i = 0; i < 7; i++) rotated.push(names[(i + root.weekStart) % 7])
+        return rotated
+    }
 
     property int currentYear: new Date().getFullYear()
     property int currentMonth: new Date().getMonth() + 1
@@ -302,7 +312,7 @@ Item {
             Timer {
                 interval: 80
                 repeat: true
-                running: true
+                running: !root.reduceMotion
                 onTriggered: {
                     starField.twinkleTime += 0.18
                     starField.requestPaint()
@@ -348,14 +358,14 @@ Item {
 
             SequentialAnimation on rotation {
                 loops: Animation.Infinite
-                running: true
+                running: !root.reduceMotion
                 NumberAnimation { from: -55; to: 5; duration: 2800; easing.type: Easing.InOutSine }
                 NumberAnimation { from: 5; to: -55; duration: 2800; easing.type: Easing.InOutSine }
             }
 
             SequentialAnimation on bobY {
                 loops: Animation.Infinite
-                running: true
+                running: !root.reduceMotion
                 NumberAnimation { from: -6; to: 6; duration: 1800; easing.type: Easing.InOutSine }
                 NumberAnimation { from: 6; to: -6; duration: 1800; easing.type: Easing.InOutSine }
             }
@@ -483,7 +493,7 @@ Item {
                     spacing: 0
 
                     Repeater {
-                        model: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+                        model: root.weekdayLabels
                         delegate: Item {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 24
@@ -492,8 +502,9 @@ Item {
                                 anchors.centerIn: parent
                                 text: modelData
                                 color: {
-                                    if (index === 0) return Qt.hsla(0.0, 0.20, 0.72, 1.0)
-                                    if (index === 6) return Qt.hsla(0.6, 0.20, 0.72, 1.0)
+                                    const absoluteDay = (index + root.weekStart) % 7
+                                    if (absoluteDay === 0) return Qt.hsla(0.0, 0.20, 0.72, 1.0)
+                                    if (absoluteDay === 6) return Qt.hsla(0.6, 0.20, 0.72, 1.0)
                                     return theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.9)
                                 }
                                 font.pixelSize: 11
@@ -529,7 +540,7 @@ Item {
 
                             property int dayNumber: {
                                 const firstDay = new Date(root.currentYear, root.currentMonth - 1, 1)
-                                const startOffset = firstDay.getDay()
+                                const startOffset = (firstDay.getDay() - root.weekStart + 7) % 7
                                 const dayIndex = index - startOffset + 1
                                 const lastDay = new Date(root.currentYear, root.currentMonth, 0).getDate()
                                 if (dayIndex > 0 && dayIndex <= lastDay) return dayIndex
@@ -542,7 +553,7 @@ Item {
 
                             property bool isCurrentMonth: {
                                 const firstDay = new Date(root.currentYear, root.currentMonth - 1, 1)
-                                const startOffset = firstDay.getDay()
+                                const startOffset = (firstDay.getDay() - root.weekStart + 7) % 7
                                 const dayIndex = index - startOffset + 1
                                 const lastDay = new Date(root.currentYear, root.currentMonth, 0).getDate()
                                 return dayIndex > 0 && dayIndex <= lastDay

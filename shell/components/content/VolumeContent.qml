@@ -21,8 +21,8 @@ Item {
         "height": modeManager.scale(370),
         "leftMargin": modeManager.scale(765),
         "rightMargin": modeManager.scale(765),
-        "topMargin": modeManager.scale(6),
-        "bottomMargin": modeManager.scale(6)
+        "topMargin": modeManager.normalBarSize.topMargin,
+        "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
 
     property int tabIndex: 0

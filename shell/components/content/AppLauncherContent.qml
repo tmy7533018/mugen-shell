@@ -12,13 +12,14 @@ FocusScope {
     property var theme
     property var typo
     property var icons
+    property var settingsManager
 
     readonly property var requiredBarSize: ({
         "height": modeManager.scale(520),
         "leftMargin": modeManager.scale(450),
         "rightMargin": modeManager.scale(450),
-        "topMargin": modeManager.scale(6),
-        "bottomMargin": modeManager.scale(6)
+        "topMargin": modeManager.normalBarSize.topMargin,
+        "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
 
     property var apps: []
@@ -62,7 +63,12 @@ FocusScope {
 
     function launchExec(execCmd, inTerminal) {
         if (!execCmd) return
-        Theme.Hypr.exec(inTerminal ? "kitty " + execCmd : execCmd)
+        if (inTerminal) {
+            let terminal = (settingsManager && settingsManager.launcherTerminal) ? settingsManager.launcherTerminal : "kitty"
+            Theme.Hypr.execInTerminal(terminal, execCmd)
+        } else {
+            Theme.Hypr.exec(execCmd)
+        }
         modeManager.closeAllModes()
     }
 
@@ -92,12 +98,14 @@ FocusScope {
         // terminal route on purpose: the user sees what gets removed (deps
         // included) and confirms in the package manager itself
         let holdTail = "; echo; printf 'Press Enter to close...'; read _"
+        let terminal = (settingsManager && settingsManager.launcherTerminal) ? settingsManager.launcherTerminal : "kitty"
+        let termPrefix = Theme.Hypr.terminalArgvPrefix(terminal)
         if (df.indexOf("flatpak/exports/share/applications/") !== -1) {
             let appId = df.split("/").pop().replace(/\.desktop$/, "")
-            Quickshell.execDetached([
-                "kitty", "--title", "Uninstall " + app.name, "sh", "-c",
+            Quickshell.execDetached(termPrefix.concat([
+                "sh", "-c",
                 "flatpak uninstall \"$1\"" + holdTail, "sh", appId
-            ])
+            ]))
         } else {
             // user-local .desktop copies often point at packaged binaries, so
             // fall back to the Exec target's owner. Interpreters are excluded
@@ -107,8 +115,8 @@ FocusScope {
             if (execFirst[0] !== "/" || ["env", "sh", "bash", "zsh", "python", "python3"].indexOf(execBase) !== -1) {
                 execFirst = ""
             }
-            Quickshell.execDetached([
-                "kitty", "--title", "Uninstall " + app.name, "sh", "-c",
+            Quickshell.execDetached(termPrefix.concat([
+                "sh", "-c",
                 "if ! command -v pacman >/dev/null 2>&1; then "
                     + "echo 'No system package manager found — on NixOS, remove the app from your Nix config instead.'; "
                     + "echo \"  Entry: $1\"; "
@@ -122,7 +130,7 @@ FocusScope {
                     + "if [ -n \"$2\" ]; then echo \"  Exec:  $2\"; fi; "
                     + "echo 'Remove those files manually to uninstall it.'; fi; fi" + holdTail,
                 "sh", df, execFirst
-            ])
+            ]))
         }
         modeManager.closeAllModes()
     }

@@ -10,9 +10,8 @@ ShellRoot {
 
     Windows.Bar {
         id: barWindow
-        // Unpinned, the layer-shell surface drifts onto whatever output is
-        // focused, so bar panels open on the wrong monitor.
-        screen: Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
+        // screen is resolved inside Bar.qml (settings.display.monitor), not
+        // here — it needs SettingsManager, which lives inside the bar window.
     }
 
     Connections {

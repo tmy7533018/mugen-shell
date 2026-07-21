@@ -24,6 +24,10 @@ ShellRoot {
             return v
         }
 
+        function isMode(name) {
+            return false
+        }
+
         function bump() {
         }
     }
@@ -92,13 +96,52 @@ ShellRoot {
         }
     }
 
+    // Only lock/suspend/dpms write hypridle.conf, so they're queued through one
+    // Process: two of these firing together (e.g. Reset to Default) would
+    // otherwise race as concurrent read-modify-writes of the same file, and
+    // setting `running = true` on an already-running Process is a silent no-op
+    // that would drop whichever call lost the race.
+    property var _hyprIdleQueue: []
+    property bool _hyprIdleBusy: false
+
+    function _queueHyprIdleScript(kind, args) {
+        root._hyprIdleQueue = root._hyprIdleQueue.filter(q => q.kind !== kind)
+        root._hyprIdleQueue.push({ kind: kind, args: args })
+        root._drainHyprIdleQueue()
+    }
+
+    function _drainHyprIdleQueue() {
+        if (root._hyprIdleBusy || root._hyprIdleQueue.length === 0) return
+        root._hyprIdleBusy = true
+        let next = root._hyprIdleQueue.shift()
+        hyprIdleQueueProcess.command = next.args
+        hyprIdleQueueProcess.running = true
+    }
+
     function applyLockTimer(minutes) {
-        applyLockTimerProcess.command = [
+        root._queueHyprIdleScript("lock", [
             "bash",
             Quickshell.shellDir + "/scripts/lock-timer.sh",
             String(minutes)
-        ]
-        applyLockTimerProcess.running = true
+        ])
+    }
+
+    function applyIdleSuspend(minutes) {
+        root._queueHyprIdleScript("suspend", [
+            "bash",
+            Quickshell.shellDir + "/scripts/idle-timer.sh",
+            "suspend",
+            String(minutes)
+        ])
+    }
+
+    function applyIdleDpms(minutes) {
+        root._queueHyprIdleScript("dpms", [
+            "bash",
+            Quickshell.shellDir + "/scripts/idle-timer.sh",
+            "dpms",
+            String(minutes)
+        ])
     }
 
     function openAiConfig() {
@@ -224,9 +267,13 @@ ShellRoot {
     }
 
     Process {
-        id: applyLockTimerProcess
+        id: hyprIdleQueueProcess
         command: []
         running: false
+        onExited: {
+            root._hyprIdleBusy = false
+            root._drainHyprIdleQueue()
+        }
     }
 
     FloatingWindow {
@@ -264,10 +311,28 @@ ShellRoot {
         loadTimerSounds()
     }
 
+    // The settings file's very first load fires these same property-changed
+    // signals for every value that differs from the QML defaults, which would
+    // otherwise rewrite hypridle.conf and restart hypridle just from opening
+    // the settings window. settingsChanged() fires at the end of that first
+    // load (still inside the same synchronous pass, before this flag flips),
+    // so it suppresses exactly that load without blocking later real edits —
+    // including a later Reset to Default, which reloads through the same path.
+    property bool _settingsReady: false
+
     Connections {
         target: settingsManager
+        function onSettingsChanged() {
+            root._settingsReady = true
+        }
         function onLockTimerMinutesChanged() {
-            root.applyLockTimer(settingsManager.lockTimerMinutes)
+            if (root._settingsReady) root.applyLockTimer(settingsManager.lockTimerMinutes)
+        }
+        function onIdleSuspendMinutesChanged() {
+            if (root._settingsReady) root.applyIdleSuspend(settingsManager.idleSuspendMinutes)
+        }
+        function onIdleDpmsMinutesChanged() {
+            if (root._settingsReady) root.applyIdleDpms(settingsManager.idleDpmsMinutes)
         }
     }
 }

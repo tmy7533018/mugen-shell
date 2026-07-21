@@ -13,6 +13,7 @@ Item {
     
     required property var modeManager
     required property var notificationManager
+    property var settingsManager
     property var theme
     property var icons
     
@@ -20,8 +21,8 @@ Item {
         "height": modeManager.scale(420),
         "leftMargin": modeManager.scale(700),
         "rightMargin": modeManager.scale(700),
-        "topMargin": modeManager.scale(6),
-        "bottomMargin": modeManager.scale(6)
+        "topMargin": modeManager.normalBarSize.topMargin,
+        "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
     
     property var notifications: notificationManager.notifications
@@ -222,9 +223,11 @@ Item {
     }
 
     function toggleNotificationsAndPreview() {
-        let wasOff = !notificationManager.notificationsEnabled
-        notificationManager.notificationsEnabled = !notificationManager.notificationsEnabled
-        if (wasOff && notificationManager.notificationsEnabled) {
+        if (!settingsManager) return
+        let wasOff = !settingsManager.notificationsEnabled
+        settingsManager.notificationsEnabled = !settingsManager.notificationsEnabled
+        settingsManager.saveSettings()
+        if (wasOff && settingsManager.notificationsEnabled) {
             notificationManager.playSound()
         }
     }

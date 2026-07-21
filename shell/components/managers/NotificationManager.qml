@@ -8,7 +8,7 @@ QtObject {
 
     property var notifications: []
     property int unreadCount: 0
-    property bool notificationsEnabled: true
+    property bool notificationsEnabled: settingsManager ? settingsManager.notificationsEnabled : true
     property var settingsManager
     signal notificationReceived(var notification)
 

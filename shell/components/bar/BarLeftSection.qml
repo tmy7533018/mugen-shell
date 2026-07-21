@@ -85,7 +85,9 @@ RowLayout {
                 modeManager: root.modeManager
                 theme: root.theme
                 typo: root.typo
-                showSeconds: false
+                showSeconds: root.settingsManager ? root.settingsManager.clockShowSeconds : false
+                use24Hour: root.settingsManager ? root.settingsManager.clockShow24Hour : true
+                reduceMotion: root.settingsManager ? root.settingsManager.reduceMotion : false
                 isHovered: clockMouseArea.containsMouse
                 glowColor: timeBlock.glowColor
                 opacity: clockMouseArea.containsMouse ? 1.0 : 0.6
