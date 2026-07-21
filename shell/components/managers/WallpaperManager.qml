@@ -31,12 +31,16 @@ QtObject {
     }
 
     function setWallpaper(path) {
-        setWallpaperProcess.command = [
+        // Detached, not a tracked Process: change-wallpaper.sh runs for
+        // seconds (matugen, swww transition, mpvpaper startup) and a
+        // hot-reload mid-run would otherwise SIGTERM it along with every
+        // other QML object. currentWallpaperWatcher below picks up the
+        // result once the script writes it, instead of an onExited handler.
+        Quickshell.execDetached([
             "bash",
             Quickshell.shellDir + "/scripts/change-wallpaper.sh",
             path
-        ]
-        setWallpaperProcess.running = true
+        ])
     }
 
     function isVideoFile(path) {
@@ -137,22 +141,14 @@ QtObject {
         }
     }
 
-    property Process setWallpaperProcess: Process {
-        command: []
-        running: false
-        
-        stdout: SplitParser {
-        }
-        
-        stderr: SplitParser {
-        }
-        
-        onExited: (exitCode) => {
-            if (exitCode === 0) {
-                Qt.callLater(() => {
-                    currentWallpaperProcess.running = true
-                })
-            }
+    property FileView currentWallpaperWatcher: FileView {
+        path: wallpaperManager.currentWallpaperFile
+        watchChanges: true
+        preload: false
+        printErrors: false
+
+        onFileChanged: {
+            currentWallpaperProcess.running = true
         }
     }
 
