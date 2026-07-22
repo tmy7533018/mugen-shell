@@ -195,10 +195,11 @@ hl.bind(mainMod .. " + Tab",         hl.dsp.exec_cmd("hyprctl dispatch 'hl.dsp.w
 hl.bind(mainMod .. " + SHIFT + Tab", hl.dsp.exec_cmd("hyprctl dispatch 'hl.dsp.window.cycle_next({ prev = true })' && hyprctl dispatch 'hl.dsp.window.bring_to_top()'"))
 
 -- Workspaces
-for i = 1, 5 do
-    hl.bind(mainMod .. " + " .. i,         hl.dsp.focus({ workspace = tostring(i) }))
-    hl.bind("ALT + SHIFT + " .. i,         hl.dsp.window.move({ workspace = tostring(i), follow = true }))
-    hl.bind(mainMod .. " + SHIFT + " .. i, hl.dsp.window.move({ workspace = tostring(i), follow = false }))
+for i = 1, 10 do
+    local key = i == 10 and 0 or i
+    hl.bind(mainMod .. " + " .. key,         hl.dsp.focus({ workspace = tostring(i) }))
+    hl.bind("ALT + SHIFT + " .. key,         hl.dsp.window.move({ workspace = tostring(i), follow = true }))
+    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = tostring(i), follow = false }))
 end
 
 -- Workspace scroll
