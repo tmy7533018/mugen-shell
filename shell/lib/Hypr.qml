@@ -104,6 +104,6 @@ Item {
     function terminalArgvPrefix(terminalCmd) {
         let bin = String(terminalCmd || "kitty").trim().split(/\s+/)[0]
         let flag = root._terminalFlag(terminalCmd)
-        return flag.length > 0 ? [bin, flag] : [bin]
+        return flag.length > 0 ? [bin].concat(flag.split(/\s+/)) : [bin]
     }
 }
