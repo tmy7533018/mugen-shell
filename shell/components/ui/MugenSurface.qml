@@ -173,7 +173,7 @@ Rectangle {
 
         property real visibilityFactor: surface.calculateGradientVisibility(gradient1.slidePosition, 0.5)
 
-        opacity: dynamicOpacity * visibilityFactor
+        opacity: surface.gradientsAnimating ? (dynamicOpacity * visibilityFactor) : 0
 
         SequentialAnimation on slidePosition {
             loops: Animation.Infinite
@@ -260,7 +260,7 @@ Rectangle {
 
         property real visibilityFactor: surface.calculateGradientVisibility(gradient2.slidePosition, 0.5)
 
-        opacity: dynamicOpacity * visibilityFactor
+        opacity: surface.gradientsAnimating ? (dynamicOpacity * visibilityFactor) : 0
 
         SequentialAnimation on slidePosition {
             loops: Animation.Infinite
@@ -348,7 +348,7 @@ Rectangle {
 
         property real visibilityFactor: surface.calculateGradientVisibility(gradient3.slidePosition, 0.5)
 
-        opacity: dynamicOpacity * visibilityFactor
+        opacity: surface.gradientsAnimating ? (dynamicOpacity * visibilityFactor) : 0
 
         SequentialAnimation on slidePosition {
             loops: Animation.Infinite
