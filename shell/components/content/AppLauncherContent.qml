@@ -25,7 +25,6 @@ FocusScope {
     property var apps: []
     property string lastAppsJson: ""
     property var filteredApps: []
-    property var runningApps: []
     property bool appsLoaded: false
     property bool isLoading: false
 
@@ -156,22 +155,6 @@ FocusScope {
         }
     }
 
-    function loadRunningApps() {
-        runningAppsDebounceTimer.restart()
-    }
-
-    Timer {
-        id: runningAppsDebounceTimer
-        interval: 500
-        running: false
-        repeat: false
-        onTriggered: {
-            if (!runningAppsProcess.running) {
-                runningAppsProcess.running = true
-            }
-        }
-    }
-
     function stripDiacritics(s) {
         return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     }
@@ -293,29 +276,6 @@ FocusScope {
         }
     }
 
-    // Derived, not mutated inside isAppRunning(): a binding that both reads and
-    // writes the cache is what Qt flags as a loop.
-    readonly property var _runningSet: {
-        let set = ({})
-        for (let i = 0; i < runningApps.length; i++) {
-            set[runningApps[i].toLowerCase()] = true
-        }
-        return set
-    }
-
-    function isAppRunning(appName) {
-        let name = appName.toLowerCase()
-        if (_runningSet[name]) {
-            return true
-        }
-        for (let key in _runningSet) {
-            if (key.includes(name) || name.includes(key)) {
-                return true
-            }
-        }
-        return false
-    }
-
     Theme.IconResolver {
         id: iconResolver
     }
@@ -413,35 +373,12 @@ FocusScope {
         }
     }
 
-    Process {
-        id: runningAppsProcess
-        command: ["bash", "-c", "hyprctl clients -j | jq -r '.[].class'"]
-        running: false
-
-        property var classes: []
-
-        stdout: SplitParser {
-            onRead: data => {
-                let trimmed = data.trim()
-                if (trimmed.length > 0) {
-                    runningAppsProcess.classes.push(trimmed)
-                }
-            }
-        }
-
-        onExited: () => {
-            root.runningApps = runningAppsProcess.classes
-            runningAppsProcess.classes = []
-        }
-    }
-
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
             contextMenu.shown = false
             if (modeManager.isMode("launcher")) {
                 root.loadApps()
-                root.loadRunningApps()
                 root.searchText = ""
                 if (searchField) {
                     searchField.text = ""
@@ -720,7 +657,6 @@ FocusScope {
                         theme: root.theme
                         typo: root.typo
                         iconResolver: root.iconResolver
-                        isAppRunning: root.isAppRunning
                         modeManager: root.modeManager
                         isFavorite: root.isFavorite(delegateWrapper.wrapperModelData ? delegateWrapper.wrapperModelData.exec : "")
 
@@ -839,7 +775,6 @@ FocusScope {
             modeManager.registerMode("launcher", root)
             if (modeManager.isMode("launcher")) {
                 root.loadApps()
-                root.loadRunningApps()
                 root.searchText = ""
                 if (searchField) searchField.text = ""
                 if (appGrid) {

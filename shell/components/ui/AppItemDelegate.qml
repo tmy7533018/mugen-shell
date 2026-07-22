@@ -12,7 +12,6 @@ Item {
     required property var theme
     required property var typo
     required property var iconResolver
-    required property var isAppRunning
     required property var modeManager
     required property bool isFavorite
 
@@ -200,16 +199,6 @@ Item {
                             easing.type: Easing.OutCubic
                         }
                     }
-                }
-
-                Rectangle {
-                    anchors.bottom: parent.bottom
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    width: 6
-                    height: 6
-                    radius: 3
-                    color: delegateRoot.theme ? delegateRoot.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
-                    visible: delegateRoot.currentData ? (delegateRoot.isAppRunning ? delegateRoot.isAppRunning(delegateRoot.currentData.name) : false) : false
                 }
             }
 
