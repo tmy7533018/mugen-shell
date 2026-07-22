@@ -40,6 +40,13 @@ QtObject {
     property int barMarginV: 6
     property int workspaceCount: 5
     property string displayMonitor: ""  // Quickshell screen name; "" = first screen
+
+    // Reassigning a live PanelWindow.screen crashes Quickshell, so a monitor
+    // change needs a restart to take effect. Windows bind screen to this latched
+    // copy (frozen after the first load) instead of displayMonitor, so a live
+    // settings write can't re-resolve the screen out from under a live surface.
+    property string initialDisplayMonitor: ""
+    property bool _displayMonitorLatched: false
     property string barAiModel: ""  // "" = follow the backend default
     property bool barThinking: false
     property string yuraPanelSide: "left"  // "left" | "right"
@@ -416,6 +423,11 @@ QtObject {
             }
 
             updateAnimationMultiplier()
+
+            if (!_displayMonitorLatched) {
+                initialDisplayMonitor = displayMonitor
+                _displayMonitorLatched = true
+            }
 
             _applyingExternal = false
 

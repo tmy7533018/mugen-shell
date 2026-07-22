@@ -24,7 +24,7 @@ PanelWindow {
         }
         return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
     }
-    screen: screenByName(settingsManager.displayMonitor)
+    screen: screenByName(settingsManager.initialDisplayMonitor)
 
     anchors.top: true
     anchors.left: true

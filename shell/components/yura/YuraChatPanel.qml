@@ -53,7 +53,7 @@ PanelWindow {
     color: "transparent"
 
     visible: false
-    screen: chatWindow.screenByName(chatWindow.settingsManager ? chatWindow.settingsManager.displayMonitor : "")
+    screen: chatWindow.screenByName(chatWindow.settingsManager ? chatWindow.settingsManager.initialDisplayMonitor : "")
 
     function screenByName(name) {
         if (!name || name === "") return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
