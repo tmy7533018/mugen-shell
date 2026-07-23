@@ -728,22 +728,43 @@ FocusScope {
                     ? root.parseBlocks(displayContent)
                     : []
 
+                HoverHandler { id: msgHover }
+
                 Column {
                     id: msgCol
                     width: parent.width
                     spacing: modeManager.scale(6)
 
-                    Text {
+                    Item {
                         visible: !delegateRoot.isAssistant && modelData.content !== ""
                         width: parent.width
-                        horizontalAlignment: Text.AlignRight
-                        text: modelData.content
-                        wrapMode: Text.WordWrap
-                        color: root.theme ? root.theme.textSecondary : Qt.rgba(0.78, 0.78, 0.88, 0.85)
-                        font.pixelSize: modeManager.scale(14)
-                        font.family: "M PLUS 2"
-                        font.letterSpacing: 0.3
-                        lineHeight: 1.5
+                        height: visible ? userBubble.height : 0
+
+                        Rectangle {
+                            id: userBubble
+                            anchors.right: parent.right
+                            readonly property real hPad: modeManager.scale(12)
+                            readonly property real vPad: modeManager.scale(8)
+                            width: Math.min(userText.implicitWidth + hPad * 2, parent.width * 0.85)
+                            height: userText.height + vPad * 2
+                            radius: modeManager.scale(14)
+                            color: root.theme ? root.theme.chipActiveBg : Qt.rgba(0.45, 0.45, 0.60, 0.20)
+                            border.color: root.theme ? root.theme.chipInactiveBorder : Qt.rgba(0.55, 0.55, 0.68, 0.15)
+                            border.width: 1
+
+                            Text {
+                                id: userText
+                                anchors.centerIn: parent
+                                width: userBubble.width - userBubble.hPad * 2
+                                text: modelData.content
+                                wrapMode: Text.WordWrap
+                                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                                font.pixelSize: modeManager.scale(14)
+                                font.family: "M PLUS 2"
+                                font.letterSpacing: 0.3
+                                lineHeight: 1.4
+                            }
+                        }
                     }
 
                     Repeater {
@@ -788,12 +809,79 @@ FocusScope {
                         }
                     }
 
+                    Item {
+                        width: parent.width
+                        height: msgActions.height
+                        visible: modelData.content !== ""
+
+                        Row {
+                            id: msgActions
+                            anchors.left: delegateRoot.isAssistant ? parent.left : undefined
+                            anchors.right: delegateRoot.isAssistant ? undefined : parent.right
+                            spacing: modeManager.scale(4)
+                            opacity: msgHover.hovered ? 1.0 : 0.0
+                            visible: opacity > 0
+                            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
+
+                            Rectangle {
+                                id: copyBtn
+                                property bool copied: false
+                                width: modeManager.scale(27)
+                                height: modeManager.scale(23)
+                                radius: modeManager.scale(6)
+                                color: copyMouse.containsMouse
+                                    ? (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.22) : Qt.rgba(0.65, 0.55, 0.85, 0.22))
+                                    : (root.theme ? Qt.rgba(root.theme.textPrimary.r, root.theme.textPrimary.g, root.theme.textPrimary.b, 0.08) : Qt.rgba(0.9, 0.9, 0.95, 0.08))
+                                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+
+                                UI.SvgIcon {
+                                    anchors.centerIn: parent
+                                    width: modeManager.scale(15)
+                                    height: modeManager.scale(15)
+                                    visible: !copyBtn.copied
+                                    source: root.icons ? root.icons.copySvg : ""
+                                    color: copyMouse.containsMouse
+                                        ? (root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.98))
+                                        : (root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.7))
+                                }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    visible: copyBtn.copied
+                                    text: "✓"
+                                    color: root.theme ? root.theme.accent : Qt.rgba(0.55, 0.85, 0.65, 0.95)
+                                    font.pixelSize: modeManager.scale(15)
+                                }
+
+                                Timer {
+                                    id: copiedTimer
+                                    interval: 1200
+                                    onTriggered: copyBtn.copied = false
+                                }
+
+                                MouseArea {
+                                    id: copyMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        copyProcess.text = modelData.content
+                                        copyProcess.running = true
+                                        copyBtn.copied = true
+                                        copiedTimer.restart()
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Reserves space for the global orb that lands here.
                     Item {
                         visible: delegateRoot.isAssistant && delegateRoot.isLatest
                         width: 1
                         height: modeManager.scale(40)
                     }
+
                 }
             }
         }
