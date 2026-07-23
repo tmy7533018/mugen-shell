@@ -120,7 +120,11 @@ Item {
                 Lib.Hypr.exec("~/.config/quickshell/mugen-shell/scripts/" + script)
                 return
             }
-            ipcRouter.modeManager.switchMode(name, true)
+            // Idempotent open: this verb is only ever called programmatically
+            // (voice wake, MCP panel_open), so re-opening an already-active mode
+            // must keep it open, not toggle it shut. Keybinds/buttons keep using
+            // switchMode directly when they want toggle behaviour.
+            if (!ipcRouter.modeManager.isMode(name)) ipcRouter.modeManager.switchMode(name, true)
         }
 
         function close(): void {
