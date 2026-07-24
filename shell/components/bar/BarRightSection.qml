@@ -35,6 +35,7 @@ RowLayout {
     property var modeManager
     property var wifiManager
     property var bluetoothManager
+    property var airplaneManager
     property var batteryManager
     property var imeStatus
     property var idleInhibitorManager
@@ -81,6 +82,14 @@ RowLayout {
     }
 
     Separator {}
+
+    Right.AirplaneToggle {
+        theme: root.theme
+        icons: root.icons
+        modeManager: root.modeManager
+        airplaneManager: root.airplaneManager
+        visible: root.batteryManager && root.batteryManager.present
+    }
 
     Right.WifiButton {
         theme: root.theme

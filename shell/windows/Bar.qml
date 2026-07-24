@@ -310,6 +310,8 @@ PanelWindow {
 
     Managers.BluetoothManager { id: bluetoothManager }
 
+    Managers.AirplaneManager { id: airplaneManager; active: batteryManager.present }
+
     Managers.BatteryManager { id: batteryManager }
 
     Managers.ClipboardManager { id: clipboardManager }
@@ -526,6 +528,7 @@ PanelWindow {
             notificationManager: notificationManager
             wifiManager: wifiManager
             bluetoothManager: bluetoothManager
+            airplaneManager: airplaneManager
             batteryManager: batteryManager
             imeStatus: imeStatus
             idleInhibitorManager: idleInhibitorManager

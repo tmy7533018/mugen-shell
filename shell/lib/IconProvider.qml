@@ -42,6 +42,7 @@ QtObject {
     readonly property string bluetoothSlashSvg: basePath + "/bluetooth-slash.svg"
     readonly property string bluetoothSearchingSvg: basePath + "/bluetooth-searching.svg"
     readonly property string bluetoothConnectedSvg: basePath + "/bluetooth-connected.svg"
+    readonly property string airplaneSvg: basePath + "/airplane.svg"
 
     readonly property string wallpaperSvg: basePath + "/wallpaper.svg"
 
