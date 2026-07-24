@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
 import "../common" as Common
 import "../ui" as UI
 import "../../lib" as Theme
@@ -11,11 +12,12 @@ Item {
     required property var weatherManager
     property var theme
     property var icons
+    property bool reduceMotion: false
 
     readonly property var requiredBarSize: ({
-        "height": modeManager.scale(544),
-        "leftMargin": modeManager.scale(540),
-        "rightMargin": modeManager.scale(540),
+        "height": modeManager.scale(478),
+        "leftMargin": modeManager.scale(576),
+        "rightMargin": modeManager.scale(576),
         "topMargin": modeManager.normalBarSize.topMargin,
         "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
@@ -31,12 +33,36 @@ Item {
         }
     }
 
-    readonly property color cText: theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.9)
-    readonly property color cSub: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.9)
-    readonly property color cFaint: theme ? theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.9)
-    readonly property color cCard: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
 
-    // Open-Meteo hourly starts at today 00:00; slice from the current hour.
+    // --- Weather-driven "夢幻" palette ---
+    readonly property string wtype: (icons && weatherManager) ? icons.weatherType(weatherManager.weatherCode, weatherManager.isDay) : "clouds"
+    readonly property var pal: icons ? icons.weatherPalette(wtype) : null
+    readonly property color cAccent: pal ? pal.accent : Qt.rgba(0.74, 0.78, 0.90, 1)
+    readonly property color cAccent2: pal ? pal.accent2 : Qt.rgba(0.58, 0.63, 0.78, 1)
+    readonly property color cGlow: pal ? pal.glow : Qt.rgba(0.74, 0.78, 0.90, 0.4)
+    readonly property color cFg: pal ? pal.fg : Qt.rgba(0.93, 0.95, 0.98, 1)
+    readonly property color cDim: pal ? pal.dim : Qt.rgba(0.86, 0.89, 0.96, 0.58)
+
+    readonly property real weekMin: {
+        let d = weatherManager ? weatherManager.daily : []
+        if (!d || d.length === 0) return 0
+        let m = d[0].tempMin
+        for (let i = 0; i < d.length; i++) m = Math.min(m, d[i].tempMin)
+        return m
+    }
+    readonly property real weekMax: {
+        let d = weatherManager ? weatherManager.daily : []
+        if (!d || d.length === 0) return 1
+        let m = d[0].tempMax
+        for (let i = 0; i < d.length; i++) m = Math.max(m, d[i].tempMax)
+        return m
+    }
+
+    function isHourDay(t) {
+        let h = new Date(t).getHours()
+        return h >= 6 && h < 19
+    }
+
     function hourlyStart() {
         let h = weatherManager ? weatherManager.hourly : []
         if (!h || h.length === 0) return 0
@@ -46,26 +72,9 @@ Item {
         }
         return 0
     }
-
-    property var hourlySlice: {
+    readonly property var hourlySlice: {
         let h = weatherManager ? weatherManager.hourly : []
-        let s = hourlyStart()
-        return h.slice(s, s + 24)
-    }
-
-    property real weekMin: {
-        let d = weatherManager ? weatherManager.daily : []
-        if (!d || d.length === 0) return 0
-        let m = d[0].tempMin
-        for (let i = 0; i < d.length; i++) m = Math.min(m, d[i].tempMin)
-        return m
-    }
-    property real weekMax: {
-        let d = weatherManager ? weatherManager.daily : []
-        if (!d || d.length === 0) return 1
-        let m = d[0].tempMax
-        for (let i = 0; i < d.length; i++) m = Math.max(m, d[i].tempMax)
-        return m
+        return h.slice(hourlyStart(), hourlyStart() + 18)
     }
 
     MouseArea {
@@ -78,220 +87,293 @@ Item {
         onPositionChanged: { if (modeManager.isMode("weather")) modeManager.bump() }
     }
 
-    // The content Loader fills the whole window; inset onto the bar surface
-    // (which is sized to requiredBarSize) so nothing spills past the pill.
     FocusScope {
         anchors.fill: parent
-        anchors.topMargin: root.requiredBarSize.topMargin + root.scaled(22)
-        anchors.bottomMargin: root.requiredBarSize.bottomMargin + root.scaled(22)
-        anchors.leftMargin: root.requiredBarSize.leftMargin + root.scaled(30)
-        anchors.rightMargin: root.requiredBarSize.rightMargin + root.scaled(30)
+        anchors.topMargin: root.requiredBarSize.topMargin + root.scaled(16)
+        anchors.bottomMargin: root.requiredBarSize.bottomMargin + root.scaled(16)
+        anchors.leftMargin: root.requiredBarSize.leftMargin + root.scaled(22)
+        anchors.rightMargin: root.requiredBarSize.rightMargin + root.scaled(22)
         z: 3
         focus: modeManager.isMode("weather")
         Keys.onPressed: (event) => {
-            if (event.key === Qt.Key_Escape) {
-                modeManager.closeAllModes()
-                event.accepted = true
-            }
+            if (event.key === Qt.Key_Escape) { modeManager.closeAllModes(); event.accepted = true }
         }
 
-        ColumnLayout {
+        // Palette-gradient panel body with floating blobs.
+        Rectangle {
+            id: panelBg
             anchors.fill: parent
-            spacing: root.scaled(16)
+            radius: root.scaled(26)
+            clip: true
+            border.width: 1
+            border.color: Qt.rgba(1, 1, 1, 0.07)
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: root.pal ? root.pal.bg1 : "#20232e" }
+                GradientStop { position: 0.38; color: root.pal ? root.pal.bg2 : "#2b2f3d" }
+                GradientStop { position: 1.0; color: root.pal ? root.pal.bg3 : "#0e1015" }
+            }
 
-            // --- Current conditions ---
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: root.scaled(18)
-
-                Text {
-                    text: (root.icons && root.weatherManager)
-                        ? root.icons.weatherGlyph(root.weatherManager.weatherCode, root.weatherManager.isDay)
-                        : ""
-                    font.family: "JetBrainsMono Nerd Font"
-                    font.pixelSize: root.scaled(64)
-                    color: root.cText
-                    renderType: Text.QtRendering
+            Common.BlobEffect {
+                id: blob1
+                width: root.scaled(230); height: root.scaled(230)
+                x: root.scaled(120) + drift; y: -root.scaled(70)
+                property real drift: 0
+                blobColor: Qt.darker(root.cAccent, 1.35)
+                baseOpacity: 0.32
+                layers: 2
+                waveAmplitude: 5.0
+                animationSpeed: 0.05
+                running: !root.reduceMotion
+                SequentialAnimation on drift {
+                    running: !root.reduceMotion; loops: Animation.Infinite
+                    NumberAnimation { from: 0; to: root.scaled(26); duration: 13000; easing.type: Easing.InOutSine }
+                    NumberAnimation { from: root.scaled(26); to: 0; duration: 13000; easing.type: Easing.InOutSine }
                 }
-
-                ColumnLayout {
-                    spacing: root.scaled(2)
-                    Text {
-                        text: root.weatherManager ? (Math.round(root.weatherManager.temperature) + "°") : "—"
-                        font.family: "M PLUS 2"
-                        font.pixelSize: root.scaled(52)
-                        font.weight: Font.Light
-                        color: root.cText
-                    }
-                    Text {
-                        text: (root.icons && root.weatherManager) ? root.icons.weatherText(root.weatherManager.weatherCode) : ""
-                        font.family: "M PLUS 2"
-                        font.pixelSize: root.scaled(15)
-                        color: root.cSub
-                    }
-                }
-
-                Item { Layout.fillWidth: true }
-
-                ColumnLayout {
-                    Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                    spacing: root.scaled(4)
-                    Text {
-                        Layout.alignment: Qt.AlignRight
-                        text: root.weatherManager ? root.weatherManager.locationName : ""
-                        font.family: "M PLUS 2"
-                        font.pixelSize: root.scaled(18)
-                        font.weight: Font.Medium
-                        color: root.cText
-                    }
-                    Text {
-                        Layout.alignment: Qt.AlignRight
-                        text: root.weatherManager
-                            ? ("Feels " + Math.round(root.weatherManager.feelsLike) + "°   ·   Humidity " + root.weatherManager.humidity + "%   ·   Wind " + Math.round(root.weatherManager.wind) + " km/h")
-                            : ""
-                        font.family: "M PLUS 2"
-                        font.pixelSize: root.scaled(12)
-                        color: root.cFaint
-                    }
+            }
+            Common.BlobEffect {
+                id: blob2
+                width: root.scaled(210); height: root.scaled(210)
+                x: parent.width - root.scaled(200) + drift; y: parent.height - root.scaled(90)
+                property real drift: 0
+                blobColor: Qt.darker(root.cAccent2, 1.35)
+                baseOpacity: 0.23
+                layers: 2
+                waveAmplitude: 5.0
+                animationSpeed: 0.045
+                running: !root.reduceMotion
+                SequentialAnimation on drift {
+                    running: !root.reduceMotion; loops: Animation.Infinite
+                    NumberAnimation { from: 0; to: -root.scaled(28); duration: 16000; easing.type: Easing.InOutSine }
+                    NumberAnimation { from: -root.scaled(28); to: 0; duration: 16000; easing.type: Easing.InOutSine }
                 }
             }
 
-            // --- Hourly (next 24h) ---
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: root.scaled(128)
-                color: root.cCard
-                radius: root.scaled(12)
-
-                ListView {
-                    anchors.fill: parent
-                    anchors.margins: root.scaled(10)
-                    orientation: ListView.Horizontal
-                    spacing: root.scaled(4)
-                    clip: true
-                    boundsBehavior: Flickable.StopAtBounds
-                    model: root.hourlySlice
-
-                    delegate: Column {
-                        width: root.scaled(52)
-                        height: ListView.view.height
-                        spacing: root.scaled(6)
-
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: index === 0 ? "Now" : Qt.formatDateTime(new Date(modelData.time), "H") + "時"
-                            font.family: "M PLUS 2"
-                            font.pixelSize: root.scaled(11)
-                            color: root.cFaint
-                        }
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: root.icons ? root.icons.weatherGlyph(modelData.code, Qt.formatDateTime(new Date(modelData.time), "H") >= 6 && Qt.formatDateTime(new Date(modelData.time), "H") < 19) : ""
-                            font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: root.scaled(20)
-                            color: root.cText
-                            renderType: Text.QtRendering
-                        }
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: (modelData.precip > 0 ? modelData.precip + "%" : "")
-                            font.family: "M PLUS 2"
-                            font.pixelSize: root.scaled(10)
-                            color: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
-                        }
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: Math.round(modelData.temp) + "°"
-                            font.family: "M PLUS 2"
-                            font.pixelSize: root.scaled(13)
-                            font.weight: Font.Medium
-                            color: root.cText
-                        }
-                    }
-                }
+            WeatherParticles {
+                anchors.fill: parent
+                wtype: root.wtype
+                windKmh: root.weatherManager ? root.weatherManager.wind : 0
+                tint: root.cAccent
+                active: !root.reduceMotion
             }
 
-            // --- Daily (7 days) ---
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                color: root.cCard
-                radius: root.scaled(12)
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: root.scaled(22)
+                spacing: root.scaled(14)
 
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: root.scaled(12)
-                    spacing: 0
+                // ---- Row 1: current + hourly ----
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    spacing: root.scaled(14)
 
-                    Repeater {
-                        model: root.weatherManager ? root.weatherManager.daily : []
+                    // Current conditions glass card
+                    Rectangle {
+                        Layout.preferredWidth: root.scaled(226)
+                        Layout.fillHeight: true
+                        radius: root.scaled(20)
+                        color: Qt.rgba(1, 1, 1, 0.06)
+                        border.width: 1
+                        border.color: Qt.rgba(1, 1, 1, 0.12)
 
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: root.scaled(30)
-                            Layout.maximumHeight: root.scaled(32)
-                            spacing: root.scaled(12)
-
-                            Text {
-                                Layout.preferredWidth: root.scaled(52)
-                                text: index === 0 ? "Today" : Qt.formatDateTime(new Date(modelData.date), "ddd")
-                                font.family: "M PLUS 2"
-                                font.pixelSize: root.scaled(14)
-                                color: root.cSub
-                            }
-                            Text {
-                                Layout.preferredWidth: root.scaled(28)
-                                Layout.preferredHeight: root.scaled(30)
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                text: root.icons ? root.icons.weatherGlyph(modelData.code, true) : ""
-                                font.family: "JetBrainsMono Nerd Font"
-                                font.pixelSize: root.scaled(16)
-                                color: root.cText
-                                renderType: Text.QtRendering
-                            }
-                            Text {
-                                Layout.preferredWidth: root.scaled(40)
-                                text: modelData.precipProb > 0 ? modelData.precipProb + "%" : ""
-                                font.family: "M PLUS 2"
-                                font.pixelSize: root.scaled(12)
-                                color: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
-                            }
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: root.scaled(18)
+                            spacing: root.scaled(2)
 
                             Text {
-                                Layout.preferredWidth: root.scaled(34)
-                                horizontalAlignment: Text.AlignRight
-                                text: Math.round(modelData.tempMin) + "°"
-                                font.family: "M PLUS 2"
-                                font.pixelSize: root.scaled(13)
-                                color: root.cFaint
+                                text: root.weatherManager ? root.weatherManager.locationName : ""
+                                font.family: "M PLUS 2"; font.pixelSize: root.scaled(10.5)
+                                font.letterSpacing: 2.5
+                                font.capitalization: Font.AllUppercase
+                                color: root.cDim
                             }
-                            Rectangle {
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: root.scaled(4)
-                                radius: height / 2
-                                color: Qt.rgba(root.cFaint.r, root.cFaint.g, root.cFaint.b, 0.25)
-
-                                Rectangle {
-                                    property real span: Math.max(1, root.weekMax - root.weekMin)
-                                    x: parent.width * (modelData.tempMin - root.weekMin) / span
-                                    width: parent.width * (modelData.tempMax - modelData.tempMin) / span
-                                    height: parent.height
-                                    radius: height / 2
-                                    gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.0; color: theme ? theme.glowSecondary : Qt.rgba(0.4, 0.6, 0.9, 0.9) }
-                                        GradientStop { position: 1.0; color: theme ? theme.accent : Qt.rgba(0.9, 0.6, 0.4, 0.9) }
-                                    }
+                            RowLayout {
+                                Layout.topMargin: root.scaled(4)
+                                spacing: root.scaled(10)
+                                Text {
+                                    id: bigTemp
+                                    Layout.preferredHeight: root.scaled(62)
+                                    verticalAlignment: Text.AlignVCenter
+                                    text: root.weatherManager ? Math.round(root.weatherManager.temperature) + "°" : "—"
+                                    font.family: "M PLUS 2"; font.pixelSize: root.scaled(58); font.weight: Font.Light
+                                    color: root.cFg
+                                    layer.enabled: true
+                                    layer.effect: Glow { color: root.cGlow; radius: 14; samples: 25; spread: 0.2; transparentBorder: true }
+                                }
+                                UI.SvgIcon {
+                                    Layout.alignment: Qt.AlignVCenter
+                                    source: (root.icons && root.weatherManager) ? root.icons.weatherIcon(root.weatherManager.weatherCode, root.weatherManager.isDay) : ""
+                                    color: root.cAccent
+                                    width: root.scaled(38); height: root.scaled(38)
+                                    layer.enabled: true
+                                    layer.effect: Glow { color: root.cGlow; radius: 10; samples: 21; spread: 0.3; transparentBorder: true }
                                 }
                             }
                             Text {
-                                Layout.preferredWidth: root.scaled(34)
-                                text: Math.round(modelData.tempMax) + "°"
-                                font.family: "M PLUS 2"
-                                font.pixelSize: root.scaled(13)
-                                font.weight: Font.Medium
-                                color: root.cText
+                                Layout.topMargin: root.scaled(5)
+                                text: (root.icons && root.weatherManager) ? root.icons.weatherText(root.weatherManager.weatherCode) : ""
+                                font.family: "M PLUS 2"; font.pixelSize: root.scaled(15)
+                                color: root.cDim
+                            }
+                            Text {
+                                Layout.topMargin: root.scaled(12)
+                                text: root.weatherManager ? ("Feels " + Math.round(root.weatherManager.feelsLike) + "°   ·   Humidity " + root.weatherManager.humidity + "%") : ""
+                                font.family: "M PLUS 2"; font.pixelSize: root.scaled(11.5); color: root.cDim
+                            }
+                            Text {
+                                text: root.weatherManager ? "Wind " + Math.round(root.weatherManager.wind) + " km/h" : ""
+                                font.family: "M PLUS 2"; font.pixelSize: root.scaled(11.5); color: root.cDim
+                            }
+                            Item { Layout.fillHeight: true }
+                        }
+                    }
+
+                    // Hourly glass card
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        radius: root.scaled(20)
+                        color: Qt.rgba(1, 1, 1, 0.05)
+                        border.width: 1
+                        border.color: Qt.rgba(1, 1, 1, 0.1)
+
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: root.scaled(16)
+                            spacing: root.scaled(8)
+
+                            Text {
+                                text: "24 HOURS"
+                                font.family: "M PLUS 2"; font.pixelSize: root.scaled(10)
+                                font.letterSpacing: 2.5
+                                color: root.cDim
+                            }
+                            ListView {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                orientation: ListView.Horizontal
+                                spacing: root.scaled(8)
+                                clip: true
+                                boundsBehavior: Flickable.StopAtBounds
+                                model: root.hourlySlice
+
+                                delegate: Rectangle {
+                                    width: (ListView.view.width - 6 * ListView.view.spacing) / 7
+                                    height: ListView.view.height
+                                    radius: root.scaled(15)
+                                    color: Qt.rgba(1, 1, 1, 0.06)
+                                    border.width: 1
+                                    border.color: Qt.rgba(1, 1, 1, 0.1)
+
+                                    ColumnLayout {
+                                        anchors.fill: parent
+                                        anchors.topMargin: root.scaled(14)
+                                        anchors.bottomMargin: root.scaled(14)
+                                        spacing: root.scaled(7)
+                                        Text {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            text: index === 0 ? "Now" : Qt.formatDateTime(new Date(modelData.time), "H")
+                                            font.family: "M PLUS 2"; font.pixelSize: root.scaled(11); color: root.cDim
+                                        }
+                                        Item { Layout.fillHeight: true }
+                                        UI.SvgIcon {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            source: root.icons ? root.icons.weatherIcon(modelData.code, root.isHourDay(modelData.time)) : ""
+                                            color: root.cAccent
+                                            width: root.scaled(20); height: root.scaled(20)
+                                        }
+                                        Text {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            text: modelData.precip > 0 ? modelData.precip + "%" : ""
+                                            font.family: "M PLUS 2"; font.pixelSize: root.scaled(11); font.weight: Font.Medium; color: root.cAccent2
+                                        }
+                                        Item { Layout.fillHeight: true }
+                                        Text {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            text: Math.round(modelData.temp) + "°"
+                                            font.family: "M PLUS 2"; font.pixelSize: root.scaled(14); font.weight: Font.Medium; color: root.cFg
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ---- Row 2: 7-day columns with vertical range bars ----
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: root.scaled(190)
+                    radius: root.scaled(20)
+                    color: Qt.rgba(1, 1, 1, 0.07)
+                    border.width: 1
+                    border.color: Qt.rgba(1, 1, 1, 0.13)
+
+                    RowLayout {
+                        id: dailyRow
+                        anchors.fill: parent
+                        anchors.margins: root.scaled(14)
+                        spacing: root.scaled(4)
+
+                        Repeater {
+                            model: root.weatherManager ? root.weatherManager.daily : []
+
+                            ColumnLayout {
+                                Layout.preferredWidth: (dailyRow.width - 6 * dailyRow.spacing) / 7
+                                Layout.fillHeight: true
+                                spacing: root.scaled(5)
+
+                                Text {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: index === 0 ? "Today" : Qt.formatDateTime(new Date(modelData.date), "ddd")
+                                    font.family: "M PLUS 2"; font.pixelSize: root.scaled(12.5); color: root.cDim
+                                }
+                                UI.SvgIcon {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    source: root.icons ? root.icons.weatherIcon(modelData.code, true) : ""
+                                    color: root.cAccent
+                                    width: root.scaled(20); height: root.scaled(20)
+                                }
+                                Text {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: modelData.precipProb > 0 ? modelData.precipProb + "%" : ""
+                                    font.family: "M PLUS 2"; font.pixelSize: root.scaled(11); font.weight: Font.Medium; color: root.cAccent2
+                                }
+                                Text {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: Math.round(modelData.tempMax) + "°"
+                                    font.family: "M PLUS 2"; font.pixelSize: root.scaled(14); font.weight: Font.Medium; color: root.cFg
+                                }
+                                // vertical range bar
+                                Item {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    Layout.fillHeight: true
+                                    width: root.scaled(6)
+                                    Rectangle {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        width: root.scaled(6); height: parent.height
+                                        radius: width / 2
+                                        color: Qt.rgba(1, 1, 1, 0.08)
+                                    }
+                                    Rectangle {
+                                        property real span: Math.max(1, root.weekMax - root.weekMin)
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        width: root.scaled(6)
+                                        y: parent.height * (root.weekMax - modelData.tempMax) / span
+                                        height: parent.height * (modelData.tempMax - modelData.tempMin) / span
+                                        radius: width / 2
+                                        gradient: Gradient {
+                                            GradientStop { position: 0.0; color: root.cAccent }
+                                            GradientStop { position: 1.0; color: root.cAccent2 }
+                                        }
+                                    }
+                                }
+                                Text {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: Math.round(modelData.tempMin) + "°"
+                                    font.family: "M PLUS 2"; font.pixelSize: root.scaled(12); color: root.cDim
+                                }
                             }
                         }
                     }

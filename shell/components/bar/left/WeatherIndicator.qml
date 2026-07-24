@@ -1,9 +1,11 @@
 import QtQuick
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
+import "../../ui" as UI
 import "../../../lib" as Theme
 
 Item {
-    id: weatherContainer
+    id: root
 
     required property var theme
     required property var typo
@@ -14,60 +16,60 @@ Item {
     function scaled(v) { return modeManager ? modeManager.scale(v) : v }
 
     visible: weatherManager ? (weatherManager.enabled && weatherManager.ready) : false
-    implicitWidth: row.implicitWidth
-    implicitHeight: row.implicitHeight
+    implicitWidth: content.implicitWidth
+    implicitHeight: scaled(28)
     Layout.alignment: Qt.AlignVCenter
 
-    opacity: weatherMouseArea.containsMouse ? 1.0 : 0.6
-    scale: weatherMouseArea.containsMouse ? 1.15 : 1.0
+    readonly property string wtype: (icons && weatherManager) ? icons.weatherType(weatherManager.weatherCode, weatherManager.isDay) : "clouds"
+    readonly property var pal: icons ? icons.weatherPalette(wtype) : null
+    readonly property color accentC: pal ? pal.accent : (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 1))
+    readonly property color glowC: pal ? pal.glow : Qt.rgba(0.65, 0.55, 0.85, 0.45)
 
-    Behavior on opacity {
-        NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
-    }
-    Behavior on scale {
-        NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic }
-    }
+    opacity: ma.containsMouse ? 1.0 : 0.8
+    scale: ma.containsMouse ? 1.15 : 1.0
+    Behavior on opacity { NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic } }
+    Behavior on scale { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
 
     Row {
-        id: row
+        id: content
         anchors.centerIn: parent
-        spacing: weatherContainer.scaled(5)
+        spacing: root.scaled(3)
 
-        Text {
-            id: glyph
+        UI.SvgIcon {
             anchors.verticalCenter: parent.verticalCenter
-            text: (weatherContainer.icons && weatherContainer.weatherManager)
-                ? weatherContainer.icons.weatherGlyph(weatherContainer.weatherManager.weatherCode, weatherContainer.weatherManager.isDay)
-                : ""
-            font.family: "JetBrainsMono Nerd Font"
-            font.pixelSize: weatherContainer.scaled(15)
-            color: weatherContainer.theme ? weatherContainer.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-            renderType: Text.QtRendering
+            source: (root.icons && root.weatherManager) ? root.icons.weatherIcon(root.weatherManager.weatherCode, root.weatherManager.isDay) : ""
+            color: root.accentC
+            width: root.scaled(22)
+            height: root.scaled(22)
+            layer.enabled: true
+            layer.effect: Glow {
+                color: root.glowC
+                radius: 5
+                samples: 11
+                spread: 0.15
+                transparentBorder: true
+            }
         }
 
         Text {
-            id: temp
             anchors.verticalCenter: parent.verticalCenter
-            text: weatherContainer.weatherManager
-                ? Math.round(weatherContainer.weatherManager.temperature) + "°"
-                : ""
-            font.family: weatherContainer.typo ? weatherContainer.typo.clockStyle.family : "M PLUS 2"
-            font.pixelSize: weatherContainer.scaled(13)
+            anchors.verticalCenterOffset: -root.scaled(1)
+            text: root.weatherManager ? Math.round(root.weatherManager.temperature) + "°" : ""
+            font.family: root.typo ? root.typo.clockStyle.family : "M PLUS 2"
+            font.pixelSize: root.scaled(15)
             font.weight: Font.Medium
-            color: weatherContainer.theme ? weatherContainer.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+            color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.9)
             renderType: Text.QtRendering
         }
     }
 
     MouseArea {
-        id: weatherMouseArea
+        id: ma
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: {
-            if (weatherContainer.modeManager) {
-                weatherContainer.modeManager.switchMode("weather")
-            }
+            if (root.modeManager) root.modeManager.switchMode("weather")
         }
     }
 }

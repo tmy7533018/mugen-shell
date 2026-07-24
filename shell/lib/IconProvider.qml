@@ -161,23 +161,39 @@ QtObject {
         return basePath + "/" + iconName + ".svg"
     }
 
-    // WMO weather code -> Nerd Font Weather glyph (nf-weather-*, U+E3xx).
-    function weatherGlyph(code, isDay) {
-        var c = String.fromCharCode
+    // WMO weather code -> design weather type key (clear/clouds/rain/thunder/
+    // snow/fog/night), used for both the icon and the palette.
+    function weatherType(code, isDay) {
         switch (true) {
         case code === 0:
-        case code === 1:                 return isDay ? c(0xE30D) : c(0xE32B)
-        case code === 2:                 return isDay ? c(0xE302) : c(0xE37E)
-        case code === 3:                 return c(0xE312)
-        case code === 45 || code === 48: return c(0xE313)
-        case code >= 51 && code <= 57:   return c(0xE319)
-        case code >= 61 && code <= 65:   return c(0xE318)
-        case code === 66 || code === 67: return c(0xE317)
-        case code >= 71 && code <= 77:   return c(0xE31A)
-        case code >= 80 && code <= 82:   return c(0xE318)
-        case code === 85 || code === 86: return c(0xE31A)
-        case code >= 95:                 return c(0xE31D)
-        default:                         return c(0xE312)
+        case code === 1:                 return isDay ? "clear" : "night"
+        case code === 2:
+        case code === 3:                 return "clouds"
+        case code === 45 || code === 48: return "fog"
+        case code >= 51 && code <= 67:   return "rain"
+        case code >= 71 && code <= 77:   return "snow"
+        case code >= 80 && code <= 82:   return "rain"
+        case code === 85 || code === 86: return "snow"
+        case code >= 95:                 return "thunder"
+        default:                         return "clouds"
+        }
+    }
+
+    function weatherIcon(code, isDay) {
+        return basePath + "/weather-" + weatherType(code, isDay) + ".svg"
+    }
+
+    // "夢幻" Liquid Glass palette per weather type (from the Claude Design doc).
+    function weatherPalette(type) {
+        switch (type) {
+        case "clear":   return { bg1: "#2a2410", bg2: "#3a3013", bg3: "#100d06", accent: "#f5c56b", accent2: "#ff9d5c", glow: Qt.rgba(0.96, 0.77, 0.42, 0.5),  fg: "#fff7e6", dim: Qt.rgba(1.0, 0.94, 0.84, 0.62) }
+        case "clouds":  return { bg1: "#20232e", bg2: "#2b2f3d", bg3: "#0e1015", accent: "#bcc6e6", accent2: "#93a0c8", glow: Qt.rgba(0.74, 0.78, 0.90, 0.4),  fg: "#eef1fb", dim: Qt.rgba(0.86, 0.89, 0.96, 0.58) }
+        case "rain":    return { bg1: "#12222b", bg2: "#163540", bg3: "#091317", accent: "#6fd7e6", accent2: "#5aa8e0", glow: Qt.rgba(0.43, 0.84, 0.90, 0.45), fg: "#e8fbff", dim: Qt.rgba(0.78, 0.92, 0.95, 0.6) }
+        case "thunder": return { bg1: "#1b1630", bg2: "#291e44", bg3: "#0c0917", accent: "#b18bff", accent2: "#6f7bff", glow: Qt.rgba(0.69, 0.55, 1.0, 0.5),  fg: "#f2ecff", dim: Qt.rgba(0.86, 0.83, 0.96, 0.58) }
+        case "snow":    return { bg1: "#1a222b", bg2: "#243240", bg3: "#0b1015", accent: "#cfe9f5", accent2: "#9fc8e6", glow: Qt.rgba(0.81, 0.91, 0.96, 0.5),  fg: "#f4fbff", dim: Qt.rgba(0.88, 0.94, 0.97, 0.65) }
+        case "fog":     return { bg1: "#20241f", bg2: "#2b302a", bg3: "#0f130f", accent: "#c6cdbe", accent2: "#9aa78f", glow: Qt.rgba(0.78, 0.80, 0.75, 0.38), fg: "#eef2e8", dim: Qt.rgba(0.86, 0.89, 0.84, 0.58) }
+        case "night":   return { bg1: "#141a2e", bg2: "#1c2547", bg3: "#070a14", accent: "#9fb4ff", accent2: "#c7b3ff", glow: Qt.rgba(0.62, 0.71, 1.0, 0.45), fg: "#eef1ff", dim: Qt.rgba(0.82, 0.85, 0.96, 0.6) }
+        default:        return { bg1: "#20232e", bg2: "#2b2f3d", bg3: "#0e1015", accent: "#bcc6e6", accent2: "#93a0c8", glow: Qt.rgba(0.74, 0.78, 0.90, 0.4),  fg: "#eef1fb", dim: Qt.rgba(0.86, 0.89, 0.96, 0.58) }
         }
     }
 

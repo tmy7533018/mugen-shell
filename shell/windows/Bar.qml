@@ -775,6 +775,7 @@ PanelWindow {
         property var themeRef: theme
         property var iconsRef: icons
         property var weatherManagerRef: weatherManager
+        property var settingsManagerRef: settingsManager
         active: modeManagerRef.isMode("weather")
         sourceComponent: Content.WeatherContent {
             anchors.fill: parent
@@ -783,6 +784,7 @@ PanelWindow {
             weatherManager: weatherLoader.weatherManagerRef
             theme: weatherLoader.themeRef
             icons: weatherLoader.iconsRef
+            reduceMotion: weatherLoader.settingsManagerRef ? weatherLoader.settingsManagerRef.reduceMotion : false
         }
     }
 
