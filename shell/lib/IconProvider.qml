@@ -161,6 +161,44 @@ QtObject {
         return basePath + "/" + iconName + ".svg"
     }
 
+    // WMO weather code -> Nerd Font Weather glyph (nf-weather-*, U+E3xx).
+    function weatherGlyph(code, isDay) {
+        var c = String.fromCharCode
+        switch (true) {
+        case code === 0:
+        case code === 1:                 return isDay ? c(0xE30D) : c(0xE32B)
+        case code === 2:                 return isDay ? c(0xE302) : c(0xE37E)
+        case code === 3:                 return c(0xE312)
+        case code === 45 || code === 48: return c(0xE313)
+        case code >= 51 && code <= 57:   return c(0xE319)
+        case code >= 61 && code <= 65:   return c(0xE318)
+        case code === 66 || code === 67: return c(0xE317)
+        case code >= 71 && code <= 77:   return c(0xE31A)
+        case code >= 80 && code <= 82:   return c(0xE318)
+        case code === 85 || code === 86: return c(0xE31A)
+        case code >= 95:                 return c(0xE31D)
+        default:                         return c(0xE312)
+        }
+    }
+
+    function weatherText(code) {
+        switch (true) {
+        case code === 0:                return "Clear"
+        case code === 1:                return "Mostly clear"
+        case code === 2:                return "Partly cloudy"
+        case code === 3:                return "Overcast"
+        case code === 45 || code === 48: return "Fog"
+        case code >= 51 && code <= 57:  return "Drizzle"
+        case code >= 61 && code <= 65:  return "Rain"
+        case code === 66 || code === 67: return "Freezing rain"
+        case code >= 71 && code <= 77:  return "Snow"
+        case code >= 80 && code <= 82:  return "Rain showers"
+        case code === 85 || code === 86: return "Snow showers"
+        case code >= 95:                return "Thunderstorm"
+        default:                        return "—"
+        }
+    }
+
     Component.onCompleted: {
     }
 }

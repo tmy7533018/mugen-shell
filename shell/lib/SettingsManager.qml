@@ -32,6 +32,9 @@ QtObject {
     property string dateFormat: "ddd M/d"  // Qt date tokens
     property bool clockShow24Hour: true
     property bool clockShowSeconds: false
+    property bool weatherEnabled: true
+    property string weatherLocation: ""
+    property string weatherUnit: "celsius"
     property int calendarWeekStart: 0  // 0 = Sunday, 1 = Monday
     property bool reduceMotion: false  // silences looping ambient animation, separate from animationSpeed
     property int barHeight: 60
@@ -151,6 +154,11 @@ QtObject {
             "clock": {
                 "show24Hour": clockShow24Hour,
                 "showSeconds": clockShowSeconds
+            },
+            "weather": {
+                "enabled": weatherEnabled,
+                "location": weatherLocation,
+                "unit": weatherUnit
             },
             "calendar": {
                 "weekStart": calendarWeekStart
@@ -312,6 +320,18 @@ QtObject {
                 }
                 if (settings.clock.showSeconds !== undefined) {
                     clockShowSeconds = settings.clock.showSeconds
+                }
+            }
+
+            if (settings.weather) {
+                if (settings.weather.enabled !== undefined) {
+                    weatherEnabled = settings.weather.enabled
+                }
+                if (settings.weather.location !== undefined) {
+                    weatherLocation = settings.weather.location
+                }
+                if (settings.weather.unit !== undefined) {
+                    weatherUnit = settings.weather.unit
                 }
             }
 

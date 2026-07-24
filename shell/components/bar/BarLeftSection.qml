@@ -24,6 +24,7 @@ RowLayout {
     property var cavaManager
     property var settingsManager
     property var timerManager
+    property var weatherManager
     property bool aiThinking: false
     property bool aiListening: false
     property bool aiSpeaking: false
@@ -152,6 +153,16 @@ RowLayout {
                 }
             }
         }
+    }
+
+    Separator { visible: root.weatherManager && root.weatherManager.enabled && root.weatherManager.ready }
+
+    Left.WeatherIndicator {
+        theme: root.theme
+        typo: root.typo
+        icons: root.icons
+        modeManager: root.modeManager
+        weatherManager: root.weatherManager
     }
 
     Item {

@@ -27,7 +27,7 @@ Item {
     signal restartAi()
 
     readonly property var categories: [
-        { id: "appearance", label: "Appearance",   types: ["theme", "gradient", "blur", "animation", "dateFormat", "clock", "calendarWeekStart", "barLayout"] },
+        { id: "appearance", label: "Appearance",   types: ["theme", "gradient", "blur", "animation", "dateFormat", "clock", "weather", "calendarWeekStart", "barLayout"] },
         { id: "sound",      label: "Sound",        types: ["notificationSound", "timerSound"] },
         { id: "notifications", label: "Notifications", types: ["doNotDisturb", "notificationTimeout"] },
         { id: "timer",      label: "Timer & Lock", types: ["timer", "lockTimer", "idlePower"] },
@@ -179,6 +179,7 @@ Item {
                                 case "idlePower":         return idlePowerSection
                                 case "dateFormat":        return dateFormatSection
                                 case "clock":              return clockSection
+                                case "weather":            return weatherSection
                                 case "calendarWeekStart": return calendarWeekStartSection
                                 case "barLayout":         return barLayoutSection
                                 case "doNotDisturb":      return doNotDisturbSection
@@ -292,6 +293,11 @@ Item {
         settingsManager: root.settingsManager
     }}
     Component { id: clockSection; Settings.ClockSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: weatherSection; Settings.WeatherSection {
         theme: root.theme
         modeManager: root.modeManager
         settingsManager: root.settingsManager

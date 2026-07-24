@@ -38,6 +38,11 @@
     "show24Hour": true,
     "showSeconds": false
   },
+  "weather": {
+    "enabled": true,
+    "location": "",
+    "unit": "celsius"
+  },
   "calendar": {
     "weekStart": 0
   },

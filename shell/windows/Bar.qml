@@ -314,6 +314,13 @@ PanelWindow {
 
     Managers.BatteryManager { id: batteryManager }
 
+    Managers.WeatherManager {
+        id: weatherManager
+        enabled: settingsManager.weatherEnabled
+        locationOverride: settingsManager.weatherLocation
+        unit: settingsManager.weatherUnit
+    }
+
     Managers.ClipboardManager { id: clipboardManager }
 
     Managers.ScreenshotManager { id: screenshotManager }
@@ -511,6 +518,7 @@ PanelWindow {
             cavaManager: cavaManager
             settingsManager: settingsManager
             timerManager: timerManager
+            weatherManager: weatherManager
             aiThinking: (aiAssistantLoader.item ? aiAssistantLoader.item.streaming : false)
                 || barWindow.yuraFloatThinking
             aiListening: barWindow.yuraListening
@@ -756,6 +764,25 @@ PanelWindow {
             bluetoothManager: bluetoothLoader.bluetoothManagerRef
             theme: bluetoothLoader.themeRef
             icons: bluetoothLoader.iconsRef
+        }
+    }
+
+    Loader {
+        id: weatherLoader
+        anchors.fill: parent
+        z: 2
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var iconsRef: icons
+        property var weatherManagerRef: weatherManager
+        active: modeManagerRef.isMode("weather")
+        sourceComponent: Content.WeatherContent {
+            anchors.fill: parent
+            visible: weatherLoader.modeManagerRef.isMode("weather")
+            modeManager: weatherLoader.modeManagerRef
+            weatherManager: weatherLoader.weatherManagerRef
+            theme: weatherLoader.themeRef
+            icons: weatherLoader.iconsRef
         }
     }
 
