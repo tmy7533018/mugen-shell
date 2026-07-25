@@ -46,19 +46,33 @@ QtObject {
         else resolveLocation()
     }
 
+    // A change landing while the matching curl is still in flight is queued
+    // and replayed from onStreamFinished, so it can't be silently dropped
+    // until the next 15-minute poll.
+    property bool pendingResolve: false
+    property bool pendingRefetch: false
+
     function resolveLocation() {
         if (!enabled) return
+        if (geocodeProcess.running || ipGeoProcess.running) {
+            pendingResolve = true
+            return
+        }
         let place = locationOverride.trim()
         if (place.length > 0) {
             geocodeProcess.place = place
-            if (!geocodeProcess.running) geocodeProcess.running = true
+            geocodeProcess.running = true
         } else {
-            if (!ipGeoProcess.running) ipGeoProcess.running = true
+            ipGeoProcess.running = true
         }
     }
 
     function fetchForecast() {
-        if (!locationResolved || forecastProcess.running) return
+        if (!locationResolved) return
+        if (forecastProcess.running) {
+            pendingRefetch = true
+            return
+        }
         forecastProcess.command = ["bash", "-c",
             "curl -s --max-time 8 \"https://api.open-meteo.com/v1/forecast"
             + "?latitude=" + latitude.toFixed(4)
@@ -79,6 +93,7 @@ QtObject {
         // required — a SplitParser would drop the unterminated final segment.
         stdout: StdioCollector {
             onStreamFinished: {
+                let ok = false
                 try {
                     let j = JSON.parse(this.text)
                     if (typeof j.latitude === "number" && typeof j.longitude === "number") {
@@ -87,11 +102,16 @@ QtObject {
                         weatherManager.locationName = j.city || j.region || "Here"
                         weatherManager.locationResolved = true
                         weatherManager.errorText = ""
-                        weatherManager.fetchForecast()
-                        return
+                        ok = true
                     }
                 } catch (e) {}
-                weatherManager.errorText = "location unavailable"
+                if (!ok) weatherManager.errorText = "location unavailable"
+                if (weatherManager.pendingResolve) {
+                    weatherManager.pendingResolve = false
+                    weatherManager.resolveLocation()
+                } else if (ok) {
+                    weatherManager.fetchForecast()
+                }
             }
         }
     }
@@ -108,6 +128,7 @@ QtObject {
 
         stdout: StdioCollector {
             onStreamFinished: {
+                let ok = false
                 try {
                     let j = JSON.parse(this.text)
                     if (j.results && j.results.length > 0) {
@@ -117,11 +138,16 @@ QtObject {
                         weatherManager.locationName = r.name || weatherManager.locationOverride
                         weatherManager.locationResolved = true
                         weatherManager.errorText = ""
-                        weatherManager.fetchForecast()
-                        return
+                        ok = true
                     }
                 } catch (e) {}
-                weatherManager.errorText = "place not found"
+                if (!ok) weatherManager.errorText = "place not found"
+                if (weatherManager.pendingResolve) {
+                    weatherManager.pendingResolve = false
+                    weatherManager.resolveLocation()
+                } else if (ok) {
+                    weatherManager.fetchForecast()
+                }
             }
         }
     }
@@ -173,6 +199,10 @@ QtObject {
                     weatherManager.errorText = ""
                 } catch (e) {
                     if (!weatherManager.ready) weatherManager.errorText = "weather unavailable"
+                }
+                if (weatherManager.pendingRefetch) {
+                    weatherManager.pendingRefetch = false
+                    weatherManager.fetchForecast()
                 }
             }
         }

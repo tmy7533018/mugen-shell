@@ -74,7 +74,7 @@ Item {
     }
     readonly property var hourlySlice: {
         let h = weatherManager ? weatherManager.hourly : []
-        return h.slice(hourlyStart(), hourlyStart() + 18)
+        return h.slice(hourlyStart(), hourlyStart() + 24)
     }
 
     MouseArea {
@@ -146,6 +146,16 @@ Item {
                 GradientStop { position: 0.0; color: root.pal ? root.pal.bg1 : "#20232e" }
                 GradientStop { position: 0.38; color: root.pal ? root.pal.bg2 : "#2b2f3d" }
                 GradientStop { position: 1.0; color: root.pal ? root.pal.bg3 : "#0e1015" }
+            }
+
+            // Absorbs clicks on the panel body so they can't fall through to
+            // the outer close-on-click area; the content is otherwise all
+            // non-interactive items that never accept mouse events.
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: modeManager.bump()
+                onPositionChanged: { if (modeManager.isMode("weather")) modeManager.bump() }
             }
 
             Common.BlobEffect {
