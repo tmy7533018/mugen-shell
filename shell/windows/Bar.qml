@@ -244,6 +244,7 @@ PanelWindow {
         theme: theme
         timerManager: timerManager
         settingsManager: settingsManager
+        weatherManager: weatherManager
     }
 
     // Float Yura runs as a separate quickshell process and mirrors its state

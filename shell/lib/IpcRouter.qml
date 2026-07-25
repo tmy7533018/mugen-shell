@@ -19,6 +19,7 @@ Item {
     required property var theme
     required property var timerManager
     required property var settingsManager
+    required property var weatherManager
 
     IpcHandler {
         target: "audio"
@@ -174,6 +175,25 @@ Item {
 
         function get(): string {
             return ipcRouter.theme.themeMode
+        }
+    }
+
+    IpcHandler {
+        target: "weather"
+
+        function get(): string {
+            let w = ipcRouter.weatherManager
+            if (!w || !w.enabled || !w.ready) return ""
+            return JSON.stringify({
+                "temp": Math.round(w.temperature),
+                "feels": Math.round(w.feelsLike),
+                "humidity": w.humidity,
+                "wind_kmh": Math.round(w.wind),
+                "code": w.weatherCode,
+                "is_day": w.isDay,
+                "location": w.locationName,
+                "unit": w.unit
+            })
         }
     }
 

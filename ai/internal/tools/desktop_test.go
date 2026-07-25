@@ -42,6 +42,7 @@ func fullDesktopResults() map[string]string {
 		"notification/unread":  "3",
 		"notification/get_dnd": "false",
 		"timer/get":            `{"running":true,"paused":false,"duration_sec":600,"remaining_sec":83,"alerting":false}`,
+		"weather/get":          `{"temp":27,"feels":33,"humidity":93,"wind_kmh":5,"code":51,"is_day":false,"location":"Chiba","unit":"celsius"}`,
 		"calendar":             `{"events":[{"id":"1","date":"2026-07-02","time":"14:00","title":"mtg"},{"id":"2","date":"2026-07-02","time":"","title":"errand"}]}`,
 		"theme/get":            "dark",
 	}
@@ -59,6 +60,7 @@ func TestDesktopContextGathersEverything(t *testing.T) {
 		"volume: 45%",
 		"notifications: 3 unread",
 		"timer: 1m23s remaining",
+		"weather: drizzle 27°C (feels 33°C), humidity 93%, wind 5 km/h — Chiba",
 		`calendar today: 14:00 "mtg", all-day "errand"`,
 		"theme: dark mode",
 	} {
@@ -72,11 +74,11 @@ func TestDesktopContextGathersEverything(t *testing.T) {
 }
 
 func TestDesktopContextRespectsDisabledCategories(t *testing.T) {
-	r, _, _ := newTestRegistry(t, nil, []string{"music", "calendar", "notification"})
+	r, _, _ := newTestRegistry(t, nil, []string{"music", "calendar", "notification", "weather"})
 	r.run = desktopFakeRun(fullDesktopResults())
 
 	out := r.DesktopContext(context.Background())
-	for _, banned := range []string{"music:", "calendar today:", "notifications:"} {
+	for _, banned := range []string{"music:", "calendar today:", "notifications:", "weather:"} {
 		if strings.Contains(out, banned) {
 			t.Errorf("disabled category leaked %q in:\n%s", banned, out)
 		}

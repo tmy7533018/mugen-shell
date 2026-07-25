@@ -142,6 +142,34 @@ func (r *Registry) DesktopContext(ctx context.Context) string {
 		}
 	})
 
+	gather("weather", func() {
+		out, ok := ipc("weather", "get")
+		if !ok {
+			return
+		}
+		var w struct {
+			Temp     int    `json:"temp"`
+			Feels    int    `json:"feels"`
+			Humidity int    `json:"humidity"`
+			WindKmh  int    `json:"wind_kmh"`
+			Code     int    `json:"code"`
+			Location string `json:"location"`
+			Unit     string `json:"unit"`
+		}
+		if json.Unmarshal([]byte(out), &w) != nil {
+			return
+		}
+		deg := "°C"
+		if w.Unit == "fahrenheit" {
+			deg = "°F"
+		}
+		line := fmt.Sprintf("weather: %s %d%s (feels %d%s), humidity %d%%, wind %d km/h", wmoText(w.Code), w.Temp, deg, w.Feels, deg, w.Humidity, w.WindKmh)
+		if w.Location != "" {
+			line += " — " + clip(w.Location, 40)
+		}
+		add(6, line)
+	})
+
 	gather("calendar", func() {
 		out, err := r.run(ctx, filepath.Join(r.scriptsDir, "calendar-cli.py"), []string{"list-today"})
 		if err != nil {
@@ -168,7 +196,7 @@ func (r *Registry) DesktopContext(ctx context.Context) string {
 			}
 			parts = append(parts, fmt.Sprintf("%s %q", t, clip(e.Title, 60)))
 		}
-		add(6, "calendar today: "+strings.Join(parts, ", "))
+		add(7, "calendar today: "+strings.Join(parts, ", "))
 	})
 
 	gather("theme", func() {
@@ -176,7 +204,7 @@ func (r *Registry) DesktopContext(ctx context.Context) string {
 		if !ok || (out != "dark" && out != "light") {
 			return
 		}
-		add(7, "theme: "+out+" mode")
+		add(8, "theme: "+out+" mode")
 	})
 
 	wg.Wait()
