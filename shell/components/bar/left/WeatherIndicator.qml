@@ -25,7 +25,7 @@ Item {
     readonly property color accentC: pal ? pal.accent : (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 1))
     readonly property color glowC: pal ? pal.glow : Qt.rgba(0.65, 0.55, 0.85, 0.45)
 
-    opacity: ma.containsMouse ? 1.0 : 0.8
+    opacity: ma.containsMouse ? 1.0 : 0.6
     scale: ma.containsMouse ? 1.15 : 1.0
     Behavior on opacity { NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic } }
     Behavior on scale { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
@@ -58,7 +58,12 @@ Item {
             font.family: root.typo ? root.typo.clockStyle.family : "M PLUS 2"
             font.pixelSize: root.scaled(15)
             font.weight: Font.Medium
-            color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.9)
+            // Same brightening the clock applies: Text renders darker than
+            // icons at the same color.
+            color: {
+                let base = root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.9)
+                return Qt.rgba(Math.min(1.0, base.r * 1.05), Math.min(1.0, base.g * 1.05), Math.min(1.0, base.b * 1.05), base.a)
+            }
             renderType: Text.QtRendering
         }
     }

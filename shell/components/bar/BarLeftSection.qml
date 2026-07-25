@@ -155,16 +155,6 @@ RowLayout {
         }
     }
 
-    Separator { visible: root.weatherManager && root.weatherManager.enabled && root.weatherManager.ready }
-
-    Left.WeatherIndicator {
-        theme: root.theme
-        typo: root.typo
-        icons: root.icons
-        modeManager: root.modeManager
-        weatherManager: root.weatherManager
-    }
-
     Item {
         id: timerPill
         Layout.alignment: Qt.AlignVCenter
@@ -238,6 +228,16 @@ RowLayout {
                 if (root.modeManager) root.modeManager.switchMode("timer")
             }
         }
+    }
+
+    Separator { visible: root.weatherManager && root.weatherManager.enabled && root.weatherManager.ready }
+
+    Left.WeatherIndicator {
+        theme: root.theme
+        typo: root.typo
+        icons: root.icons
+        modeManager: root.modeManager
+        weatherManager: root.weatherManager
     }
 
     Separator {}
