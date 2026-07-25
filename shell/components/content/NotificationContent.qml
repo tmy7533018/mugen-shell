@@ -248,7 +248,21 @@ Item {
             if (modeManager.isMode("notification")) modeManager.bump()
         }
     }
-    
+
+    MouseArea {
+        anchors.fill: parent
+        anchors.topMargin: root.requiredBarSize.topMargin
+        anchors.bottomMargin: root.requiredBarSize.bottomMargin
+        anchors.leftMargin: root.requiredBarSize.leftMargin
+        anchors.rightMargin: root.requiredBarSize.rightMargin
+        z: 1.8
+        enabled: modeManager.isMode("notification")
+        visible: enabled
+        hoverEnabled: true
+        onClicked: modeManager.bump()
+        onPositionChanged: modeManager.bump()
+    }
+
     Item {
         id: notificationLayer
         anchors.fill: parent

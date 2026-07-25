@@ -69,7 +69,21 @@ FocusScope {
             }
         }
     }
-    
+
+    MouseArea {
+        anchors.fill: parent
+        anchors.topMargin: root.requiredBarSize.topMargin
+        anchors.bottomMargin: root.requiredBarSize.bottomMargin
+        anchors.leftMargin: root.requiredBarSize.leftMargin
+        anchors.rightMargin: root.requiredBarSize.rightMargin
+        z: 1.8
+        enabled: modeManager.isMode("powermenu")
+        visible: enabled
+        hoverEnabled: true
+        onClicked: modeManager.bump()
+        onPositionChanged: modeManager.bump()
+    }
+
     RowLayout {
         id: powerMenuLayer
         anchors.fill: parent
