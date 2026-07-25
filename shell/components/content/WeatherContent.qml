@@ -88,6 +88,7 @@ Item {
     }
 
     FocusScope {
+        id: contentScope
         anchors.fill: parent
         anchors.topMargin: root.requiredBarSize.topMargin + root.scaled(16)
         anchors.bottomMargin: root.requiredBarSize.bottomMargin + root.scaled(16)
@@ -95,6 +96,40 @@ Item {
         anchors.rightMargin: root.requiredBarSize.rightMargin + root.scaled(22)
         z: 3
         focus: modeManager.isMode("weather")
+
+        opacity: 0
+
+        states: [
+            State {
+                name: "visible"
+                when: modeManager.isMode("weather")
+                PropertyChanges { target: contentScope; opacity: 1.0 }
+            }
+        ]
+
+        transitions: [
+            Transition {
+                from: "visible"
+                to: ""
+                NumberAnimation {
+                    property: "opacity"
+                    duration: Theme.Motion.standard
+                    easing.type: Easing.OutCubic
+                }
+            },
+            Transition {
+                from: ""
+                to: "visible"
+                SequentialAnimation {
+                    PauseAnimation { duration: Theme.Motion.standard }
+                    NumberAnimation {
+                        property: "opacity"
+                        duration: Theme.Motion.gentle
+                        easing.type: Easing.InOutCubic
+                    }
+                }
+            }
+        ]
         Keys.onPressed: (event) => {
             if (event.key === Qt.Key_Escape) { modeManager.closeAllModes(); event.accepted = true }
         }
