@@ -58,12 +58,7 @@ Item {
             font.family: root.typo ? root.typo.clockStyle.family : "M PLUS 2"
             font.pixelSize: root.scaled(15)
             font.weight: Font.Medium
-            // Same brightening the clock applies: Text renders darker than
-            // icons at the same color.
-            color: {
-                let base = root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.9)
-                return Qt.rgba(Math.min(1.0, base.r * 1.05), Math.min(1.0, base.g * 1.05), Math.min(1.0, base.b * 1.05), base.a)
-            }
+            color: root.theme ? root.theme.textPrimaryBright : Qt.rgba(0.92, 0.92, 0.96, 0.9)
             renderType: Text.QtRendering
         }
     }

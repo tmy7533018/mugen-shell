@@ -353,6 +353,13 @@ QtObject {
     property color surfaceBorder: themeMode === "light" ? lightSurfaceBorder : darkSurfaceBorder
     property color surfaceGlass: themeMode === "light" ? lightSurfaceGlass : darkSurfaceGlass
     property color textPrimary: themeMode === "light" ? lightTextPrimary : darkTextPrimary
+    // Text renders darker than icons at the same color; bar text uses this to
+    // sit level with neighbouring glyphs.
+    property color textPrimaryBright: Qt.rgba(
+        Math.min(1.0, textPrimary.r * 1.05),
+        Math.min(1.0, textPrimary.g * 1.05),
+        Math.min(1.0, textPrimary.b * 1.05),
+        textPrimary.a)
     property color textSecondary: themeMode === "light" ? lightTextSecondary : darkTextSecondary
     property color textFaint: themeMode === "light" ? lightTextFaint : darkTextFaint
     property color chipInactiveBg: themeMode === "light" ? lightChipInactiveBg : darkChipInactiveBg

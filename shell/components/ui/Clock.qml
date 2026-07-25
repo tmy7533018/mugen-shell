@@ -18,20 +18,7 @@ Text {
     
     text: timeString
     
-    // Brightened: Text renders darker than icons at the same color
-    color: {
-        if (theme) {
-            let baseColor = theme.textPrimary
-            return Qt.rgba(
-                Math.min(1.0, baseColor.r * 1.05),
-                Math.min(1.0, baseColor.g * 1.05),
-                Math.min(1.0, baseColor.b * 1.05),
-                baseColor.a
-            )
-        } else {
-            return Qt.rgba(0.96, 0.96, 1.0, 0.90)
-        }
-    }
+    color: theme ? theme.textPrimaryBright : Qt.rgba(0.96, 0.96, 1.0, 0.90)
     
     font.family: typo ? typo.clockStyle.family : "JetBrainsMono Nerd Font"
     font.pixelSize: modeManager ? modeManager.scale(typo ? typo.clockStyle.size : 14) : (typo ? typo.clockStyle.size : 14)
