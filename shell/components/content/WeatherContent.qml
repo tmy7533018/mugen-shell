@@ -34,7 +34,6 @@ Item {
     }
 
 
-    // --- Weather-driven "夢幻" palette ---
     readonly property string wtype: (icons && weatherManager) ? icons.weatherType(weatherManager.weatherCode, weatherManager.isDay) : "clouds"
     readonly property var pal: icons ? icons.weatherPalette(wtype) : null
     readonly property color cAccent: pal ? pal.accent : Qt.rgba(0.74, 0.78, 0.90, 1)
@@ -134,7 +133,6 @@ Item {
             if (event.key === Qt.Key_Escape) { modeManager.closeAllModes(); event.accepted = true }
         }
 
-        // Palette-gradient panel body with floating blobs.
         Rectangle {
             id: panelBg
             anchors.fill: parent
@@ -206,13 +204,11 @@ Item {
                 anchors.margins: root.scaled(22)
                 spacing: root.scaled(14)
 
-                // ---- Row 1: current + hourly ----
                 RowLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     spacing: root.scaled(14)
 
-                    // Current conditions glass card
                     Rectangle {
                         Layout.preferredWidth: root.scaled(226)
                         Layout.fillHeight: true
@@ -275,7 +271,6 @@ Item {
                         }
                     }
 
-                    // Hourly glass card
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
@@ -347,7 +342,6 @@ Item {
                     }
                 }
 
-                // ---- Row 2: 7-day columns with vertical range bars ----
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: root.scaled(190)
@@ -391,7 +385,6 @@ Item {
                                     text: Math.round(modelData.tempMax) + "°"
                                     font.family: "M PLUS 2"; font.pixelSize: root.scaled(14); font.weight: Font.Medium; color: root.cFg
                                 }
-                                // vertical range bar
                                 Item {
                                     Layout.alignment: Qt.AlignHCenter
                                     Layout.fillHeight: true

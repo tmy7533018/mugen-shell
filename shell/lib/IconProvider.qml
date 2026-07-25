@@ -161,8 +161,6 @@ QtObject {
         return basePath + "/" + iconName + ".svg"
     }
 
-    // WMO weather code -> design weather type key (clear/clouds/rain/thunder/
-    // snow/fog/night), used for both the icon and the palette.
     function weatherType(code, isDay) {
         switch (true) {
         case code === 0:
@@ -183,7 +181,6 @@ QtObject {
         return basePath + "/weather-" + weatherType(code, isDay) + ".svg"
     }
 
-    // "夢幻" Liquid Glass palette per weather type (from the Claude Design doc).
     function weatherPalette(type) {
         switch (type) {
         case "clear":   return { bg1: "#2a2410", bg2: "#3a3013", bg3: "#100d06", accent: "#f5c56b", accent2: "#ff9d5c", glow: Qt.rgba(0.96, 0.77, 0.42, 0.5),  fg: "#fff7e6", dim: Qt.rgba(1.0, 0.94, 0.84, 0.62) }
