@@ -20,6 +20,7 @@ Available modes:
   screenshot-gallery  Open screenshot gallery
   timer               Open countdown timer
   brightness          Open brightness panel
+  weather             Open weather forecast
   close               Close all modules
 
 Examples:

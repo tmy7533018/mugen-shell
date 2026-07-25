@@ -257,6 +257,7 @@ hl.bind(mainMod .. " + S",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-s
 hl.bind(mainMod .. " + U",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh volume"))
 hl.bind(mainMod .. " + I",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh wifi"))
 hl.bind(mainMod .. " + E",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh bluetooth"))
+hl.bind(mainMod .. " + SHIFT + W", hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh weather"))
 hl.bind(mainMod .. " + comma",     hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/toggle-settings.sh"))
 hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh timer"))
 hl.bind(mainMod .. " + SHIFT + Y", hl.dsp.exec_cmd("qs -p ~/.config/quickshell/mugen-shell/yura-shell.qml ipc call yura toggle"))

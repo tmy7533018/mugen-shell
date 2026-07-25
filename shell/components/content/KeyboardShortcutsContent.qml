@@ -28,6 +28,7 @@ Item {
         { keys: "Super+P", desc: "Power menu" },
         { keys: "Super+,", desc: "Settings" },
         { keys: "Super+Shift+T", desc: "Timer" },
+        { keys: "Super+Shift+W", desc: "Weather panel" },
         { keys: "Super+Shift+Y", desc: "Yura (corner pop-up)" },
         { keys: "Super+Shift+I", desc: "Toggle idle inhibitor" },
         { keys: "Super+/", desc: "This shortcuts panel" },

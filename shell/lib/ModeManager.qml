@@ -205,7 +205,8 @@ QtObject {
             "clipboard": true,
             "ai": true,
             "timer": true,
-            "brightness": true
+            "brightness": true,
+            "weather": true
         }
 
         function safeSwitch(modeName) {
