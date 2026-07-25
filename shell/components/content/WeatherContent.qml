@@ -238,9 +238,10 @@ Item {
                                 }
                                 UI.SvgIcon {
                                     Layout.alignment: Qt.AlignVCenter
+                                    Layout.preferredWidth: root.scaled(58)
+                                    Layout.preferredHeight: root.scaled(58)
                                     source: (root.icons && root.weatherManager) ? root.icons.weatherIcon(root.weatherManager.weatherCode, root.weatherManager.isDay) : ""
                                     color: root.cAccent
-                                    width: root.scaled(38); height: root.scaled(38)
                                     layer.enabled: true
                                     layer.effect: Glow { color: root.cGlow; radius: 10; samples: 21; spread: 0.3; transparentBorder: true }
                                 }
