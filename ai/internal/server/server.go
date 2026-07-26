@@ -312,13 +312,22 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	// effects and the user message can no longer be dropped on error.
 	var sideEffected bool
 
+	// Stored as-is, a cut-off reply reads back as a complete one: the next turn
+	// feeds the model a truncated message with no sign it stopped early, and a
+	// reload loses the error the user watched arrive. Marked even with no text,
+	// so a turn whose tools fired can't leave history ending on a bare user
+	// message.
+	const interruptedMarker = "[interrupted]"
+
 	persistOnError := func(errMsg string) {
 		if sideEffected {
-			if fullResponse != "" {
-				_ = s.history.AddAssistantTo(convID, fullResponse)
-				s.events.broadcast("conversations", nil)
-				s.events.broadcast("messages", map[string]any{"conversation_id": convID})
+			marked := interruptedMarker
+			if text := strings.TrimRight(fullResponse, "\n"); text != "" {
+				marked = text + "\n\n" + interruptedMarker
 			}
+			_ = s.history.AddAssistantTo(convID, marked)
+			s.events.broadcast("conversations", nil)
+			s.events.broadcast("messages", map[string]any{"conversation_id": convID})
 		} else {
 			s.history.RemoveLastFrom(convID)
 		}
