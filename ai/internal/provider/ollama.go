@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -17,10 +18,26 @@ type Ollama struct {
 	numCtx    int
 	keepAlive string
 	http      *http.Client
+	// Overridden in tests, which can't wait out the real window.
+	stallTimeout time.Duration
 }
 
+// Ollama withholds the response headers until the model is loaded and the
+// first token is ready, so the shared client's header timeout already covers a
+// cold load (measured at ~4s for a 12B model). Past that point output should be
+// a steady drip — the worst gap between chunks measured under 100 ms — so a
+// long silence means generation wedged with the socket still open, which no
+// other timeout catches.
+const ollamaStallTimeout = 60 * time.Second
+
 func NewOllama(host string, numCtx int, keepAlive string) *Ollama {
-	return &Ollama{host: host, numCtx: numCtx, keepAlive: keepAlive, http: &http.Client{}}
+	return &Ollama{
+		host:         host,
+		numCtx:       numCtx,
+		keepAlive:    keepAlive,
+		http:         streamingHTTPClient(),
+		stallTimeout: ollamaStallTimeout,
+	}
 }
 
 func (o *Ollama) Name() string { return "ollama" }
@@ -97,6 +114,9 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 		return err
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, o.host+"/api/chat", bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -127,8 +147,19 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 
+	// Armed only once the retry-without-tools branch above is behind us: that
+	// path re-enters Chat on this same context, and a timer left running would
+	// cancel the retry mid-flight.
+	var stalled atomic.Bool
+	stall := time.AfterFunc(o.stallTimeout, func() {
+		stalled.Store(true)
+		cancel()
+	})
+	defer stall.Stop()
+
 	var toolCalls []ToolCall
 	for scanner.Scan() {
+		stall.Reset(o.stallTimeout)
 		line := scanner.Bytes()
 		if len(line) == 0 {
 			continue
@@ -166,7 +197,15 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 			break
 		}
 	}
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		// Without this the caller only sees "context canceled", which is also
+		// what a client disconnect looks like.
+		if stalled.Load() {
+			return fmt.Errorf("ollama stopped sending output for %s", o.stallTimeout)
+		}
+		return err
+	}
+	return nil
 }
 
 // Embed returns one embedding vector per input text. Not part of the Provider
