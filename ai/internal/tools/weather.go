@@ -17,6 +17,9 @@ type weatherAPI struct {
 	geocodeBase  string
 	forecastBase string
 	defaultPlace string
+	// Where the bar says the user is, asked only when nothing else names a
+	// place. Substituted in tests.
+	locate func(context.Context) string
 
 	mu       sync.Mutex
 	geoCache map[string]geoPlace
@@ -29,14 +32,17 @@ type geoPlace struct {
 	Longitude float64 `json:"longitude"`
 }
 
-// AttachWeather registers the weather_get tool. defaultPlace is used when
-// the model doesn't pass one (config [weather] place).
+// AttachWeather registers the weather_get tool. A place the model omits falls
+// back to config [weather] place, then to wherever the bar has resolved the
+// user to be — the tool documents omitting as supported, so it has to work
+// without anything configured.
 func (r *Registry) AttachWeather(defaultPlace string) {
 	api := &weatherAPI{
 		http:         &http.Client{Timeout: 8 * time.Second},
 		geocodeBase:  "https://geocoding-api.open-meteo.com",
 		forecastBase: "https://api.open-meteo.com",
 		defaultPlace: defaultPlace,
+		locate:       r.shellLocation,
 		geoCache:     map[string]geoPlace{},
 	}
 	r.tools = append(r.tools, Tool{
@@ -47,7 +53,7 @@ func (r *Registry) AttachWeather(defaultPlace string) {
 			"properties": map[string]any{
 				"place": map[string]any{
 					"type":        "string",
-					"description": "City or place name. Omit for the user's default location.",
+					"description": "City or place name. Omit for wherever the user is now.",
 				},
 			},
 		},
@@ -57,14 +63,36 @@ func (r *Registry) AttachWeather(defaultPlace string) {
 	})
 }
 
+// The bar resolves this by IP (or the user's override) and the desktop-state
+// line already reports it, so asking the shell keeps the two from disagreeing
+// and needs no second configuration.
+func (r *Registry) shellLocation(ctx context.Context) string {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	out, ok := r.shellIPC(ctx, r.resolveQsPID(ctx), "weather", "get")
+	if !ok {
+		return ""
+	}
+	var w struct {
+		Location string `json:"location"`
+	}
+	if json.Unmarshal([]byte(out), &w) != nil {
+		return ""
+	}
+	return strings.TrimSpace(w.Location)
+}
+
 func (w *weatherAPI) get(ctx context.Context, args map[string]any) (string, error) {
 	place, _ := args["place"].(string)
 	place = strings.TrimSpace(place)
 	if place == "" {
 		place = w.defaultPlace
 	}
+	if place == "" && w.locate != nil {
+		place = w.locate(ctx)
+	}
 	if place == "" {
-		return "error: no place given and no default configured. Ask the user which city they mean (they can set a default in config.toml under [weather] place).", nil
+		return "error: no place given, and neither a configured default nor the shell's location was available. Ask the user which city they mean (they can set a default in config.toml under [weather] place).", nil
 	}
 
 	loc, err := w.geocode(ctx, place)

@@ -94,6 +94,18 @@ func execCommand(ctx context.Context, name string, args []string) (string, error
 	return strings.TrimSpace(string(out)), err
 }
 
+// Addressing the instance by pid is what makes this work from a headless
+// service: `qs ipc` matches on the display otherwise, and mugen-ai has none.
+// Pass pid 0 to fall back to config-name addressing.
+func (r *Registry) shellIPC(ctx context.Context, pid int, target, fn string) (string, bool) {
+	args := []string{"-c", r.qsConfig, "ipc", "call", target, fn}
+	if pid > 0 {
+		args = []string{"ipc", "--pid", strconv.Itoa(pid), "call", target, fn}
+	}
+	out, err := r.run(ctx, "qs", args)
+	return out, err == nil && out != ""
+}
+
 // `qs list --all` is used because, unlike `qs ipc`, it works with no display.
 func (r *Registry) resolveQsPID(ctx context.Context) int {
 	out, err := r.run(ctx, "qs", []string{"list", "--all"})

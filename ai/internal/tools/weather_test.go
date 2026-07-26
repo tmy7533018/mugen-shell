@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -96,5 +97,85 @@ func TestWeatherGeocodeCache(t *testing.T) {
 	}
 	if calls != 1 {
 		t.Fatalf("geocode should be cached, got %d calls", calls)
+	}
+}
+
+// Omitting the place is documented as supported, so with nothing configured it
+// has to resolve to wherever the bar says the user is.
+func TestWeatherFallsBackToShellLocation(t *testing.T) {
+	geo, fc := newWeatherServers(t, true)
+	api := testWeatherAPI("", geo.URL, fc.URL)
+	asked := 0
+	api.locate = func(context.Context) string {
+		asked++
+		return "Tokyo"
+	}
+
+	out, err := api.get(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if !strings.Contains(out, "Weather for Tokyo") {
+		t.Fatalf("did not use the shell's location: %q", out)
+	}
+	if asked != 1 {
+		t.Errorf("asked the shell %d times, want 1", asked)
+	}
+}
+
+// An explicitly configured default is a preference; it outranks the live
+// location and must not cost a shell round-trip.
+func TestWeatherConfiguredDefaultOutranksShellLocation(t *testing.T) {
+	var queried []string
+	geo := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		queried = append(queried, r.URL.Query().Get("name"))
+		w.Write([]byte(`{"results":[{"name":"Osaka","country_code":"JP","latitude":34.69,"longitude":135.50}]}`))
+	}))
+	t.Cleanup(geo.Close)
+	_, fc := newWeatherServers(t, true)
+	api := testWeatherAPI("Osaka", geo.URL, fc.URL)
+	api.locate = func(context.Context) string {
+		t.Error("shell was consulted despite a configured default")
+		return "Tokyo"
+	}
+
+	if out, err := api.get(context.Background(), nil); err != nil || !strings.Contains(out, "Weather for Osaka") {
+		t.Fatalf("configured default: %q, %v", out, err)
+	}
+	if len(queried) != 1 || queried[0] != "Osaka" {
+		t.Errorf("geocoded %v, want [Osaka]", queried)
+	}
+}
+
+func TestWeatherErrorsWhenNothingNamesAPlace(t *testing.T) {
+	geo, fc := newWeatherServers(t, true)
+	api := testWeatherAPI("", geo.URL, fc.URL)
+	api.locate = func(context.Context) string { return "" }
+
+	out, _ := api.get(context.Background(), nil)
+	if !strings.Contains(out, "error: no place given") {
+		t.Fatalf("want the ask-the-user error, got %q", out)
+	}
+}
+
+// Reads the same IPC the bar's weather panel answers, addressed by pid so it
+// works from the headless service.
+func TestShellLocationReadsTheBarsWeather(t *testing.T) {
+	r, _, _ := newTestRegistry(t, nil, nil)
+	r.run = desktopFakeRun(fullDesktopResults())
+
+	if got := r.shellLocation(context.Background()); got != "Chiba" {
+		t.Fatalf("shellLocation = %q, want Chiba", got)
+	}
+}
+
+func TestShellLocationSurvivesAnAbsentShell(t *testing.T) {
+	r, _, _ := newTestRegistry(t, nil, nil)
+	r.run = func(context.Context, string, []string) (string, error) {
+		return "", errors.New("qs: no instance")
+	}
+
+	if got := r.shellLocation(context.Background()); got != "" {
+		t.Fatalf("shellLocation = %q, want empty", got)
 	}
 }

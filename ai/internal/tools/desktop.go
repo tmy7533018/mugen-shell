@@ -23,12 +23,7 @@ func (r *Registry) DesktopContext(ctx context.Context) string {
 
 	pid := r.resolveQsPID(ctx)
 	ipc := func(target, fn string) (string, bool) {
-		args := []string{"-c", r.qsConfig, "ipc", "call", target, fn}
-		if pid > 0 {
-			args = []string{"ipc", "--pid", strconv.Itoa(pid), "call", target, fn}
-		}
-		out, err := r.run(ctx, "qs", args)
-		return out, err == nil && out != ""
+		return r.shellIPC(ctx, pid, target, fn)
 	}
 
 	var (
