@@ -216,6 +216,26 @@ Item {
     Process {
         id: launchAppProcess
         running: false
+
+        // hyprctl exits 0 even when a dispatch is rejected, so without this a
+        // broken focus is invisible — how the Lua config migration silently took
+        // notification click-to-focus out for two weeks.
+        property string errorOutput: ""
+
+        stderr: SplitParser {
+            onRead: data => {
+                launchAppProcess.errorOutput += data
+            }
+        }
+
+        onRunningChanged: { if (running) errorOutput = "" }
+
+        onExited: (exitCode) => {
+            if (exitCode !== 0) {
+                console.warn("focus_or_launch failed (" + exitCode + "): "
+                             + launchAppProcess.errorOutput.trim())
+            }
+        }
     }
     
     property bool isClearingAll: false
