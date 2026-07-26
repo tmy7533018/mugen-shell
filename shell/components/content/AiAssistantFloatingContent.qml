@@ -22,6 +22,10 @@ FocusScope {
     property bool voiceSpeaking: false
     readonly property bool voiceActive: voiceListening || voiceSpeaking
     onVoiceListeningChanged: voiceListening ? listenCava.start() : listenCava.stop()
+    onVoiceSpeakingChanged: {
+        if (voiceSpeaking) speakGuard.stop()
+        else speakingIndex = -1
+    }
 
     // Private instance — the volume panel stops the shared one on its own
     // schedule, killing our capture visuals mid-listen.
@@ -41,6 +45,12 @@ FocusScope {
     readonly property bool orbExternalEmptyState: orb.isInEmptyState
 
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://127.0.0.1:11435"
+    readonly property string _runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || ""
+    readonly property string _speakSocket: _runtimeDir + "/mugen-shell/yura-speak.sock"
+    // Read-aloud is yurad's TTS pipeline, so it follows the same switch the mic
+    // button does.
+    readonly property bool canReadAloud: _runtimeDir !== ""
+        && (!settingsManager || settingsManager.voiceEnabled)
 
     property var messages: []
     property bool streaming: false
@@ -48,6 +58,7 @@ FocusScope {
     property bool hasModel: false
     property bool healthChecked: false
     property bool userScrolled: false
+    property int speakingIndex: -1
     property string currentModel: ""
     // Tracked separately from currentModel so opening an old chat can show
     // its bound model without clobbering the next-new-chat preference.
@@ -64,6 +75,13 @@ FocusScope {
     readonly property int sidebarWidth: modeManager.scale(200)
 
     readonly property bool isEmpty: messages.length === 0
+
+    readonly property var suggestedPrompts: [
+        "What's the weather like?",
+        "What am I working on right now?",
+        "Set a 10 minute timer",
+        "Summarize my unread notifications"
+    ]
 
     // While this is set the backend is blocked waiting on approval of a
     // destructive MCP tool. Shape: { confirm_id, name, arguments }.
@@ -192,6 +210,28 @@ FocusScope {
         chatProcess.running = true
     }
 
+    function readAloud(index, text) {
+        if (!canReadAloud || !text) return
+        speakingIndex = index
+        speakProcess.payload = JSON.stringify({ text: text })
+        speakProcess.running = true
+        speakGuard.restart()
+    }
+
+    function stopReadAloud() {
+        speakingIndex = -1
+        speakGuard.stop()
+        stopSpeakProcess.running = true
+    }
+
+    Timer {
+        id: speakGuard
+        // Nothing ever started playing, so drop the stop button rather than
+        // strand it on a message that stayed silent.
+        interval: 20000
+        onTriggered: root.speakingIndex = -1
+    }
+
     function stopStreaming() {
         if (!streaming) return
         chatProcess.signal(15)
@@ -202,6 +242,9 @@ FocusScope {
 
     function newChat() {
         if (streaming) stopStreaming()
+        // speakingIndex is a row number, so it would mark an unrelated message
+        // once the list is replaced.
+        if (speakingIndex >= 0) stopReadAloud()
         messages = []
         currentConvId = 0
         userScrolled = false
@@ -216,6 +259,7 @@ FocusScope {
     function selectConversation(convId) {
         if (convId === currentConvId) return
         if (streaming) stopStreaming()
+        if (speakingIndex >= 0) stopReadAloud()
         currentConvId = convId
         messages = []
         userScrolled = false
@@ -673,6 +717,16 @@ FocusScope {
                 glowSpread: 0.4
             }
 
+            Ai.SuggestionChips {
+                Layout.fillWidth: true
+                Layout.topMargin: modeManager.scale(6)
+                modeManager: root.modeManager
+                theme: root.theme
+                prompts: root.suggestedPrompts
+                onPromptChosen: text => {
+                    if (!root.streaming) root.sendMessage(text)
+                }
+            }
         }
     }
 
@@ -721,6 +775,7 @@ FocusScope {
                     && isAssistant
                     && modelData.content === ""
                 readonly property bool showInlineOrb: isAssistant && isLatest
+                readonly property var toolCalls: modelData.toolCalls || []
                 readonly property string displayContent: (isAssistant && isLatest && root.revealActive)
                     ? modelData.content.substring(0, root.streamRevealed)
                     : modelData.content
@@ -765,6 +820,15 @@ FocusScope {
                                 lineHeight: 1.4
                             }
                         }
+                    }
+
+                    Ai.ToolChips {
+                        width: parent.width
+                        visible: delegateRoot.isAssistant && delegateRoot.toolCalls.length > 0
+                        modeManager: root.modeManager
+                        theme: root.theme
+                        icons: root.icons
+                        toolCalls: delegateRoot.toolCalls
                     }
 
                     Repeater {
@@ -814,63 +878,28 @@ FocusScope {
                         height: msgActions.height
                         visible: modelData.content !== ""
 
-                        Row {
+                        Ai.MessageActions {
                             id: msgActions
                             anchors.left: delegateRoot.isAssistant ? parent.left : undefined
                             anchors.right: delegateRoot.isAssistant ? undefined : parent.right
-                            spacing: modeManager.scale(4)
-                            opacity: msgHover.hovered ? 1.0 : 0.0
+                            modeManager: root.modeManager
+                            theme: root.theme
+                            icons: root.icons
+                            canSpeak: delegateRoot.isAssistant && root.canReadAloud
+                            speaking: root.speakingIndex === index
+                            // Stays put while it reads, so the stop button
+                            // doesn't vanish when the pointer moves away.
+                            opacity: (msgHover.hovered || msgActions.speaking) ? 1.0 : 0.0
                             visible: opacity > 0
                             Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
-                            Rectangle {
-                                id: copyBtn
-                                property bool copied: false
-                                width: modeManager.scale(27)
-                                height: modeManager.scale(23)
-                                radius: modeManager.scale(6)
-                                color: copyMouse.containsMouse
-                                    ? (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.22) : Qt.rgba(0.65, 0.55, 0.85, 0.22))
-                                    : (root.theme ? Qt.rgba(root.theme.textPrimary.r, root.theme.textPrimary.g, root.theme.textPrimary.b, 0.08) : Qt.rgba(0.9, 0.9, 0.95, 0.08))
-                                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-
-                                UI.SvgIcon {
-                                    anchors.centerIn: parent
-                                    width: modeManager.scale(15)
-                                    height: modeManager.scale(15)
-                                    visible: !copyBtn.copied
-                                    source: root.icons ? root.icons.copySvg : ""
-                                    color: copyMouse.containsMouse
-                                        ? (root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.98))
-                                        : (root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.7))
-                                }
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    visible: copyBtn.copied
-                                    text: "✓"
-                                    color: root.theme ? root.theme.accent : Qt.rgba(0.55, 0.85, 0.65, 0.95)
-                                    font.pixelSize: modeManager.scale(15)
-                                }
-
-                                Timer {
-                                    id: copiedTimer
-                                    interval: 1200
-                                    onTriggered: copyBtn.copied = false
-                                }
-
-                                MouseArea {
-                                    id: copyMouse
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        copyProcess.text = modelData.content
-                                        copyProcess.running = true
-                                        copyBtn.copied = true
-                                        copiedTimer.restart()
-                                    }
-                                }
+                            onCopyRequested: {
+                                copyProcess.text = modelData.content
+                                copyProcess.running = true
+                            }
+                            onSpeakToggled: {
+                                if (root.speakingIndex === index) root.stopReadAloud()
+                                else root.readAloud(index, modelData.content)
                             }
                         }
                     }
@@ -885,6 +914,48 @@ FocusScope {
                 }
             }
         }
+
+        Rectangle {
+            id: scrollDownBtn
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.rightMargin: modeManager.scale(2)
+            width: modeManager.scale(32)
+            height: width
+            radius: width / 2
+            z: 2
+            opacity: (root.userScrolled && !chatList.atYEnd) ? 1.0 : 0.0
+            visible: opacity > 0
+
+            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
+
+            color: scrollDownMouse.containsMouse
+                ? (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.32) : Qt.rgba(0.65, 0.55, 0.85, 0.32))
+                : (root.theme ? root.theme.surfaceInsetSubtle : Qt.rgba(0.07, 0.06, 0.11, 0.92))
+            border.width: 1
+            border.color: Qt.rgba(1, 1, 1, 0.10)
+
+            Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+
+            UI.SvgIcon {
+                anchors.centerIn: parent
+                width: modeManager.scale(15)
+                height: width
+                source: root.icons ? root.icons.arrowDownwardSvg : ""
+                color: root.theme ? root.theme.textSecondary : Qt.rgba(0.82, 0.80, 0.90, 0.9)
+            }
+
+            MouseArea {
+                id: scrollDownMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                    root.userScrolled = false
+                    chatList.positionViewAtEnd()
+                }
+            }
+        }
     }
 
     Item {
@@ -895,9 +966,13 @@ FocusScope {
         anchors.leftMargin: modeManager.scale(40)
         anchors.rightMargin: modeManager.scale(40)
         anchors.bottomMargin: modeManager.scale(22)
-        height: modeManager.scale(46)
         z: 5
         visible: root.aiAvailable && root.hasModel
+
+        readonly property real rowHeight: modeManager.scale(46)
+        height: Math.max(rowHeight, inputFlick.height + modeManager.scale(22))
+
+        Behavior on height { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
         Rectangle {
             anchors.bottom: parent.bottom
@@ -920,47 +995,71 @@ FocusScope {
             }
         }
 
-        TextInput {
-            id: inputField
+        Flickable {
+            id: inputFlick
             anchors.left: parent.left
             // Invisible items keep their geometry, so the mic slot has to be
             // anchored around when voice input is off.
             anchors.right: micIcon.visible ? listenViz.left : sendIcon.left
             anchors.rightMargin: modeManager.scale(12)
+            // Grows symmetrically around the row, so a single line sits where
+            // it did before Shift+Enter existed.
             anchors.verticalCenter: parent.verticalCenter
-            color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
-            font.pixelSize: modeManager.scale(15)
-            font.family: "M PLUS 2"
-            font.letterSpacing: 0.3
-            selectByMouse: true
+            height: Math.min(inputField.implicitHeight, modeManager.scale(110))
+            contentWidth: width
+            contentHeight: inputField.implicitHeight
             clip: true
-            verticalAlignment: TextInput.AlignVCenter
-            inputMethodHints: Qt.ImhNone
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: contentHeight > height
 
-            Keys.onPressed: (event) => {
-                root.userActivity()
-                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                    let txt = inputField.text.trim()
-                    if (txt.length > 0 && !root.streaming) {
-                        root.sendMessage(txt)
-                        inputField.text = ""
-                    }
-                    event.accepted = true
-                }
+            function revealCursor() {
+                let r = inputField.cursorRectangle
+                if (r.y < contentY) contentY = r.y
+                else if (r.y + r.height > contentY + height) contentY = r.y + r.height - height
             }
 
-            Text {
-                anchors.fill: parent
-                verticalAlignment: Text.AlignVCenter
-                text: root.streaming ? "Thinking..." : "Ask anything"
-                color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.6)
-                font.pixelSize: parent.font.pixelSize
-                font.family: parent.font.family
-                font.letterSpacing: parent.font.letterSpacing
-                font.italic: true
-                visible: parent.text.length === 0
-                    && parent.preeditText.length === 0
-                    && !parent.inputMethodComposing
+            TextEdit {
+                id: inputField
+                width: inputFlick.width
+                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                font.pixelSize: modeManager.scale(15)
+                font.family: "M PLUS 2"
+                font.letterSpacing: 0.3
+                selectByMouse: true
+                wrapMode: TextEdit.Wrap
+                inputMethodHints: Qt.ImhNone
+                selectionColor: root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.35) : Qt.rgba(0.65, 0.55, 0.85, 0.35)
+
+                onCursorRectangleChanged: inputFlick.revealCursor()
+
+                Keys.onPressed: (event) => {
+                    root.userActivity()
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        // Unaccepted, so TextEdit inserts the newline itself.
+                        if (event.modifiers & Qt.ShiftModifier) return
+                        let txt = inputField.text.trim()
+                        if (txt.length > 0 && !root.streaming) {
+                            root.sendMessage(txt)
+                            inputField.text = ""
+                        }
+                        event.accepted = true
+                    }
+                }
+
+                Text {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    width: parent.width
+                    text: root.streaming ? "Thinking..." : "Ask anything"
+                    color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.6)
+                    font.pixelSize: parent.font.pixelSize
+                    font.family: parent.font.family
+                    font.letterSpacing: parent.font.letterSpacing
+                    font.italic: true
+                    visible: parent.text.length === 0
+                        && parent.preeditText.length === 0
+                        && !parent.inputMethodComposing
+                }
             }
         }
 
@@ -968,9 +1067,9 @@ FocusScope {
             id: listenViz
             anchors.right: micIcon.left
             anchors.rightMargin: root.voiceListening ? modeManager.scale(4) : 0
-            anchors.verticalCenter: parent.verticalCenter
+            anchors.bottom: parent.bottom
             width: root.voiceListening ? modeManager.scale(48) : 0
-            height: parent.height
+            height: inputBar.rowHeight
             clip: true
 
             Behavior on width { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
@@ -994,7 +1093,8 @@ FocusScope {
             id: micIcon
             anchors.right: sendIcon.left
             anchors.rightMargin: modeManager.scale(6)
-            anchors.verticalCenter: parent.verticalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: modeManager.scale(6)
             width: modeManager.scale(34)
             height: modeManager.scale(34)
             visible: !root.settingsManager || root.settingsManager.voiceEnabled
@@ -1058,7 +1158,8 @@ FocusScope {
         Item {
             id: sendIcon
             anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: modeManager.scale(6)
             width: modeManager.scale(34)
             height: modeManager.scale(34)
             opacity: (root.streaming || inputField.text.trim().length > 0) ? 1.0 : 0.35
@@ -1521,6 +1622,30 @@ FocusScope {
         property string text: ""
         running: false
         command: ["wl-copy", text]
+    }
+
+    Process {
+        id: speakProcess
+        property string payload: ""
+        running: false
+        command: ["curl", "-sS", "--max-time", "5",
+                  "--unix-socket", root._speakSocket,
+                  "-X", "POST", "--data-binary", payload,
+                  "-H", "Content-Type: application/json",
+                  "http://localhost/speak"]
+
+        // yurad is down or was built without the socket; nothing will speak.
+        onExited: (exitCode) => {
+            if (exitCode !== 0) root.speakingIndex = -1
+        }
+    }
+
+    Process {
+        id: stopSpeakProcess
+        running: false
+        command: ["curl", "-sS", "--max-time", "5",
+                  "--unix-socket", root._speakSocket,
+                  "-X", "POST", "http://localhost/stop"]
     }
 
     Process {
