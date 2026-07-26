@@ -203,8 +203,8 @@ Item {
         function set(path: string): string {
             // Models invent paths, so anything outside the wallpaper dir is
             // rejected. Membership in the enumerated list is deliberately NOT
-            // required: it refreshes only on startup/picker-open, so a
-            // just-added file would be rejected spuriously.
+            // required: the list is polled, so a file added seconds ago would
+            // be rejected spuriously.
             const known = ipcRouter.wallpaperManager.wallpapers || []
             if (known.indexOf(path) === -1) {
                 const dir = ipcRouter.wallpaperManager.wallpaperDir + "/"
@@ -224,8 +224,10 @@ Item {
             const known = ipcRouter.wallpaperManager.wallpapers || []
             if (known.length === 0)
                 return "error: no wallpapers found"
-            // Skip the current one so "random" always visibly changes.
-            const current = ipcRouter.wallpaperManager.currentWallpaperPath
+            // Skip the current one so "random" always visibly changes, unless
+            // it has since been deleted and any pick is already a change.
+            const current = ipcRouter.wallpaperManager.currentWallpaperExists
+                ? ipcRouter.wallpaperManager.currentWallpaperPath : ""
             let pick = known[Math.floor(Math.random() * known.length)]
             if (known.length > 1 && pick === current)
                 pick = known[(known.indexOf(pick) + 1) % known.length]

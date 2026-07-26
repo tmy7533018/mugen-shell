@@ -29,7 +29,9 @@ FocusScope {
     Component.onCompleted: {
         if (modeManager) {
             modeManager.registerMode("wallpaper", root)
+            wallpaperManager.pickerOpen = modeManager.isMode("wallpaper")
             if (modeManager.isMode("wallpaper")) {
+                root.anchorPath = ""
                 wallpaperManager.loadWallpapers()
                 focusTimer.restart()
             }
@@ -39,12 +41,18 @@ FocusScope {
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
+            wallpaperManager.pickerOpen = modeManager.isMode("wallpaper")
             if (modeManager.isMode("wallpaper")) {
+                root.anchorPath = ""
                 wallpaperManager.loadWallpapers()
                 focusTimer.restart()
             }
         }
     }
+
+    // A Binding here would leave pickerOpen stuck on, because the Loader that
+    // owns this content tears the binding down without restoring it.
+    Component.onDestruction: wallpaperManager.pickerOpen = false
 
     function resetAutoCloseTimer() {
         if (modeManager.isMode("wallpaper")) modeManager.bump()
@@ -89,32 +97,39 @@ FocusScope {
         running: false
     }
 
-    function updateFocusToCurrentWallpaper() {
-        if (wallpaperManager.wallpapers.length > 0 && wallpaperManager.currentWallpaperPath.length > 0) {
-            Qt.callLater(function() {
-                let index = 1
-                for (let i = 0; i < wallpaperManager.wallpapers.length; i++) {
-                    if (wallpaperManager.wallpapers[i] === wallpaperManager.currentWallpaperPath) {
-                        index = i + 1
-                        break
-                    }
-                }
-                if (listView) {
-                    listView.positionViewAtIndex(index, ListView.Center)
-                    listView.currentIndex = index
-                }
-            })
-        }
+    // Whatever the user last landed on. Kept as a path, not an index, so the
+    // selection survives a file appearing or disappearing mid-browse.
+    property string anchorPath: ""
+
+    function moveTo(index) {
+        listView.currentIndex = index
+        root.anchorPath = index >= 1 ? (root.listModel[index] || "") : ""
+    }
+
+    function restoreSelection() {
+        Qt.callLater(function() {
+            if (!listView)
+                return
+
+            let index = root.listModel.indexOf(root.anchorPath)
+            if (index < 1)
+                index = root.listModel.indexOf(wallpaperManager.currentWallpaperPath)
+            if (index < 1)
+                index = wallpaperManager.wallpapers.length > 0 ? 1 : 0
+
+            listView.currentIndex = index
+            listView.positionViewAtIndex(index, ListView.Center)
+        })
     }
 
     Connections {
         target: wallpaperManager
         function onWallpapersChanged() {
-            updateFocusToCurrentWallpaper()
+            root.restoreSelection()
         }
 
         function onCurrentWallpaperPathChanged() {
-            updateFocusToCurrentWallpaper()
+            root.restoreSelection()
         }
     }
 
@@ -222,12 +237,12 @@ FocusScope {
                         if (currentIndex === 0) {
                             root.openWallpaperFolder()
                         } else if (currentIndex >= 1) {
-                            root.setWallpaper(wallpaperManager.wallpapers[currentIndex - 1])
+                            root.setWallpaper(root.listModel[currentIndex])
                         }
                         event.accepted = true
                     } else if (event.key === Qt.Key_Left) {
                         if (currentIndex > 0) {
-                            currentIndex--
+                            root.moveTo(currentIndex - 1)
                             root.resetAutoCloseTimer()
                             event.accepted = true
                         } else {
@@ -235,7 +250,7 @@ FocusScope {
                         }
                     } else if (event.key === Qt.Key_Right) {
                         if (currentIndex < count - 1) {
-                            currentIndex++
+                            root.moveTo(currentIndex + 1)
                             root.resetAutoCloseTimer()
                             event.accepted = true
                         } else {
@@ -244,7 +259,7 @@ FocusScope {
                     } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
                         if (event.modifiers & Qt.ShiftModifier || event.key === Qt.Key_Backtab) {
                             if (currentIndex > 0) {
-                                currentIndex--
+                                root.moveTo(currentIndex - 1)
                                 root.resetAutoCloseTimer()
                                 event.accepted = true
                             } else {
@@ -252,7 +267,7 @@ FocusScope {
                             }
                         } else {
                             if (currentIndex < count - 1) {
-                                currentIndex++
+                                root.moveTo(currentIndex + 1)
                                 root.resetAutoCloseTimer()
                                 event.accepted = true
                             } else {
@@ -260,11 +275,11 @@ FocusScope {
                             }
                         }
                     } else if (event.key === Qt.Key_Home) {
-                        currentIndex = 0
+                        root.moveTo(0)
                         root.resetAutoCloseTimer()
                         event.accepted = true
                     } else if (event.key === Qt.Key_End) {
-                        currentIndex = count - 1
+                        root.moveTo(count - 1)
                         root.resetAutoCloseTimer()
                         event.accepted = true
                     } else {
@@ -280,11 +295,11 @@ FocusScope {
                     onWheel: (wheel) => {
                         if (wheel.angleDelta.y > 0) {
                             if (listView.currentIndex > 0) {
-                                listView.currentIndex--
+                                root.moveTo(listView.currentIndex - 1)
                             }
                         } else if (wheel.angleDelta.y < 0) {
                             if (listView.currentIndex < listView.count - 1) {
-                                listView.currentIndex++
+                                root.moveTo(listView.currentIndex + 1)
                             }
                         }
                         root.resetAutoCloseTimer()
@@ -297,7 +312,7 @@ FocusScope {
 
                 onCountChanged: {
                     if (modeManager.isMode("wallpaper")) {
-                        Qt.callLater(() => root.updateFocusToCurrentWallpaper())
+                        root.restoreSelection()
                     }
                 }
 
@@ -331,7 +346,7 @@ FocusScope {
                             border.color: root.theme
                                 ? Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.45)
                                 : Qt.rgba(0.65, 0.55, 0.85, 0.45)
-                            visible: cellRoot.isAddCell || thumb.status === Image.Loading || thumb.status === Image.Null
+                            visible: cellRoot.isAddCell || thumb.status !== Image.Ready
 
                             Canvas {
                                 id: plusCanvas
@@ -371,7 +386,7 @@ FocusScope {
                             id: thumb
                             anchors.fill: parent
                             anchors.margins: modeManager.scale(4)
-                            source: cellRoot.isAddCell ? "" : "file://" + wallpaperManager.getThumbnailPath(cellRoot.wallpaperPath)
+                            source: cellRoot.isAddCell ? "" : wallpaperManager.thumbnailSource(cellRoot.wallpaperPath)
                             fillMode: Image.PreserveAspectCrop
                             asynchronous: true
                             smooth: true
@@ -382,7 +397,7 @@ FocusScope {
                         OpacityMask {
                             anchors.fill: thumb
                             source: thumb
-                            visible: !cellRoot.isAddCell
+                            visible: !cellRoot.isAddCell && thumb.status === Image.Ready
                             maskSource: Rectangle {
                                 width: thumb.width
                                 height: thumb.height
@@ -420,7 +435,7 @@ FocusScope {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                listView.currentIndex = index
+                                root.moveTo(index)
                                 // setWallpaper() closes all modes and tears down this delegate,
                                 // so bump first or resetAutoCloseTimer() runs in a dead context.
                                 root.resetAutoCloseTimer()
@@ -437,7 +452,11 @@ FocusScope {
 
             Text {
                 Layout.alignment: Qt.AlignHCenter
-                text: wallpaperManager.isLoading ? "loading..." : wallpaperManager.wallpapers.length + " wallpapers"
+                text: wallpaperManager.isLoading
+                    ? "loading..."
+                    : (wallpaperManager.wallpapers.length === 0
+                        ? "no wallpapers yet, press + to open the folder"
+                        : wallpaperManager.wallpapers.length + " wallpapers")
                 color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
                 font.pixelSize: modeManager.scale(10)
                 font.family: "M PLUS 2"

@@ -20,9 +20,19 @@ debug_log "WAYLAND_DISPLAY: ${WAYLAND_DISPLAY:-not set}"
 debug_log "XDG_RUNTIME_DIR: ${XDG_RUNTIME_DIR:-not set}"
 debug_log "PATH: $PATH"
 
+# The shell fires this detached and never sees the exit code, so a rejected
+# wallpaper has to announce itself.
+notify_failure() {
+  command -v notify-send >/dev/null 2>&1 && notify-send -a mugen-shell "Wallpaper" "$1" >/dev/null 2>&1 || true
+}
+
 WALLPAPER="$1"
 [[ -z "${WALLPAPER:-}" ]] && { echo "Usage: $0 <wallpaper-path>" >&2; exit 1; }
-[[ ! -f "$WALLPAPER" ]] && { echo "File not found: $WALLPAPER" >&2; exit 1; }
+[[ ! -f "$WALLPAPER" ]] && {
+  echo "File not found: $WALLPAPER" >&2
+  notify_failure "File not found: ${WALLPAPER##*/}"
+  exit 1
+}
 
 WALLPAPER_ABS="$(cd "$(dirname "$WALLPAPER")" && pwd)/$(basename "$WALLPAPER")"
 
@@ -346,5 +356,6 @@ elif is_video "$WALLPAPER_ABS"; then
 
 else
   echo "Unsupported file format: $WALLPAPER_ABS" >&2
+  notify_failure "Unsupported file format: ${WALLPAPER_ABS##*/}"
   exit 1
 fi

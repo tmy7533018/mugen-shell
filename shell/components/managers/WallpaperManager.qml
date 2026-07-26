@@ -12,22 +12,45 @@ QtObject {
     property string wallpaperDir: dataDir + "/wallpapers"
     property string thumbDir: cacheDir + "/wallpaper-thumbs"
     property string currentWallpaperFile: cacheDir + "/wallp/current_wallpaper_path.txt"
-    
+
     property var wallpapers: []
     property string currentWallpaperPath: ""
     property bool isLoading: false
-    
+
     property bool isInitialized: false
+
+    // Raised by the picker so files dropped into the folder while it is open
+    // show up without a reopen.
+    property bool pickerOpen: false
+
+    readonly property bool currentWallpaperExists:
+        currentWallpaperPath.length > 0 && (wallpapers || []).indexOf(currentWallpaperPath) !== -1
+
+    // Video path -> generation counter. Absent means no usable thumbnail yet;
+    // the counter goes into the image URL so Qt reloads a regenerated file.
+    property var thumbTokens: ({})
 
     property Process mkdirProcess: Process {
         running: false
         command: []
+
+        // Chained rather than fired alongside the mkdir so a first run, where
+        // the wallpaper folder does not exist yet, still enumerates it. Runs
+        // eagerly so IPC consumers don't see an empty list before the picker
+        // is opened for the first time.
+        onExited: () => {
+            wallpaperManager.loadWallpapers()
+        }
     }
 
     function loadWallpapers() {
-        isLoading = true
         currentWallpaperProcess.running = true
-        wallpaperProcess.running = true
+        refreshWallpapers()
+    }
+
+    function refreshWallpapers() {
+        if (!wallpaperProcess.running)
+            wallpaperProcess.running = true
     }
 
     function setWallpaper(path) {
@@ -36,6 +59,7 @@ QtObject {
         // hot-reload mid-run would otherwise SIGTERM it along with every
         // other QML object. currentWallpaperWatcher below picks up the
         // result once the script writes it, instead of an onExited handler.
+        // A path that vanished meanwhile is reported by the script itself.
         Quickshell.execDetached([
             "bash",
             Quickshell.shellDir + "/scripts/change-wallpaper.sh",
@@ -45,100 +69,150 @@ QtObject {
 
     function isVideoFile(path) {
         let lower = path.toLowerCase()
-        return lower.endsWith('.mp4') || lower.endsWith('.webm') || 
+        return lower.endsWith('.mp4') || lower.endsWith('.webm') ||
                lower.endsWith('.mkv') || lower.endsWith('.gif')
     }
 
-    function getThumbnailPath(wallpaperPath) {
-        if (!isVideoFile(wallpaperPath)) {
-            return wallpaperPath
+    function thumbnailPathFor(videoPath) {
+        return thumbDir + "/" + videoPath.split('/').pop() + ".png"
+    }
+
+    // Empty until a video's thumbnail exists, so the delegate can hold a
+    // placeholder instead of a broken image.
+    function thumbnailSource(path) {
+        if (!isVideoFile(path))
+            return "file://" + path
+
+        let token = thumbTokens[path]
+        if (token === undefined)
+            return ""
+
+        let url = "file://" + thumbnailPathFor(path)
+        return token > 0 ? url + "#" + token : url
+    }
+
+    function applyThumbState(state, videoPath) {
+        let prev = thumbTokens[videoPath]
+        if (state === "ok" && prev !== undefined)
+            return
+
+        let next = Object.assign({}, thumbTokens)
+        next[videoPath] = (state === "new" && prev !== undefined) ? prev + 1 : 0
+        thumbTokens = next
+    }
+
+    function pruneThumbTokens() {
+        let list = wallpapers || []
+        let next = {}
+        let changed = false
+
+        for (let key in thumbTokens) {
+            if (list.indexOf(key) !== -1)
+                next[key] = thumbTokens[key]
+            else
+                changed = true
         }
-        let filename = wallpaperPath.split('/').pop()
-        let thumbPath = thumbDir + "/" + filename + ".png"
-        
-        generateThumbnail(wallpaperPath, thumbPath)
-        
-        return thumbPath
+
+        if (changed)
+            thumbTokens = next
     }
 
-    function generateThumbnail(videoPath, outputPath) {
-        checkThumbnailProcess.command = ["test", "-f", outputPath]
-        checkThumbnailProcess.videoPath = videoPath
-        checkThumbnailProcess.outputPath = outputPath
-        checkThumbnailProcess.running = true
+    function syncThumbnails() {
+        if (thumbSyncProcess.running)
+            return
+
+        let videos = (wallpapers || []).filter(isVideoFile)
+        thumbSyncProcess.command = [
+            "bash",
+            Quickshell.shellDir + "/scripts/sync-wallpaper-thumbs.sh",
+            thumbDir
+        ].concat(videos)
+        thumbSyncProcess.running = true
     }
 
-    property Process checkThumbnailProcess: Process {
+    function sameList(a, b) {
+        if (!a || !b || a.length !== b.length)
+            return false
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i])
+                return false
+        }
+        return true
+    }
+
+    property Process thumbSyncProcess: Process {
         command: []
         running: false
-        property string videoPath: ""
-        property string outputPath: ""
 
-        onExited: (exitCode) => {
-            if (exitCode !== 0) {
-                thumbnailProcess.command = [
-                    "ffmpeg", "-y", "-v", "error",
-                    "-ss", "2",
-                    "-i", videoPath,
-                    "-vf", "scale=360:-1:force_original_aspect_ratio=decrease",
-                    "-frames:v", "1",
-                    outputPath
-                ]
-                thumbnailProcess.running = true
+        stdout: SplitParser {
+            onRead: data => {
+                let line = data.trim()
+                let sep = line.indexOf('\t')
+                if (sep > 0)
+                    wallpaperManager.applyThumbState(line.substring(0, sep), line.substring(sep + 1))
             }
         }
-    }
 
-    property Process thumbnailProcess: Process {
-        command: []
-        running: false
-        
-        onExited: (exitCode) => {
+        onExited: () => {
+            wallpaperManager.pruneThumbTokens()
         }
     }
 
     property Process currentWallpaperProcess: Process {
         command: ["cat", wallpaperManager.currentWallpaperFile]
         running: false
-        property string output: ""
 
-        stdout: SplitParser {
-            onRead: data => { currentWallpaperProcess.output += data }
-        }
-
-        onExited: (exitCode) => {
-            if (exitCode === 0 && currentWallpaperProcess.output.trim().length > 0) {
-                wallpaperManager.currentWallpaperPath = currentWallpaperProcess.output.trim()
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let path = this.text.trim()
+                if (path.length > 0)
+                    wallpaperManager.currentWallpaperPath = path
             }
-            currentWallpaperProcess.output = ""
         }
     }
 
     property Process wallpaperProcess: Process {
+        // The sentinel stands in for find's exit status, which onStreamFinished
+        // cannot see: a listing cut short by a missing folder or a truncated
+        // read must never be mistaken for "the user deleted everything".
         command: [
             "bash", "-c",
-            "find -L '" + wallpaperManager.wallpaperDir + "' -maxdepth 2 -type f \\( " +
+            "set -o pipefail; find -L \"$1\" -maxdepth 2 -type f \\( " +
             "-iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o " +
             "-iname '*.webp' -o -iname '*.mp4' -o -iname '*.webm' -o " +
-            "-iname '*.mkv' -o -iname '*.gif' \\) | sort"
+            "-iname '*.mkv' -o -iname '*.gif' \\) | sort && echo __END__",
+            "_", wallpaperManager.wallpaperDir
         ]
         running: false
-        property var files: []
 
-        stdout: SplitParser {
-            onRead: data => {
-                let trimmed = data.trim()
-                if (trimmed.length > 0) {
-                    wallpaperProcess.files.push(trimmed)
-                }
+        stdout: StdioCollector {
+            onStreamFinished: {
+                wallpaperManager.isLoading = false
+
+                let lines = this.text.split("\n")
+                if (lines.indexOf("__END__") === -1)
+                    return
+
+                let found = lines.filter(l => l.length > 0 && l !== "__END__")
+                let changed = !wallpaperManager.sameList(found, wallpaperManager.wallpapers)
+                if (changed)
+                    wallpaperManager.wallpapers = found
+
+                // A file replaced in place leaves the listing identical, so
+                // thumbnails are rechecked anyway while anyone can see them.
+                if (changed || wallpaperManager.pickerOpen)
+                    wallpaperManager.syncThumbnails()
             }
         }
+    }
 
-        onExited: () => {
-            wallpaperManager.wallpapers = wallpaperProcess.files
-            wallpaperManager.isLoading = false
-            wallpaperProcess.files = []
-        }
+    // No directory watch is available, so the folder is polled: tightly while
+    // the picker is on screen, lazily otherwise to keep IPC answers current.
+    property Timer refreshTimer: Timer {
+        interval: wallpaperManager.pickerOpen ? 2000 : 30000
+        running: true
+        repeat: true
+        onTriggered: wallpaperManager.refreshWallpapers()
     }
 
     property FileView currentWallpaperWatcher: FileView {
@@ -153,12 +227,10 @@ QtObject {
     }
 
     Component.onCompleted: {
-        mkdirProcess.command = ["mkdir", "-p", thumbDir]
-        mkdirProcess.running = true
+        isLoading = true
 
-        // Populate eagerly so IPC consumers don't see an empty list before
-        // the picker is opened for the first time.
-        loadWallpapers()
+        mkdirProcess.command = ["mkdir", "-p", thumbDir, wallpaperDir]
+        mkdirProcess.running = true
 
         isInitialized = true
     }
