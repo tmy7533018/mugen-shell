@@ -27,12 +27,14 @@ QtObject {
 
     onEnabledChanged: {
         if (enabled) resolveLocation()
+        else cancelRetry()
     }
 
     // A changed override forces a fresh location resolve; clearing it falls
     // back to IP geolocation.
     onLocationOverrideChanged: {
         locationResolved = false
+        cancelRetry()
         if (enabled) resolveLocation()
     }
 
@@ -51,6 +53,33 @@ QtObject {
     // until the next 15-minute poll.
     property bool pendingResolve: false
     property bool pendingRefetch: false
+
+    // The shell starts well before the network does — wifi association can
+    // land 15 seconds after the first fetch has already failed — and the bar
+    // hides the indicator until a forecast arrives. Without this the wait
+    // would be the full poll interval.
+    property int retryDelay: 0
+    readonly property int retryDelayBase: 5000
+    readonly property int retryDelayMax: 2 * 60 * 1000
+
+    function scheduleRetry() {
+        if (!enabled) return
+        retryDelay = retryDelay === 0
+            ? retryDelayBase
+            : Math.min(retryDelay * 2, retryDelayMax)
+        retryTimer.interval = retryDelay
+        retryTimer.restart()
+    }
+
+    function cancelRetry() {
+        retryDelay = 0
+        retryTimer.stop()
+    }
+
+    property Timer retryTimer: Timer {
+        repeat: false
+        onTriggered: weatherManager.refresh()
+    }
 
     function resolveLocation() {
         if (!enabled) return
@@ -105,7 +134,14 @@ QtObject {
                         ok = true
                     }
                 } catch (e) {}
-                if (!ok) weatherManager.errorText = "location unavailable"
+                if (ok) {
+                    weatherManager.cancelRetry()
+                } else {
+                    // Every way this fails is transient: no network yet, or
+                    // ipwho.is answering with success:false under rate limit.
+                    weatherManager.errorText = "location unavailable"
+                    weatherManager.scheduleRetry()
+                }
                 if (weatherManager.pendingResolve) {
                     weatherManager.pendingResolve = false
                     weatherManager.resolveLocation()
@@ -129,8 +165,10 @@ QtObject {
         stdout: StdioCollector {
             onStreamFinished: {
                 let ok = false
+                let answered = false
                 try {
                     let j = JSON.parse(this.text)
+                    answered = true
                     if (j.results && j.results.length > 0) {
                         let r = j.results[0]
                         weatherManager.latitude = r.latitude
@@ -141,7 +179,17 @@ QtObject {
                         ok = true
                     }
                 } catch (e) {}
-                if (!ok) weatherManager.errorText = "place not found"
+                if (ok) {
+                    weatherManager.cancelRetry()
+                } else {
+                    weatherManager.errorText = "place not found"
+                    // A well-formed reply with no match is a real answer: the
+                    // place is misspelled, and retrying would only hammer the
+                    // geocoder. Unparseable output means the request never
+                    // landed, which is worth another go.
+                    if (answered) weatherManager.cancelRetry()
+                    else weatherManager.scheduleRetry()
+                }
                 if (weatherManager.pendingResolve) {
                     weatherManager.pendingResolve = false
                     weatherManager.resolveLocation()
@@ -197,8 +245,10 @@ QtObject {
                     }
                     weatherManager.ready = true
                     weatherManager.errorText = ""
+                    weatherManager.cancelRetry()
                 } catch (e) {
                     if (!weatherManager.ready) weatherManager.errorText = "weather unavailable"
+                    weatherManager.scheduleRetry()
                 }
                 if (weatherManager.pendingRefetch) {
                     weatherManager.pendingRefetch = false
