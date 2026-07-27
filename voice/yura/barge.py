@@ -18,6 +18,7 @@ import numpy as np
 from .const import CHUNK, SR
 from .log import log
 from .settings import voice_float, voice_settings
+from .wake import dump_audio
 
 # Above the capture threshold (0.35): a false trigger here costs the user the
 # rest of a sentence, while a missed one just means they say it again.
@@ -88,6 +89,9 @@ class BargeMonitor:
                 self.frames = preroll[:]
                 self.triggered = True
                 log("barge", f"interrupted after {speech_run:.2f}s of speech")
+                # False triggers are only arguable with the audio in hand, and
+                # a bad one is invisible otherwise — the reply just stops.
+                dump_audio(self.frames, "barge")
                 return
 
 

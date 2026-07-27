@@ -36,10 +36,11 @@ WAKE_DUMP_DIR = os.path.join(DATA_DIR, "wake-debug")
 WAKE_DUMP_KEEP = 100
 
 
-def dump_wake_audio(frames, score: float) -> None:
+def dump_audio(frames, tag: str) -> None:
+    """Archive audio that made a decision, ring-capped. `tag` names the caller."""
     try:
         os.makedirs(WAKE_DUMP_DIR, exist_ok=True)
-        name = time.strftime("%Y%m%d-%H%M%S") + f"-{score:.2f}.wav"
+        name = time.strftime("%Y%m%d-%H%M%S") + f"-{tag}.wav"
         with wave.open(os.path.join(WAKE_DUMP_DIR, name), "wb") as w:
             w.setnchannels(1)
             w.setsampwidth(2)
@@ -49,6 +50,10 @@ def dump_wake_audio(frames, score: float) -> None:
             os.remove(os.path.join(WAKE_DUMP_DIR, old))
     except Exception as e:
         log("dump", str(e))
+
+
+def dump_wake_audio(frames, score: float) -> None:
+    dump_audio(frames, f"{score:.2f}")
 
 
 class WakeDetector:

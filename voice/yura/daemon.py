@@ -108,6 +108,9 @@ class Daemon:
     def _handle_turn(self, surface_up: bool = False) -> None:
         prewarm_tts()
         self.cancel.clear()
+        # A cancel lands between the barge monitor firing and the loop reading
+        # its audio, so a summons must not inherit the last turn's leftovers.
+        self._barge_seed = None
         # A summons outranks a message being read aloud, and the mic would
         # otherwise capture it.
         self.read_aloud.stop()
@@ -119,7 +122,8 @@ class Daemon:
                                    follow_up=not first)
             # Talking over Yura is itself a request to keep going, whatever
             # the follow-up setting says, and the audio is already in hand.
-            if self._barge_seed:
+            # A cancel still wins: the loop condition is checked first.
+            if self._barge_seed and not self.cancel.is_set():
                 first = False
                 continue
             if not spoke or not voice_settings().get("followUp", True):
