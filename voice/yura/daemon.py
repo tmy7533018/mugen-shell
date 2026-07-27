@@ -13,8 +13,10 @@ from .audio import (
     FOLLOWUP_TIMEOUT_S,
     LISTEN_TIMEOUT_S,
     Capture,
+    SileroVAD,
     frames_to_wav,
 )
+from .barge import BargeMonitor, NullMonitor, enabled as barge_enabled
 from .chat import Chat
 from .const import CHUNK, SR
 from .control import ReadAloud, serve_control_socket
@@ -67,6 +69,10 @@ class Daemon:
         self._wake_failed = False
         self.chat = Chat()
         self.read_aloud = ReadAloud()
+        # Its own VAD: sharing capture's would tangle the two streams' state.
+        self._barge_vad = SileroVAD()
+        # Audio a barge-in cut in with, waiting to become the next utterance.
+        self._barge_seed: list | None = None
 
     def request_turn(self, fresh: bool = False) -> None:
         (self.trigger_fresh if fresh else self.trigger).set()
@@ -111,6 +117,11 @@ class Daemon:
         while self.running and not self.cancel.is_set():
             spoke = self._one_turn(open_surface=first and not surface_up,
                                    follow_up=not first)
+            # Talking over Yura is itself a request to keep going, whatever
+            # the follow-up setting says, and the audio is already in hand.
+            if self._barge_seed:
+                first = False
+                continue
             if not spoke or not voice_settings().get("followUp", True):
                 break
             first = False
@@ -120,7 +131,13 @@ class Daemon:
 
     def _one_turn(self, open_surface: bool, follow_up: bool) -> bool:
         """One capture -> STT -> chat -> TTS round; True keeps the floor open."""
-        if follow_up:
+        # A barge-in already has the user's words; a cue here would land on top
+        # of them and the surface is open from the turn being interrupted.
+        seed = self._barge_seed
+        self._barge_seed = None
+        if seed:
+            pass
+        elif follow_up:
             cue("soundFollowUp", 660)
         else:
             cue("soundWake", 880)
@@ -139,10 +156,12 @@ class Daemon:
             # arrives; the first turn does it in Chat._ask.
             if self.chat.conversation_id:
                 yura_ipc("show_conversation", str(self.chat.conversation_id))
-            log("listen", "capturing..." + (" (follow-up)" if follow_up else ""))
+            log("listen", "capturing..." + (" (barge-in)" if seed
+                                            else " (follow-up)" if follow_up else ""))
             frames = self.capture.utterance(
                 timeout=FOLLOWUP_TIMEOUT_S if follow_up else LISTEN_TIMEOUT_S,
-                held=self.ptt_held.is_set if not follow_up else None)
+                held=self.ptt_held.is_set if not follow_up else None,
+                seed=seed)
         finally:
             set_listening(False)
         if not frames:
@@ -188,8 +207,18 @@ class Daemon:
             spoken.append(s)
             shell_ipc("yura", "voice_reply", join_spoken(spoken))
 
-        speak_guarded(reply, on_sentence if mirror_bar else None,
-                      should_stop=self.cancel.is_set)
+        # The mic keeps running through playback so the user can cut in; the
+        # monitor consumes those frames, which also keeps the echo residue out
+        # of whatever capture comes next.
+        monitor = (BargeMonitor(self.capture, self._barge_vad)
+                   if barge_enabled() else NullMonitor())
+        monitor.start()
+        try:
+            speak_guarded(reply, on_sentence if mirror_bar else None,
+                          should_stop=lambda: (self.cancel.is_set()
+                                               or monitor.triggered))
+        finally:
+            self._barge_seed = monitor.stop()
         return not self.cancel.is_set()
 
     def run(self) -> None:

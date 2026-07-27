@@ -75,6 +75,9 @@ QtObject {
     // because losing it reads as the voice override itself having been lost.
     property string voiceEditingLang: ""
     property bool voiceFollowUp: true
+    // Off by default: a false trigger costs the rest of a spoken reply, so it
+    // stays opt-in until it has been lived with.
+    property bool voiceBargeIn: false
     // Kept equal to the shipped units' YURA_WAKE_THRESHOLD so the first save of
     // any setting (which persists this key) can't move the wake gate on its own.
     property real voiceWakeThreshold: 0.85
@@ -206,6 +209,7 @@ QtObject {
                 "ttsByLang": voiceTtsByLang,
                 "editingLang": voiceEditingLang,
                 "followUp": voiceFollowUp,
+                "bargeIn": voiceBargeIn,
                 "wakeThreshold": voiceWakeThreshold,
                 "volume": voiceVolume,
                 "soundWake": voiceSoundWake,
@@ -445,6 +449,9 @@ QtObject {
                 }
                 if (settings.voice.followUp !== undefined) {
                     voiceFollowUp = settings.voice.followUp
+                }
+                if (settings.voice.bargeIn !== undefined) {
+                    voiceBargeIn = settings.voice.bargeIn
                 }
                 if (settings.voice.wakeThreshold !== undefined) {
                     voiceWakeThreshold = settings.voice.wakeThreshold

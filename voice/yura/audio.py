@@ -112,16 +112,21 @@ class Capture:
                 break
 
     def utterance(self, timeout: float = LISTEN_TIMEOUT_S,
-                  held: Callable[[], bool] | None = None) -> list[np.ndarray] | None:
+                  held: Callable[[], bool] | None = None,
+                  seed: list[np.ndarray] | None = None) -> list[np.ndarray] | None:
         """Collect frames until trailing silence. None = no speech at all.
 
         `held` reports whether the push-to-talk key is still down: while it is,
         every frame is kept and the release ends the utterance.
+
+        `seed` is audio already known to be the user speaking — a barge-in
+        hands over the words it interrupted with, which are the start of this
+        utterance, so onset detection is already settled.
         """
         self.vad.reset()
-        frames: list[np.ndarray] = []
+        frames: list[np.ndarray] = list(seed or [])
         preroll: list[np.ndarray] = []
-        speech_started = False
+        speech_started = bool(frames)
         silence_run = 0.0
         started = time.time()
         frame_s = CHUNK / SR

@@ -456,6 +456,27 @@ Rectangle {
             }
         }
 
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Common.SettingLabel { theme: section.theme;
+                title: "Talk over Yura"
+                desc: "Speaking cuts a reply short, and becomes your next question"
+            }
+
+            Common.Switch {
+                Layout.alignment: Qt.AlignVCenter
+                theme: section.theme
+                checked: section.settingsManager ? section.settingsManager.voiceBargeIn : false
+                onToggled: {
+                    if (!section.settingsManager) return
+                    section.settingsManager.voiceBargeIn = checked
+                    section.save()
+                }
+            }
+        }
+
         ColumnLayout {
             visible: section.wakeWordOn
             Layout.fillWidth: true
