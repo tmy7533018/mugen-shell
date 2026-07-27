@@ -19,6 +19,7 @@ let
     ps.scikit-learn
     ps.requests
     ps.onnxruntime
+    ps.sherpa-onnx
   ]);
 
   # Pinned to a revision rather than resolve/main: main would only fail the
@@ -26,6 +27,20 @@ let
   whisperModel = pkgs.fetchurl {
     url = "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo.bin";
     hash = "sha256-H8cPd0046xaZk6w5Huo1fvR8iHV+9y7llDh5t+jivGk=";
+  };
+
+  # The default non-Japanese voice. Piper rather than Kokoro: Kokoro's Japanese
+  # has no G2P here (its jf_* voices garble kanji) and its English measured
+  # ~20% of energy above 6 kHz against Piper's 4%, which is the harshness you
+  # hear. Japanese stays on AivisSpeech, picked per-language by voice.ttsByLang.
+  piperVoice = pkgs.stdenvNoCC.mkDerivation {
+    name = "piper-en_US-lessac-high";
+    src = pkgs.fetchurl {
+      url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-high.tar.bz2";
+      hash = "sha256-hhnSBMcAWGb+T0IBgd+nliKvamIiOJ8LCBjSrzHg2w4=";
+    };
+    sourceRoot = ".";
+    installPhase = "mkdir -p $out && cp -r vits-piper-en_US-lessac-high $out/";
   };
 
   aivisEngine = pkgs.callPackage ./voice/aivisspeech-engine.nix { };
@@ -219,6 +234,9 @@ in
           "YURA_WAKE_THRESHOLD=0.85"
           "YURA_WHISPER_BIN=${pkgs.whisper-cpp-vulkan}/bin/whisper-server"
           "YURA_WHISPER_MODEL=${whisperModel}"
+          # Colon-separated search path. A voice dropped in the writable dir
+          # shadows a packaged one of the same name.
+          "YURA_TTS_MODELS=%h/.local/share/mugen-shell/tts:${piperVoice}"
         ]
         # yurad defaults to VOICEVOX, which the Nix path never installs, so
         # without this every reply is silent. The style id is left off on

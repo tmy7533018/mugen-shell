@@ -1,9 +1,4 @@
-import time
-
-import requests
-
-from .const import AI_URL, STT_LANG
-from .settings import voice_settings
+from .lang import configured_lang
 
 # Canned lines yurad speaks itself. Keyed by personality.language, hinted by
 # voice.sttLang, anything else falls back to English.
@@ -26,23 +21,11 @@ MESSAGES = {
     },
 }
 
-_lang_cache: tuple[float, str] = (0.0, "")
-
-
-def speech_lang() -> str:
-    global _lang_cache
-    now = time.time()
-    if now - _lang_cache[0] > 60:
-        lang = ""
-        try:
-            r = requests.get(f"{AI_URL}/config", timeout=3)
-            lang = str(r.json().get("personality", {}).get("language") or "")
-        except requests.RequestException:
-            pass
-        _lang_cache = (now, lang.strip().lower()[:2])
-    lang = _lang_cache[1] or str(voice_settings().get("sttLang", STT_LANG)).lower()[:2]
+def message_lang() -> str:
+    """Unlike the voice, a canned line always needs *some* language."""
+    lang = configured_lang() or "en"
     return lang if lang in MESSAGES else "en"
 
 
 def msg(key: str, **kw) -> str:
-    return MESSAGES[speech_lang()][key].format(**kw)
+    return MESSAGES[message_lang()][key].format(**kw)

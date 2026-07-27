@@ -14,7 +14,7 @@ from .messages import msg
 from .shell import set_listening
 from .sound import beep
 from .tts import speak_guarded
-from .tts.engines import AIVIS_URL, VOICEVOX_URL
+from .tts.voicevox_api import AIVIS_URL, VOICEVOX_URL
 from .wake import (
     ENROLL_CLIPS,
     ENROLL_MARKER,

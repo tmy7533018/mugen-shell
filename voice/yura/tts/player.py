@@ -12,7 +12,7 @@ import sounddevice as sd
 from ..log import log
 from ..settings import voice_float
 from ..shell import set_speaking
-from .engines import synthesize
+from .router import configured_voice, synthesize
 
 # Engines master at very different loudness (Aivis ~8 dB hotter than VOICEVOX),
 # so every clip is RMS-normalized here and a voice change stays inaudible.
@@ -91,6 +91,9 @@ def speak(text: str, on_sentence=None, should_stop=None) -> None:
     sentences = split_sentences(clean_for_speech(text))
     if not sentences:
         return
+    # Resolved once: a settings change mid-reply must not swap the voice
+    # between two sentences of the same answer.
+    voice = configured_voice()
     # One-ahead synthesis pipeline: synth sentence N+1 while N plays.
     q: queue.Queue[tuple[str, bytes] | None] = queue.Queue(maxsize=2)
     # Set once the consumer stops draining, so the producer never parks
@@ -109,7 +112,7 @@ def speak(text: str, on_sentence=None, should_stop=None) -> None:
     def producer():
         try:
             for s in sentences:
-                if done.is_set() or not put((s, synthesize(s))):
+                if done.is_set() or not put((s, synthesize(s, voice))):
                     return
         except Exception as e:
             log("tts", f"synthesis failed: {e}")
