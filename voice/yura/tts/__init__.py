@@ -12,3 +12,13 @@ from .player import (
     speak_guarded,
     split_sentences,
 )
+
+# Names re-exported on purpose; without this they read as unused imports.
+__all__ = [
+    "clean_for_speech",
+    "join_spoken",
+    "play_wav",
+    "speak",
+    "speak_guarded",
+    "split_sentences",
+]

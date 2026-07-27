@@ -19,7 +19,7 @@ WAKE_PATIENCE = int(os.environ.get("YURA_WAKE_PATIENCE", "2"))
 WAKE_VAD_GATE = float(os.environ.get("YURA_WAKE_VAD_GATE", "0.3"))
 # Per-user model that re-scores a wake as "was this the owner's voice" — the
 # only defense against another *human* voice (a phone video) saying the phrase.
-# Enrollment (SIGRTMIN+2) trains it; dormant until the file exists.
+# Enrollment (POST /enroll) trains it; dormant until the file exists.
 VERIFIER_DIR = os.path.expanduser("~/.local/share/mugen-shell/verifier")
 WAKE_VERIFIER = os.path.expanduser(os.environ.get(
     "YURA_VERIFIER", os.path.join(VERIFIER_DIR, "hey_yura_verifier.pkl")))

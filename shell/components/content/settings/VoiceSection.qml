@@ -23,7 +23,7 @@ Rectangle {
     readonly property var wakeOpenOptions: ["panel", "bar", "none"]
     readonly property var speedOptions: [0.9, 1.0, 1.1, 1.2]
 
-    // The daemon owns enrollment (SIGRTMIN+2); the verifier pkl is the only
+    // The daemon owns enrollment (POST /enroll); the verifier pkl is the only
     // "enrolled?" signal across the process boundary.
     property bool enrolling: false
     // mtime (epoch secs), 0 = never registered. mtime rather than existence,
@@ -52,18 +52,6 @@ Rectangle {
                 section.daemonEnrolling = parts[1] === "1"
             }
         }
-    }
-
-    Process {
-        id: enrollStart
-        command: ["systemctl", "--user", "kill", "-s", "SIGRTMIN+2",
-                  "--kill-whom=main", "yura-voice.service"]
-    }
-
-    Process {
-        id: enrollCancel
-        command: ["systemctl", "--user", "kill", "-s", "SIGUSR2",
-                  "--kill-whom=main", "yura-voice.service"]
     }
 
     // Training lands the pkl a while after the last clip, with no signal back.
@@ -102,7 +90,7 @@ Rectangle {
         section.sawDaemonEnrolling = false
         section.enrolling = true
         enrollCava.start()
-        enrollStart.running = true
+        Theme.YuraCtl.post("/enroll")
     }
 
     function stopEnroll() {
@@ -517,7 +505,7 @@ Rectangle {
                     selected: section.enrolling
                     onClicked: {
                         if (section.enrolling) {
-                            enrollCancel.running = true
+                            Theme.YuraCtl.post("/cancel")
                             section.stopEnroll()
                         } else {
                             section.startEnroll()

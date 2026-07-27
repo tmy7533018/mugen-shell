@@ -17,7 +17,7 @@ from .audio import (
 )
 from .chat import Chat
 from .const import CHUNK, SR
-from .control import ReadAloud, serve_speak_socket
+from .control import ReadAloud, serve_control_socket
 from .enroll import run_enrollment
 from .log import log
 from .messages import msg
@@ -30,6 +30,7 @@ from .shell import (
     shell_ipc_read,
     yura_ipc,
 )
+from .shell import state as shell_state
 from .sound import beep, cue
 from .stt import ensure_whisper_server, transcribe
 from .tts import join_spoken, speak_guarded
@@ -46,9 +47,10 @@ from .wake import (
 class Daemon:
     def __init__(self):
         self.running = True
-        # SIGUSR1 starts a turn without a wake word; SIGUSR2 cancels capture
-        # (or stops speech at a sentence break); SIGRTMIN+1 is SIGUSR1 into a
-        # fresh conversation; SIGRTMIN+2 starts voice enrollment.
+        # Raised by the control socket, consumed by the wake loop between
+        # frames: trigger starts a turn without a wake word, trigger_fresh does
+        # the same into a new conversation, cancel drops capture (or stops
+        # speech at a sentence break), enroll starts voice registration.
         self.trigger = threading.Event()
         self.trigger_fresh = threading.Event()
         self.enroll = threading.Event()
@@ -57,6 +59,24 @@ class Daemon:
         self.wake = WakeDetector()
         self.chat = Chat()
         self.read_aloud = ReadAloud()
+
+    def request_turn(self, fresh: bool = False) -> None:
+        (self.trigger_fresh if fresh else self.trigger).set()
+
+    def request_cancel(self) -> None:
+        self.cancel.set()
+        self.read_aloud.stop()
+
+    def request_enroll(self) -> None:
+        # Clear now rather than in run_enrollment: the wake loop only dequeues
+        # this between turns, and a cancel sent in that gap must still land.
+        self.cancel.clear()
+        self.enroll.set()
+
+    def state(self) -> dict:
+        return {**shell_state(),
+                "enrolling": self.enroll.is_set() or os.path.exists(ENROLL_MARKER),
+                "conversation_id": self.chat.conversation_id}
 
     def _handle_turn(self, from_button: bool = False) -> None:
         self.cancel.clear()
@@ -256,21 +276,5 @@ def main() -> None:
 
     signal.signal(signal.SIGINT, stop)
     signal.signal(signal.SIGTERM, stop)
-    signal.signal(signal.SIGUSR1, lambda *_: daemon.trigger.set())
-
-    def cancel(*_):
-        daemon.cancel.set()
-        daemon.read_aloud.stop()
-
-    signal.signal(signal.SIGUSR2, cancel)
-    signal.signal(signal.SIGRTMIN + 1, lambda *_: daemon.trigger_fresh.set())
-
-    def request_enroll(*_):
-        # Clear now rather than in run_enrollment: the wake loop only dequeues
-        # this between turns, and a cancel sent in that gap must still land.
-        daemon.cancel.clear()
-        daemon.enroll.set()
-
-    signal.signal(signal.SIGRTMIN + 2, request_enroll)
-    serve_speak_socket(daemon.read_aloud)
+    serve_control_socket(daemon)
     daemon.run()

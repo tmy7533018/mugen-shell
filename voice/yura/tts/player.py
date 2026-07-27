@@ -77,7 +77,7 @@ def play_wav(data: bytes, should_stop=None) -> None:
     if should_stop is None:
         sd.wait()
         return
-    # Poll while the sentence plays so a cancel (SIGUSR2 / the ✕ button) cuts
+    # Poll while the sentence plays so a cancel (POST /cancel, the ✕ button) cuts
     # it off immediately instead of only at the next sentence boundary.
     stream = sd.get_stream()
     while stream.active:

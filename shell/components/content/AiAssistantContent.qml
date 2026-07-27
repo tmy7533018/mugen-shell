@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import Quickshell
 import Quickshell.Io
 import "../../lib" as Theme
 import "../ui" as UI
@@ -494,16 +493,8 @@ FocusScope {
 
                     MouseArea {
                         anchors.fill: parent
-                        onClicked: {
-                            // main only — the broadcast default would signal
-                            // the whisper-server child too, which dies on it.
-                            // On an empty chat, RTMIN+1 asks for a fresh
-                            // conversation (same gesture as the panel).
-                            Quickshell.execDetached(["systemctl", "--user", "kill",
-                                "-s", root.voiceActive ? "SIGUSR2"
-                                    : (root.currentConvId === 0 ? "SIGRTMIN+1" : "SIGUSR1"),
-                                "--kill-whom=main", "yura-voice.service"])
-                        }
+                        onClicked: Theme.YuraCtl.micPressed(root.voiceActive,
+                                                           root.currentConvId)
                     }
                 }
 

@@ -8,12 +8,14 @@ import threading
 from .log import log
 from .tts import speak_guarded
 
-# The chat panel's read-aloud button hands text to the running daemon here.
-# A socket rather than a second process: on the Nix path yurad.py lives in the
-# store behind a wrapped interpreter, so it can't be re-invoked as a one-shot.
-SPEAK_SOCKET = os.path.join(
+# The shell drives the daemon over this socket: read-aloud, starting and
+# cancelling a turn, and voice enrollment. A socket rather than signals or a
+# second process — signals carry no arguments and give no answer, and on the
+# Nix path yurad.py lives in the store behind a wrapped interpreter, so it
+# can't be re-invoked as a one-shot.
+CTL_SOCKET = os.path.join(
     os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}",
-    "mugen-shell", "yura-speak.sock")
+    "mugen-shell", "yura-ctl.sock")
 # A pasted wall of text would park the synthesis queue for many minutes.
 SPEAK_MAX_CHARS = 4000
 
@@ -51,7 +53,7 @@ class ReadAloud:
                 log("speak", str(e))
 
 
-class _SpeakServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+class _CtlServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     address_family = socket.AF_UNIX
     daemon_threads = True
 
@@ -63,7 +65,7 @@ class _SpeakServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
         self.server_port = 0
 
 
-class _SpeakHandler(http.server.BaseHTTPRequestHandler):
+class _CtlHandler(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     timeout = 5
 
@@ -82,48 +84,70 @@ class _SpeakHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(raw)
 
-    def do_POST(self) -> None:
-        # Drain the body on every path, before any early return: what's left
-        # unread gets parsed as the next request on this kept-alive connection.
+    def _body(self) -> dict | None:
+        """Read the request body, or None once an error has been answered.
+
+        Draining happens on every path, before any early return: what's left
+        unread gets parsed as the next request on this kept-alive connection.
+        """
         try:
             length = int(self.headers.get("Content-Length") or 0)
         except ValueError:
             self.close_connection = True
             self._reply(400, {"error": "bad content-length"})
-            return
+            return None
         raw = self.rfile.read(length)
-        if self.path == "/stop":
-            self.server.read_aloud.stop()
-            self._reply(200, {"ok": True})
+        try:
+            return json.loads(raw or b"{}")
+        except (TypeError, ValueError) as e:
+            self._reply(400, {"error": str(e)})
+            return None
+
+    def do_GET(self) -> None:
+        if self._body() is None:
             return
-        if self.path != "/speak":
+        if self.path != "/state":
             self._reply(404, {"error": "unknown endpoint"})
             return
-        try:
-            body = json.loads(raw or b"{}")
+        self._reply(200, self.server.yurad.state())
+
+    def do_POST(self) -> None:
+        body = self._body()
+        if body is None:
+            return
+        daemon = self.server.yurad
+        if self.path == "/speak":
             text = str(body.get("text") or "").strip()[:SPEAK_MAX_CHARS]
-        except (AttributeError, TypeError, ValueError) as e:
-            self._reply(400, {"error": str(e)})
+            if not text:
+                self._reply(400, {"error": "empty text"})
+                return
+            daemon.read_aloud.speak(text)
+        elif self.path == "/stop":
+            daemon.read_aloud.stop()
+        elif self.path == "/turn":
+            daemon.request_turn(bool(body.get("fresh")))
+        elif self.path == "/cancel":
+            daemon.request_cancel()
+        elif self.path == "/enroll":
+            daemon.request_enroll()
+        else:
+            self._reply(404, {"error": "unknown endpoint"})
             return
-        if not text:
-            self._reply(400, {"error": "empty text"})
-            return
-        self.server.read_aloud.speak(text)
         self._reply(200, {"ok": True})
 
 
-def serve_speak_socket(read_aloud: ReadAloud) -> None:
+def serve_control_socket(daemon) -> None:
     try:
-        os.makedirs(os.path.dirname(SPEAK_SOCKET), exist_ok=True)
+        os.makedirs(os.path.dirname(CTL_SOCKET), exist_ok=True)
         # SIGTERM leaves through os._exit, so the last run's socket is still
         # on disk and bind would fail on it.
-        if os.path.exists(SPEAK_SOCKET):
-            os.remove(SPEAK_SOCKET)
-        server = _SpeakServer(SPEAK_SOCKET, _SpeakHandler)
-        os.chmod(SPEAK_SOCKET, 0o600)
+        if os.path.exists(CTL_SOCKET):
+            os.remove(CTL_SOCKET)
+        server = _CtlServer(CTL_SOCKET, _CtlHandler)
+        os.chmod(CTL_SOCKET, 0o600)
     except OSError as e:
-        log("speak", f"socket unavailable: {e}")
+        log("ctl", f"socket unavailable: {e}")
         return
-    server.read_aloud = read_aloud
+    server.yurad = daemon
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    log("speak", f"listening on {SPEAK_SOCKET}")
+    log("ctl", f"listening on {CTL_SOCKET}")

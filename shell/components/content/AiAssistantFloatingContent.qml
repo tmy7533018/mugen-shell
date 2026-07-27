@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import Quickshell
 import Quickshell.Io
 import "../../lib" as Theme
 import "../ui" as UI
@@ -45,11 +44,9 @@ FocusScope {
     readonly property bool orbExternalEmptyState: orb.isInEmptyState
 
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://127.0.0.1:11435"
-    readonly property string _runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || ""
-    readonly property string _speakSocket: _runtimeDir + "/mugen-shell/yura-speak.sock"
     // Read-aloud is yurad's TTS pipeline, so it follows the same switch the mic
     // button does.
-    readonly property bool canReadAloud: _runtimeDir !== ""
+    readonly property bool canReadAloud: Theme.YuraCtl.available
         && (!settingsManager || settingsManager.voiceEnabled)
 
     property var messages: []
@@ -1144,13 +1141,7 @@ FocusScope {
                 anchors.fill: parent
                 onClicked: {
                     root.userActivity()
-                    // main only: the default broadcast would also signal the
-                    // whisper-server child, which dies on it. RTMIN+1 asks
-                    // for a fresh conversation rather than the voice thread.
-                    Quickshell.execDetached(["systemctl", "--user", "kill",
-                        "-s", root.voiceActive ? "SIGUSR2"
-                            : (root.currentConvId === 0 ? "SIGRTMIN+1" : "SIGUSR1"),
-                        "--kill-whom=main", "yura-voice.service"])
+                    Theme.YuraCtl.micPressed(root.voiceActive, root.currentConvId)
                 }
             }
         }
@@ -1629,7 +1620,7 @@ FocusScope {
         property string payload: ""
         running: false
         command: ["curl", "-sS", "--max-time", "5",
-                  "--unix-socket", root._speakSocket,
+                  "--unix-socket", Theme.YuraCtl.socket,
                   "-X", "POST", "--data-binary", payload,
                   "-H", "Content-Type: application/json",
                   "http://localhost/speak"]
@@ -1644,7 +1635,7 @@ FocusScope {
         id: stopSpeakProcess
         running: false
         command: ["curl", "-sS", "--max-time", "5",
-                  "--unix-socket", root._speakSocket,
+                  "--unix-socket", Theme.YuraCtl.socket,
                   "-X", "POST", "http://localhost/stop"]
     }
 
