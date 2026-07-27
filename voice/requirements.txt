@@ -8,3 +8,5 @@ scikit-learn
 tqdm
 requests
 sounddevice
+# Local TTS (Piper/VITS and Kokoro model dirs) — see yura/tts/local.py.
+sherpa-onnx

@@ -62,9 +62,12 @@
             mkdir -p $out/hypr/configs
             cp ${./system/hypr/configs/mugen-shell.conf} $out/hypr/configs/mugen-shell.conf
             # Voice daemon runtime, so the service works without a checkout.
-            # train/ stays out — separate pipeline, not runtime.
+            # yura/ is the pipeline itself — yurad.py is only its entry point
+            # and imports from it, so shipping the one file crashes on start.
+            # train/ and tests/ stay out — neither runs at runtime.
             mkdir -p $out/voice/models
             cp ${./voice/yurad.py} $out/voice/yurad.py
+            cp -r ${./voice/yura} $out/voice/yura
             cp -r ${./voice/models}/. $out/voice/models/
           '';
 
