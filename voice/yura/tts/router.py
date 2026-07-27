@@ -7,11 +7,13 @@ one reply is worse than speaking all of it in the less apt one.
 import os
 import threading
 
+import requests
+
 from ..lang import configured_lang
 from ..log import log
 from ..settings import voice_float, voice_settings
 from .base import Engine, split_voice
-from .local import LocalEngine, available
+from .local import LocalEngine, available, find_model
 from .voicevox_api import BASE_URLS, VoicevoxEngine
 
 # Fallback voice when settings.json names none, as "<engine>:<voice>" or
@@ -42,10 +44,11 @@ def _build(value: str) -> Engine:
     engine, voice = split_voice(value)
     if engine in BASE_URLS:
         return VoicevoxEngine(engine, voice)
-    if engine in ("local", "piper") and voice:
+    if engine in ("local", "piper") and voice and find_model(voice):
         return LocalEngine(voice)
-    # Nothing usable was named. A packaged local model beats silence, and it is
-    # the only engine guaranteed to be installed.
+    # Either nothing usable was named or the named model isn't installed. Both
+    # degrade to an installed voice rather than going silent: a typo in
+    # settings.json must not cost the user the whole reply.
     names = available()
     if names:
         if value:
@@ -67,3 +70,38 @@ def synthesize(sentence: str, voice: str | None = None) -> bytes:
     # Clamped so a hand-edited settings.json can't zero the length_scale divisor.
     speed = voice_float("speed", TTS_SPEED, 0.5, 2.0)
     return engine_for(voice).synth(sentence, speed)
+
+
+def _pretty(name: str) -> str:
+    # The zoo names every Piper voice "vits-piper-<locale>-<voice>-<quality>";
+    # the prefix is noise in a picker.
+    for junk in ("vits-piper-", "vits-"):
+        if name.startswith(junk):
+            return name[len(junk):]
+    return name
+
+
+def catalog() -> list[dict]:
+    """Every voice the user could pick, for the Settings picker.
+
+    Assembled here because the daemon already knows which engines exist and
+    which models are installed; asking the shell to rediscover that meant three
+    separate probes and a second copy of the naming rules.
+    """
+    out = [{"value": f"local:{name}", "label": _pretty(name), "engine": "local"}
+           for name in available()]
+    for engine, base_url in BASE_URLS.items():
+        try:
+            r = requests.get(f"{base_url}/speakers", timeout=2)
+            r.raise_for_status()
+            speakers = r.json()
+        except Exception:
+            continue  # engine not running; its voices simply aren't offered
+        for sp in speakers:
+            for st in sp.get("styles", []):
+                out.append({
+                    "value": f"{engine}:{st['id']}",
+                    "label": f"{sp['name']} ({st['name']})",
+                    "engine": engine,
+                })
+    return out

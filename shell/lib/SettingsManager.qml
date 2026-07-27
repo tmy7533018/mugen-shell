@@ -65,7 +65,11 @@ QtObject {
     property string voiceWakeOpens: "panel"  // "panel" | "bar" | "none"
     property int voiceSpeaker: 14  // legacy fallback for voiceTts
     property real voiceSpeed: 1.0
-    property string voiceTts: "voicevox:14"  // "voicevox:<id>" | "piper:<voice>"
+    // "<engine>:<voice>" — "aivis:<id>" | "voicevox:<id>" | "local:<model-dir>"
+    property string voiceTts: "voicevox:14"
+    // Per-language overrides of voiceTts, keyed by 2-letter code. Japanese
+    // lives here because no lightweight multilingual model speaks it.
+    property var voiceTtsByLang: ({})
     property string voiceSttLang: "ja"  // whisper language, "auto" allowed
     property bool voiceFollowUp: true
     // Kept equal to the shipped units' YURA_WAKE_THRESHOLD so the first save of
@@ -194,6 +198,7 @@ QtObject {
                 "speaker": voiceSpeaker,
                 "speed": voiceSpeed,
                 "tts": voiceTts,
+                "ttsByLang": voiceTtsByLang,
                 "sttLang": voiceSttLang,
                 "followUp": voiceFollowUp,
                 "wakeThreshold": voiceWakeThreshold,
@@ -418,6 +423,11 @@ QtObject {
                     voiceTts = settings.voice.tts
                 } else if (settings.voice.speaker !== undefined) {
                     voiceTts = "voicevox:" + settings.voice.speaker
+                }
+                if (settings.voice.ttsByLang !== undefined
+                        && typeof settings.voice.ttsByLang === "object"
+                        && settings.voice.ttsByLang !== null) {
+                    voiceTtsByLang = settings.voice.ttsByLang
                 }
                 if (settings.voice.sttLang !== undefined) {
                     voiceSttLang = settings.voice.sttLang

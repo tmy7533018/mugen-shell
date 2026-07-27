@@ -99,20 +99,57 @@ Rectangle {
         enrollCheck.running = true
     }
 
-    // Values carry an engine prefix ("voicevox:<style-id>" | "piper:<voice>")
-    // to match what voice.tts expects.
-    property var voicevoxVoices: []
-    property var aivisVoices: []
-    property var piperVoices: []
-    readonly property var voices: [...aivisVoices, ...voicevoxVoices, ...piperVoices]
+    // Values carry an engine prefix ("aivis:<id>" | "local:<model-dir>") to
+    // match what voice.tts expects. The daemon assembles the list: it already
+    // knows which engines answer and which models are installed.
+    property var voices: []
     property bool voiceExpanded: false
 
-    function voiceLabel() {
-        const tts = settingsManager ? settingsManager.voiceTts : ""
-        for (const v of voices) {
-            if (v.value === tts) return v.label
+    // "" edits voice.tts (used whenever no override matches); a language code
+    // edits voice.ttsByLang[code].
+    property string editingLang: ""
+    readonly property var langOptions: ["", "ja", "en"]
+
+    function langLabel(code) {
+        return code === "" ? "Default" : code.toUpperCase()
+    }
+
+    function voiceFor(lang) {
+        if (!settingsManager) return ""
+        if (lang === "") return settingsManager.voiceTts
+        const map = settingsManager.voiceTtsByLang || ({})
+        return map[lang] || ""
+    }
+
+    function applyVoice(lang, value) {
+        if (!settingsManager) return
+        if (lang === "") {
+            settingsManager.voiceTts = value
+        } else {
+            // Reassign rather than mutate: a var property doesn't notify on an
+            // in-place key write, so the picker would keep the old label.
+            let map = Object.assign({}, settingsManager.voiceTtsByLang || ({}))
+            map[lang] = value
+            settingsManager.voiceTtsByLang = map
         }
-        return tts !== "" ? tts : "voicevox:14"
+        save()
+    }
+
+    function clearVoice(lang) {
+        if (!settingsManager || lang === "") return
+        let map = Object.assign({}, settingsManager.voiceTtsByLang || ({}))
+        delete map[lang]
+        settingsManager.voiceTtsByLang = map
+        save()
+    }
+
+    function voiceLabel() {
+        const value = voiceFor(section.editingLang)
+        if (value === "") return "Same as Default"
+        for (const v of voices) {
+            if (v.value === value) return v.label
+        }
+        return value
     }
 
     // Stored cue values: "" = built-in beep, "none" = silent, anything else
@@ -149,113 +186,34 @@ Rectangle {
         }
     }
 
-    // Env fallbacks and the -23 loudness target must stay in sync with yurad,
-    // or previews drift from what actually gets played.
-    readonly property string playNormalized:
-        'n=$(mktemp --suffix=.wav); ffmpeg -hide_banner -loglevel error -y -i "$w" -af loudnorm=I=-23:TP=-2 "$n" && pw-play "$n"; rm -f "$n"'
-
+    // Auditioned through the daemon so the preview uses the very engine and
+    // loudness normalization a real reply would. The old path rebuilt each
+    // engine's HTTP call in a shell line, which needed its own escaping rules.
     function preview(value) {
-        const engine = value.split(":")[0]
-        const voice = value.slice(engine.length + 1)
-        let script
-        if (engine === "piper") {
-            if (!/^[A-Za-z0-9._+-]+$/.test(voice)) return
-            script = 'w=$(mktemp --suffix=.wav); trap \'rm -f "$w"\' EXIT; '
-                + 'echo "Hi! I\'m Yura. How does this voice sound?" | '
-                + '"${YURA_PIPER_BIN:-piper}" --model "${YURA_PIPER_VOICES:-$HOME/.local/share/piper/voices}/' + voice + '.onnx" --output_file "$w" && '
-                + playNormalized
-        } else {
-            // Style ids get spliced into the shell line below; only digits
-            // may pass.
-            if (!/^[0-9]+$/.test(voice)) return
-            const enc = encodeURIComponent("こんにちは、ユラだよ。この声はどうかな")
-            const base = engine === "aivis"
-                ? 'vv="${YURA_AIVIS_URL:-http://127.0.0.1:10101}"; '
-                : 'vv="${YURA_VOICEVOX_URL:-http://127.0.0.1:50021}"; '
-            script = 'q=$(mktemp); w=$(mktemp --suffix=.wav); trap \'rm -f "$q" "$w"\' EXIT; '
-                + base
-                + 'curl -s -m 5 -X POST "$vv/audio_query?text=' + enc + '&speaker=' + voice + '" -o "$q" && '
-                + 'curl -s -m 20 -X POST "$vv/synthesis?speaker=' + voice + '" -H "Content-Type: application/json" -d @"$q" -o "$w" && '
-                + playNormalized
-        }
-        previewProc.running = false
-        previewProc.command = ["bash", "-c", script]
-        previewProc.running = true
+        Theme.YuraCtl.post("/speak", {
+            text: value.startsWith("local:")
+                ? "Hi! I'm Yura. How does this voice sound?"
+                : "こんにちは、ユラだよ。この声はどうかな",
+            voice: value
+        })
     }
 
     Process {
-        id: previewProc
-        running: false
-    }
-
-    Process {
-        id: speakersProc
+        id: voicesProc
         running: false
         property string buf: ""
-        command: ["bash", "-c", "curl -sS --max-time 2 \"${YURA_VOICEVOX_URL:-http://127.0.0.1:50021}/speakers\""]
+        command: ["curl", "-sS", "--max-time", "4",
+                  "--unix-socket", Theme.YuraCtl.socket,
+                  "http://localhost/voices"]
 
-        stdout: SplitParser { onRead: data => { speakersProc.buf += data } }
+        stdout: StdioCollector { onStreamFinished: voicesProc.buf = text }
         onRunningChanged: { if (running) buf = "" }
 
         onExited: (exitCode) => {
             if (exitCode !== 0) return
             try {
-                let list = []
-                for (const sp of JSON.parse(speakersProc.buf)) {
-                    for (const st of sp.styles) {
-                        list.push({ label: sp.name + " (" + st.name + ")",
-                                    value: "voicevox:" + st.id })
-                    }
-                }
-                section.voicevoxVoices = list
+                section.voices = JSON.parse(voicesProc.buf).voices || []
             } catch (e) {}
-        }
-    }
-
-    Process {
-        id: aivisProc
-        running: false
-        property string buf: ""
-        command: ["bash", "-c", "curl -sS --max-time 2 \"${YURA_AIVIS_URL:-http://127.0.0.1:10101}/speakers\""]
-
-        stdout: SplitParser { onRead: data => { aivisProc.buf += data } }
-        onRunningChanged: { if (running) buf = "" }
-
-        onExited: (exitCode) => {
-            if (exitCode !== 0) return
-            try {
-                let list = []
-                for (const sp of JSON.parse(aivisProc.buf)) {
-                    for (const st of sp.styles) {
-                        list.push({ label: "Aivis: " + sp.name + " (" + st.name + ")",
-                                    value: "aivis:" + st.id })
-                    }
-                }
-                section.aivisVoices = list
-            } catch (e) {}
-        }
-    }
-
-    Process {
-        id: piperProc
-        running: false
-        property string buf: ""
-        command: ["bash", "-c", "ls -1 \"${YURA_PIPER_VOICES:-$HOME/.local/share/piper/voices}\"/*.onnx 2>/dev/null"]
-
-        stdout: SplitParser { onRead: data => { piperProc.buf += data + "\n" } }
-        onRunningChanged: { if (running) buf = "" }
-
-        onExited: () => {
-            let list = []
-            for (const line of piperProc.buf.split("\n")) {
-                const f = line.trim()
-                if (!f.endsWith(".onnx")) continue
-                const name = f.split("/").pop().replace(/\.onnx$/, "")
-                // Names feed the preview's bash line; refuse shell metachars.
-                if (!/^[A-Za-z0-9._+-]+$/.test(name)) continue
-                list.push({ label: "Piper: " + name, value: "piper:" + name })
-            }
-            section.piperVoices = list
         }
     }
 
@@ -289,9 +247,7 @@ Rectangle {
     }
 
     Component.onCompleted: {
-        speakersProc.running = true
-        aivisProc.running = true
-        piperProc.running = true
+        voicesProc.running = true
         enrollCheck.running = true
         cueSoundsProc.running = true
     }
@@ -571,6 +527,36 @@ Rectangle {
             }
         }
 
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Common.SettingLabel { theme: section.theme;
+                title: "Voice per language"
+                desc: "Which language the voice below applies to"
+            }
+
+            Row {
+                spacing: 6
+                Layout.alignment: Qt.AlignVCenter
+
+                Repeater {
+                    model: section.langOptions
+
+                    Common.Chip { theme: section.theme;
+                        required property string modelData
+                        label: section.langLabel(modelData)
+                            + (modelData !== "" && section.voiceFor(modelData) !== "" ? " ●" : "")
+                        selected: section.editingLang === modelData
+                        onClicked: {
+                            section.editingLang = modelData
+                            section.bump()
+                        }
+                    }
+                }
+            }
+        }
+
         Item {
             Layout.fillWidth: true
             implicitHeight: voiceHeader.implicitHeight
@@ -583,7 +569,9 @@ Rectangle {
 
                 Common.SettingLabel { theme: section.theme;
                     title: "Voice"
-                    desc: "VOICEVOX speaker for spoken replies"
+                    desc: section.editingLang === ""
+                        ? "Spoken replies in any language without its own voice"
+                        : "Spoken replies when the language is " + section.langLabel(section.editingLang)
                 }
 
                 Text {
@@ -615,7 +603,7 @@ Rectangle {
 
         Text {
             visible: section.voiceExpanded && section.voices.length === 0
-            text: "No voices found (VOICEVOX engine down, no Piper voices installed)"
+            text: "No voices found (the voice daemon is not running, or no engine answered)"
             color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.60)
             font.pixelSize: 10
             font.family: "M PLUS 2"
@@ -638,8 +626,8 @@ Rectangle {
                 height: 30
                 radius: 8
 
-                readonly property bool isSelected: section.settingsManager
-                    && section.settingsManager.voiceTts === modelData.value
+                readonly property bool isSelected:
+                    section.voiceFor(section.editingLang) === modelData.value
 
                 color: rowMouse.containsMouse
                     ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.25) : Qt.rgba(0.65, 0.55, 0.85, 0.25))
@@ -654,9 +642,13 @@ Rectangle {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        if (!section.settingsManager) return
-                        section.settingsManager.voiceTts = modelData.value
-                        section.save()
+                        // Tapping the current voice of a language override
+                        // removes it, which is the only way back to Default.
+                        if (parent.isSelected && section.editingLang !== "") {
+                            section.clearVoice(section.editingLang)
+                        } else {
+                            section.applyVoice(section.editingLang, modelData.value)
+                        }
                     }
                 }
 
@@ -713,7 +705,7 @@ Rectangle {
 
             Common.SettingLabel { theme: section.theme;
                 title: "Speech speed"
-                desc: "VOICEVOX speedScale for replies"
+                desc: "Playback rate for spoken replies"
             }
 
             Row {

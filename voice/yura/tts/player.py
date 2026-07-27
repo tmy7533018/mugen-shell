@@ -87,13 +87,15 @@ def play_wav(data: bytes, should_stop=None) -> None:
         time.sleep(0.03)
 
 
-def speak(text: str, on_sentence=None, should_stop=None) -> None:
+def speak(text: str, on_sentence=None, should_stop=None, voice=None) -> None:
     sentences = split_sentences(clean_for_speech(text))
     if not sentences:
         return
     # Resolved once: a settings change mid-reply must not swap the voice
-    # between two sentences of the same answer.
-    voice = configured_voice()
+    # between two sentences of the same answer. A caller may pin one instead,
+    # which is how the Settings picker auditions a voice it hasn't saved yet.
+    if voice is None:
+        voice = configured_voice()
     # One-ahead synthesis pipeline: synth sentence N+1 while N plays.
     q: queue.Queue[tuple[str, bytes] | None] = queue.Queue(maxsize=2)
     # Set once the consumer stops draining, so the producer never parks
@@ -138,11 +140,11 @@ def speak(text: str, on_sentence=None, should_stop=None) -> None:
                 break
 
 
-def speak_guarded(text: str, on_sentence=None, should_stop=None) -> None:
+def speak_guarded(text: str, on_sentence=None, should_stop=None, voice=None) -> None:
     # Every audible reply must raise yuraSpeaking (the bar holds auto-close
     # on it), including the error apology.
     set_speaking(True)
     try:
-        speak(text, on_sentence, should_stop=should_stop)
+        speak(text, on_sentence, should_stop=should_stop, voice=voice)
     finally:
         set_speaking(False)

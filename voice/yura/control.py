@@ -36,11 +36,12 @@ class ReadAloud:
     def stop(self) -> None:
         self._bump()
 
-    def speak(self, text: str) -> None:
+    def speak(self, text: str, voice: str | None = None) -> None:
         gen = self._bump()
-        threading.Thread(target=self._run, args=(text, gen), daemon=True).start()
+        threading.Thread(target=self._run, args=(text, gen, voice),
+                         daemon=True).start()
 
-    def _run(self, text: str, gen: int) -> None:
+    def _run(self, text: str, gen: int, voice: str | None) -> None:
         # The lock keeps a preempted utterance from overlapping its successor:
         # the in-flight one cuts out on the generation bump, and whoever wakes
         # up holding a stale generation gives up its turn.
@@ -48,7 +49,8 @@ class ReadAloud:
             if gen != self._gen:
                 return
             try:
-                speak_guarded(text, should_stop=lambda: gen != self._gen)
+                speak_guarded(text, should_stop=lambda: gen != self._gen,
+                              voice=voice)
             except Exception as e:
                 log("speak", str(e))
 
@@ -106,10 +108,13 @@ class _CtlHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if self._body() is None:
             return
-        if self.path != "/state":
+        if self.path == "/state":
+            self._reply(200, self.server.yurad.state())
+        elif self.path == "/voices":
+            from .tts.router import catalog
+            self._reply(200, {"voices": catalog()})
+        else:
             self._reply(404, {"error": "unknown endpoint"})
-            return
-        self._reply(200, self.server.yurad.state())
 
     def do_POST(self) -> None:
         body = self._body()
@@ -121,7 +126,9 @@ class _CtlHandler(http.server.BaseHTTPRequestHandler):
             if not text:
                 self._reply(400, {"error": "empty text"})
                 return
-            daemon.read_aloud.speak(text)
+            # Absent means "whatever the language routing picks"; the Settings
+            # picker passes one to audition a voice before saving it.
+            daemon.read_aloud.speak(text, str(body.get("voice") or "") or None)
         elif self.path == "/stop":
             daemon.read_aloud.stop()
         elif self.path == "/turn":

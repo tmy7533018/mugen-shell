@@ -108,6 +108,45 @@ class ConfiguredVoice(_LangFixture):
         self.assertEqual(router.configured_voice(), self.EN)
 
 
+class BuildEngine(unittest.TestCase):
+    """A bad voice string must cost the user a voice, never the whole reply."""
+
+    def setUp(self):
+        import tempfile
+
+        from yura.tts import local
+        self._tmp = tempfile.TemporaryDirectory()
+        os.makedirs(os.path.join(self._tmp.name, "installed-voice"))
+        open(os.path.join(self._tmp.name, "installed-voice", "m.onnx"), "w").close()
+        self._saved = local.MODEL_PATH
+        local.MODEL_PATH = self._tmp.name
+
+    def tearDown(self):
+        from yura.tts import local
+        local.MODEL_PATH = self._saved
+        self._tmp.cleanup()
+
+    def test_missing_model_falls_back_to_an_installed_one(self):
+        e = router._build("local:typo-in-settings")
+        self.assertEqual(os.path.basename(e.path), "installed-voice")
+
+    def test_unknown_engine_falls_back_too(self):
+        e = router._build("nosuchengine:whatever")
+        self.assertEqual(os.path.basename(e.path), "installed-voice")
+
+    def test_empty_value_falls_back(self):
+        e = router._build("")
+        self.assertEqual(os.path.basename(e.path), "installed-voice")
+
+    def test_named_model_is_used_when_present(self):
+        e = router._build("local:installed-voice")
+        self.assertEqual(os.path.basename(e.path), "installed-voice")
+
+    def test_http_engines_do_not_need_a_local_model(self):
+        e = router._build("aivis:123")
+        self.assertEqual(e.speaker, 123)
+
+
 class SplitVoice(unittest.TestCase):
     def test_splits_engine_from_voice(self):
         self.assertEqual(base.split_voice("aivis:1599412416"),
