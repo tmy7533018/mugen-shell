@@ -38,6 +38,7 @@ __pycache__/
 TODO.md
 note.txt
 MCP_DESIGN.md
+VOICE_DESIGN.md
 
 # nix build output symlink (anywhere in the tree, since `nix build` drops it
 # in the current working directory)
