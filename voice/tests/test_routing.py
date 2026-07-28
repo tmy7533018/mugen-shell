@@ -33,31 +33,19 @@ class _LangFixture(unittest.TestCase):
 
 
 class ConfiguredLang(_LangFixture):
-    def test_voice_setting_wins(self):
-        self.configure("en", {"sttLang": "ja"})
-        self.assertEqual(lang.configured_lang(), "ja")
-
-    def test_auto_defers_to_the_personality(self):
-        self.configure("en", {"sttLang": "auto"})
+    def test_personality_is_the_only_source(self):
+        self.configure("en", {})
         self.assertEqual(lang.configured_lang(), "en")
 
-    def test_falls_back_to_stt_language(self):
-        self.configure("", {"sttLang": "ja"})
-        self.assertEqual(lang.configured_lang(), "ja")
-
-    def test_auto_stt_is_not_a_language(self):
+    def test_auto_is_not_a_language(self):
         # "auto" truncated to "au" is what used to hand a Japanese speaker an
         # English voice.
-        self.configure("", {"sttLang": "auto"})
+        self.configure("auto", {})
         self.assertIsNone(lang.configured_lang())
 
     def test_nothing_configured_is_none(self):
         self.configure("", {})
         self.assertIsNone(lang.configured_lang())
-
-    def test_unset_picker_defers_to_the_personality(self):
-        self.configure("en", {})
-        self.assertEqual(lang.configured_lang(), "en")
 
     def test_locale_is_truncated_to_two_letters(self):
         self.configure("ja-JP", {})
@@ -75,7 +63,7 @@ class MessageLang(_LangFixture):
 
     def test_auto_still_yields_a_language(self):
         # Unlike a voice, a canned line cannot decline to have a language.
-        self.configure("", {"sttLang": "auto"})
+        self.configure("", {})
         self.assertEqual(messages.message_lang(), "en")
 
 
@@ -84,20 +72,17 @@ class ConfiguredVoice(_LangFixture):
     EN = "local:vits-piper-en_US-lessac-high"
 
     def test_language_override_wins(self):
-        self.configure("", {"sttLang": "ja", "tts": self.EN,
-                            "ttsByLang": {"ja": self.JA}})
+        self.configure("ja", {"tts": self.EN, "ttsByLang": {"ja": self.JA}})
         self.assertEqual(router.configured_voice(), self.JA)
 
     def test_other_languages_take_the_default(self):
-        self.configure("", {"sttLang": "en", "tts": self.EN,
-                            "ttsByLang": {"ja": self.JA}})
+        self.configure("en", {"tts": self.EN, "ttsByLang": {"ja": self.JA}})
         self.assertEqual(router.configured_voice(), self.EN)
 
     def test_no_language_signal_takes_the_default(self):
         # The whole point of returning None from configured_lang: with nothing
         # chosen we must not reach into the map and pick for the user.
-        self.configure("", {"sttLang": "auto", "tts": self.EN,
-                            "ttsByLang": {"ja": self.JA}})
+        self.configure("", {"tts": self.EN, "ttsByLang": {"ja": self.JA}})
         self.assertEqual(router.configured_voice(), self.EN)
 
     def test_missing_map_entry_takes_the_default(self):
@@ -105,13 +90,11 @@ class ConfiguredVoice(_LangFixture):
         self.assertEqual(router.configured_voice(), self.EN)
 
     def test_junk_map_is_ignored(self):
-        self.configure("", {"sttLang": "ja", "tts": self.EN,
-                            "ttsByLang": "not a map"})
+        self.configure("ja", {"tts": self.EN, "ttsByLang": "not a map"})
         self.assertEqual(router.configured_voice(), self.EN)
 
     def test_empty_override_does_not_silence_the_turn(self):
-        self.configure("", {"sttLang": "ja", "tts": self.EN,
-                            "ttsByLang": {"ja": ""}})
+        self.configure("ja", {"tts": self.EN, "ttsByLang": {"ja": ""}})
         self.assertEqual(router.configured_voice(), self.EN)
 
 

@@ -755,37 +755,6 @@ Rectangle {
             }
         }
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Common.SettingLabel { theme: section.theme;
-                title: "Language"
-                desc: "What Yura hears, answers and speaks in; Auto follows the persona"
-            }
-
-            Row {
-                spacing: 6
-                Layout.alignment: Qt.AlignVCenter
-
-                Repeater {
-                    model: ["auto", "ja", "en"]
-
-                    Common.Chip { theme: section.theme;
-                        required property string modelData
-                        label: modelData === "auto" ? "Auto" : modelData.toUpperCase()
-                        selected: section.settingsManager
-                            && section.settingsManager.voiceSttLang === modelData
-                        onClicked: {
-                            if (!section.settingsManager) return
-                            section.settingsManager.voiceSttLang = modelData
-                            section.save()
-                        }
-                    }
-                }
-            }
-        }
-
         SoundPicker {
             title: "Wake sound"
             desc: "When Yura starts listening"

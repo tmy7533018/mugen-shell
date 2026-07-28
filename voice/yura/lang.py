@@ -4,8 +4,8 @@ Whisper's own detection is not trustworthy enough to steer anything: asked to
 auto-detect a Japanese clip it answered English at 0.64 against Japanese 0.011,
 and transcribed accordingly. Guessing from the reply's script fares no better,
 because "OK" and "了解" would land on different voices inside one conversation.
-So the only inputs are the two settings the user actually chose, and when
-neither says anything the caller falls back rather than picking for them.
+So the only input is personality.language — the one control the user actually
+chose — and when it says nothing the caller falls back rather than picking.
 """
 
 import time
@@ -13,7 +13,6 @@ import time
 import requests
 
 from .const import AI_URL
-from .settings import voice_settings
 
 _cache: tuple[float, str] = (0.0, "")
 
@@ -39,10 +38,7 @@ def configured_lang() -> str | None:
     None is a real answer, not a failure: it means "no signal", and callers
     must fall back to their default instead of inventing a language.
     """
-    lang = str(voice_settings().get("sttLang") or "").strip().lower()
-    if lang in ("", "auto"):
-        lang = _personality_lang()
-    lang = lang.strip().lower()
+    lang = _personality_lang().strip().lower()
     # "auto" is a recognition mode, not a language. Truncating it to "au" is
     # what used to hand Japanese speakers an English voice.
     if lang in ("", "auto"):

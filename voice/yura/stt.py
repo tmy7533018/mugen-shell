@@ -5,8 +5,8 @@ import time
 import requests
 
 from .const import STT_LANG
+from .lang import configured_lang
 from .log import log
-from .settings import voice_settings
 
 WHISPER_URL = os.environ.get("YURA_WHISPER_URL", "http://127.0.0.1:8178")
 WHISPER_BIN = os.environ.get(
@@ -46,7 +46,7 @@ def ensure_whisper_server() -> subprocess.Popen | None:
 def transcribe(wav: bytes) -> str:
     # Per-request language wins over the server's -l startup default,
     # so the Settings knob applies without a whisper-server restart.
-    lang = str(voice_settings().get("sttLang", STT_LANG))
+    lang = configured_lang() or "auto"
     r = requests.post(
         f"{WHISPER_URL}/inference",
         files={"file": ("speech.wav", wav, "audio/wav")},
