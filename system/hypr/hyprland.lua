@@ -263,5 +263,9 @@ hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd("~/.config/quickshell/mugen-s
 hl.bind(mainMod .. " + SHIFT + Y", hl.dsp.exec_cmd("qs -p ~/.config/quickshell/mugen-shell/yura-shell.qml ipc call yura toggle"))
 hl.bind(mainMod .. " + slash",     hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/toggle-shortcuts.sh"))
 
+-- Push-to-talk. `global` forwards press and release to the shell's
+-- GlobalShortcut; a normal bind would only ever report the press.
+hl.bind(mainMod .. " + Z", hl.dsp.global("mugen-shell:ptt"))
+
 -- Idle inhibitor toggle
 hl.bind(mainMod .. " + SHIFT + I", hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/idle_inhibitor.sh"))

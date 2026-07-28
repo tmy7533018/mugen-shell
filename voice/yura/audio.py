@@ -18,6 +18,7 @@ MAX_UTTERANCE_S = 15.0
 LISTEN_TIMEOUT_S = 6.0            # wake with no speech -> give up
 FOLLOWUP_TIMEOUT_S = 4.0          # post-reply window before returning to idle
 VAD_THRESHOLD = 0.35              # silero speech probability
+PTT_TAP_S = 0.3                   # shorter hold than this = tap, not push-to-talk
 
 
 class SileroVAD:
@@ -86,8 +87,13 @@ class Capture:
             except queue.Empty:
                 break
 
-    def utterance(self, timeout: float = LISTEN_TIMEOUT_S) -> list[np.ndarray] | None:
-        """Collect frames until trailing silence. None = no speech at all."""
+    def utterance(self, timeout: float = LISTEN_TIMEOUT_S,
+                  held: Callable[[], bool] | None = None) -> list[np.ndarray] | None:
+        """Collect frames until trailing silence. None = no speech at all.
+
+        `held` reports whether the push-to-talk key is still down: while it is,
+        every frame is kept and the release ends the utterance.
+        """
         self.vad.reset()
         frames: list[np.ndarray] = []
         preroll: list[np.ndarray] = []
@@ -100,6 +106,8 @@ class Capture:
         # has passed (frames still preroll).
         beep_guard = int(0.25 / frame_s)
         seen = 0
+        hold_started = started if (held is not None and held()) else None
+        heard_speech = False
 
         while self._running():
             if self._cancel.is_set():
@@ -108,6 +116,33 @@ class Capture:
             frame = self.queue.get()
             p = self.vad.prob(frame)
             seen += 1
+            if hold_started is not None:
+                preroll.append(frame)
+                if len(preroll) > int(PREROLL_S / frame_s):
+                    preroll.pop(0)
+                if held():
+                    heard_speech = heard_speech or p >= VAD_THRESHOLD
+                    if not speech_started:
+                        speech_started = True
+                        frames = preroll[:]
+                    else:
+                        frames.append(frame)
+                    if time.time() - started > MAX_UTTERANCE_S:
+                        break
+                    continue
+                if time.time() - hold_started >= PTT_TAP_S:
+                    if not heard_speech:
+                        log("listen", "ptt release, no speech")
+                        return None
+                    log("listen", "ptt release")
+                    break
+                log("listen", "ptt tap, falling back to vad")
+                hold_started = None
+                speech_started = False
+                frames = []
+                started = time.time()
+                seen = 0
+                continue
             if not speech_started:
                 preroll.append(frame)
                 if len(preroll) > int(PREROLL_S / frame_s):

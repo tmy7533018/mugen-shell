@@ -24,6 +24,14 @@ QtObject {
         Quickshell.execDetached(args)
     }
 
+    function pttDown() {
+        post("/ptt/start")
+    }
+
+    function pttUp() {
+        post("/ptt/stop")
+    }
+
     // What the mic button does depends on what the daemon is already doing.
     function micPressed(voiceActive, conversationId) {
         if (voiceActive) post("/cancel")

@@ -55,6 +55,7 @@ class Daemon:
         self.trigger_fresh = threading.Event()
         self.enroll = threading.Event()
         self.cancel = threading.Event()
+        self.ptt_held = threading.Event()
         self.capture = Capture(lambda: self.running, self.cancel)
         self.wake = WakeDetector()
         self.chat = Chat()
@@ -62,6 +63,13 @@ class Daemon:
 
     def request_turn(self, fresh: bool = False) -> None:
         (self.trigger_fresh if fresh else self.trigger).set()
+
+    def request_ptt(self, down: bool, fresh: bool = False) -> None:
+        if down:
+            self.ptt_held.set()
+            self.request_turn(fresh)
+        else:
+            self.ptt_held.clear()
 
     def request_cancel(self) -> None:
         self.cancel.set()
@@ -121,7 +129,8 @@ class Daemon:
                 yura_ipc("show_conversation", str(self.chat.conversation_id))
             log("listen", "capturing..." + (" (follow-up)" if follow_up else ""))
             frames = self.capture.utterance(
-                timeout=FOLLOWUP_TIMEOUT_S if follow_up else LISTEN_TIMEOUT_S)
+                timeout=FOLLOWUP_TIMEOUT_S if follow_up else LISTEN_TIMEOUT_S,
+                held=self.ptt_held.is_set if not follow_up else None)
         finally:
             set_listening(False)
         if not frames:
@@ -265,6 +274,8 @@ class Daemon:
                 self.capture.drain()
                 # A button press that landed mid-turn shouldn't queue another.
                 self.trigger.clear()
+                self.trigger_fresh.clear()
+                self.ptt_held.clear()
 
 
 def main() -> None:
