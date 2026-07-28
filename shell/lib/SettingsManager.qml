@@ -70,6 +70,9 @@ QtObject {
     // Per-language overrides of voiceTts, keyed by 2-letter code. Japanese
     // lives here because no lightweight multilingual model speaks it.
     property var voiceTtsByLang: ({})
+    // Which language tab the voice picker last edited. UI state, but persisted
+    // because losing it reads as the voice override itself having been lost.
+    property string voiceEditingLang: ""
     property bool voiceFollowUp: true
     // Kept equal to the shipped units' YURA_WAKE_THRESHOLD so the first save of
     // any setting (which persists this key) can't move the wake gate on its own.
@@ -198,6 +201,7 @@ QtObject {
                 "speed": voiceSpeed,
                 "tts": voiceTts,
                 "ttsByLang": voiceTtsByLang,
+                "editingLang": voiceEditingLang,
                 "followUp": voiceFollowUp,
                 "wakeThreshold": voiceWakeThreshold,
                 "volume": voiceVolume,
@@ -426,6 +430,9 @@ QtObject {
                         && typeof settings.voice.ttsByLang === "object"
                         && settings.voice.ttsByLang !== null) {
                     voiceTtsByLang = settings.voice.ttsByLang
+                }
+                if (settings.voice.editingLang !== undefined) {
+                    voiceEditingLang = settings.voice.editingLang
                 }
                 if (settings.voice.followUp !== undefined) {
                     voiceFollowUp = settings.voice.followUp
