@@ -226,7 +226,7 @@ NixOS モジュールが自動でやってくれる、Arch 固有のハマりど
   sudo curl -fsSL https://raw.githubusercontent.com/hyprwm/hyprlock/main/pam/hyprlock \
     -o /etc/pam.d/hyprlock
   ```
-- **fcitx5 の環境変数。** `fcitx5` 本体は `GTK_IM_MODULE` / `QT_IM_MODULE` / `XMODIFIERS` を自分でエクスポートしません。同梱の `system/hypr/configs/ime.conf` が Hyprland セッションをカバーします。Hyprland 外のプロセス (ログインシェル、コンポジタ外から起動した GUI アプリ) には、同じ変数を `/etc/environment` にも書いておきます。
+- **fcitx5 の環境変数。** `fcitx5` 本体は `XMODIFIERS` を自分でエクスポートしません。同梱の `system/hypr/configs/ime.conf` が Hyprland セッションをカバーします。Hyprland 外のプロセス (ログインシェル、コンポジタ外から起動した GUI アプリ) 向けには `/etc/environment` にも書いておきます。`GTK_IM_MODULE` / `QT_IM_MODULE` / `SDL_IM_MODULE` は**設定しないでください**。Wayland クライアントは fcitx5 の text-input フロントエンド経由で繋がるため、これらを設定すると旧来のモジュール経路に引き戻され、fcitx5 が「Wayland Diagnose」通知を出します。`XMODIFIERS` は XWayland クライアントが XIM を使うので残します。
 
 ### Path C — 純粋な手動インストール (Nix 不使用)
 

@@ -226,7 +226,7 @@ Two Arch-specific items the NixOS module handles automatically:
   sudo curl -fsSL https://raw.githubusercontent.com/hyprwm/hyprlock/main/pam/hyprlock \
     -o /etc/pam.d/hyprlock
   ```
-- **fcitx5 env vars.** `fcitx5` itself does not export `GTK_IM_MODULE` / `QT_IM_MODULE` / `XMODIFIERS`. The shipped `system/hypr/configs/ime.conf` covers Hyprland sessions. For non-Hyprland processes (login shells, GUI apps started outside the compositor), put the same vars in `/etc/environment`.
+- **fcitx5 env vars.** `fcitx5` itself does not export `XMODIFIERS`. The shipped `system/hypr/configs/ime.conf` covers Hyprland sessions; for non-Hyprland processes (login shells, GUI apps started outside the compositor), put it in `/etc/environment` too. Do **not** set `GTK_IM_MODULE` / `QT_IM_MODULE` / `SDL_IM_MODULE`: Wayland clients reach fcitx5 through its text-input frontend, and those variables force the legacy module path instead — fcitx5 raises a "Wayland Diagnose" notification when it sees them. `XMODIFIERS` stays because XWayland clients still go through XIM.
 
 ### Path C — Pure manual (no Nix)
 

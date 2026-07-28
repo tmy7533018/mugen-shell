@@ -36,11 +36,11 @@ hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
 -- clobbering XDG_DATA_DIRS hides every .desktop entry on NixOS.
 hl.env("XDG_DATA_DIRS", HOME .. "/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:" .. (os.getenv("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"))
 
--- IME (fcitx5). Drop this block if you don't use an IME.
-hl.env("GTK_IM_MODULE", "fcitx")
-hl.env("QT_IM_MODULE", "fcitx")
+-- IME (fcitx5). Drop this line if you don't use an IME. Only XMODIFIERS:
+-- XWayland clients still go through XIM, while Wayland ones use fcitx5's
+-- text-input frontend. Setting GTK_IM_MODULE forces GTK back onto the legacy
+-- module path, which fcitx5 warns about on startup.
 hl.env("XMODIFIERS", "@im=fcitx")
-hl.env("SDL_IM_MODULE", "fcitx")
 
 -----------------
 ---- AUTOSTART --

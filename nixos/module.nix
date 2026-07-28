@@ -44,9 +44,10 @@ in
         fcitx5 input-method engines to install. Empty disables IME entirely.
 
         Setting this to a non-empty list enables i18n.inputMethod with
-        fcitx5, which is the only correct way to wire up the IME on NixOS
-        (it sets the GTK_IM_MODULE / QT_IM_MODULE / XMODIFIERS env vars
-        for every login session — installing fcitx5 directly does not).
+        fcitx5 and its Wayland text-input frontend, which is the only
+        correct way to wire up the IME on NixOS (it exports XMODIFIERS and
+        registers the input-method plugins for every login session —
+        installing fcitx5 directly does not).
 
         Examples: <literal>[ pkgs.fcitx5-mozc ]</literal> for Japanese,
         <literal>[ pkgs.fcitx5-rime ]</literal> for Chinese,
@@ -65,6 +66,11 @@ in
         type = "fcitx5";
         enable = true;
         fcitx5.addons = cfg.fcitx5Addons;
+        # This shell only runs on Wayland, so the text-input frontend is always
+        # the right one. It also stops the module from exporting GTK_IM_MODULE
+        # and QT_IM_MODULE, which fcitx5 warns about on every session start.
+        # XMODIFIERS stays either way — XWayland clients still need XIM.
+        fcitx5.waylandFrontend = true;
       };
     })
 

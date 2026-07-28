@@ -351,10 +351,8 @@ elif command -v fastfetch &>/dev/null; then
     command fastfetch
 fi
 
-# IME for fcitx5
-export GTK_IM_MODULE=fcitx
-export QT_IM_MODULE=fcitx
+# IME for fcitx5. Only XMODIFIERS — Wayland clients use the text-input
+# frontend, and GTK_IM_MODULE would force GTK back onto the legacy module path.
 export XMODIFIERS=@im=fcitx
-export SDL_IM_MODULE=fcitx
 
 unsetopt correct
