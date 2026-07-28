@@ -107,8 +107,20 @@ Rectangle {
 
     // "" edits voice.tts (used whenever no override matches); a language code
     // edits voice.ttsByLang[code].
-    property string editingLang: ""
     readonly property var langOptions: ["", "ja", "en"]
+    property bool langTabPicked: false
+    property string pickedLang: ""
+    // Bound, not assigned once: settings arrive asynchronously, so the
+    // overrides are usually still absent at startup.
+    readonly property string editingLang: langTabPicked ? pickedLang : firstOverriddenLang()
+
+    function firstOverriddenLang() {
+        const map = settingsManager ? (settingsManager.voiceTtsByLang || ({})) : ({})
+        for (const code of langOptions) {
+            if (code !== "" && map[code]) return code
+        }
+        return ""
+    }
 
     function langLabel(code) {
         return code === "" ? "Default" : code.toUpperCase()
@@ -123,6 +135,9 @@ Rectangle {
 
     function applyVoice(lang, value) {
         if (!settingsManager) return
+        // Editing pins the tab, or clearing the last override would move it.
+        section.pickedLang = lang
+        section.langTabPicked = true
         if (lang === "") {
             settingsManager.voiceTts = value
         } else {
@@ -137,6 +152,8 @@ Rectangle {
 
     function clearVoice(lang) {
         if (!settingsManager || lang === "") return
+        section.pickedLang = lang
+        section.langTabPicked = true
         let map = Object.assign({}, settingsManager.voiceTtsByLang || ({}))
         delete map[lang]
         settingsManager.voiceTtsByLang = map
@@ -549,7 +566,8 @@ Rectangle {
                             + (modelData !== "" && section.voiceFor(modelData) !== "" ? " ●" : "")
                         selected: section.editingLang === modelData
                         onClicked: {
-                            section.editingLang = modelData
+                            section.pickedLang = modelData
+                            section.langTabPicked = true
                             section.bump()
                         }
                     }
