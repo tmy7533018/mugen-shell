@@ -21,6 +21,8 @@ Item {
     required property var settingsManager
     required property var weatherManager
 
+    readonly property var shellMetacharPattern: /[;|&$`<>(){}\[\]\\!*?"'\n\r]/
+
     IpcHandler {
         target: "audio"
 
@@ -116,7 +118,8 @@ Item {
         target: "panel"
 
         function open(name: string): void {
-            let script = ipcRouter._detachedScripts[name]
+            let script = ipcRouter._detachedScripts.hasOwnProperty(name)
+                ? ipcRouter._detachedScripts[name] : ""
             if (script) {
                 Lib.Hypr.exec("~/.config/quickshell/mugen-shell/scripts/" + script)
                 return
@@ -246,8 +249,9 @@ Item {
         function launch(cmd: string): string {
             let trimmed = (cmd || "").trim()
             if (trimmed === "") return "error: empty command"
-            // Exec inherits the user's $PATH, so bare names need no resolving.
-            Lib.Hypr.exec(trimmed)
+            if (ipcRouter.shellMetacharPattern.test(trimmed))
+                return "error: command contains shell metacharacters"
+            Quickshell.execDetached(trimmed.split(/\s+/))
             return "launched: " + trimmed
         }
     }

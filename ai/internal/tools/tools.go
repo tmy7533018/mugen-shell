@@ -192,52 +192,57 @@ func CategoryOf(toolName string) string {
 	return toolName
 }
 
-// `Hyprland.dispatch("exec "+cmd)` runs cmd through /bin/sh, so any of these
-// anywhere in the string is a hard reject regardless of the allowlist.
 const shellMetachars = ";|&$`<>(){}[]\\!*?\"'\n\r"
 
-// Returns a non-empty error string when app_launch must not run. Strict by
-// default: an empty allowlist allows nothing, and shell metacharacters are
-// always rejected.
+func desktopExecRejection(exec string) string {
+	if strings.ContainsAny(exec, shellMetachars) {
+		return "error: the installed launch command for that app contains shell metacharacters and was blocked for safety."
+	}
+	return ""
+}
+
 func (r *Registry) rejectAppLaunch(args map[string]any) string {
 	cmd, _ := args["cmd"].(string)
 	if strings.ContainsAny(cmd, shellMetachars) {
-		return "error: cmd contains shell metacharacters (;|&$ etc.); only plain `binary [args]` strings are allowed. Tell the user the command was blocked for safety."
+		return "error: cmd contains shell metacharacters (;|&$ etc.); only a plain app or binary name is allowed. Tell the user the command was blocked for safety."
 	}
 	if len(r.allowedApps) == 0 {
 		return "error: app launcher has no allowed apps. Tell the user nothing is allowed yet, then immediately call panel_open(name=\"settings\") so they can pick apps via AI / Yura → Allowed apps."
 	}
-	tokens := strings.Fields(strings.TrimSpace(cmd))
+	trimmed := strings.TrimSpace(cmd)
+	tokens := strings.Fields(trimmed)
 	if len(tokens) == 0 {
 		return "error: cmd is empty."
 	}
 	bin := filepath.Base(tokens[0])
-	for _, a := range r.allowedApps {
-		if a == bin || a == tokens[0] {
-			return ""
+	if len(tokens) == 1 {
+		for _, a := range r.allowedApps {
+			if a == bin || a == tokens[0] {
+				return ""
+			}
 		}
 	}
 	// Flatpak / AppImage apps all share one launcher binary, so matching the
 	// display name and rewriting to its Exec line keeps the allowlist
 	// coarse-grained (one "flatpak" entry covers every flatpak app) without
 	// giving up on natural-language requests.
-	if app, ok := r.apps.FindByDisplay(tokens[0]); ok {
+	if app, ok := r.apps.FindByDisplay(trimmed); ok {
 		aliasTokens := strings.Fields(app.Exec)
 		if len(aliasTokens) > 0 {
 			aliasBin := filepath.Base(aliasTokens[0])
 			for _, a := range r.allowedApps {
 				if a == aliasBin {
-					// The resolved Exec also goes through /bin/sh, so a crafted
-					// .desktop entry must not smuggle metacharacters past the
-					// check the typed cmd already passed.
-					if strings.ContainsAny(app.Exec, shellMetachars) {
-						return "error: the matched app's launch command contains shell metacharacters and was blocked for safety."
+					if rejection := desktopExecRejection(app.Exec); rejection != "" {
+						return rejection
 					}
 					args["cmd"] = app.Exec
 					return ""
 				}
 			}
 		}
+	}
+	if len(tokens) > 1 {
+		return fmt.Sprintf("error: app_launch takes no arguments, only an app or binary name, and %q is not an installed app's name either. Retry with just %q if that is the app the user meant. Otherwise tell the user that launching a command with arguments is blocked for safety.", trimmed, bin)
 	}
 	return fmt.Sprintf("error: %q is not in the app launcher allowlist. Allowed apps right now: %s. If one of those is the same app under a different name (e.g. user said \"zenbrowser\" but the binary is \"zen-bin\"), retry app_launch with that binary. Otherwise tell the user the app is not allowed, then immediately call panel_open(name=\"settings\") so they can enable %q via AI / Yura → Allowed apps.", bin, strings.Join(r.allowedApps, ", "), bin)
 }
@@ -306,8 +311,10 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 				if resolved := r.apps.Resolve(bin); resolved != "" {
 					resolvedTokens := strings.Fields(resolved)
 					if len(resolvedTokens) > 0 {
-						// Only the binary path, so args the model passed survive
-						// (e.g. "kitty -e htop").
+						if rejection := desktopExecRejection(resolvedTokens[0]); rejection != "" {
+							r.auditor.Log(name, args, rejection, nil)
+							return rejection, nil
+						}
 						tokens[0] = resolvedTokens[0]
 						args["cmd"] = strings.Join(tokens, " ")
 					}
@@ -720,13 +727,13 @@ func builtin() []Tool {
 		},
 		{
 			Name:        "app_launch",
-			Description: "[DESTRUCTIVE for unfamiliar commands] Launch a desktop app or command (inherits $PATH). May be gated by user's allowlist.",
+			Description: "[DESTRUCTIVE for unfamiliar apps] Launch a desktop app (inherits $PATH). Name only — arguments are rejected. Gated by the user's allowlist.",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
 					"cmd": map[string]any{
 						"type":        "string",
-						"description": "Command to exec (e.g. \"firefox\", \"code .\", \"kitty -e htop\").",
+						"description": "App or binary name, with no arguments (e.g. \"firefox\", \"kitty\", \"Zen Browser\").",
 					},
 				},
 				"required": []string{"cmd"},
