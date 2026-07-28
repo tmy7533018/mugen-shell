@@ -56,6 +56,7 @@ class Daemon:
         self.enroll = threading.Event()
         self.cancel = threading.Event()
         self.ptt_held = threading.Event()
+        self.ptt_turn = threading.Event()
         self.capture = Capture(lambda: self.running, self.cancel)
         self.wake = WakeDetector()
         self.chat = Chat()
@@ -64,9 +65,13 @@ class Daemon:
     def request_turn(self, fresh: bool = False) -> None:
         (self.trigger_fresh if fresh else self.trigger).set()
 
+    def _trigger_name(self) -> str:
+        return "ptt key" if self.ptt_turn.is_set() else "mic button"
+
     def request_ptt(self, down: bool, fresh: bool = False) -> None:
         if down:
             self.ptt_held.set()
+            self.ptt_turn.set()
             self.request_turn(fresh)
         else:
             self.ptt_held.clear()
@@ -86,7 +91,7 @@ class Daemon:
                 "enrolling": self.enroll.is_set() or os.path.exists(ENROLL_MARKER),
                 "conversation_id": self.chat.conversation_id}
 
-    def _handle_turn(self, from_button: bool = False) -> None:
+    def _handle_turn(self, surface_up: bool = False) -> None:
         self.cancel.clear()
         # A summons outranks a message being read aloud, and the mic would
         # otherwise capture it.
@@ -95,7 +100,7 @@ class Daemon:
         # cancel, or an empty turn drops back to idle.
         first = True
         while self.running and not self.cancel.is_set():
-            spoke = self._one_turn(open_surface=first and not from_button,
+            spoke = self._one_turn(open_surface=first and not surface_up,
                                    follow_up=not first)
             if not spoke or not voice_settings().get("followUp", True):
                 break
@@ -112,8 +117,6 @@ class Daemon:
             cue("soundWake", 880)
         set_listening(True)
         try:
-            # The mic button means a Yura surface is already in front of the
-            # user; only first wake-word turns open one.
             if open_surface:
                 opens = voice_settings().get("wakeOpens", "panel")
                 if opens == "panel":
@@ -221,17 +224,17 @@ class Daemon:
                     self.wake.reset()
                     self.capture.drain()
                     continue
-                from_button = False
+                surface_up = False
                 if self.trigger_fresh.is_set():
                     self.trigger_fresh.clear()
                     self.trigger.clear()
-                    from_button = True
+                    surface_up = not self.ptt_turn.is_set()
                     self.chat.reset()
-                    log("wake", "push-to-talk (new chat)")
+                    log("wake", f"{self._trigger_name()} (new chat)")
                 elif self.trigger.is_set():
                     self.trigger.clear()
-                    from_button = True
-                    log("wake", "push-to-talk")
+                    surface_up = not self.ptt_turn.is_set()
+                    log("wake", self._trigger_name())
                 elif frame is None:
                     continue
                 else:
@@ -262,7 +265,7 @@ class Daemon:
                     # the conversation bound this session.
                     self.chat.reset()
                 try:
-                    self._handle_turn(from_button)
+                    self._handle_turn(surface_up)
                 except Exception as e:
                     log("error", str(e))
                     beep(330, 0.3)
@@ -276,6 +279,7 @@ class Daemon:
                 self.trigger.clear()
                 self.trigger_fresh.clear()
                 self.ptt_held.clear()
+                self.ptt_turn.clear()
 
 
 def main() -> None:
