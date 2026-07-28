@@ -134,7 +134,7 @@ class _CtlHandler(http.server.BaseHTTPRequestHandler):
         elif self.path == "/turn":
             daemon.request_turn(bool(body.get("fresh")))
         elif self.path == "/ptt/start":
-            daemon.request_ptt(True, bool(body.get("fresh")))
+            daemon.request_ptt(True)
         elif self.path == "/ptt/stop":
             daemon.request_ptt(False)
         elif self.path == "/cancel":
