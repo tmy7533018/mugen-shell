@@ -760,8 +760,8 @@ Rectangle {
             spacing: 12
 
             Common.SettingLabel { theme: section.theme;
-                title: "Speech recognition"
-                desc: "Whisper language; Auto detects per utterance"
+                title: "Language"
+                desc: "What Yura hears, answers and speaks in; Auto follows the persona"
             }
 
             Row {

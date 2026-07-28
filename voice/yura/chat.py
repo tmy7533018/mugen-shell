@@ -5,6 +5,7 @@ import time
 import requests
 
 from .const import AI_URL
+from .lang import configured_lang
 from .log import log
 from .settings import settings
 from .shell import yura_ipc
@@ -67,6 +68,9 @@ class Chat:
         parts: list[str] = []
         payload = {"message": text, "conversation_id": self.conversation_id,
                    "voice": True}
+        lang = configured_lang()
+        if lang:
+            payload["language"] = lang
         # Voice mirrors into the bar pill, so it follows the bar's model knob;
         # empty falls back to the backend default, like the bar row does.
         if model:

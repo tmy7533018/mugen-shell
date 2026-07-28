@@ -33,8 +33,12 @@ class _LangFixture(unittest.TestCase):
 
 
 class ConfiguredLang(_LangFixture):
-    def test_personality_wins(self):
+    def test_voice_setting_wins(self):
         self.configure("en", {"sttLang": "ja"})
+        self.assertEqual(lang.configured_lang(), "ja")
+
+    def test_auto_defers_to_the_personality(self):
+        self.configure("en", {"sttLang": "auto"})
         self.assertEqual(lang.configured_lang(), "en")
 
     def test_falls_back_to_stt_language(self):
@@ -49,8 +53,11 @@ class ConfiguredLang(_LangFixture):
 
     def test_nothing_configured_is_none(self):
         self.configure("", {})
-        # sttLang is absent, so the module default ("ja") applies.
-        self.assertEqual(lang.configured_lang(), "ja")
+        self.assertIsNone(lang.configured_lang())
+
+    def test_unset_picker_defers_to_the_personality(self):
+        self.configure("en", {})
+        self.assertEqual(lang.configured_lang(), "en")
 
     def test_locale_is_truncated_to_two_letters(self):
         self.configure("ja-JP", {})
@@ -82,8 +89,8 @@ class ConfiguredVoice(_LangFixture):
         self.assertEqual(router.configured_voice(), self.JA)
 
     def test_other_languages_take_the_default(self):
-        self.configure("en", {"sttLang": "ja", "tts": self.EN,
-                              "ttsByLang": {"ja": self.JA}})
+        self.configure("", {"sttLang": "en", "tts": self.EN,
+                            "ttsByLang": {"ja": self.JA}})
         self.assertEqual(router.configured_voice(), self.EN)
 
     def test_no_language_signal_takes_the_default(self):

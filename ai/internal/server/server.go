@@ -169,9 +169,39 @@ type chatRequest struct {
 	Thinking *bool `json:"thinking,omitempty"`
 	// Set by yurad. Attaches a transient style hint, never persisted.
 	Voice bool `json:"voice,omitempty"`
+	// Set by yurad. Overrides the persona's language for this turn only.
+	Language string `json:"language,omitempty"`
 }
 
 const voiceStyleHint = "This is a voice conversation. Answer in short spoken-style sentences: no markdown, no bullet or numbered lists, no headings, no code blocks, no emoji. When the user asks you to do something a tool can do, emit the tool call NOW, in this same turn — a reply that only promises to act (\"やっておくね\", \"変えておくね\") with no tool call does nothing and is a failure."
+
+// An unknown code returns empty, so a config value never reaches the prompt
+// verbatim. Names rather than codes: models follow them far more reliably.
+func languageName(code string) string {
+	switch strings.ToLower(strings.TrimSpace(code)) {
+	case "en":
+		return "English"
+	case "ja":
+		return "Japanese"
+	case "zh":
+		return "Chinese"
+	case "ko":
+		return "Korean"
+	case "es":
+		return "Spanish"
+	case "fr":
+		return "French"
+	case "de":
+		return "German"
+	case "it":
+		return "Italian"
+	case "pt":
+		return "Portuguese"
+	case "hi":
+		return "Hindi"
+	}
+	return ""
+}
 
 // Everything downstream works off the returned request-local copies, so a
 // concurrent /chat switching the shared current pointer can't retarget this
@@ -275,9 +305,13 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	// Same transient rider as the desktop snapshot, so typed follow-ups in the
 	// panel get normal markdown again.
 	if req.Voice && len(msgs) > 0 {
+		hint := voiceStyleHint
+		if lang := languageName(req.Language); lang != "" {
+			hint += " Respond in " + lang + ", whatever language the persona or these instructions are written in."
+		}
 		userMsg := msgs[len(msgs)-1]
 		msgs = append(msgs[:len(msgs)-1:len(msgs)-1],
-			provider.Message{Role: "system", Content: voiceStyleHint}, userMsg)
+			provider.Message{Role: "system", Content: hint}, userMsg)
 	}
 
 	// Tool calls / results stay in-memory only — history persists just the

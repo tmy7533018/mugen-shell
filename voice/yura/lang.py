@@ -12,7 +12,7 @@ import time
 
 import requests
 
-from .const import AI_URL, STT_LANG
+from .const import AI_URL
 from .settings import voice_settings
 
 _cache: tuple[float, str] = (0.0, "")
@@ -39,9 +39,9 @@ def configured_lang() -> str | None:
     None is a real answer, not a failure: it means "no signal", and callers
     must fall back to their default instead of inventing a language.
     """
-    lang = _personality_lang()
-    if not lang:
-        lang = str(voice_settings().get("sttLang", STT_LANG) or "")
+    lang = str(voice_settings().get("sttLang") or "").strip().lower()
+    if lang in ("", "auto"):
+        lang = _personality_lang()
     lang = lang.strip().lower()
     # "auto" is a recognition mode, not a language. Truncating it to "au" is
     # what used to hand Japanese speakers an English voice.
