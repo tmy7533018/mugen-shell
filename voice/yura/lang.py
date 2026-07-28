@@ -25,7 +25,11 @@ def _personality_lang() -> str:
         lang = ""
         try:
             r = requests.get(f"{AI_URL}/config", timeout=3)
-            lang = str(r.json().get("personality", {}).get("language") or "")
+            body = r.json()
+            # The endpoint nests the file under "config" alongside its path and
+            # key-presence flags; reading the top level silently yielded "".
+            cfg = body.get("config") or body
+            lang = str(cfg.get("personality", {}).get("language") or "")
         except requests.RequestException:
             pass
         _cache = (now, lang.strip().lower())

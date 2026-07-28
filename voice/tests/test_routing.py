@@ -52,6 +52,41 @@ class ConfiguredLang(_LangFixture):
         self.assertEqual(lang.configured_lang(), "ja")
 
 
+class PersonalityFetch(unittest.TestCase):
+    """The real /config parse, which the _LangFixture stub bypasses."""
+
+    def setUp(self):
+        self._saved = lang._cache
+        lang._cache = (0.0, "")
+
+    def tearDown(self):
+        lang._cache = self._saved
+
+    def _fetch(self, payload):
+        class _Resp:
+            def json(self_inner):
+                return payload
+        saved = lang.requests.get
+        lang.requests.get = lambda *a, **kw: _Resp()
+        try:
+            lang._cache = (0.0, "")
+            return lang._personality_lang()
+        finally:
+            lang.requests.get = saved
+
+    def test_reads_the_nested_config(self):
+        self.assertEqual(
+            self._fetch({"path": "/x", "config": {"personality": {"language": "ja"}}}),
+            "ja")
+
+    def test_tolerates_an_unwrapped_body(self):
+        self.assertEqual(
+            self._fetch({"personality": {"language": "en"}}), "en")
+
+    def test_missing_personality_is_empty(self):
+        self.assertEqual(self._fetch({"config": {}}), "")
+
+
 class MessageLang(_LangFixture):
     def test_uses_the_configured_language(self):
         self.configure("ja", {})
