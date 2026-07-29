@@ -17,47 +17,15 @@ Rectangle {
 
     signal removeRequested(var notificationId)
     signal actionRequested(var notif)
-    signal groupToggleRequested(var groupKey)
-    signal groupDismissRequested(var memberIds)
-
-    // A header is its own row, so a card always means exactly one notification.
-    readonly property bool isGroupHeader: !!(modelData && modelData.isGroupHeader)
-    readonly property bool isGroupMember: !!(modelData && modelData.inGroup)
-    readonly property int groupHeaderHeight: 30
-    readonly property int groupIndent: 18
-
-    x: isGroupMember ? groupIndent : 0
-    width: (parent ? parent.width : 0) - (isGroupMember ? groupIndent : 0)
-
-    Behavior on x {
-        NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
-    }
-    height: shouldCollapseHeight
-        ? 0
-        : (isGroupHeader
-            ? groupHeaderHeight
-            : (isExpanded && !notificationItem.isRemoving ? contentColumn.implicitHeight + 24 : 65))
-    color: isGroupHeader
-        ? "transparent"
-        : (theme ? theme.surfaceInsetCard : Qt.rgba(0, 0, 0, 0.65))
-    radius: isGroupHeader ? 0 : (isExpanded ? 20 : 32.5)
+    
+    width: parent ? parent.width : 0
+    height: shouldCollapseHeight ? 0 : (isExpanded && !notificationItem.isRemoving ? contentColumn.implicitHeight + 24 : 65)
+    color: theme ? theme.surfaceInsetCard : Qt.rgba(0, 0, 0, 0.65)
+    radius: isExpanded ? 20 : 32.5
     border.width: 0
     clip: true
-
-    Loader {
-        id: groupHeaderLoader
-        anchors.fill: parent
-        active: notificationItem.isGroupHeader
-        sourceComponent: NotificationGroupHeader {
-            modelData: notificationItem.modelData
-            theme: notificationItem.theme
-            onToggleRequested: (key) => notificationItem.groupToggleRequested(key)
-            onDismissRequested: (ids) => notificationItem.groupDismissRequested(ids)
-        }
-    }
-
-    property bool isExpanded: !isGroupHeader
-        && notificationItem.ListView.isCurrentItem && !notificationItem.isRemoving
+    
+    property bool isExpanded: notificationItem.ListView.isCurrentItem && !notificationItem.isRemoving
     property bool showFullText: isExpanded
 
     // Delayed so quick hover in/out doesn't flicker the text
@@ -138,7 +106,7 @@ Rectangle {
         }
     }
     
-    layer.enabled: !isGroupHeader
+    layer.enabled: true
     layer.effect: Glow {
         samples: 12
         radius: 6
@@ -151,7 +119,6 @@ Rectangle {
 
     ColumnLayout {
         id: contentColumn
-        visible: !notificationItem.isGroupHeader
         anchors.fill: parent
         anchors.leftMargin: 24
         anchors.rightMargin: 24
@@ -364,8 +331,7 @@ Rectangle {
         id: notifMouseArea
         anchors.fill: parent
         hoverEnabled: true
-        visible: !notificationItem.isGroupHeader
-        enabled: !notificationItem.isRemoving && !notificationItem.isGroupHeader
+        enabled: !notificationItem.isRemoving
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
         z: 2
