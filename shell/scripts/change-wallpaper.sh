@@ -41,21 +41,32 @@ CURRENT_WALLPAPER_FILE="$THUMB_DIR/current_wallpaper_path.txt"
 MPV_SOCKET="$THUMB_DIR/mpvpaper.sock"
 LOCK="$THUMB_DIR/.wallp.lock"
 
+TRANS_DURATION=1.3
+
 TRANS_OPTS=(
   --transition-type wave
   --transition-fps 144
-  --transition-duration 1.3
+  --transition-duration "$TRANS_DURATION"
   --transition-angle 30
   --transition-wave 40,40
   --transition-step 20
   --transition-bezier 0.25,0.1,0.25,1.0
 )
 
-TRANS_SEC=1.0
+# Hyprland draws a closing layer's fade-out on top of the stack regardless of
+# its real depth, so a torn-down layer keeps bleeding through for this long.
+LAYER_FADE_SEC=0.5
 
+# awww paces even a zero-duration set by --transition-fps, so 1 fps stalls the
+# commit past a second and the video would be torn down over a stale still.
+STILL_SET_FPS=60
+STILL_COMMIT_SEC=0.35
+
+# vaapi surfaces cannot be read back, which fails every mpv screenshot and
+# forces the slow ffmpeg path; auto-copy lands the frames in system memory.
 MPV_OPTS="no-config no-audio loop cache=yes profile=low-latency \
 vo=gpu-next gpu-context=wayland \
-hwdec=auto \
+hwdec=auto-copy \
 keep-open=yes \
 input-ipc-server=${MPV_SOCKET} \
 screenshot-format=png screenshot-high-bit-depth=no screenshot-png-compression=1"
@@ -143,27 +154,14 @@ ensure_swww() {
   return 1
 }
 
-ensure_swww_top_if_mpvpaper() {
-  if pgrep mpvpaper >/dev/null 2>&1; then
-    pkill awww-daemon >/dev/null 2>&1 || true
-    start_swww
-    for _ in {1..60}; do
-      swww_ready && return 0
-      sleep 0.05
-    done
-  else
-    ensure_swww
-  fi
-}
-
 swww_set_no_transition() {
   ensure_swww || return 1
 
   if awww img --help 2>/dev/null | grep -q -- '--transition-type'; then
-    awww img --resize crop "$1" --transition-type none --transition-duration 0 --transition-fps 1 2>/dev/null \
-    || awww img --resize crop "$1" --transition-duration 0 --transition-fps 1
+    awww img --resize crop "$1" --transition-type none --transition-duration 0 --transition-fps "$STILL_SET_FPS" 2>/dev/null \
+    || awww img --resize crop "$1" --transition-duration 0 --transition-fps "$STILL_SET_FPS"
   else
-    awww img --resize crop "$1" --transition-duration 0 --transition-fps 1
+    awww img --resize crop "$1" --transition-duration 0 --transition-fps "$STILL_SET_FPS"
   fi
 }
 
@@ -243,9 +241,8 @@ grab_current_video_frame_via_ipc() {
   printf '%s' "$out"
 }
 
-# For smooth transitions when switching from video wallpapers, capture the current
-# mpvpaper frame and set it via swww before stopping mpvpaper.
-prev_applied=false
+# Tear the video layer down while awww underneath already holds the very same
+# frame, so the closing-layer flash has nothing different to show.
 if pgrep mpvpaper >/dev/null 2>&1; then
   echo "Capturing current video frame for smooth transition..."
 
@@ -253,14 +250,16 @@ if pgrep mpvpaper >/dev/null 2>&1; then
   [[ -z "${prev_png:-}" ]] && prev_png="$(grab_current_video_frame_via_ipc 2>/dev/null || true)"
 
   if [[ -n "${prev_png:-}" && -s "$prev_png" ]]; then
-    ensure_swww_top_if_mpvpaper
+    ensure_swww
     if swww_set_no_transition "$prev_png"; then
-      prev_applied=true
+      sleep "$STILL_COMMIT_SEC"
       echo "Current frame captured and displayed"
-      sleep 0.3
     fi
     rm -f "$prev_png"
   fi
+
+  stop_mpvpaper
+  sleep "$LAYER_FADE_SEC"
 fi
 
 if is_image "$WALLPAPER_ABS"; then
@@ -291,8 +290,6 @@ if is_image "$WALLPAPER_ABS"; then
     debug_log "awww img: FAILED with exit code $?"
   fi
 
-  sleep "$TRANS_SEC"
-  stop_mpvpaper
   echo "$WALLPAPER_ABS" > "$CURRENT_WALLPAPER_FILE"
   echo "Image wallpaper set successfully"
   debug_log "Image wallpaper set successfully"
@@ -331,9 +328,7 @@ elif is_video "$WALLPAPER_ABS"; then
     fi
   fi
 
-  sleep "$TRANS_SEC"
-  stop_mpvpaper
-  sleep 0.1
+  sleep "$TRANS_DURATION"
 
   echo "Starting mpvpaper..."
   debug_log "Starting mpvpaper with: $WALLPAPER_ABS"
