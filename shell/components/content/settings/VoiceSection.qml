@@ -105,6 +105,12 @@ Rectangle {
     property var voices: []
     property bool voiceExpanded: false
 
+    // A language override needs a way back to voice.tts, so it gets an extra
+    // row rather than a second meaning for tapping the selected voice.
+    readonly property var voiceOptions: section.editingLang === ""
+        ? section.voices
+        : [{ label: "Same as Default", value: "" }, ...section.voices]
+
     // "" edits voice.tts (used whenever no override matches); a language code
     // edits voice.ttsByLang[code].
     readonly property var langOptions: ["", "ja", "en"]
@@ -147,7 +153,7 @@ Rectangle {
 
     function voiceLabel() {
         const value = voiceFor(section.editingLang)
-        if (value === "") return "Same as Default"
+        if (value === "") return section.editingLang === "" ? "Automatic" : "Same as Default"
         for (const v of voices) {
             if (v.value === value) return v.label
         }
@@ -620,7 +626,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: visible ? 220 : 0
             clip: true
-            model: section.voices
+            model: section.voiceOptions
             interactive: contentHeight > height
             boundsBehavior: Flickable.StopAtBounds
 
@@ -646,9 +652,7 @@ Rectangle {
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        // Tapping the current voice of a language override
-                        // removes it, which is the only way back to Default.
-                        if (parent.isSelected && section.editingLang !== "") {
+                        if (modelData.value === "") {
                             section.clearVoice(section.editingLang)
                         } else {
                             section.applyVoice(section.editingLang, modelData.value)
@@ -680,7 +684,8 @@ Rectangle {
                     width: 26
                     height: 20
                     radius: 10
-                    visible: rowMouse.containsMouse || playMouse.containsMouse
+                    visible: parent.modelData.value !== ""
+                        && (rowMouse.containsMouse || playMouse.containsMouse)
                     color: playMouse.containsMouse
                         ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.5) : Qt.rgba(0.65, 0.55, 0.85, 0.5))
                         : Qt.rgba(1, 1, 1, 0.08)
