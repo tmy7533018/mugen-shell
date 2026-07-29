@@ -212,5 +212,68 @@ class FindModel(unittest.TestCase):
                 local.MODEL_PATH = saved
 
 
+class EnginePrewarm(_LangFixture):
+    """Warming follows the routing decision, so an English turn stays cheap."""
+
+    def setUp(self):
+        super().setUp()
+        from yura.tts import service
+        self.service = service
+        self._svc = (service.SERVICE, service.prewarm)
+        service.SERVICE = "aivisspeech-engine.service"
+        self.warmed = 0
+        service.prewarm = self._count
+
+    def tearDown(self):
+        self.service.SERVICE, self.service.prewarm = self._svc
+        super().tearDown()
+
+    def _count(self):
+        self.warmed += 1
+
+    def test_a_japanese_turn_warms_the_engine(self):
+        self.configure("ja", {"ttsByLang": {"ja": "aivis:1878365376"}})
+        router.prewarm()
+        self.assertEqual(self.warmed, 1)
+
+    def test_a_local_voice_does_not(self):
+        self.configure("en", {"tts": "local:vits-piper-en_US-lessac-high"})
+        router.prewarm()
+        self.assertEqual(self.warmed, 0)
+
+    def test_the_read_aloud_voice_overrides_the_setting(self):
+        # /speak names the voice, so the turn's routing must not decide for it.
+        self.configure("en", {"tts": "local:vits-piper-en_US-lessac-high"})
+        router.prewarm("aivis:1878365376")
+        self.assertEqual(self.warmed, 1)
+
+    def test_nothing_is_managed_without_the_service_env(self):
+        self.service.SERVICE = ""
+        self.configure("ja", {"ttsByLang": {"ja": "aivis:1878365376"}})
+        router.prewarm()
+        self.assertEqual(self.warmed, 0)
+
+
+class UnmanagedEngine(unittest.TestCase):
+    def test_construction_does_not_poll_an_engine_we_do_not_start(self):
+        # Waiting is only worth it for the unit we can bring up ourselves. A
+        # VOICEVOX the user runs is either there or not, and polling it would
+        # stall the turn for the whole ready timeout.
+        import time
+
+        from yura.tts import service, voicevox_api
+        saved = (service.SERVICE, voicevox_api.BASE_URLS["voicevox"])
+        service.SERVICE = "aivisspeech-engine.service"
+        voicevox_api.BASE_URLS["voicevox"] = "http://127.0.0.1:1"
+        try:
+            started = time.perf_counter()
+            engine = voicevox_api.VoicevoxEngine("voicevox", "")
+            elapsed = time.perf_counter() - started
+        finally:
+            service.SERVICE, voicevox_api.BASE_URLS["voicevox"] = saved
+        self.assertFalse(engine.managed)
+        self.assertLess(elapsed, 2.0)
+
+
 if __name__ == "__main__":
     unittest.main()

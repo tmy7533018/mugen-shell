@@ -13,12 +13,14 @@ from .player import (
     split_sentences,
 )
 from .router import configured_voice, synthesize
+from .router import prewarm as prewarm_tts
 
 # Names re-exported on purpose; without this they read as unused imports.
 __all__ = [
     "clean_for_speech",
     "configured_voice",
     "join_spoken",
+    "prewarm_tts",
     "play_wav",
     "speak",
     "speak_guarded",

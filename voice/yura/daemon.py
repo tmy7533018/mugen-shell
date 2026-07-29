@@ -33,7 +33,7 @@ from .shell import (
 from .shell import state as shell_state
 from .sound import beep, cue
 from .stt import ensure_whisper_server, transcribe
-from .tts import join_spoken, speak_guarded
+from .tts import join_spoken, prewarm_tts, speak_guarded
 from .wake import (
     ENROLL_MARKER,
     WAKE_PATIENCE,
@@ -102,6 +102,9 @@ class Daemon:
                 "conversation_id": self.chat.conversation_id}
 
     def _handle_turn(self, surface_up: bool = False) -> None:
+        # Every route into a turn passes here, and the reply is several seconds
+        # of STT and LLM away — exactly the window the engine needs to start.
+        prewarm_tts()
         self.cancel.clear()
         # A summons outranks a message being read aloud, and the mic would
         # otherwise capture it.

@@ -12,6 +12,7 @@ import requests
 from ..lang import configured_lang
 from ..log import log
 from ..settings import voice_float, voice_settings
+from . import service
 from .base import Engine, split_voice
 from .local import LocalEngine, available, find_model
 from .voicevox_api import BASE_URLS, VoicevoxEngine
@@ -38,6 +39,19 @@ def configured_voice() -> str:
         if isinstance(by_lang, dict) and by_lang.get(lang):
             return str(by_lang[lang])
     return str(vs.get("tts", "") or TTS_DEFAULT)
+
+
+def prewarm(voice: str | None = None) -> None:
+    """Start the engine this turn will speak with, if it needs starting.
+
+    Called at the trigger, not at synthesis: the point is to spend the engine's
+    startup on the STT and LLM that come first. Following the routing decision
+    rather than warming unconditionally keeps an English turn from paying for
+    the Japanese engine.
+    """
+    engine, _ = split_voice(voice if voice is not None else configured_voice())
+    if service.managed(engine):
+        service.prewarm()
 
 
 def _build(value: str) -> Engine:
@@ -88,9 +102,15 @@ def catalog() -> list[dict]:
     which models are installed; asking the shell to rediscover that meant three
     separate probes and a second copy of the naming rules.
     """
+    # Opening the voice picker means wanting to see and audition voices, and a
+    # stopped engine reports none of its own. Warming it here is the behaviour,
+    # not a workaround; the idle stop takes it away again afterwards.
+    service.prewarm()
     out = [{"value": f"local:{name}", "label": _pretty(name), "engine": "local"}
            for name in available()]
     for engine, base_url in BASE_URLS.items():
+        if service.managed(engine):
+            service.wait_ready(base_url)
         try:
             r = requests.get(f"{base_url}/speakers", timeout=2)
             r.raise_for_status()
