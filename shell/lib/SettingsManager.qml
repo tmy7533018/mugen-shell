@@ -66,7 +66,6 @@ QtObject {
     // wake word means holding the microphone open for as long as the shell runs.
     property bool voiceWakeWord: false
     property string voiceWakeOpens: "panel"  // "panel" | "bar" | "none"
-    property int voiceSpeaker: 14  // legacy fallback for voiceTts
     property real voiceSpeed: 1.0
     // "<engine>:<voice>" — "aivis:<id>" | "voicevox:<id>" | "local:<model-dir>".
     // Empty leaves the pick to the daemon, which takes YURA_TTS and otherwise
@@ -203,7 +202,6 @@ QtObject {
                 "enabled": voiceEnabled,
                 "wakeWord": voiceWakeWord,
                 "wakeOpens": voiceWakeOpens,
-                "speaker": voiceSpeaker,
                 "speed": voiceSpeed,
                 "tts": voiceTts,
                 "ttsByLang": voiceTtsByLang,
@@ -424,15 +422,15 @@ QtObject {
                 if (settings.voice.wakeOpens !== undefined) {
                     voiceWakeOpens = settings.voice.wakeOpens
                 }
-                if (settings.voice.speaker !== undefined) {
-                    voiceSpeaker = settings.voice.speaker
-                }
                 if (settings.voice.speed !== undefined) {
                     voiceSpeed = settings.voice.speed
                 }
                 if (settings.voice.tts !== undefined) {
                     voiceTts = settings.voice.tts
                 } else if (settings.voice.speaker !== undefined) {
+                    // Read-only legacy: settings.json predating voice.tts named
+                    // a bare VOICEVOX style id. Nothing writes the key any more,
+                    // and _rawSettings keeps whatever is already in the file.
                     voiceTts = "voicevox:" + settings.voice.speaker
                 }
                 if (settings.voice.ttsByLang !== undefined
