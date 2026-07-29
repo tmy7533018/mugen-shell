@@ -42,11 +42,6 @@ def configured_voice() -> str:
 
 
 def prewarm(voice: str | None = None) -> None:
-    """Start the engine this turn will speak with, if it needs starting.
-
-    Routed rather than unconditional: an English turn must not pay for the
-    Japanese engine.
-    """
     engine, _ = split_voice(voice if voice is not None else configured_voice())
     if service.managed(engine):
         service.prewarm()
@@ -100,8 +95,6 @@ def catalog() -> list[dict]:
     which models are installed; asking the shell to rediscover that meant three
     separate probes and a second copy of the naming rules.
     """
-    # A stopped engine reports none of its voices, and opening the picker
-    # means wanting to audition them.
     service.prewarm()
     out = [{"value": f"local:{name}", "label": _pretty(name), "engine": "local"}
            for name in available()]

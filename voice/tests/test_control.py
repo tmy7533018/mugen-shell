@@ -53,14 +53,11 @@ def bare_daemon() -> Daemon:
 
 
 class _Settings:
-    """Swap settings.json for a literal dict, cache and all."""
-
     def __init__(self, voice: dict):
         self.voice = voice
 
     def __enter__(self):
         self._saved = (settings._settings_cache, settings.SETTINGS_FILE)
-        # A missing path keeps settings() on the cache below.
         settings.SETTINGS_FILE = "/nonexistent/mugen-shell/settings.json"
         settings._settings_cache = (0.0, {"voice": self.voice})
         return self
@@ -89,8 +86,6 @@ class RequestTurn(unittest.TestCase):
 
 
 class Summons(unittest.TestCase):
-    """The idle loop has no audio frames to wake it, so it waits on this."""
-
     def test_a_turn_raises_it(self):
         d = bare_daemon()
         d.request_turn()

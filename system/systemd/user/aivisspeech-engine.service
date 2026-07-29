@@ -1,12 +1,9 @@
 [Unit]
-# No [Install] on purpose: yurad starts this per turn and stops it after
-# voice.idleStopMin, and enabling the unit would pin it to the session again.
 Description=AivisSpeech engine (VOICEVOX-compatible natural TTS for Yura)
 After=graphical-session.target
 PartOf=graphical-session.target
 
 [Service]
 ExecStart=%h/.local/opt/aivisspeech-engine/run --host 127.0.0.1 --port 10101
-# Only on-failure: a clean stop from the idle timer must stay stopped.
 Restart=on-failure
 RestartSec=3

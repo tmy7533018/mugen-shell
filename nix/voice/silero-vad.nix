@@ -1,7 +1,5 @@
 { fetchurl }:
 
-# Its own derivation so a push-to-talk-only build can have the VAD without
-# openWakeWord. Upstream publishes the shared ONNX models under the v0.5.1 tag.
 fetchurl {
   name = "silero_vad.onnx";
   url = "https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/silero_vad.onnx";

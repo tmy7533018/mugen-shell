@@ -107,8 +107,6 @@ Rectangle {
     property var voices: []
     property bool voiceExpanded: false
 
-    // A language override needs a way back to voice.tts, so it gets an extra
-    // row rather than a second meaning for tapping the selected voice.
     readonly property var voiceOptions: section.editingLang === ""
         ? section.voices
         : [{ label: "Same as Default", value: "" }, ...section.voices]

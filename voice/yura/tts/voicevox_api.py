@@ -52,8 +52,6 @@ def default_style_id(base_url: str) -> int | None:
 class VoicevoxEngine:
     def __init__(self, engine: str, voice: str):
         self.base_url = BASE_URLS.get(engine, VOICEVOX_URL)
-        # Waiting only makes sense for a unit we can start; polling an engine
-        # the user runs would stall the turn for the whole ready timeout.
         self.managed = service.managed(engine)
         if self.managed:
             service.wait_ready(self.base_url)
@@ -65,8 +63,6 @@ class VoicevoxEngine:
         self.speaker = sid
 
     def synth(self, sentence: str, speed: float) -> bytes:
-        # Optimistic, so the healthy path costs no extra request; the idle
-        # stop can still have landed between two turns.
         try:
             return self._synth(sentence, speed)
         except requests.RequestException:

@@ -213,8 +213,6 @@ class FindModel(unittest.TestCase):
 
 
 class EnginePrewarm(_LangFixture):
-    """Warming follows the routing decision, so an English turn stays cheap."""
-
     def setUp(self):
         super().setUp()
         from yura.tts import service

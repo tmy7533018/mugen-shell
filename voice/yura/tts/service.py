@@ -1,10 +1,3 @@
-"""Runs the HTTP TTS engine only around the turns that need it.
-
-AivisSpeech costs ~2.7 GB and unloading its voice models frees none of it, so
-only stopping the process gives the memory back. Start and first answer are
-~4.8 s apart, which is why prewarm() fires at the trigger and not at synthesis.
-"""
-
 import os
 import subprocess
 import threading
@@ -15,8 +8,6 @@ import requests
 from ..log import log
 from ..settings import voice_float
 
-# Empty means nothing to manage: stopping a service the user started
-# themselves would be rude.
 SERVICE = os.environ.get("YURA_TTS_SERVICE", "")
 ENGINE = "aivis"
 READY_TIMEOUT_S = float(os.environ.get("YURA_TTS_READY_TIMEOUT", "40"))
@@ -38,7 +29,6 @@ def mark_used() -> None:
 
 
 def prewarm() -> None:
-    """Ask systemd for the engine and return; the caller has work to do."""
     if not managed():
         return
     mark_used()
@@ -47,7 +37,6 @@ def prewarm() -> None:
 
 
 def wait_ready(base_url: str) -> bool:
-    """Block until the engine answers, or give up after READY_TIMEOUT_S."""
     if not managed():
         return True
     deadline = time.time() + READY_TIMEOUT_S
@@ -70,7 +59,6 @@ def wait_ready(base_url: str) -> bool:
 
 
 def revive(base_url: str) -> bool:
-    """Bring the engine back after a request found it gone."""
     if not managed():
         return False
     prewarm()

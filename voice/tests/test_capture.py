@@ -1,11 +1,3 @@
-"""Capture and the fire-and-forget shell IPC, on their failure paths.
-
-Both are about a turn that must end rather than wedge: the mic can stop
-delivering mid-capture, and the UI must never be left showing the wrong state.
-
-Run from voice/:  python -m unittest discover -s tests
-"""
-
 import os
 import sys
 import threading
@@ -41,7 +33,6 @@ def frame(value: int) -> np.ndarray:
 
 class DeadMic(unittest.TestCase):
     def setUp(self):
-        # The real 15 s patience is deliberate, but no test should sit for it.
         self._saved = audio.MAX_UTTERANCE_S
         audio.MAX_UTTERANCE_S = 1.0
 
@@ -49,8 +40,6 @@ class DeadMic(unittest.TestCase):
         audio.MAX_UTTERANCE_S = self._saved
 
     def test_a_mic_that_stops_delivering_ends_the_turn(self):
-        # Nothing is ever queued. An unbounded get parks the thread that also
-        # answers the push-to-talk key, so the whole daemon would wedge.
         cap = Capture(lambda: True, threading.Event())
         cap.vad = _FakeVAD([0.0])
         started = time.time()
@@ -68,14 +57,11 @@ class DeadMic(unittest.TestCase):
 
 
 class IpcOrder(unittest.TestCase):
-    """A stale set_speaking(false) landing last turns the stop button into a mic."""
-
     def test_calls_run_in_the_order_they_were_made(self):
         seen = []
         done = threading.Event()
 
         def fake_run(cmd, **kw):
-            # Slow first call: a thread per call would land it last.
             if len(seen) == 0:
                 time.sleep(0.2)
             seen.append(cmd[-1])

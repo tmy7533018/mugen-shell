@@ -61,7 +61,6 @@ class Daemon:
         self.cancel = threading.Event()
         self.ptt_held = threading.Event()
         self.ptt_turn = threading.Event()
-        # The idle loop has no frames to poll between, unlike the wake loop.
         self.summons = threading.Event()
         self.capture = Capture(lambda: self.running, self.cancel)
         self.wake: WakeDetector | None = None
@@ -101,7 +100,6 @@ class Daemon:
                 "conversation_id": self.chat.conversation_id}
 
     def _handle_turn(self, surface_up: bool = False) -> None:
-        # Warmed here rather than at synthesis: STT and the LLM hide the start.
         prewarm_tts()
         self.cancel.clear()
         # A summons outranks a message being read aloud, and the mic would
@@ -216,25 +214,20 @@ class Daemon:
                 self.whisper_proc.terminate()
 
     def _wake_ready(self) -> bool:
-        """Whether the wake loop should own the mic rather than the idle loop."""
         if not wake_word_on():
             return False
         if self.wake is None and not self._wake_failed:
             try:
                 self.wake = WakeDetector()
             except Exception as e:
-                # Latched: a build without openWakeWord would otherwise retry
-                # every second forever.
                 self._wake_failed = True
                 log("wake", f"unavailable, push-to-talk only: {e}")
                 return False
-            # Report the effective gate, not the env fallback it may shadow.
             log("wake", f"model={self.wake.name} "
                         f"threshold={voice_float('wakeThreshold', WAKE_THRESHOLD, 0.05, 1.0)}")
         return self.wake is not None
 
     def _take_trigger(self) -> bool:
-        """Consume a pending trigger. True means the surface is already up."""
         fresh = self.trigger_fresh.is_set()
         self.trigger_fresh.clear()
         self.trigger.clear()
@@ -256,7 +249,6 @@ class Daemon:
         if self.wake is not None:
             self.wake.reset()
         self.capture.drain()
-        # A button press that landed mid-turn shouldn't queue another.
         self.trigger.clear()
         self.trigger_fresh.clear()
         self.ptt_held.clear()
@@ -264,10 +256,6 @@ class Daemon:
         self.summons.clear()
 
     def _idle_session(self) -> None:
-        """Wait with the mic released; only a key or button starts a turn.
-
-        Opening the stream per turn costs ~90 ms, inside the 300 ms PTT_TAP_S.
-        """
         log("ready", "push to talk")
         while self.running:
             if not self.summons.wait(1.0):
@@ -285,7 +273,6 @@ class Daemon:
                 self._run_turn(surface_up)
 
     def _wake_session(self) -> None:
-        """Hold the mic and score every frame until the wake word goes off."""
         wake = self.wake
         self.capture.prewarm()
         with self.capture.stream():

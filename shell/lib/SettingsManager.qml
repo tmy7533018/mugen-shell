@@ -62,13 +62,9 @@ QtObject {
 
     // Voice input (yurad reads these straight from settings.json).
     property bool voiceEnabled: true
-    // Off by default: push-to-talk is the primary way in, and listening for a
-    // wake word means holding the microphone open for as long as the shell runs.
     property bool voiceWakeWord: false
     property string voiceWakeOpens: "panel"  // "panel" | "bar" | "none"
     property real voiceSpeed: 1.0
-    // "<engine>:<voice>" — "aivis:<id>" | "voicevox:<id>" | "local:<model-dir>".
-    // Empty leaves the pick to the daemon.
     property string voiceTts: ""
     // Per-language overrides of voiceTts, keyed by 2-letter code. Japanese
     // lives here because no lightweight multilingual model speaks it.
@@ -427,7 +423,6 @@ QtObject {
                 if (settings.voice.tts !== undefined) {
                     voiceTts = settings.voice.tts
                 } else if (settings.voice.speaker !== undefined) {
-                    // Read-only legacy: settings.json predating voice.tts.
                     voiceTts = "voicevox:" + settings.voice.speaker
                 }
                 if (settings.voice.ttsByLang !== undefined

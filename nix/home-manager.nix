@@ -13,8 +13,6 @@ let
 
   sileroVad = pkgs.callPackage ./voice/silero-vad.nix { };
 
-  # openWakeWord brings scipy and scikit-learn, ~200 MiB that only the wake
-  # word and the speaker verifier use.
   voicePython = pkgs.python314.withPackages (
     ps:
     [
@@ -260,9 +258,6 @@ in
           # shadows a packaged one of the same name.
           "YURA_TTS_MODELS=%h/.local/share/mugen-shell/tts:${piperVoice}"
         ]
-        # The fallback for any language without its own voice in settings.json.
-        # The style id is left off on purpose: it depends on which models the
-        # engine has downloaded.
         ++ lib.optionals cfg.voice.aivis.enable [
           "YURA_TTS=aivis:"
           "YURA_TTS_SERVICE=aivisspeech-engine.service"
@@ -278,7 +273,6 @@ in
 
     systemd.user.services.aivisspeech-engine =
       lib.mkIf (cfg.voice.enable && cfg.voice.aivis.enable) {
-        # No WantedBy: yurad starts it per turn and stops it when idle.
         Unit = {
           Description = "AivisSpeech TTS engine (VOICEVOX-compatible API on :10101)";
           After = [ "graphical-session.target" ];
@@ -288,7 +282,6 @@ in
           # CPU mode: the bundled onnxruntime-gpu is CUDA-only. First start
           # pulls the default model + BERT (~900 MB), so it needs the network.
           ExecStart = "${aivisEngine}/bin/aivisspeech-engine --host 127.0.0.1 --port 10101";
-          # Only on-failure: a clean stop from the idle timer must stay stopped.
           Restart = "on-failure";
           RestartSec = 5;
         };

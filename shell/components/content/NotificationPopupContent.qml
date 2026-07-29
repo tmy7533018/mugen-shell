@@ -35,8 +35,6 @@ Item {
     }
 
     function restartAutoClose() {
-        // 0 = never auto-close. Reading the popup holds it open, and the
-        // countdown starts again from whenever the pointer leaves it.
         if (autoCloseTimer.interval > 0 && !popupHover.hovered) {
             autoCloseTimer.restart()
         } else {
@@ -127,12 +125,9 @@ Item {
             }
         ]
         
-        // Not on the MouseArea below: that one spans the screen, so any
-        // stray movement anywhere kept the popup up.
         HoverHandler {
             id: popupHover
             onHoveredChanged: {
-                // Also fires while fading out, with no countdown left to restart.
                 if (modeManager.isMode("notification-popup")) {
                     root.restartAutoClose()
                 }

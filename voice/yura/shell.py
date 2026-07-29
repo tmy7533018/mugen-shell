@@ -7,9 +7,6 @@ YURA_SHELL_QML = os.path.expanduser(
     "~/.config/quickshell/mugen-shell/yura-shell.qml")
 
 
-# Fire-and-forget, but strictly in order: an inline qs launch would gap the
-# spoken sentences, while a thread per call lets a stale set_speaking(false)
-# land after a newer true and leave the stop button looking like a mic button.
 _ipc_queue: queue.Queue[list[str]] = queue.Queue()
 
 

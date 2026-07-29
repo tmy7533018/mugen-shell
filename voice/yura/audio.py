@@ -25,11 +25,6 @@ SILERO_VAD = os.environ.get("YURA_SILERO_VAD", "")
 
 
 def silero_path() -> str:
-    """Path to the model, preferring a copy outside openWakeWord.
-
-    Endpointing needs it with the wake word off too, and reaching into that
-    package would pin the dependency a manual install still has to provide.
-    """
     if SILERO_VAD:
         return SILERO_VAD
     import openwakeword
@@ -95,10 +90,6 @@ class Capture:
             self._vad = value
 
     def prewarm(self) -> None:
-        """Build the VAD off the critical path; it costs ~320 ms and ~90 MB.
-
-        The queue holds 5 s, so a turn starting before it is ready loses no frame.
-        """
         threading.Thread(target=lambda: self.vad, daemon=True).start()
 
     def stream(self) -> sd.InputStream:
@@ -147,8 +138,6 @@ class Capture:
                 log("listen", "cancelled")
                 return None
             try:
-                # Bounded: a mic that stops delivering would otherwise park
-                # the loop that also answers the push-to-talk key.
                 frame = self.queue.get(timeout=0.5)
             except queue.Empty:
                 if time.time() - started > max(timeout, MAX_UTTERANCE_S):
