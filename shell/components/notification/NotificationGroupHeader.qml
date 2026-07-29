@@ -87,12 +87,16 @@ Item {
 
             Item { Layout.fillWidth: true }
 
+            // Collapsed shows only the newest member, so say what is still
+            // folded away rather than leaving the count to imply it.
             Text {
-                text: header.expanded ? "Collapse" : "Show all"
+                text: header.expanded
+                    ? "Collapse"
+                    : "+" + (header.count - 1) + " more"
                 color: header.theme ? header.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                 font.pixelSize: 10
                 font.family: "M PLUS 2"
-                opacity: headerMouse.containsMouse ? 0.85 : 0.0
+                opacity: header.expanded ? (headerMouse.containsMouse ? 0.85 : 0.0) : 0.7
                 Behavior on opacity { NumberAnimation { duration: Theme.Motion.micro } }
             }
 

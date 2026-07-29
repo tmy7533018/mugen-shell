@@ -45,6 +45,14 @@ Item {
     // rows by id, free of any notion of row kinds.
     readonly property string groupRowPrefix: "grp:"
 
+    // Members are indented under their header; that step is what makes the
+    // group read as one thing rather than a stray label between cards.
+    function withGroup(n) {
+        let copy = Object.assign({}, n)
+        copy.inGroup = true
+        return copy
+    }
+
     readonly property var displayRows: {
         let src = notifications
         let counts = ({})
@@ -78,9 +86,9 @@ Item {
                 }
                 // The newest member always shows as an ordinary card, so a
                 // collapsed group still offers one notification to act on.
-                rows.push(n)
+                rows.push(counts[k] > 1 ? withGroup(n) : n)
             } else if (expandedGroups[k] === true) {
-                rows.push(n)
+                rows.push(withGroup(n))
             }
         }
         return rows

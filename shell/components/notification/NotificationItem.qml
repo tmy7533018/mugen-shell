@@ -22,9 +22,16 @@ Rectangle {
 
     // A header is its own row, so a card always means exactly one notification.
     readonly property bool isGroupHeader: !!(modelData && modelData.isGroupHeader)
+    readonly property bool isGroupMember: !!(modelData && modelData.inGroup)
     readonly property int groupHeaderHeight: 30
+    readonly property int groupIndent: 18
 
-    width: parent ? parent.width : 0
+    x: isGroupMember ? groupIndent : 0
+    width: (parent ? parent.width : 0) - (isGroupMember ? groupIndent : 0)
+
+    Behavior on x {
+        NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
+    }
     height: shouldCollapseHeight
         ? 0
         : (isGroupHeader
