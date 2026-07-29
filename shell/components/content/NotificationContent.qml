@@ -684,8 +684,12 @@ Item {
                     add: Transition {
                         ParallelAnimation {
                             NumberAnimation {
+                                // Relative to where this row lands, not to the
+                                // top of the list: expanding a group inserts
+                                // rows mid-list, and an absolute start sent
+                                // them flying down from the panel's top edge.
                                 properties: "y"
-                                from: -60
+                                from: ViewTransition.destination.y - 30
                                 duration: Theme.Motion.gentle
                                 easing.type: Easing.OutCubic
                             }
