@@ -1,4 +1,5 @@
 import os
+import queue
 import subprocess
 import threading
 
@@ -6,15 +7,26 @@ YURA_SHELL_QML = os.path.expanduser(
     "~/.config/quickshell/mugen-shell/yura-shell.qml")
 
 
-# Fire-and-forget: the pipeline must survive without the shell, and an inline
-# qs launch is slow enough to delay capture and gap the spoken sentences.
-def _ipc_async(cmd: list[str]) -> None:
-    def run():
+# Fire-and-forget, but strictly in order: an inline qs launch would gap the
+# spoken sentences, while a thread per call lets a stale set_speaking(false)
+# land after a newer true and leave the stop button looking like a mic button.
+_ipc_queue: queue.Queue[list[str]] = queue.Queue()
+
+
+def _ipc_worker() -> None:
+    while True:
+        cmd = _ipc_queue.get()
         try:
             subprocess.run(cmd, capture_output=True, timeout=3)
         except Exception:
             pass
-    threading.Thread(target=run, daemon=True).start()
+
+
+threading.Thread(target=_ipc_worker, daemon=True).start()
+
+
+def _ipc_async(cmd: list[str]) -> None:
+    _ipc_queue.put(cmd)
 
 
 def shell_ipc(*args: str) -> None:
