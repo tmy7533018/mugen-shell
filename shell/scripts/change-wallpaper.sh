@@ -62,6 +62,10 @@ LAYER_FADE_SEC=0.5
 STILL_SET_FPS=60
 STILL_COMMIT_SEC=0.35
 
+# A mapped layer stays off screen until it commits its first frame, so spawning
+# mpvpaper this early hides its start-up behind the transition.
+MPV_WARMUP_SEC=0.4
+
 # vaapi surfaces cannot be read back, which fails every mpv screenshot and
 # forces the slow ffmpeg path; auto-copy lands the frames in system memory.
 MPV_OPTS="no-config no-audio loop cache=yes profile=low-latency \
@@ -328,7 +332,7 @@ elif is_video "$WALLPAPER_ABS"; then
     fi
   fi
 
-  sleep "$TRANS_DURATION"
+  sleep "$(awk "BEGIN { d = $TRANS_DURATION - $MPV_WARMUP_SEC; print (d > 0) ? d : 0 }")"
 
   echo "Starting mpvpaper..."
   debug_log "Starting mpvpaper with: $WALLPAPER_ABS"
