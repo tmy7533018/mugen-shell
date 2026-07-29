@@ -13,8 +13,8 @@ let
 
   sileroVad = pkgs.callPackage ./voice/silero-vad.nix { };
 
-  # openWakeWord brings scipy and scikit-learn, ~200 MiB of closure that only
-  # the wake word and the speaker verifier use. Push-to-talk needs neither.
+  # openWakeWord brings scipy and scikit-learn, ~200 MiB that only the wake
+  # word and the speaker verifier use.
   voicePython = pkgs.python314.withPackages (
     ps:
     [
@@ -253,8 +253,6 @@ in
         Environment = [
           "YURA_WAKEWORD=${voiceDir}/models/hey_yura.onnx"
           "YURA_WAKE_THRESHOLD=0.85"
-          # Endpointing loads this directly, so it resolves without importing
-          # openWakeWord — the whole point of voice.wakeWord.enable = false.
           "YURA_SILERO_VAD=${sileroVad}"
           "YURA_WHISPER_BIN=${pkgs.whisper-cpp-vulkan}/bin/whisper-server"
           "YURA_WHISPER_MODEL=${whisperModel}"
@@ -267,7 +265,6 @@ in
         # engine has downloaded.
         ++ lib.optionals cfg.voice.aivis.enable [
           "YURA_TTS=aivis:"
-          # Names the unit yurad may start and stop around a turn.
           "YURA_TTS_SERVICE=aivisspeech-engine.service"
         ];
         ExecStart = "${voicePython}/bin/python ${voiceDir}/yurad.py";
@@ -281,9 +278,7 @@ in
 
     systemd.user.services.aivisspeech-engine =
       lib.mkIf (cfg.voice.enable && cfg.voice.aivis.enable) {
-        # Started on demand by yurad, which warms it at the trigger and stops
-        # it after voice.idleStopMin — it costs ~2.7 GB and none of that can be
-        # freed short of stopping the process. No WantedBy on purpose.
+        # No WantedBy: yurad starts it per turn and stops it when idle.
         Unit = {
           Description = "AivisSpeech TTS engine (VOICEVOX-compatible API on :10101)";
           After = [ "graphical-session.target" ];

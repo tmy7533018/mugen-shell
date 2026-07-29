@@ -38,8 +38,6 @@ class ReadAloud:
 
     def speak(self, text: str, voice: str | None = None) -> None:
         gen = self._bump()
-        # Nothing precedes the synthesis here, so a stopped engine is heard as
-        # a lag before the first word rather than hidden behind a turn.
         prewarm_tts(voice)
         threading.Thread(target=self._run, args=(text, gen, voice),
                          daemon=True).start()

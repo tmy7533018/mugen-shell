@@ -68,8 +68,7 @@ QtObject {
     property string voiceWakeOpens: "panel"  // "panel" | "bar" | "none"
     property real voiceSpeed: 1.0
     // "<engine>:<voice>" — "aivis:<id>" | "voicevox:<id>" | "local:<model-dir>".
-    // Empty leaves the pick to the daemon, which takes YURA_TTS and otherwise
-    // the first installed local model.
+    // Empty leaves the pick to the daemon.
     property string voiceTts: ""
     // Per-language overrides of voiceTts, keyed by 2-letter code. Japanese
     // lives here because no lightweight multilingual model speaks it.
@@ -428,9 +427,7 @@ QtObject {
                 if (settings.voice.tts !== undefined) {
                     voiceTts = settings.voice.tts
                 } else if (settings.voice.speaker !== undefined) {
-                    // Read-only legacy: settings.json predating voice.tts named
-                    // a bare VOICEVOX style id. Nothing writes the key any more,
-                    // and _rawSettings keeps whatever is already in the file.
+                    // Read-only legacy: settings.json predating voice.tts.
                     voiceTts = "voicevox:" + settings.voice.speaker
                 }
                 if (settings.voice.ttsByLang !== undefined

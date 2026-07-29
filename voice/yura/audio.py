@@ -25,11 +25,10 @@ SILERO_VAD = os.environ.get("YURA_SILERO_VAD", "")
 
 
 def silero_path() -> str:
-    """Where to load silero_vad.onnx from.
+    """Path to the model, preferring a copy outside openWakeWord.
 
-    Endpointing needs it even with the wake word off, so taking it from inside
-    openWakeWord would pin that dependency forever. A manual install has no
-    standalone copy, so fall back to the one openWakeWord downloads.
+    Endpointing needs it with the wake word off too, and reaching into that
+    package would pin the dependency a manual install still has to provide.
     """
     if SILERO_VAD:
         return SILERO_VAD
@@ -91,11 +90,9 @@ class Capture:
             return self._vad
 
     def prewarm(self) -> None:
-        """Start building the VAD now: it costs ~320 ms and ~90 MB of RSS.
+        """Build the VAD off the critical path; it costs ~320 ms and ~90 MB.
 
-        Idling without the wake word never touches it, which is most of why
-        that mode is cheap. The queue holds 5 s, so a turn that starts before
-        the session is ready waits for it without losing a frame.
+        The queue holds 5 s, so a turn starting before it is ready loses no frame.
         """
         threading.Thread(target=lambda: self.vad, daemon=True).start()
 

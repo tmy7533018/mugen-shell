@@ -61,8 +61,7 @@ class Daemon:
         self.cancel = threading.Event()
         self.ptt_held = threading.Event()
         self.ptt_turn = threading.Event()
-        # Set alongside whichever of the above was raised. The wake loop polls
-        # between frames, but the idle loop has no frames to wake it up.
+        # The idle loop has no frames to poll between, unlike the wake loop.
         self.summons = threading.Event()
         self.capture = Capture(lambda: self.running, self.cancel)
         self.wake: WakeDetector | None = None
@@ -102,8 +101,7 @@ class Daemon:
                 "conversation_id": self.chat.conversation_id}
 
     def _handle_turn(self, surface_up: bool = False) -> None:
-        # Every route into a turn passes here, and the reply is several seconds
-        # of STT and LLM away — exactly the window the engine needs to start.
+        # Warmed here rather than at synthesis: STT and the LLM hide the start.
         prewarm_tts()
         self.cancel.clear()
         # A summons outranks a message being read aloud, and the mic would
@@ -225,9 +223,8 @@ class Daemon:
             try:
                 self.wake = WakeDetector()
             except Exception as e:
-                # A build with the wake word left out has no openWakeWord to
-                # import. Push-to-talk is the point of that build, so say so
-                # once and stay in the idle loop instead of retrying forever.
+                # Latched: a build without openWakeWord would otherwise retry
+                # every second forever.
                 self._wake_failed = True
                 log("wake", f"unavailable, push-to-talk only: {e}")
                 return False
@@ -269,9 +266,7 @@ class Daemon:
     def _idle_session(self) -> None:
         """Wait with the mic released; only a key or button starts a turn.
 
-        The stream opens per turn instead of being held. That costs ~90 ms
-        before the first frame, well inside the 300 ms that separates a
-        push-to-talk hold from a tap.
+        Opening the stream per turn costs ~90 ms, inside the 300 ms PTT_TAP_S.
         """
         log("ready", "push to talk")
         while self.running:

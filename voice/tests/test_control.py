@@ -60,8 +60,7 @@ class _Settings:
 
     def __enter__(self):
         self._saved = (settings._settings_cache, settings.SETTINGS_FILE)
-        # A missing path makes settings() keep the cache instead of reading the
-        # developer's real file over the top of it.
+        # A missing path keeps settings() on the cache below.
         settings.SETTINGS_FILE = "/nonexistent/mugen-shell/settings.json"
         settings._settings_cache = (0.0, {"voice": self.voice})
         return self
@@ -131,7 +130,6 @@ class TakeTrigger(unittest.TestCase):
         self.assertFalse(d.trigger_fresh.is_set())
 
     def test_a_ptt_turn_wants_the_surface_opened(self):
-        # surface_up False means _handle_turn still has to open the panel.
         d = bare_daemon()
         d.request_ptt(True)
         self.assertFalse(d._take_trigger())
@@ -158,7 +156,6 @@ class WakeReady(unittest.TestCase):
         self.assertIsNone(d.wake)
 
     def test_a_build_without_openwakeword_gives_up_once(self):
-        # Retrying every second would spin the idle loop and flood the log.
         d = bare_daemon()
         calls = []
 

@@ -1,13 +1,8 @@
 """Runs the HTTP TTS engine only around the turns that need it.
 
-AivisSpeech holds ~2.7 GB resident and unloading its voice models frees none of
-it — the bulk is Python, ONNX Runtime and the dictionary, so only stopping the
-process gives the memory back. The daemon therefore starts it the moment a turn
-begins and stops it once nothing has been synthesized for a while.
-
-Starting it and having it answer are ~4.8 s apart. That gap is meant to be
-spent on STT and the LLM, which is why prewarm() fires at the trigger rather
-than at synthesis.
+AivisSpeech costs ~2.7 GB and unloading its voice models frees none of it, so
+only stopping the process gives the memory back. Start and first answer are
+~4.8 s apart, which is why prewarm() fires at the trigger and not at synthesis.
 """
 
 import os
@@ -20,11 +15,9 @@ import requests
 from ..log import log
 from ..settings import voice_float
 
-# Empty means nothing to manage: a manual install runs the engine however it
-# likes, and stopping a service the user started themselves would be rude.
+# Empty means nothing to manage: stopping a service the user started
+# themselves would be rude.
 SERVICE = os.environ.get("YURA_TTS_SERVICE", "")
-# The only engine this project ever puts behind a unit. VOICEVOX, when present
-# at all, is something the user runs on their own terms.
 ENGINE = "aivis"
 READY_TIMEOUT_S = float(os.environ.get("YURA_TTS_READY_TIMEOUT", "40"))
 IDLE_STOP_MIN = 10.0

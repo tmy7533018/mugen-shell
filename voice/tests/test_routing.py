@@ -242,7 +242,6 @@ class EnginePrewarm(_LangFixture):
         self.assertEqual(self.warmed, 0)
 
     def test_the_read_aloud_voice_overrides_the_setting(self):
-        # /speak names the voice, so the turn's routing must not decide for it.
         self.configure("en", {"tts": "local:vits-piper-en_US-lessac-high"})
         router.prewarm("aivis:1878365376")
         self.assertEqual(self.warmed, 1)
@@ -256,9 +255,6 @@ class EnginePrewarm(_LangFixture):
 
 class UnmanagedEngine(unittest.TestCase):
     def test_construction_does_not_poll_an_engine_we_do_not_start(self):
-        # Waiting is only worth it for the unit we can bring up ourselves. A
-        # VOICEVOX the user runs is either there or not, and polling it would
-        # stall the turn for the whole ready timeout.
         import time
 
         from yura.tts import service, voicevox_api
