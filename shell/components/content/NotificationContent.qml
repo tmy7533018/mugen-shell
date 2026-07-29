@@ -39,10 +39,12 @@ Item {
         return "n:" + n.id
     }
 
-    // A collapsed group is rendered as a decorated copy of its newest member
-    // rather than a group object, so every row's modelData keeps the plain
-    // notification shape and modelData.id stays a real id — which is what lets
-    // removingNotifications, removalIndex and the clear-all walk work unchanged.
+    // A card that sometimes means one notification and sometimes five cannot
+    // signal which, so a group is a header row plus plain notification rows.
+    // The header's synthetic id keeps syncNotificationsToModel, which matches
+    // rows by id, free of any notion of row kinds.
+    readonly property string groupRowPrefix: "grp:"
+
     readonly property var displayRows: {
         let src = notifications
         let counts = ({})
@@ -61,17 +63,31 @@ Item {
             let k = groupKeyOf(n)
             if (!seen[k]) {
                 seen[k] = true
-                let head = Object.assign({}, n)
-                head.groupKey = k
-                head.groupCount = counts[k]
-                head.groupMemberIds = members[k]
-                head.groupExpanded = expandedGroups[k] === true
-                rows.push(head)
+                if (counts[k] > 1) {
+                    rows.push({
+                        "id": groupRowPrefix + k,
+                        "isGroupHeader": true,
+                        "groupKey": k,
+                        "groupCount": counts[k],
+                        "groupMemberIds": members[k],
+                        "groupExpanded": expandedGroups[k] === true,
+                        "appName": n.appName,
+                        "desktopEntry": n.desktopEntry,
+                        "image": n.image
+                    })
+                }
+                // The newest member always shows as an ordinary card, so a
+                // collapsed group still offers one notification to act on.
+                rows.push(n)
             } else if (expandedGroups[k] === true) {
                 rows.push(n)
             }
         }
         return rows
+    }
+
+    function isGroupRow(id) {
+        return String(id).indexOf(groupRowPrefix) === 0
     }
 
     onDisplayRowsChanged: {
@@ -175,6 +191,9 @@ Item {
             if (ids.length === 0) return
 
             for (let i = 0; i < ids.length; i++) {
+                // Header rows fade with their group but have nothing behind
+                // them for the manager to drop.
+                if (root.isGroupRow(ids[i])) continue
                 notificationManager.removeNotification(isNaN(ids[i]) ? ids[i] : Number(ids[i]))
             }
 
@@ -720,7 +739,7 @@ Item {
                         removingNotifications: root.removingNotifications
                         notifications: root.notifications
                         index: model.index
-                        
+
                         onRemoveRequested: (notificationId) => {
                             root.removeNotification(notificationId)
                             root.resetAutoCloseTimer()
@@ -734,7 +753,7 @@ Item {
                             root.removeNotificationIds(memberIds)
                             root.resetAutoCloseTimer()
                         }
-                        
+
                         onActionRequested: (notif) => {
                             if (notif.desktopEntry && notif.desktopEntry.length > 0) {
                                 launchAppProcess.command = ["python3", Quickshell.shellDir + "/scripts/focus_or_launch.py", notif.desktopEntry]
