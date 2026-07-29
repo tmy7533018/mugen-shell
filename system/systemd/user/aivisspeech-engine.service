@@ -1,12 +1,14 @@
 [Unit]
+# Started on demand by yurad, which warms it at the trigger and stops it after
+# voice.idleStopMin — it costs ~2.7 GB and none of that can be freed short of
+# stopping the process. There is no [Install] section on purpose: enabling this
+# unit would put it back in the session and undo the whole arrangement.
 Description=AivisSpeech engine (VOICEVOX-compatible natural TTS for Yura)
 After=graphical-session.target
 PartOf=graphical-session.target
 
 [Service]
 ExecStart=%h/.local/opt/aivisspeech-engine/run --host 127.0.0.1 --port 10101
+# Only on-failure: a clean stop from the idle timer must stay stopped.
 Restart=on-failure
 RestartSec=3
-
-[Install]
-WantedBy=graphical-session.target

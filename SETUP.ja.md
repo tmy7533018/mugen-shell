@@ -441,6 +441,8 @@ programs.mugen-shell.voice.enable = true;
 
 デーモンはパッケージ内の `yurad.py` から動くので clone は不要です。`yurad.py` をいじりたいときは `programs.mugen-shell.voice.sourceDir` に live な `voice/` を指定すれば、サービス再起動だけで反映されます (`qmlDir` と同じ発想)。返答の読み上げは自動で AivisSpeech に向くので、Settings で声を選ぶ前から音が出ます。VOICEVOX は Nix 配線に含まれないので、Aivis と並べて使いたければ下の手順 3 で手動追加します。
 
+**AivisSpeech エンジンはログイン時ではなく必要になった時に起動します。** 常駐で ~2.6GB 使ううえ音声モデルを unload しても 1MB も戻らないので、ターンが始まった瞬間にデーモンが unit を start し (応答まで ~5 秒かかりますが、その間どのみち音声認識と LLM が走るので待ち時間は隠れます)、合成が `voice.idleStopMin` 分 (既定 10、`settings.json` を直接編集) 途切れたら stop します。ローカルの Piper ボイスに向くターンでは最初から起動しません。Settings のボイスピッカーを開いたときは起動します — 止まっているエンジンは自分の声を 1 つも報告しないので、一覧も試聴もできないためです。自分でエンジンを管理したい場合は unit の `YURA_TTS_SERVICE=` を空にすれば、こちらからは一切触りません。
+
 下の手動セットアップから移行する場合は、切り替える前に `~/.config/systemd/user/{yura-voice,voicevox-engine,aivisspeech-engine}.service` の symlink を消してください。home-manager が同じ名前で unit を書くので、自分の管理外のファイルがあると activation が失敗します。
 
 ### 手動セットアップ

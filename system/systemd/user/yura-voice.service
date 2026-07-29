@@ -14,6 +14,9 @@ WorkingDirectory=%h/mugen-shell/voice
 # place to tune it). YURA_WAKE_PATIENCE still gates single-frame spikes.
 Environment=YURA_WAKEWORD=%h/mugen-shell/voice/models/hey_yura.onnx
 Environment=YURA_WAKE_THRESHOLD=0.85
+# Names the unit yurad may start and stop around a turn. Leave it unset to run
+# the engine yourself; nothing here will then touch it.
+Environment=YURA_TTS_SERVICE=aivisspeech-engine.service
 ExecStart=%h/mugen-shell/voice/.venv/bin/python %h/mugen-shell/voice/yurad.py
 Restart=on-failure
 RestartSec=3

@@ -265,7 +265,11 @@ in
         # The fallback for any language without its own voice in settings.json.
         # The style id is left off on purpose: it depends on which models the
         # engine has downloaded.
-        ++ lib.optional cfg.voice.aivis.enable "YURA_TTS=aivis:";
+        ++ lib.optionals cfg.voice.aivis.enable [
+          "YURA_TTS=aivis:"
+          # Names the unit yurad may start and stop around a turn.
+          "YURA_TTS_SERVICE=aivisspeech-engine.service"
+        ];
         ExecStart = "${voicePython}/bin/python ${voiceDir}/yurad.py";
         Restart = "on-failure";
         RestartSec = 3;
@@ -277,6 +281,9 @@ in
 
     systemd.user.services.aivisspeech-engine =
       lib.mkIf (cfg.voice.enable && cfg.voice.aivis.enable) {
+        # Started on demand by yurad, which warms it at the trigger and stops
+        # it after voice.idleStopMin — it costs ~2.7 GB and none of that can be
+        # freed short of stopping the process. No WantedBy on purpose.
         Unit = {
           Description = "AivisSpeech TTS engine (VOICEVOX-compatible API on :10101)";
           After = [ "graphical-session.target" ];
@@ -286,11 +293,9 @@ in
           # CPU mode: the bundled onnxruntime-gpu is CUDA-only. First start
           # pulls the default model + BERT (~900 MB), so it needs the network.
           ExecStart = "${aivisEngine}/bin/aivisspeech-engine --host 127.0.0.1 --port 10101";
+          # Only on-failure: a clean stop from the idle timer must stay stopped.
           Restart = "on-failure";
           RestartSec = 5;
-        };
-        Install = {
-          WantedBy = [ "graphical-session.target" ];
         };
       };
 
