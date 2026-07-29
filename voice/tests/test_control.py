@@ -6,12 +6,13 @@ Run from voice/:  python -m unittest discover -s tests
 import os
 import sys
 import threading
+import types
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from yura import shell  # noqa: E402
-from yura.daemon import Daemon  # noqa: E402
+from yura import settings, shell  # noqa: E402
+from yura.daemon import Daemon, wake_word_on  # noqa: E402
 
 
 class _FakeReadAloud:
@@ -24,6 +25,9 @@ class _FakeReadAloud:
 
 class _FakeChat:
     conversation_id = 0
+
+    def reset(self):
+        self.conversation_id = 0
 
 
 def bare_daemon() -> Daemon:
@@ -38,9 +42,32 @@ def bare_daemon() -> Daemon:
     d.trigger_fresh = threading.Event()
     d.enroll = threading.Event()
     d.cancel = threading.Event()
+    d.ptt_held = threading.Event()
+    d.ptt_turn = threading.Event()
+    d.summons = threading.Event()
+    d.wake = None
+    d._wake_failed = False
     d.read_aloud = _FakeReadAloud()
     d.chat = _FakeChat()
     return d
+
+
+class _Settings:
+    """Swap settings.json for a literal dict, cache and all."""
+
+    def __init__(self, voice: dict):
+        self.voice = voice
+
+    def __enter__(self):
+        self._saved = (settings._settings_cache, settings.SETTINGS_FILE)
+        # A missing path makes settings() keep the cache instead of reading the
+        # developer's real file over the top of it.
+        settings.SETTINGS_FILE = "/nonexistent/mugen-shell/settings.json"
+        settings._settings_cache = (0.0, {"voice": self.voice})
+        return self
+
+    def __exit__(self, *exc):
+        settings._settings_cache, settings.SETTINGS_FILE = self._saved
 
 
 class RequestTurn(unittest.TestCase):
@@ -60,6 +87,94 @@ class RequestTurn(unittest.TestCase):
         d = bare_daemon()
         d.request_turn()
         self.assertTrue(d.trigger.is_set())
+
+
+class Summons(unittest.TestCase):
+    """The idle loop has no audio frames to wake it, so it waits on this."""
+
+    def test_a_turn_raises_it(self):
+        d = bare_daemon()
+        d.request_turn()
+        self.assertTrue(d.summons.is_set())
+
+    def test_an_enrollment_raises_it(self):
+        d = bare_daemon()
+        d.request_enroll()
+        self.assertTrue(d.summons.is_set())
+
+    def test_a_ptt_press_raises_it_and_a_release_does_not(self):
+        d = bare_daemon()
+        d.request_ptt(True)
+        self.assertTrue(d.summons.is_set())
+        d.summons.clear()
+        d.request_ptt(False)
+        self.assertFalse(d.summons.is_set())
+
+    def test_finishing_a_turn_clears_every_trigger(self):
+        d = bare_daemon()
+        d._handle_turn = lambda surface_up=False: None
+        d.capture = types.SimpleNamespace(drain=lambda: None)
+        d.request_ptt(True)
+        d._run_turn(False)
+        for flag in ("trigger", "trigger_fresh", "ptt_held", "ptt_turn", "summons"):
+            self.assertFalse(getattr(d, flag).is_set(), flag)
+
+
+class TakeTrigger(unittest.TestCase):
+    def test_a_fresh_trigger_starts_a_new_conversation(self):
+        d = bare_daemon()
+        d.chat = types.SimpleNamespace(reset=lambda: setattr(d, "_reset", True))
+        d._reset = False
+        d.request_turn(fresh=True)
+        d._take_trigger()
+        self.assertTrue(d._reset)
+        self.assertFalse(d.trigger_fresh.is_set())
+
+    def test_a_ptt_turn_wants_the_surface_opened(self):
+        # surface_up False means _handle_turn still has to open the panel.
+        d = bare_daemon()
+        d.request_ptt(True)
+        self.assertFalse(d._take_trigger())
+
+    def test_a_mic_button_turn_leaves_the_surface_alone(self):
+        d = bare_daemon()
+        d.request_turn()
+        self.assertTrue(d._take_trigger())
+
+
+class WakeReady(unittest.TestCase):
+    def test_off_by_default(self):
+        with _Settings({}):
+            self.assertFalse(wake_word_on())
+
+    def test_follows_the_setting(self):
+        with _Settings({"wakeWord": True}):
+            self.assertTrue(wake_word_on())
+
+    def test_the_idle_loop_owns_the_mic_while_the_setting_is_off(self):
+        d = bare_daemon()
+        with _Settings({"wakeWord": False}):
+            self.assertFalse(d._wake_ready())
+        self.assertIsNone(d.wake)
+
+    def test_a_build_without_openwakeword_gives_up_once(self):
+        # Retrying every second would spin the idle loop and flood the log.
+        d = bare_daemon()
+        calls = []
+
+        def boom():
+            calls.append(1)
+            raise ModuleNotFoundError("No module named 'openwakeword'")
+
+        with _Settings({"wakeWord": True}):
+            import yura.daemon as mod
+            saved, mod.WakeDetector = mod.WakeDetector, boom
+            try:
+                self.assertFalse(d._wake_ready())
+                self.assertFalse(d._wake_ready())
+            finally:
+                mod.WakeDetector = saved
+        self.assertEqual(len(calls), 1)
 
 
 class RequestCancel(unittest.TestCase):
