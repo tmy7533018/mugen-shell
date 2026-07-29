@@ -89,6 +89,11 @@ class Capture:
                 self._vad = SileroVAD()
             return self._vad
 
+    @vad.setter
+    def vad(self, value) -> None:
+        with self._vad_lock:
+            self._vad = value
+
     def prewarm(self) -> None:
         """Build the VAD off the critical path; it costs ~320 ms and ~90 MB.
 
@@ -141,7 +146,15 @@ class Capture:
             if self._cancel.is_set():
                 log("listen", "cancelled")
                 return None
-            frame = self.queue.get()
+            try:
+                # Bounded: a mic that stops delivering would otherwise park
+                # the loop that also answers the push-to-talk key.
+                frame = self.queue.get(timeout=0.5)
+            except queue.Empty:
+                if time.time() - started > max(timeout, MAX_UTTERANCE_S):
+                    log("listen", "no audio from the mic, giving up")
+                    return frames or None
+                continue
             p = self.vad.prob(frame)
             seen += 1
             if hold_started is not None:
