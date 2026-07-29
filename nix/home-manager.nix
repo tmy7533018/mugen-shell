@@ -11,16 +11,25 @@ let
   voiceDir =
     if cfg.voice.sourceDir != null then cfg.voice.sourceDir else "${cfg.package}/voice";
 
-  voicePython = pkgs.python314.withPackages (ps: [
-    (ps.callPackage ./voice/openwakeword.nix { })
-    ps.sounddevice
-    ps.numpy
-    ps.scipy
-    ps.scikit-learn
-    ps.requests
-    ps.onnxruntime
-    ps.sherpa-onnx
-  ]);
+  sileroVad = pkgs.callPackage ./voice/silero-vad.nix { };
+
+  # openWakeWord brings scipy and scikit-learn, ~200 MiB of closure that only
+  # the wake word and the speaker verifier use. Push-to-talk needs neither.
+  voicePython = pkgs.python314.withPackages (
+    ps:
+    [
+      ps.sounddevice
+      ps.numpy
+      ps.requests
+      ps.onnxruntime
+      ps.sherpa-onnx
+    ]
+    ++ lib.optionals cfg.voice.wakeWord.enable [
+      (ps.callPackage ./voice/openwakeword.nix { })
+      ps.scipy
+      ps.scikit-learn
+    ]
+  );
 
   # Pinned to a revision rather than resolve/main: main would only fail the
   # hash later, on some unrelated rebuild.
@@ -118,6 +127,18 @@ in
         type = lib.types.bool;
         default = true;
         description = "Run the AivisSpeech engine (primary Japanese TTS) as a user service.";
+      };
+
+      wakeWord.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Install openWakeWord so "Hey Yura" can start a turn. Turning this off
+          drops ~200 MiB of closure (scipy, scikit-learn) and leaves
+          push-to-talk, the mic button and read-aloud working. Whether the
+          daemon actually listens is the separate voice.wakeWord setting in
+          settings.json, which defaults to off.
+        '';
       };
     };
   };
@@ -232,15 +253,18 @@ in
         Environment = [
           "YURA_WAKEWORD=${voiceDir}/models/hey_yura.onnx"
           "YURA_WAKE_THRESHOLD=0.85"
+          # Endpointing loads this directly, so it resolves without importing
+          # openWakeWord — the whole point of voice.wakeWord.enable = false.
+          "YURA_SILERO_VAD=${sileroVad}"
           "YURA_WHISPER_BIN=${pkgs.whisper-cpp-vulkan}/bin/whisper-server"
           "YURA_WHISPER_MODEL=${whisperModel}"
           # Colon-separated search path. A voice dropped in the writable dir
           # shadows a packaged one of the same name.
           "YURA_TTS_MODELS=%h/.local/share/mugen-shell/tts:${piperVoice}"
         ]
-        # yurad defaults to VOICEVOX, which the Nix path never installs, so
-        # without this every reply is silent. The style id is left off on
-        # purpose: it depends on which models the engine has downloaded.
+        # The fallback for any language without its own voice in settings.json.
+        # The style id is left off on purpose: it depends on which models the
+        # engine has downloaded.
         ++ lib.optional cfg.voice.aivis.enable "YURA_TTS=aivis:";
         ExecStart = "${voicePython}/bin/python ${voiceDir}/yurad.py";
         Restart = "on-failure";
