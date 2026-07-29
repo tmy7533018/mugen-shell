@@ -1,6 +1,7 @@
 {
   lib,
   buildPythonPackage,
+  callPackage,
   fetchPypi,
   fetchurl,
   python,
@@ -19,10 +20,7 @@ let
   # ONNX path needs; upstream still publishes them under the v0.5.1 tag.
   modelBase = "https://github.com/dscripka/openWakeWord/releases/download/v0.5.1";
   models = {
-    "silero_vad.onnx" = fetchurl {
-      url = "${modelBase}/silero_vad.onnx";
-      hash = "sha256-o16/Uv085fFGmyo2FY26dhvEe5c+ozgrMYbKFbH1ryg=";
-    };
+    "silero_vad.onnx" = callPackage ./silero-vad.nix { };
     "melspectrogram.onnx" = fetchurl {
       url = "${modelBase}/melspectrogram.onnx";
       hash = "sha256-uisOD4t7h1NposicsTNg/1O6xDbyiVzO2fR5+mXrF28=";

@@ -21,15 +21,29 @@ VAD_THRESHOLD = 0.35              # silero speech probability
 PTT_TAP_S = 0.3                   # shorter hold than this = tap, not push-to-talk
 
 
+SILERO_VAD = os.environ.get("YURA_SILERO_VAD", "")
+
+
+def silero_path() -> str:
+    """Where to load silero_vad.onnx from.
+
+    Endpointing needs it even with the wake word off, so taking it from inside
+    openWakeWord would pin that dependency forever. A manual install has no
+    standalone copy, so fall back to the one openWakeWord downloads.
+    """
+    if SILERO_VAD:
+        return SILERO_VAD
+    import openwakeword
+    return os.path.join(os.path.dirname(openwakeword.__file__),
+                        "resources", "models", "silero_vad.onnx")
+
+
 class SileroVAD:
-    """Thin wrapper over the silero_vad.onnx that openWakeWord ships."""
+    """Thin wrapper over silero_vad.onnx, the model openWakeWord also ships."""
 
     def __init__(self):
         import onnxruntime as ort
-        import openwakeword
-        path = os.path.join(
-            os.path.dirname(openwakeword.__file__), "resources", "models",
-            "silero_vad.onnx")
+        path = silero_path()
         opts = ort.SessionOptions()
         opts.inter_op_num_threads = 1
         opts.intra_op_num_threads = 1
@@ -64,9 +78,26 @@ class Capture:
 
     def __init__(self, running: Callable[[], bool], cancel: threading.Event):
         self.queue: queue.Queue[np.ndarray] = queue.Queue(maxsize=64)
-        self.vad = SileroVAD()
+        self._vad: SileroVAD | None = None
+        self._vad_lock = threading.Lock()
         self._running = running
         self._cancel = cancel
+
+    @property
+    def vad(self) -> SileroVAD:
+        with self._vad_lock:
+            if self._vad is None:
+                self._vad = SileroVAD()
+            return self._vad
+
+    def prewarm(self) -> None:
+        """Start building the VAD now: it costs ~320 ms and ~90 MB of RSS.
+
+        Idling without the wake word never touches it, which is most of why
+        that mode is cheap. The queue holds 5 s, so a turn that starts before
+        the session is ready waits for it without losing a frame.
+        """
+        threading.Thread(target=lambda: self.vad, daemon=True).start()
 
     def stream(self) -> sd.InputStream:
         return sd.InputStream(samplerate=SR, channels=1, dtype="int16",
