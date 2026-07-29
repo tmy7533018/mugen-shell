@@ -21,6 +21,8 @@ Rectangle {
     border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
 
     readonly property var wakeOpenOptions: ["panel", "bar", "none"]
+    readonly property bool wakeWordOn:
+        settingsManager ? settingsManager.voiceWakeWord : false
     readonly property var speedOptions: [0.9, 1.0, 1.1, 1.2]
 
     // The daemon owns enrollment (POST /enroll); the verifier pkl is the only
@@ -398,7 +400,7 @@ Rectangle {
 
             Common.SettingLabel { theme: section.theme;
                 title: "Voice input"
-                desc: "Wake word listening; off releases the microphone"
+                desc: "Talking to Yura at all; off stops the daemon listening"
             }
 
             Common.Switch {
@@ -408,6 +410,27 @@ Rectangle {
                 onToggled: {
                     if (!section.settingsManager) return
                     section.settingsManager.voiceEnabled = checked
+                    section.save()
+                }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Common.SettingLabel { theme: section.theme;
+                title: "Wake word"
+                desc: "Listen for “Hey Yura”; off releases the mic until you press the key"
+            }
+
+            Common.Switch {
+                Layout.alignment: Qt.AlignVCenter
+                theme: section.theme
+                checked: section.wakeWordOn
+                onToggled: {
+                    if (!section.settingsManager) return
+                    section.settingsManager.voiceWakeWord = checked
                     section.save()
                 }
             }
@@ -435,6 +458,7 @@ Rectangle {
         }
 
         ColumnLayout {
+            visible: section.wakeWordOn
             Layout.fillWidth: true
             spacing: 8
 
@@ -484,8 +508,8 @@ Rectangle {
             spacing: 12
 
             Common.SettingLabel { theme: section.theme;
-                title: "On wake"
-                desc: "What opens when Yura hears you"
+                title: "On summon"
+                desc: "What opens when a wake word or the push-to-talk key starts a turn"
             }
 
             Row {
@@ -511,6 +535,7 @@ Rectangle {
         }
 
         RowLayout {
+            visible: section.wakeWordOn
             Layout.fillWidth: true
             spacing: 12
 

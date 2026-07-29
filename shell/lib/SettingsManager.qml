@@ -62,6 +62,9 @@ QtObject {
 
     // Voice input (yurad reads these straight from settings.json).
     property bool voiceEnabled: true
+    // Off by default: push-to-talk is the primary way in, and listening for a
+    // wake word means holding the microphone open for as long as the shell runs.
+    property bool voiceWakeWord: false
     property string voiceWakeOpens: "panel"  // "panel" | "bar" | "none"
     property int voiceSpeaker: 14  // legacy fallback for voiceTts
     property real voiceSpeed: 1.0
@@ -198,6 +201,7 @@ QtObject {
             },
             "voice": {
                 "enabled": voiceEnabled,
+                "wakeWord": voiceWakeWord,
                 "wakeOpens": voiceWakeOpens,
                 "speaker": voiceSpeaker,
                 "speed": voiceSpeed,
@@ -413,6 +417,9 @@ QtObject {
             if (settings.voice) {
                 if (settings.voice.enabled !== undefined) {
                     voiceEnabled = settings.voice.enabled
+                }
+                if (settings.voice.wakeWord !== undefined) {
+                    voiceWakeWord = settings.voice.wakeWord
                 }
                 if (settings.voice.wakeOpens !== undefined) {
                     voiceWakeOpens = settings.voice.wakeOpens
