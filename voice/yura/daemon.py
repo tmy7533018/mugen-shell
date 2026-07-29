@@ -186,14 +186,14 @@ class Daemon:
         if not reply:
             return False
         log("yura", reply[:120].replace("\n", " "))
-        on_sentence = None
-        if mirror_bar:
-            spoken: list[str] = []
+        spoken: list[str] = []
 
-            def on_sentence(s: str) -> None:
-                spoken.append(s)
-                shell_ipc("yura", "voice_reply", join_spoken(spoken))
-        speak_guarded(reply, on_sentence, should_stop=self.cancel.is_set)
+        def on_sentence(s: str) -> None:
+            spoken.append(s)
+            shell_ipc("yura", "voice_reply", join_spoken(spoken))
+
+        speak_guarded(reply, on_sentence if mirror_bar else None,
+                      should_stop=self.cancel.is_set)
         return not self.cancel.is_set()
 
     def run(self) -> None:
