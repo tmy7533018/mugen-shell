@@ -472,10 +472,10 @@ Nix を使わない環境 (と `make install` ユーザ — 音声はカバー�
 
 - **TTS**: [Piper](https://github.com/rhasspy/piper) を入れて (`PATH` 上の `piper`、または `YURA_PIPER_BIN`)、[rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices) の声 (`.onnx` + `.onnx.json` のペア) を `~/.local/share/piper/voices/` に置きます。Settings の同じボイスピッカーに `Piper: <名前>` として並び、**選んだ声がエンジンを決める**ので、別途エンジン切替はありません。この場合 VOICEVOX は無くても動きます。
 - **STT**: Speech recognition を Auto (発話ごとに自動判定) か固定言語に。whisper は約 100 言語をカバーします。
-- **Wake word**: `YURA_WAKEWORD` 未設定ならデーモンは openWakeWord 標準の英語モデル `hey_jarvis` に fallback します (初回にダウンロード — 手動セットアップ限定。Nix 経路の Python 環境は read-only なので、代わりに `YURA_WAKEWORD` でダウンロード済みモデルを指してください)。同梱の `hey_yura.onnx` は日本語発音チューニングなので、他のアクセント向けには `voice/train/` で再訓練を。
+- **Wake word**: `YURA_WAKEWORD` 未設定ならデーモンは同梱の `voice/models/hey_yura.onnx` を読みます。これは日本語発音チューニングなので、他のアクセント向けには `voice/train/` で再訓練を。このファイルが無いときだけ openWakeWord 標準の英語モデル `hey_jarvis` に fallback します (初回にダウンロード — 手動セットアップ限定。Nix 経路の Python 環境は read-only なので、代わりに `YURA_WAKEWORD` でダウンロード済みモデルを指してください)。
 - **返答の言語**: Settings → AI / Yura → Personality の language で指定します。
 
-環境変数ノブ (unit か drop-in で設定): `YURA_WAKEWORD` (カスタムモデルのパス。デフォルト `hey_jarvis`)、`YURA_WAKE_THRESHOLD` (起動時のデフォルト。同梱 unit は Wake sensitivity スライダーの既定と揃えて `0.85` — デーモンは `settings.json` の `voice.wakeThreshold` を毎フレーム読み直すので、シェルが保存したあとはスライダー側が効きます)、`YURA_WAKE_PATIENCE` (閾値を連続で超えるべきフレーム数。デフォルト `2`)、`YURA_TTS` (`settings.json` に声の指定が無いときに使う声。`<engine>:<style-id>` 形式か、`<engine>:` だけならそのエンジンの先頭スタイル — Nix 経路は `aivis:` を設定)、`YURA_VOICEVOX_SPEAKER` (デフォルト `14`)、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。
+環境変数ノブ (unit か drop-in で設定): `YURA_WAKEWORD` (カスタムモデルのパス。デフォルトは同梱の `voice/models/hey_yura.onnx`)、`YURA_WAKE_THRESHOLD` (起動時のデフォルト。同梱 unit は Wake sensitivity スライダーの既定と揃えて `0.85` — デーモンは `settings.json` の `voice.wakeThreshold` を毎フレーム読み直すので、シェルが保存したあとはスライダー側が効きます)、`YURA_WAKE_PATIENCE` (閾値を連続で超えるべきフレーム数。デフォルト `2`)、`YURA_TTS` (`settings.json` に声の指定が無いときに使う声。`<engine>:<style-id>` 形式か、`<engine>:` だけならそのエンジンの先頭スタイル — Nix 経路は `aivis:` を設定)、`YURA_VOICEVOX_SPEAKER` (デフォルト `14`)、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。
 
 **ヘッドホンじゃなくてスピーカー派?** メディア音声がマイクに入ると、誤起動の原因になる上に本物の呼びかけも埋もれます。PipeWire の WebRTC エコーキャンセルで両方解決できます — デフォルト sink の再生内容をマイク入力から差し引くので、再生中でも wake word が通ります。`~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` に以下を置いて (`target.object` は `wpctl inspect` で調べた自分のマイクの `node.name` に)、PipeWire を再起動後、`wpctl set-default <id>` で新しいソースをデフォルト入力にします:
 

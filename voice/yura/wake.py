@@ -7,8 +7,14 @@ import numpy as np
 from .const import SR
 from .log import log
 
-# Name of a bundled openWakeWord model, or a path to a custom .onnx.
-WAKEWORD = os.environ.get("YURA_WAKEWORD", "hey_jarvis")
+# Name of a bundled openWakeWord model, or a path to a custom .onnx. Defaults
+# to the shipped model so a bare checkout wakes on "Hey Yura"; without it only
+# openWakeWord's stock name is left, since that one can still be downloaded.
+BUNDLED_WAKEWORD = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "models", "hey_yura.onnx")
+WAKEWORD = os.environ.get("YURA_WAKEWORD") or (
+    BUNDLED_WAKEWORD if os.path.exists(BUNDLED_WAKEWORD) else "hey_jarvis")
 WAKE_THRESHOLD = float(os.environ.get("YURA_WAKE_THRESHOLD", "0.5"))
 # Consecutive frames that must clear the threshold. Real utterances hold a
 # plateau across several 80 ms frames; media speech tends to spike on one.
