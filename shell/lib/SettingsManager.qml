@@ -65,8 +65,10 @@ QtObject {
     property string voiceWakeOpens: "panel"  // "panel" | "bar" | "none"
     property int voiceSpeaker: 14  // legacy fallback for voiceTts
     property real voiceSpeed: 1.0
-    // "<engine>:<voice>" — "aivis:<id>" | "voicevox:<id>" | "local:<model-dir>"
-    property string voiceTts: "voicevox:14"
+    // "<engine>:<voice>" — "aivis:<id>" | "voicevox:<id>" | "local:<model-dir>".
+    // Empty leaves the pick to the daemon, which takes YURA_TTS and otherwise
+    // the first installed local model.
+    property string voiceTts: ""
     // Per-language overrides of voiceTts, keyed by 2-letter code. Japanese
     // lives here because no lightweight multilingual model speaks it.
     property var voiceTtsByLang: ({})
