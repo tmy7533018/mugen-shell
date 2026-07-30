@@ -1,5 +1,4 @@
 import QtQuick
-import Qt5Compat.GraphicalEffects
 import "../common" as Common
 import "../ui" as UI
 import "../../lib" as Theme
@@ -33,7 +32,7 @@ Item {
         height: button.effectSize
         z: -1
 
-        opacity: mouseArea.containsMouse ? 1.0 : 0.6
+        opacity: mouseArea.containsMouse ? 1.0 : 0.85
 
         Behavior on opacity {
             NumberAnimation { duration: 450; easing.type: Easing.OutCubic }
@@ -58,7 +57,7 @@ Item {
             blobColor: button.backgroundColor
             layers: 3
             waveAmplitude: 4.0
-            baseOpacity: 0.6
+            baseOpacity: 0.8
             animationSpeed: 0.05
             pointCount: 16
             running: true
