@@ -31,6 +31,7 @@ QtObject {
     property string artist: ""
     property string album: ""
     property string artUrl: ""
+    property string _artTrackKey: ""
     property string status: "Stopped"
     property bool isPlaying: status === "Playing"
     property bool isAvailable: availablePlayers.length > 0
@@ -134,8 +135,14 @@ QtObject {
                     let newStatus = parts[4] ? parts[4].trim() : "Stopped"
                     let newUrl = (parts.length >= 6 && parts[5]) ? parts[5].trim() : ""
 
-                    if (newArtUrl === "" && newUrl !== "") {
-                        newArtUrl = musicManager.extractYoutubeThumbnail(newUrl)
+                    let trackKey = newUrl !== "" ? newUrl : (newTitle + "|" + newArtist)
+                    if (trackKey !== musicManager._artTrackKey || musicManager.artUrl === "") {
+                        if (newArtUrl === "" && newUrl !== "") {
+                            newArtUrl = musicManager.extractYoutubeThumbnail(newUrl)
+                        }
+                        musicManager._artTrackKey = trackKey
+                    } else {
+                        newArtUrl = musicManager.artUrl
                     }
 
                     // some players only expose xesam:title

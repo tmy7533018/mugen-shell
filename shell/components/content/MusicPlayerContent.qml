@@ -34,7 +34,7 @@ Item {
             readonly property var mgr: moduleContext ? moduleContext.musicManager : null
             readonly property string art: mgr && mgr.artUrl ? mgr.artUrl : ""
 
-            readonly property int artBleed: Math.round(height * 0.5)
+            readonly property int artBleed: Math.round(height * 0.22)
 
             Item {
                 id: artHolder
@@ -54,13 +54,13 @@ Item {
 
                     layer.enabled: true
                     layer.smooth: true
-                    layer.textureSize: Qt.size(Math.max(2, width / 48), Math.max(2, height / 48))
+                    layer.textureSize: Qt.size(200, Math.max(2, Math.round(200 * height / Math.max(1, width))))
                 }
 
                 FastBlur {
                     anchors.fill: artSource
                     source: artSource
-                    radius: 64
+                    radius: 40
                 }
             }
 
