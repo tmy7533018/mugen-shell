@@ -32,6 +32,7 @@ QtObject {
     property string album: ""
     property string artUrl: ""
     property string _artTrackKey: ""
+    property bool _artIsFallback: false
     property string status: "Stopped"
     property bool isPlaying: status === "Playing"
     property bool isAvailable: availablePlayers.length > 0
@@ -105,6 +106,14 @@ QtObject {
         }
     }
 
+    function reportArtFailure(url) {
+        if (url === "" || url !== artUrl) return
+        let derived = extractYoutubeThumbnail(_artTrackKey)
+        if (derived === "" || derived === url) return
+        artUrl = derived
+        _artIsFallback = true
+    }
+
     function extractYoutubeThumbnail(url) {
         if (!url) return ""
         var match = url.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/)|youtu\.be\/|music\.youtube\.com\/watch\?.*v=)([\w-]{11})/)
@@ -137,10 +146,13 @@ QtObject {
 
                     let trackKey = newUrl !== "" ? newUrl : (newTitle + "|" + newArtist)
                     if (trackKey !== musicManager._artTrackKey || musicManager.artUrl === "") {
+                        musicManager._artIsFallback = newArtUrl === ""
                         if (newArtUrl === "" && newUrl !== "") {
                             newArtUrl = musicManager.extractYoutubeThumbnail(newUrl)
                         }
                         musicManager._artTrackKey = trackKey
+                    } else if (musicManager._artIsFallback && newArtUrl !== "") {
+                        musicManager._artIsFallback = false
                     } else {
                         newArtUrl = musicManager.artUrl
                     }

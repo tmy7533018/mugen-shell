@@ -15,7 +15,7 @@ Item {
     property var icons
     required property var modeManager
     
-    property color extractedColor: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
+    property color extractedColor: musicManager ? musicManager.accentColor : (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))
 
     function defaultAccentColor() {
         return theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
@@ -105,9 +105,6 @@ Item {
         }
     }
 
-    Component.onCompleted: {
-        applyExtractedColor(extractedColor)
-    }
     
     function extractColorFromImage(imageSource) {
         if (!imageSource || imageSource === "") {
@@ -167,6 +164,10 @@ Item {
             cache: true
 
             onStatusChanged: {
+                if (status === Image.Error && root.musicManager) {
+                    root.musicManager.reportArtFailure(source.toString())
+                    return
+                }
                 if (status === Image.Ready && source && source !== "") {
                     Qt.callLater(() => {
                         root.extractColorFromImage(source)
