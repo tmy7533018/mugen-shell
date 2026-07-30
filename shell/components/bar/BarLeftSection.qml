@@ -28,6 +28,12 @@ RowLayout {
     property bool aiThinking: false
     property bool aiListening: false
     property bool aiSpeaking: false
+    property bool aiPanelOpen: false
+
+    function aiOrbScreenRect() {
+        const p = aiContainer.mapToItem(null, 0, 0)
+        return { x: p.x, y: p.y, size: aiContainer.width }
+    }
 
     function scaled(val) {
         if (modeManager) return modeManager.scale(val)
@@ -319,7 +325,9 @@ RowLayout {
             breathEnabled: root.settingsManager ? root.settingsManager.yuraIdleBreath : true
             active: true
             scale: aiMouseArea.containsMouse ? 1.08 : 1.0
+            opacity: root.aiPanelOpen ? 0 : 1
 
+            Behavior on opacity { NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.InOutCubic } }
             Behavior on haloOpacity { NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic } }
             Behavior on coreOpacity { NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic } }
             Behavior on scale { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }

@@ -48,6 +48,10 @@ QtObject {
     property real flyFromSize: -1
     signal flyRequested()
 
+    property real homeX: -1
+    property real homeY: -1
+    property real homeSize: -1
+
     readonly property real orbExpandedSize: aiOrbSize > 0
         ? aiOrbSize
         : Math.min(mainPaneWidth, mainPaneHeight) * 0.28

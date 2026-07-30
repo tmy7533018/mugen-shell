@@ -253,6 +253,7 @@ PanelWindow {
     property bool yuraFloatThinking: false
     property bool yuraListening: false
     property bool yuraSpeaking: false
+    property bool yuraPanelOpen: false
 
     IpcHandler {
         target: "yura"
@@ -270,6 +271,16 @@ PanelWindow {
             barWindow.yuraSpeaking = on
             if (on) yuraSpeakingFailsafe.restart()
             else yuraSpeakingFailsafe.stop()
+        }
+        function set_panel_open(on: bool): void {
+            barWindow.yuraPanelOpen = on
+            if (on) yuraPanelFailsafe.restart()
+            else yuraPanelFailsafe.stop()
+        }
+        function orb_home(): string {
+            if (barWindow.barHidden) return ""
+            const r = leftSection.aiOrbScreenRect()
+            return Math.round(r.x) + " " + Math.round(r.y) + " " + Math.round(r.size)
         }
         // Voice turns run in the daemon, not the bar's own chat process, so
         // the transcript and reply have to be mirrored into the pill.
@@ -301,6 +312,12 @@ PanelWindow {
         id: yuraSpeakingFailsafe
         interval: 10 * 60 * 1000
         onTriggered: barWindow.yuraSpeaking = false
+    }
+
+    Timer {
+        id: yuraPanelFailsafe
+        interval: 30 * 60 * 1000
+        onTriggered: barWindow.yuraPanelOpen = false
     }
 
     Managers.WallpaperManager { id: wallpaperManager }
@@ -524,6 +541,7 @@ PanelWindow {
                 || barWindow.yuraFloatThinking
             aiListening: barWindow.yuraListening
             aiSpeaking: barWindow.yuraSpeaking
+            aiPanelOpen: barWindow.yuraPanelOpen
         }
 
         Item { Layout.fillWidth: true }

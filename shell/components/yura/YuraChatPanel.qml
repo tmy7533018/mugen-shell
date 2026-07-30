@@ -1,6 +1,7 @@
 import QtQuick
 import Qt5Compat.GraphicalEffects
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import "../../lib" as Theme
@@ -70,6 +71,8 @@ PanelWindow {
                 chatWindow.visible = true
                 chatHideTimer.stop()
                 chatWindow.grabWanted = true
+                chatWindow.setBarPanelOpen(true)
+                if (!orbHomeProcess.running) orbHomeProcess.running = true
             } else {
                 chatHideTimer.restart()
                 chatWindow.grabWanted = false
@@ -79,7 +82,7 @@ PanelWindow {
 
     Timer {
         id: chatHideTimer
-        interval: 900
+        interval: 1300
         onTriggered: chatWindow.visible = false
     }
 
@@ -126,7 +129,39 @@ PanelWindow {
 
     // A fresh yura-shell can't be mid-stream, so clear any bar glow left stale
     // by a previous process that died while streaming.
-    Component.onCompleted: Theme.Hypr.exec("qs -c mugen-shell ipc call yura set_thinking false")
+    Component.onCompleted: {
+        Theme.Hypr.exec("qs -c mugen-shell ipc call yura set_thinking false")
+        chatWindow.setBarPanelOpen(false)
+    }
+
+    function setBarPanelOpen(on) {
+        Theme.Hypr.exec("qs -c mugen-shell ipc call yura set_panel_open " + (on ? "true" : "false"))
+    }
+
+    Process {
+        id: orbHomeProcess
+        command: ["sh", "-c", "qs -c mugen-shell ipc call yura orb_home"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const state = chatWindow.yuraState
+                const parts = this.text.trim().split(/\s+/)
+                if (parts.length !== 3) {
+                    state.homeX = -1
+                    return
+                }
+                const x = parseFloat(parts[0])
+                const y = parseFloat(parts[1])
+                const s = parseFloat(parts[2])
+                if (isNaN(x) || isNaN(y) || isNaN(s) || s <= 0) {
+                    state.homeX = -1
+                    return
+                }
+                state.homeX = x
+                state.homeY = y
+                state.homeSize = s
+            }
+        }
+    }
 
     function syncScreenSize() {
         if (chatWindow.width <= 0 || chatWindow.height <= 0) return
@@ -470,15 +505,23 @@ PanelWindow {
         id: flyOrb
 
         property bool shown: false
+        property bool returning: false
         property real px: 0
         property real py: 0
 
         readonly property real targetX: yuraState.panelRestX + yuraState.orbX
         readonly property real targetY: yuraState.panelRestY + yuraState.orbY
 
-        x: yuraState.flyFromX + (targetX - yuraState.flyFromX) * px
-        y: yuraState.flyFromY + (targetY - yuraState.flyFromY) * py
-        width: yuraState.flyFromSize + (yuraState.orbSize - yuraState.flyFromSize) * px
+        readonly property real originX: returning ? targetX : chatWindow.yuraState.flyFromX
+        readonly property real originY: returning ? targetY : chatWindow.yuraState.flyFromY
+        readonly property real originSize: returning ? chatWindow.yuraState.orbSize : chatWindow.yuraState.flyFromSize
+        readonly property real destX: returning ? chatWindow.yuraState.homeX : targetX
+        readonly property real destY: returning ? chatWindow.yuraState.homeY : targetY
+        readonly property real destSize: returning ? chatWindow.yuraState.homeSize : chatWindow.yuraState.orbSize
+
+        x: originX + (destX - originX) * px
+        y: originY + (destY - originY) * py
+        width: originSize + (destSize - originSize) * px
         height: width
         visible: shown
         z: 10
@@ -509,22 +552,51 @@ PanelWindow {
         ScriptAction { script: { flyOrb.shown = false; flyOrb.opacity = 1 } }
     }
 
+    SequentialAnimation {
+        id: returnAnim
+
+        ParallelAnimation {
+            NumberAnimation { target: flyOrb; property: "px"; from: 0; to: 1; duration: Theme.Motion.drift; easing.type: Easing.InOutCubic }
+            NumberAnimation { target: flyOrb; property: "py"; from: 0; to: 1; duration: Theme.Motion.drift; easing.type: Easing.InOutSine }
+        }
+        ScriptAction { script: chatWindow.setBarPanelOpen(false) }
+        NumberAnimation { target: flyOrb; property: "opacity"; from: 1; to: 0; duration: Theme.Motion.standard; easing.type: Easing.InOutCubic }
+        ScriptAction { script: { flyOrb.shown = false; flyOrb.opacity = 1; flyOrb.returning = false; chatWindow.flying = false } }
+    }
+
     Connections {
         target: yuraState
         function onFlyRequested() {
             flyAnim.stop()
+            returnAnim.stop()
+            flyOrb.returning = false
             flyOrb.opacity = 1
             flyOrb.shown = true
             chatWindow.flying = true
             flyAnim.restart()
         }
         function onExpandedChanged() {
-            if (!yuraState.expanded && chatWindow.flying) {
+            if (yuraState.expanded) return
+            if (chatWindow.flying) {
                 flyAnim.stop()
                 flyOrb.shown = false
                 flyOrb.opacity = 1
+                flyOrb.returning = false
                 chatWindow.flying = false
+                chatWindow.setBarPanelOpen(false)
+                return
             }
+            if (yuraState.homeX < 0) {
+                chatWindow.setBarPanelOpen(false)
+                return
+            }
+            flyOrb.returning = true
+            flyOrb.px = 0
+            flyOrb.py = 0
+            flyOrb.opacity = 1
+            flyOrb.shown = true
+            chatWindow.flying = true
+            returnAnim.restart()
         }
     }
 
