@@ -237,7 +237,10 @@ PanelWindow {
 
     Managers.BrightnessManager { id: brightnessManager }
 
-    Managers.MusicPlayerManager { id: musicPlayerManager }
+    Managers.MusicPlayerManager {
+        id: musicPlayerManager
+        fallbackAccent: theme.accent
+    }
 
     Theme.IpcRouter {
         audioManager: audioManager

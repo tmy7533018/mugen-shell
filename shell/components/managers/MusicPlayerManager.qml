@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import Quickshell.Io
 
 QtObject {
@@ -37,7 +38,10 @@ QtObject {
     property string status: "Stopped"
     property bool isPlaying: status === "Playing"
     property bool isAvailable: availablePlayers.length > 0
-    property color accentColor: Qt.rgba(0.65, 0.55, 0.85, 0.9)
+    property color fallbackAccent: Qt.rgba(0.65, 0.55, 0.85, 0.9)
+    property color artAccent: fallbackAccent
+    property bool hasArtAccent: false
+    readonly property color accentColor: hasArtAccent ? artAccent : fallbackAccent
 
     property real position: 0
     property real duration: 0
@@ -135,7 +139,10 @@ QtObject {
     property string _artUnreachable: ""
     property string _artCacheOutput: ""
 
-    onArtUrlChanged: cacheRemoteArt()
+    onArtUrlChanged: {
+        cacheRemoteArt()
+        extractArtAccent()
+    }
 
     function cacheRemoteArt() {
         if (artCacheProcess.running) return
@@ -180,6 +187,68 @@ QtObject {
             musicManager.artRetryTimer.interval = Math.min(60000, musicManager.artRetryTimer.interval * 2)
             musicManager._artUnreachable = ""
             musicManager.cacheRemoteArt()
+        }
+    }
+
+    property string _accentSource: ""
+    property string _accentOutput: ""
+
+    function extractArtAccent() {
+        if (artUrl === "") {
+            hasArtAccent = false
+            return
+        }
+        if (!artUrl.startsWith("file://")) return
+        if (artColorProcess.running || artUrl === _accentSource) return
+        let path = artUrl.substring(7)
+        try {
+            path = decodeURIComponent(path)
+        } catch (e) {
+        }
+        _accentSource = artUrl
+        artColorProcess.command = ["python3", Quickshell.shellDir + "/scripts/extract-color.py", path]
+        artColorProcess.running = true
+    }
+
+    function artAccentFrom(r, g, b) {
+        let dominant = Qt.rgba(r, g, b, 1.0)
+        let deepened = Qt.hsla(dominant.hslHue,
+                               Math.min(1.0, dominant.hslSaturation * 1.5),
+                               Math.max(0.2, dominant.hslLightness * 0.7),
+                               0.9)
+        const mix = 0.4
+        return Qt.rgba(deepened.r + (1.0 - deepened.r) * mix,
+                       deepened.g + (1.0 - deepened.g) * mix,
+                       deepened.b + (1.0 - deepened.b) * mix,
+                       deepened.a)
+    }
+
+    property Process artColorProcess: Process {
+        running: false
+        command: []
+
+        stdout: SplitParser {
+            onRead: data => musicManager._accentOutput += data
+        }
+
+        onExited: (exitCode) => {
+            let parts = musicManager._accentOutput.trim().split(",")
+            let source = musicManager._accentSource
+            musicManager._accentOutput = ""
+            let ok = false
+            if (exitCode === 0 && parts.length === 3) {
+                let r = parseFloat(parts[0])
+                let g = parseFloat(parts[1])
+                let b = parseFloat(parts[2])
+                ok = !isNaN(r) && !isNaN(g) && !isNaN(b)
+                    && r >= 0 && r <= 1 && g >= 0 && g <= 1 && b >= 0 && b <= 1
+                if (ok && musicManager.artUrl === source) {
+                    musicManager.artAccent = musicManager.artAccentFrom(r, g, b)
+                    musicManager.hasArtAccent = true
+                }
+            }
+            if (!ok) musicManager.hasArtAccent = false
+            Qt.callLater(() => musicManager.extractArtAccent())
         }
     }
 
