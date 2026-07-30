@@ -9,6 +9,7 @@ import "../components/ui" as UI
 import "../components/content" as Content
 import "../components/managers" as Managers
 import "../components/bar" as BarComponents
+import "../components/common" as Common
 import "../lib" as Theme
 
 PanelWindow {
@@ -159,6 +160,10 @@ PanelWindow {
     }
 
     Theme.ModeManager { id: modeManager; screenWidth: barWindow.width; settingsManager: settingsManager }
+
+    readonly property Component defaultModuleBackground: Component {
+        Common.ModuleBackdrop {}
+    }
 
     Theme.Colors { id: theme }
 
@@ -377,6 +382,8 @@ PanelWindow {
         baseRadius: settingsManager.barRadius
         reduceMotion: settingsManager.reduceMotion
         moduleBackground: modeManager.currentSurfaceBackground
+            ? modeManager.currentSurfaceBackground
+            : (modeManager.currentModeInstance ? barWindow.defaultModuleBackground : null)
         moduleContext: modeManager.currentModeInstance
 
         theme: theme

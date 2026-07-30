@@ -28,47 +28,45 @@ Item {
     }
 
     readonly property Component surfaceBackground: Component {
-        Item {
+        Common.ModuleBackdrop {
             id: bg
-
-            property real surfaceRadius: 0
-            property var moduleContext: null
 
             readonly property var mgr: moduleContext ? moduleContext.musicManager : null
             readonly property string art: mgr && mgr.artUrl ? mgr.artUrl : ""
-            readonly property var pal: moduleContext ? moduleContext.theme : null
 
-            Rectangle {
-                id: bgBase
+            readonly property int artBleed: Math.round(height * 0.5)
+
+            Item {
+                id: artHolder
                 anchors.fill: parent
-                radius: bg.surfaceRadius
-                gradient: Gradient {
-                    GradientStop { position: 0.0; color: bg.pal ? Qt.darker(bg.pal.accent, 3.2) : "#242030" }
-                    GradientStop { position: 1.0; color: bg.pal ? Qt.darker(bg.pal.accent, 6.0) : "#0d0b12" }
+                visible: false
+
+                Image {
+                    id: artSource
+                    anchors.fill: parent
+                    anchors.margins: -bg.artBleed
+                    source: bg.art
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    cache: true
+                    smooth: true
+                    visible: false
+
+                    layer.enabled: true
+                    layer.smooth: true
+                    layer.textureSize: Qt.size(Math.max(2, width / 48), Math.max(2, height / 48))
                 }
-            }
 
-            Image {
-                id: artSource
-                anchors.fill: parent
-                source: bg.art
-                fillMode: Image.PreserveAspectCrop
-                asynchronous: true
-                cache: true
-                visible: false
-            }
-
-            FastBlur {
-                id: artBlur
-                anchors.fill: parent
-                source: artSource
-                radius: 96
-                visible: false
+                FastBlur {
+                    anchors.fill: artSource
+                    source: artSource
+                    radius: 64
+                }
             }
 
             OpacityMask {
                 anchors.fill: parent
-                source: artBlur
+                source: artHolder
                 maskSource: Rectangle {
                     width: bg.width
                     height: bg.height

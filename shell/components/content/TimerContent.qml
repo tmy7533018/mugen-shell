@@ -37,7 +37,6 @@ Item {
         Common.ModuleBackdrop {
             id: bg
 
-            property var moduleContext: null
 
             readonly property var mgr: moduleContext ? moduleContext.timerManager : null
             readonly property bool done: mgr ? mgr.alerting : false
@@ -56,7 +55,6 @@ Item {
 
             readonly property color flare: theme ? theme.glowPrimary : Qt.rgba(0.87, 0.77, 0.43, 1)
 
-            theme: moduleContext ? moduleContext.theme : null
             speed: 0.35
 
             baseTop: done ? Qt.darker(flare, 2.6)

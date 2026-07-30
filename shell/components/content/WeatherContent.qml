@@ -26,10 +26,8 @@ Item {
 
     readonly property Component surfaceBackground: Component {
         Common.ModuleBackdrop {
-            property var moduleContext: null
             readonly property var bgPal: moduleContext ? moduleContext.pal : null
 
-            theme: moduleContext ? moduleContext.theme : null
 
             baseTop: bgPal ? bgPal.bg1 : "#20232e"
             baseBottom: bgPal ? bgPal.bg3 : "#0e1015"

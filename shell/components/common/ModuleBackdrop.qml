@@ -4,7 +4,8 @@ Item {
     id: root
 
     property real surfaceRadius: 0
-    property var theme
+    property var moduleContext: null
+    property var theme: moduleContext ? moduleContext.theme : null
 
     property color baseTop: Qt.rgba(0.09, 0.09, 0.13, 1.0)
     property color baseBottom: Qt.rgba(0.04, 0.04, 0.06, 1.0)
