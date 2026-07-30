@@ -27,6 +27,68 @@ Item {
         modeManager.bump()
     }
 
+    readonly property Component surfaceBackground: Component {
+        Item {
+            id: bg
+
+            property real surfaceRadius: 0
+            property var moduleContext: null
+
+            readonly property var mgr: moduleContext ? moduleContext.musicManager : null
+            readonly property string art: mgr && mgr.artUrl ? mgr.artUrl : ""
+            readonly property var pal: moduleContext ? moduleContext.theme : null
+
+            Rectangle {
+                id: bgBase
+                anchors.fill: parent
+                radius: bg.surfaceRadius
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: bg.pal ? Qt.darker(bg.pal.accent, 3.2) : "#242030" }
+                    GradientStop { position: 1.0; color: bg.pal ? Qt.darker(bg.pal.accent, 6.0) : "#0d0b12" }
+                }
+            }
+
+            Image {
+                id: artSource
+                anchors.fill: parent
+                source: bg.art
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                cache: true
+                visible: false
+            }
+
+            FastBlur {
+                id: artBlur
+                anchors.fill: parent
+                source: artSource
+                radius: 96
+                visible: false
+            }
+
+            OpacityMask {
+                anchors.fill: parent
+                source: artBlur
+                maskSource: Rectangle {
+                    width: bg.width
+                    height: bg.height
+                    radius: bg.surfaceRadius
+                }
+                opacity: artSource.status === Image.Ready ? 1 : 0
+
+                Behavior on opacity {
+                    NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.InOutCubic }
+                }
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: bg.surfaceRadius
+                color: Qt.rgba(0.05, 0.04, 0.08, 0.68)
+            }
+        }
+    }
+
 
     MouseArea {
         anchors.fill: parent
