@@ -22,7 +22,19 @@ layout(std140, binding = 0) uniform buf {
     float spread;
     float strength;
     float aspect;
+    float radiusN;
+    float aaN;
 };
+
+// Rounded-rect coverage in uv space, so the pill shape needs no OpacityMask
+// pass — one less FBO, and nothing to go stale when the source is hidden.
+float roundedCoverage(vec2 uv, float r, float aa) {
+    vec2 halfExtent = vec2(0.5 * aspect, 0.5);
+    vec2 p = abs(vec2(uv.x * aspect, uv.y) - halfExtent);
+    vec2 q = p - (halfExtent - vec2(r));
+    float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+    return 1.0 - smoothstep(-aa, aa, d);
+}
 
 vec2 orbit(float t, float fx, float fy, vec2 centre, float rx, float ry) {
     return centre + vec2(rx * sin(t * fx), ry * cos(t * fy));
@@ -51,6 +63,7 @@ void main() {
     vec3 base = mix(baseTop.rgb, baseBottom.rgb, uv.y);
 
     vec3 rgb = mix(base, mesh, clamp(strength, 0.0, 1.0));
-    float alpha = mix(baseTop.a, baseBottom.a, uv.y) * qt_Opacity;
+    float alpha = mix(baseTop.a, baseBottom.a, uv.y) * qt_Opacity
+                * roundedCoverage(uv, radiusN, aaN);
     fragColor = vec4(rgb * alpha, alpha);
 }

@@ -1,5 +1,4 @@
 import QtQuick
-import Qt5Compat.GraphicalEffects
 
 Item {
     id: root
@@ -9,14 +8,14 @@ Item {
 
     property color baseTop: Qt.rgba(0.09, 0.09, 0.13, 1.0)
     property color baseBottom: Qt.rgba(0.04, 0.04, 0.06, 1.0)
-    property color colorA: root.hue(root.theme ? root.theme.glowPrimary : fallback, 0.20)
-    property color colorB: root.hue(root.theme ? root.theme.glowSecondary : fallback, 0.13)
-    property color colorC: root.hue(root.theme ? root.theme.glowTertiary : fallback, 0.17)
-    property color colorD: root.hue(root.theme ? root.theme.glowPrimary : fallback, 0.09)
+    property color colorA: root.hue(root.theme ? root.theme.glowPrimary : fallback, 0.24)
+    property color colorB: root.hue(root.theme ? root.theme.glowSecondary : fallback, 0.10)
+    property color colorC: root.hue(root.theme ? root.theme.glowTertiary : fallback, 0.19)
+    property color colorD: root.hue(root.theme ? root.theme.glowPrimary : fallback, 0.06)
 
     property real strength: 0.85
-    property real spread: 0.18
-    property real speed: 0.45
+    property real spread: 0.06
+    property real speed: 1.4
     property bool running: true
 
     readonly property color fallback: Qt.rgba(0.65, 0.55, 0.85, 1.0)
@@ -38,10 +37,8 @@ Item {
     }
 
     ShaderEffect {
-        id: aurora
         anchors.fill: parent
         blending: true
-        visible: false
 
         property color baseTop: root.baseTop
         property color baseBottom: root.baseBottom
@@ -54,17 +51,9 @@ Item {
         property real spread: root.spread
         property real strength: root.strength
         property real aspect: height > 0 ? width / height : 1.0
+        property real radiusN: height > 0 ? root.surfaceRadius / height : 0
+        property real aaN: height > 0 ? 1.0 / height : 0.002
 
         fragmentShader: Qt.resolvedUrl("../../assets/shaders/aurora.frag.qsb")
-    }
-
-    OpacityMask {
-        anchors.fill: parent
-        source: aurora
-        maskSource: Rectangle {
-            width: root.width
-            height: root.height
-            radius: root.surfaceRadius
-        }
     }
 }
