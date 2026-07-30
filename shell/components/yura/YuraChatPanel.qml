@@ -72,6 +72,7 @@ PanelWindow {
                 chatHideTimer.stop()
                 chatWindow.grabWanted = true
                 chatWindow.setBarPanelOpen(true)
+                if (chatWindow.yuraState.flyFromX < 0) chatWindow.askOrbHome("launch")
             } else {
                 chatHideTimer.restart()
                 chatWindow.grabWanted = false
@@ -137,37 +138,62 @@ PanelWindow {
         Theme.Hypr.exec("qs -c mugen-shell ipc call yura set_panel_open " + (on ? "true" : "false"))
     }
 
+    property string orbHomePurpose: ""
+
+    function askOrbHome(purpose) {
+        chatWindow.orbHomePurpose = purpose
+        if (!orbHomeProcess.running) orbHomeProcess.running = true
+    }
+
     Process {
         id: orbHomeProcess
         command: ["sh", "-c", "qs -c mugen-shell ipc call yura orb_home"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const state = chatWindow.yuraState
+                const wantsReturn = chatWindow.orbHomePurpose === "return"
                 const parts = this.text.trim().split(/\s+/)
                 const x = parts.length === 3 ? parseFloat(parts[0]) : NaN
                 const y = parts.length === 3 ? parseFloat(parts[1]) : NaN
                 const s = parts.length === 3 ? parseFloat(parts[2]) : NaN
                 if (isNaN(x) || isNaN(y) || isNaN(s) || s <= 0) {
-                    chatWindow.setBarPanelOpen(false)
+                    if (wantsReturn) chatWindow.setBarPanelOpen(false)
                     return
                 }
                 state.homeX = x
                 state.homeY = y
                 state.homeSize = s
-                chatWindow.startReturnFlight()
+                if (wantsReturn) chatWindow.startReturnFlight()
+                else chatWindow.startLaunchFlight()
             }
         }
     }
 
-    function startReturnFlight() {
-        if (yuraState.expanded) return
-        flyOrb.returning = true
+    function beginFlight(returning) {
+        flyAnim.stop()
+        returnAnim.stop()
+        flyOrb.returning = returning
         flyOrb.px = 0
         flyOrb.py = 0
         flyOrb.opacity = 1
         flyOrb.shown = true
         chatWindow.flying = true
-        returnAnim.restart()
+        if (returning) returnAnim.restart()
+        else flyAnim.restart()
+    }
+
+    function startReturnFlight() {
+        if (chatWindow.yuraState.expanded) return
+        chatWindow.beginFlight(true)
+    }
+
+    function startLaunchFlight() {
+        const state = chatWindow.yuraState
+        if (!state.expanded) return
+        state.flyFromX = state.homeX
+        state.flyFromY = state.homeY
+        state.flyFromSize = state.homeSize
+        chatWindow.beginFlight(false)
     }
 
     function syncScreenSize() {
@@ -574,13 +600,7 @@ PanelWindow {
     Connections {
         target: yuraState
         function onFlyRequested() {
-            flyAnim.stop()
-            returnAnim.stop()
-            flyOrb.returning = false
-            flyOrb.opacity = 1
-            flyOrb.shown = true
-            chatWindow.flying = true
-            flyAnim.restart()
+            chatWindow.beginFlight(false)
         }
         function onExpandedChanged() {
             if (yuraState.expanded) return
@@ -593,7 +613,7 @@ PanelWindow {
                 chatWindow.setBarPanelOpen(false)
                 return
             }
-            if (!orbHomeProcess.running) orbHomeProcess.running = true
+            chatWindow.askOrbHome("return")
         }
     }
 

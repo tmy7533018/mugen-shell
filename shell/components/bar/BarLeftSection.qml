@@ -327,7 +327,10 @@ RowLayout {
             scale: aiMouseArea.containsMouse ? 1.08 : 1.0
             opacity: root.aiPanelOpen ? 0 : 1
 
-            Behavior on opacity { NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.InOutCubic } }
+            Behavior on opacity {
+                enabled: aiOrb.opacity < 1
+                NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.InOutCubic }
+            }
             Behavior on haloOpacity { NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic } }
             Behavior on coreOpacity { NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic } }
             Behavior on scale { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
