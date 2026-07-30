@@ -47,25 +47,32 @@ Item {
                 return Math.max(0, Math.min(1, 1 - mgr.remainingSec / mgr.durationSec))
             }
 
-            function blend(from, to, t) {
-                return Qt.rgba(from.r + (to.r - from.r) * t,
-                               from.g + (to.g - from.g) * t,
-                               from.b + (to.b - from.b) * t, 1)
-            }
+            readonly property color sourcePrimary: theme ? theme.glowPrimary : bg.fallback
+            readonly property color sourceSecondary: theme ? theme.glowSecondary : bg.fallback
+            readonly property color sourceTertiary: theme ? theme.glowTertiary : bg.fallback
 
-            readonly property color flare: theme ? theme.glowPrimary : Qt.rgba(0.87, 0.77, 0.43, 1)
+            readonly property real emberHue: 0.035
+            readonly property real flareLift: done ? 0.09 : 0
+
+            function ember(source, lightness) {
+                const c = bg.hue(source, lightness * (1 + bg.heat * 0.35) + bg.flareLift)
+                let turn = bg.emberHue - c.hslHue
+                if (turn > 0.5) turn -= 1
+                else if (turn < -0.5) turn += 1
+                return Qt.hsla((c.hslHue + turn * bg.heat + 1) % 1,
+                               Math.min(0.9, c.hslSaturation + 0.4 * bg.heat),
+                               c.hslLightness, 1)
+            }
 
             speed: 0.35
 
-            baseTop: done ? Qt.darker(flare, 2.6)
-                          : blend(Qt.rgba(0.11, 0.13, 0.22, 1), Qt.rgba(0.30, 0.11, 0.05, 1), heat)
-            baseBottom: done ? Qt.darker(flare, 6.5)
-                             : blend(Qt.rgba(0.05, 0.06, 0.11, 1), Qt.rgba(0.12, 0.04, 0.03, 1), heat)
+            baseTop: bg.ember(bg.sourcePrimary, 0.10)
+            baseBottom: bg.ember(bg.sourcePrimary, 0.045)
 
-            colorA: done ? Qt.darker(flare, 1.9) : blend(Qt.rgba(0.14, 0.17, 0.28, 1), Qt.rgba(0.44, 0.15, 0.06, 1), heat)
-            colorB: done ? Qt.darker(flare, 3.4) : blend(Qt.rgba(0.09, 0.10, 0.18, 1), Qt.rgba(0.26, 0.08, 0.05, 1), heat)
-            colorC: done ? Qt.darker(flare, 5.0) : blend(Qt.rgba(0.06, 0.07, 0.13, 1), Qt.rgba(0.16, 0.05, 0.04, 1), heat)
-            colorD: done ? Qt.darker(flare, 2.3) : blend(Qt.rgba(0.12, 0.14, 0.24, 1), Qt.rgba(0.38, 0.13, 0.06, 1), heat)
+            colorA: bg.ember(bg.sourcePrimary, 0.24)
+            colorB: bg.ember(bg.sourceSecondary, 0.10)
+            colorC: bg.ember(bg.sourceTertiary, 0.19)
+            colorD: bg.ember(bg.sourcePrimary, 0.06)
 
             Behavior on baseTop { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
             Behavior on baseBottom { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
