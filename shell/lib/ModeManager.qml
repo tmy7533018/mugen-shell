@@ -39,6 +39,13 @@ QtObject {
         return normalBarSize
     }
     
+    readonly property var currentModeInstance: currentMode === "normal" ? null : (modes[currentMode] || null)
+
+    readonly property var currentSurfaceBackground: {
+        var mode = currentModeInstance
+        return (mode && mode.surfaceBackground) ? mode.surfaceBackground : null
+    }
+
     function registerMode(modeName, moduleInstance) {
         if (!modeName || !moduleInstance) {
             return

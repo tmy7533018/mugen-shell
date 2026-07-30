@@ -376,6 +376,8 @@ PanelWindow {
         z: 0
         baseRadius: settingsManager.barRadius
         reduceMotion: settingsManager.reduceMotion
+        moduleBackground: modeManager.currentSurfaceBackground
+        moduleContext: modeManager.currentModeInstance
 
         theme: theme
 

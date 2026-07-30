@@ -157,6 +157,37 @@ Rectangle {
         }
     }
 
+    property Component moduleBackground: null
+
+    Loader {
+        id: moduleBackgroundLoader
+        anchors.fill: parent
+        anchors.margins: 1
+        sourceComponent: surface.moduleBackground
+        opacity: surface.moduleBackground ? 1 : 0
+        z: 0.5
+
+        Behavior on opacity {
+            NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.InOutCubic }
+        }
+    }
+
+    property var moduleContext: null
+
+    Binding {
+        target: moduleBackgroundLoader.item
+        property: "surfaceRadius"
+        value: surface.radius - 1
+        when: moduleBackgroundLoader.item !== null
+    }
+
+    Binding {
+        target: moduleBackgroundLoader.item
+        property: "moduleContext"
+        value: surface.moduleContext
+        when: moduleBackgroundLoader.item !== null
+    }
+
     Behavior on borderColor {
         ColorAnimation { duration: Theme.Motion.gentle; easing.type: Easing.InOutCubic }
     }

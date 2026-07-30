@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import "../common" as Common
 import "../ui" as UI
 import "../../lib" as Theme
 
@@ -23,6 +22,21 @@ Item {
     })
 
     function scaled(v) { return modeManager ? modeManager.scale(v) : v }
+
+    readonly property Component surfaceBackground: Component {
+        Rectangle {
+            property real surfaceRadius: 0
+            property var moduleContext: null
+            readonly property var bgPal: moduleContext ? moduleContext.pal : null
+
+            radius: surfaceRadius
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: bgPal ? bgPal.bg1 : "#20232e" }
+                GradientStop { position: 0.38; color: bgPal ? bgPal.bg2 : "#2b2f3d" }
+                GradientStop { position: 1.0; color: bgPal ? bgPal.bg3 : "#0e1015" }
+            }
+        }
+    }
 
     Component.onCompleted: modeManager.registerMode("weather", root)
 
@@ -133,18 +147,10 @@ Item {
             if (event.key === Qt.Key_Escape) { modeManager.closeAllModes(); event.accepted = true }
         }
 
-        Rectangle {
-            id: panelBg
+        Item {
+            id: panelBody
             anchors.fill: parent
-            radius: root.scaled(26)
             clip: true
-            border.width: 1
-            border.color: Qt.rgba(1, 1, 1, 0.07)
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: root.pal ? root.pal.bg1 : "#20232e" }
-                GradientStop { position: 0.38; color: root.pal ? root.pal.bg2 : "#2b2f3d" }
-                GradientStop { position: 1.0; color: root.pal ? root.pal.bg3 : "#0e1015" }
-            }
 
             // Absorbs clicks on the panel body so they can't fall through to
             // the outer close-on-click area; the content is otherwise all
@@ -154,41 +160,6 @@ Item {
                 hoverEnabled: true
                 onClicked: modeManager.bump()
                 onPositionChanged: { if (modeManager.isMode("weather")) modeManager.bump() }
-            }
-
-            Common.BlobEffect {
-                id: blob1
-                width: root.scaled(230); height: root.scaled(230)
-                x: root.scaled(120) + drift; y: -root.scaled(70)
-                property real drift: 0
-                blobColor: Qt.darker(root.cAccent, 1.35)
-                baseOpacity: 0.32
-                layers: 2
-                waveAmplitude: 5.0
-                animationSpeed: 0.05
-                running: !root.reduceMotion
-                SequentialAnimation on drift {
-                    running: !root.reduceMotion; loops: Animation.Infinite
-                    NumberAnimation { from: 0; to: root.scaled(26); duration: 13000; easing.type: Easing.InOutSine }
-                    NumberAnimation { from: root.scaled(26); to: 0; duration: 13000; easing.type: Easing.InOutSine }
-                }
-            }
-            Common.BlobEffect {
-                id: blob2
-                width: root.scaled(210); height: root.scaled(210)
-                x: parent.width - root.scaled(200) + drift; y: parent.height - root.scaled(90)
-                property real drift: 0
-                blobColor: Qt.darker(root.cAccent2, 1.35)
-                baseOpacity: 0.23
-                layers: 2
-                waveAmplitude: 5.0
-                animationSpeed: 0.045
-                running: !root.reduceMotion
-                SequentialAnimation on drift {
-                    running: !root.reduceMotion; loops: Animation.Infinite
-                    NumberAnimation { from: 0; to: -root.scaled(28); duration: 16000; easing.type: Easing.InOutSine }
-                    NumberAnimation { from: -root.scaled(28); to: 0; duration: 16000; easing.type: Easing.InOutSine }
-                }
             }
 
             WeatherParticles {
