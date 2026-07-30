@@ -72,7 +72,6 @@ PanelWindow {
                 chatHideTimer.stop()
                 chatWindow.grabWanted = true
                 chatWindow.setBarPanelOpen(true)
-                if (!orbHomeProcess.running) orbHomeProcess.running = true
             } else {
                 chatHideTimer.restart()
                 chatWindow.grabWanted = false
@@ -145,22 +144,30 @@ PanelWindow {
             onStreamFinished: {
                 const state = chatWindow.yuraState
                 const parts = this.text.trim().split(/\s+/)
-                if (parts.length !== 3) {
-                    state.homeX = -1
-                    return
-                }
-                const x = parseFloat(parts[0])
-                const y = parseFloat(parts[1])
-                const s = parseFloat(parts[2])
+                const x = parts.length === 3 ? parseFloat(parts[0]) : NaN
+                const y = parts.length === 3 ? parseFloat(parts[1]) : NaN
+                const s = parts.length === 3 ? parseFloat(parts[2]) : NaN
                 if (isNaN(x) || isNaN(y) || isNaN(s) || s <= 0) {
-                    state.homeX = -1
+                    chatWindow.setBarPanelOpen(false)
                     return
                 }
                 state.homeX = x
                 state.homeY = y
                 state.homeSize = s
+                chatWindow.startReturnFlight()
             }
         }
+    }
+
+    function startReturnFlight() {
+        if (yuraState.expanded) return
+        flyOrb.returning = true
+        flyOrb.px = 0
+        flyOrb.py = 0
+        flyOrb.opacity = 1
+        flyOrb.shown = true
+        chatWindow.flying = true
+        returnAnim.restart()
     }
 
     function syncScreenSize() {
@@ -586,17 +593,7 @@ PanelWindow {
                 chatWindow.setBarPanelOpen(false)
                 return
             }
-            if (yuraState.homeX < 0) {
-                chatWindow.setBarPanelOpen(false)
-                return
-            }
-            flyOrb.returning = true
-            flyOrb.px = 0
-            flyOrb.py = 0
-            flyOrb.opacity = 1
-            flyOrb.shown = true
-            chatWindow.flying = true
-            returnAnim.restart()
+            if (!orbHomeProcess.running) orbHomeProcess.running = true
         }
     }
 

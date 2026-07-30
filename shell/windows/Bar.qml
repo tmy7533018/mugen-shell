@@ -278,7 +278,7 @@ PanelWindow {
             else yuraPanelFailsafe.stop()
         }
         function orb_home(): string {
-            if (barWindow.barHidden) return ""
+            if (barWindow.barHidden || !modeManager.isMode("normal")) return ""
             const r = leftSection.aiOrbScreenRect()
             return Math.round(r.x) + " " + Math.round(r.y) + " " + Math.round(r.size)
         }
