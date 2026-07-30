@@ -146,7 +146,7 @@ in
         curl
         fastfetch
         hyprpolkitagent # mugen-shell.conf starts its user unit via exec-once
-        # pygobject3 for list-apps.py, pillow+numpy for extract-color.py.
+        # pygobject3 for list-apps.py, pillow+numpy for extract-color.py / trim-art-bars.py.
         (python3.withPackages (ps: [ ps.pygobject3 ps.pillow ps.numpy ]))
         gtk3
         kitty

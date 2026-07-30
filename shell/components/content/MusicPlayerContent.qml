@@ -34,6 +34,8 @@ Item {
             readonly property var mgr: moduleContext ? moduleContext.musicManager : null
             readonly property string art: mgr && mgr.artUrl ? mgr.artUrl : ""
 
+            readonly property int blurRadius: 64
+            readonly property int blurTexels: 96
             readonly property int artBleed: Math.round(height * 0.22)
 
             Item {
@@ -54,13 +56,14 @@ Item {
 
                     layer.enabled: true
                     layer.smooth: true
-                    layer.textureSize: Qt.size(200, Math.max(2, Math.round(200 * height / Math.max(1, width))))
+                    layer.textureSize: Qt.size(bg.blurTexels,
+                                              Math.max(2, Math.round(bg.blurTexels * height / Math.max(1, width))))
                 }
 
                 FastBlur {
                     anchors.fill: artSource
                     source: artSource
-                    radius: 40
+                    radius: bg.blurRadius
                 }
             }
 

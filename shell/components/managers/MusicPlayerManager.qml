@@ -130,6 +130,7 @@ QtObject {
         + 'f="$dir/$(printf %s "$1" | sha1sum | cut -c1-32)"\n'
         + 'if [ ! -s "$f" ]; then\n'
         + '  curl -sfL --max-time 10 -o "$f.part" "$1" || { rm -f "$f.part"; exit 1; }\n'
+        + '  python3 "$2" "$f.part" 2>/dev/null\n'
         + '  mv -f "$f.part" "$f" || exit 1\n'
         + '  ls -1t "$dir" | tail -n +129 | (cd "$dir" && xargs -r rm -f)\n'
         + 'fi\n'
@@ -149,7 +150,8 @@ QtObject {
         if (!artUrl.startsWith("http://") && !artUrl.startsWith("https://")) return
         if (artUrl === _artUnreachable) return
         _artFetching = artUrl
-        artCacheProcess.command = ["bash", "-c", artCacheScript, "bash", artUrl]
+        artCacheProcess.command = ["bash", "-c", artCacheScript, "bash", artUrl,
+                                  Quickshell.shellDir + "/scripts/trim-art-bars.py"]
         artCacheProcess.running = true
     }
 
