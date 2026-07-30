@@ -33,6 +33,53 @@ Item {
 
     readonly property color urgentColor: Qt.rgba(0.95, 0.40, 0.45, 1)
 
+    readonly property Component surfaceBackground: Component {
+        Rectangle {
+            id: bg
+
+            property real surfaceRadius: 0
+            property var moduleContext: null
+
+            readonly property var mgr: moduleContext ? moduleContext.timerManager : null
+            readonly property bool lit: mgr ? (mgr.running || mgr.alerting) : false
+            readonly property real heat: {
+                if (!mgr) return 0
+                if (mgr.alerting) return 1
+                if (!mgr.running || mgr.durationSec <= 0) return 0
+                return Math.max(0, Math.min(1, 1 - mgr.remainingSec / mgr.durationSec))
+            }
+
+            function blend(from, to, t) {
+                return Qt.rgba(from.r + (to.r - from.r) * t,
+                               from.g + (to.g - from.g) * t,
+                               from.b + (to.b - from.b) * t, 1)
+            }
+
+            readonly property color emberTop: blend(Qt.rgba(0.10, 0.10, 0.14, 1), Qt.rgba(0.30, 0.11, 0.05, 1), heat)
+            readonly property color emberBottom: blend(Qt.rgba(0.05, 0.05, 0.07, 1), Qt.rgba(0.12, 0.04, 0.03, 1), heat)
+
+            radius: surfaceRadius
+            opacity: lit ? 1 : 0
+
+            gradient: Gradient {
+                GradientStop {
+                    position: 0.0
+                    color: bg.mgr && bg.mgr.alerting ? Qt.rgba(0.38, 0.10, 0.12, 1) : bg.emberTop
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
+                }
+                GradientStop {
+                    position: 1.0
+                    color: bg.mgr && bg.mgr.alerting ? Qt.rgba(0.14, 0.03, 0.04, 1) : bg.emberBottom
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
+                }
+            }
+
+            Behavior on opacity {
+                NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.InOutCubic }
+            }
+        }
+    }
+
     property string inputBuffer: ""
     readonly property bool hasInput: parseInputSeconds() > 0
 
