@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import "../ui" as UI
+import "../common" as Common
 import "../../lib" as Theme
 
 Item {
@@ -24,17 +25,18 @@ Item {
     function scaled(v) { return modeManager ? modeManager.scale(v) : v }
 
     readonly property Component surfaceBackground: Component {
-        Rectangle {
-            property real surfaceRadius: 0
+        Common.ModuleBackdrop {
             property var moduleContext: null
             readonly property var bgPal: moduleContext ? moduleContext.pal : null
 
-            radius: surfaceRadius
-            gradient: Gradient {
-                GradientStop { position: 0.0; color: bgPal ? bgPal.bg1 : "#20232e" }
-                GradientStop { position: 0.38; color: bgPal ? bgPal.bg2 : "#2b2f3d" }
-                GradientStop { position: 1.0; color: bgPal ? bgPal.bg3 : "#0e1015" }
-            }
+            theme: moduleContext ? moduleContext.theme : null
+
+            baseTop: bgPal ? bgPal.bg1 : "#20232e"
+            baseBottom: bgPal ? bgPal.bg3 : "#0e1015"
+            colorA: bgPal ? bgPal.bg2 : "#2b2f3d"
+            colorB: bgPal ? Qt.darker(bgPal.accent, 2.1) : "#2b2f3d"
+            colorC: bgPal ? bgPal.bg3 : "#0e1015"
+            colorD: bgPal ? Qt.darker(bgPal.accent2, 2.6) : "#20232e"
         }
     }
 

@@ -34,14 +34,13 @@ Item {
     readonly property color urgentColor: Qt.rgba(0.95, 0.40, 0.45, 1)
 
     readonly property Component surfaceBackground: Component {
-        Rectangle {
+        Common.ModuleBackdrop {
             id: bg
 
-            property real surfaceRadius: 0
             property var moduleContext: null
 
             readonly property var mgr: moduleContext ? moduleContext.timerManager : null
-            readonly property bool lit: mgr ? (mgr.running || mgr.alerting) : false
+            readonly property bool done: mgr ? mgr.alerting : false
             readonly property real heat: {
                 if (!mgr) return 0
                 if (mgr.alerting) return 1
@@ -55,28 +54,28 @@ Item {
                                from.b + (to.b - from.b) * t, 1)
             }
 
-            readonly property color emberTop: blend(Qt.rgba(0.10, 0.10, 0.14, 1), Qt.rgba(0.30, 0.11, 0.05, 1), heat)
-            readonly property color emberBottom: blend(Qt.rgba(0.05, 0.05, 0.07, 1), Qt.rgba(0.12, 0.04, 0.03, 1), heat)
+            readonly property color flare: theme ? theme.glowPrimary : Qt.rgba(0.87, 0.77, 0.43, 1)
 
-            radius: surfaceRadius
-            opacity: lit ? 1 : 0
+            theme: moduleContext ? moduleContext.theme : null
+            speed: 0.35
 
-            gradient: Gradient {
-                GradientStop {
-                    position: 0.0
-                    color: bg.mgr && bg.mgr.alerting ? Qt.rgba(0.38, 0.10, 0.12, 1) : bg.emberTop
-                    Behavior on color { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
-                }
-                GradientStop {
-                    position: 1.0
-                    color: bg.mgr && bg.mgr.alerting ? Qt.rgba(0.14, 0.03, 0.04, 1) : bg.emberBottom
-                    Behavior on color { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
-                }
-            }
+            baseTop: done ? Qt.darker(flare, 2.6)
+                          : blend(Qt.rgba(0.11, 0.13, 0.22, 1), Qt.rgba(0.30, 0.11, 0.05, 1), heat)
+            baseBottom: done ? Qt.darker(flare, 6.5)
+                             : blend(Qt.rgba(0.05, 0.06, 0.11, 1), Qt.rgba(0.12, 0.04, 0.03, 1), heat)
 
-            Behavior on opacity {
-                NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.InOutCubic }
-            }
+            colorA: done ? Qt.darker(flare, 1.9) : blend(Qt.rgba(0.14, 0.17, 0.28, 1), Qt.rgba(0.44, 0.15, 0.06, 1), heat)
+            colorB: done ? Qt.darker(flare, 3.4) : blend(Qt.rgba(0.09, 0.10, 0.18, 1), Qt.rgba(0.26, 0.08, 0.05, 1), heat)
+            colorC: done ? Qt.darker(flare, 5.0) : blend(Qt.rgba(0.06, 0.07, 0.13, 1), Qt.rgba(0.16, 0.05, 0.04, 1), heat)
+            colorD: done ? Qt.darker(flare, 2.3) : blend(Qt.rgba(0.12, 0.14, 0.24, 1), Qt.rgba(0.38, 0.13, 0.06, 1), heat)
+
+            Behavior on baseTop { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
+            Behavior on baseBottom { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
+            Behavior on colorA { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
+            Behavior on colorB { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
+            Behavior on colorC { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
+            Behavior on colorD { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
+
         }
     }
 
