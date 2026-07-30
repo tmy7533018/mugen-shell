@@ -597,12 +597,14 @@ PanelWindow {
         z: 2
         property var modeManagerRef: modeManager
         property var iconsRef: icons
+        property var themeRef: theme
         active: modeManagerRef.isMode("powermenu")
         sourceComponent: Content.PowerMenuContent {
             anchors.fill: parent
             visible: powerMenuLoader.modeManagerRef.isMode("powermenu")
             modeManager: powerMenuLoader.modeManagerRef
             icons: powerMenuLoader.iconsRef
+            theme: powerMenuLoader.themeRef
         }
     }
 

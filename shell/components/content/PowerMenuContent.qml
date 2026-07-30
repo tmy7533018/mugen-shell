@@ -10,7 +10,8 @@ FocusScope {
 
     required property var modeManager
     required property var icons
-    
+    property var theme
+
     property int currentButtonIndex: -1
     readonly property var requiredBarSize: ({
         "height": modeManager.scale(120),
