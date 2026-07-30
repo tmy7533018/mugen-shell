@@ -33,6 +33,7 @@ QtObject {
     property string artUrl: ""
     property string _artTrackKey: ""
     property bool _artIsFallback: false
+    property string _artCachedUrl: ""
     property string status: "Stopped"
     property bool isPlaying: status === "Playing"
     property bool isAvailable: availablePlayers.length > 0
@@ -107,7 +108,7 @@ QtObject {
     }
 
     function reportArtFailure(url) {
-        if (url === "" || url !== artUrl) return
+        if (url === "" || url !== artUrl || url === _artCachedUrl) return
         let derived = extractYoutubeThumbnail(_artTrackKey)
         if (derived === "" || derived === url) return
         artUrl = derived
@@ -118,6 +119,68 @@ QtObject {
         if (!url) return ""
         var match = url.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/)|youtu\.be\/|music\.youtube\.com\/watch\?.*v=)([\w-]{11})/)
         return match ? "https://img.youtube.com/vi/" + match[1] + "/mqdefault.jpg" : ""
+    }
+
+    readonly property string artCacheScript: 'dir="${XDG_CACHE_HOME:-$HOME/.cache}/mugen-shell/art"\n'
+        + 'mkdir -p "$dir" || exit 1\n'
+        + 'f="$dir/$(printf %s "$1" | sha1sum | cut -c1-32)"\n'
+        + 'if [ ! -s "$f" ]; then\n'
+        + '  curl -sfL --max-time 10 -o "$f.part" "$1" || { rm -f "$f.part"; exit 1; }\n'
+        + '  mv -f "$f.part" "$f" || exit 1\n'
+        + '  ls -1t "$dir" | tail -n +129 | (cd "$dir" && xargs -r rm -f)\n'
+        + 'fi\n'
+        + 'printf %s "$f"\n'
+
+    property string _artFetching: ""
+    property string _artUnreachable: ""
+    property string _artCacheOutput: ""
+
+    onArtUrlChanged: cacheRemoteArt()
+
+    function cacheRemoteArt() {
+        if (artCacheProcess.running) return
+        if (!artUrl.startsWith("http://") && !artUrl.startsWith("https://")) return
+        if (artUrl === _artUnreachable) return
+        _artFetching = artUrl
+        artCacheProcess.command = ["bash", "-c", artCacheScript, "bash", artUrl]
+        artCacheProcess.running = true
+    }
+
+    property Process artCacheProcess: Process {
+        running: false
+        command: []
+
+        stdout: SplitParser {
+            onRead: data => musicManager._artCacheOutput += data
+        }
+
+        onExited: (exitCode) => {
+            let path = musicManager._artCacheOutput.trim()
+            let source = musicManager._artFetching
+            musicManager._artCacheOutput = ""
+            musicManager._artFetching = ""
+            if (exitCode === 0 && path !== "") {
+                musicManager.artRetryTimer.interval = 2000
+                if (musicManager.artUrl === source) {
+                    musicManager._artCachedUrl = "file://" + path
+                    musicManager.artUrl = musicManager._artCachedUrl
+                }
+            } else {
+                musicManager._artUnreachable = source
+                musicManager.artRetryTimer.restart()
+            }
+            Qt.callLater(() => musicManager.cacheRemoteArt())
+        }
+    }
+
+    property Timer artRetryTimer: Timer {
+        interval: 2000
+        repeat: false
+        onTriggered: {
+            musicManager.artRetryTimer.interval = Math.min(60000, musicManager.artRetryTimer.interval * 2)
+            musicManager._artUnreachable = ""
+            musicManager.cacheRemoteArt()
+        }
     }
 
     property Process metadataProcess: Process {
