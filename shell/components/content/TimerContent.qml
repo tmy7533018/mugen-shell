@@ -33,57 +33,6 @@ Item {
 
     readonly property color urgentColor: Qt.rgba(0.95, 0.40, 0.45, 1)
 
-    readonly property Component surfaceBackground: Component {
-        Common.ModuleBackdrop {
-            id: bg
-
-
-            readonly property var mgr: moduleContext ? moduleContext.timerManager : null
-            readonly property bool done: mgr ? mgr.alerting : false
-            readonly property real heat: {
-                if (!mgr) return 0
-                if (mgr.alerting) return 1
-                if (!mgr.running || mgr.durationSec <= 0) return 0
-                return Math.max(0, Math.min(1, 1 - mgr.remainingSec / mgr.durationSec))
-            }
-
-            readonly property color sourcePrimary: theme ? theme.glowPrimary : bg.fallback
-            readonly property color sourceSecondary: theme ? theme.glowSecondary : bg.fallback
-            readonly property color sourceTertiary: theme ? theme.glowTertiary : bg.fallback
-
-            readonly property real emberHue: 0.035
-            readonly property real flareLift: done ? 0.09 : 0
-
-            function ember(source, lightness) {
-                const c = bg.hue(source, lightness * (1 + bg.heat * 0.35) + bg.flareLift)
-                let turn = bg.emberHue - c.hslHue
-                if (turn > 0.5) turn -= 1
-                else if (turn < -0.5) turn += 1
-                return Qt.hsla((c.hslHue + turn * bg.heat + 1) % 1,
-                               Math.min(0.9, c.hslSaturation + 0.4 * bg.heat),
-                               c.hslLightness, 1)
-            }
-
-            speed: 0.35
-
-            baseTop: bg.ember(bg.sourcePrimary, 0.10)
-            baseBottom: bg.ember(bg.sourcePrimary, 0.045)
-
-            colorA: bg.ember(bg.sourcePrimary, 0.24)
-            colorB: bg.ember(bg.sourceSecondary, 0.10)
-            colorC: bg.ember(bg.sourceTertiary, 0.19)
-            colorD: bg.ember(bg.sourcePrimary, 0.06)
-
-            Behavior on baseTop { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
-            Behavior on baseBottom { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
-            Behavior on colorA { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
-            Behavior on colorB { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
-            Behavior on colorC { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
-            Behavior on colorD { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
-
-        }
-    }
-
     property string inputBuffer: ""
     readonly property bool hasInput: parseInputSeconds() > 0
 
