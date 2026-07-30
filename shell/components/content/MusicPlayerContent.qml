@@ -34,37 +34,27 @@ Item {
             readonly property var mgr: moduleContext ? moduleContext.musicManager : null
             readonly property string art: mgr && mgr.artUrl ? mgr.artUrl : ""
 
-            readonly property int blurRadius: 64
-            readonly property int blurTexels: 96
             readonly property int artBleed: Math.round(height * 0.22)
+            property bool artRevealed: false
 
-            Item {
+            onWidthChanged: reshapeSettled.restart()
+            Component.onCompleted: reshapeSettled.restart()
+
+            Timer {
+                id: reshapeSettled
+                interval: 90
+                onTriggered: bg.artRevealed = true
+            }
+
+            Common.CrossfadeArt {
                 id: artHolder
                 anchors.fill: parent
                 visible: false
-
-                Image {
-                    id: artSource
-                    anchors.fill: parent
-                    anchors.margins: -bg.artBleed
-                    source: bg.art
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    cache: true
-                    smooth: true
-                    visible: false
-
-                    layer.enabled: true
-                    layer.smooth: true
-                    layer.textureSize: Qt.size(bg.blurTexels,
-                                              Math.max(2, Math.round(bg.blurTexels * height / Math.max(1, width))))
-                }
-
-                FastBlur {
-                    anchors.fill: artSource
-                    source: artSource
-                    radius: bg.blurRadius
-                }
+                source: bg.art
+                bleed: bg.artBleed
+                blurRadius: 64
+                blurTexels: 96
+                fadeDuration: Theme.Motion.slow
             }
 
             OpacityMask {
@@ -75,7 +65,7 @@ Item {
                     height: bg.height
                     radius: bg.surfaceRadius
                 }
-                opacity: artSource.status === Image.Ready ? 1 : 0
+                opacity: bg.artRevealed && bg.art !== "" ? 1 : 0
 
                 Behavior on opacity {
                     NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.InOutCubic }

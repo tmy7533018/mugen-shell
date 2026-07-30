@@ -37,6 +37,10 @@ Item {
     property color accentColor: musicPlayerManager && musicPlayerManager.accentColor
         ? musicPlayerManager.accentColor
         : (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))
+
+    Behavior on accentColor {
+        ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic }
+    }
     property real colorPhase: 0
 
     property color currentIconColor: blendColors(baseColor, accentColor, isPlaying ? colorPhase : 0)

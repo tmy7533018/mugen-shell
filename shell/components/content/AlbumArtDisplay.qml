@@ -13,7 +13,11 @@ Item {
     property var icons
     required property var modeManager
     
-    readonly property color extractedColor: musicManager ? musicManager.accentColor : (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))
+    property color extractedColor: musicManager ? musicManager.accentColor : (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))
+
+    Behavior on extractedColor {
+        ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic }
+    }
 
     width: modeManager.scale(96)
     height: modeManager.scale(96)
