@@ -797,16 +797,24 @@ FocusScope {
                             anchors.right: parent.right
                             readonly property real hPad: modeManager.scale(12)
                             readonly property real vPad: modeManager.scale(8)
+                            readonly property real trailingLeading: (userText.lineHeight - 1) * userMetrics.lineSpacing
                             width: Math.min(userText.implicitWidth + hPad * 2, parent.width * 0.85)
-                            height: userText.height + vPad * 2
+                            height: userText.height - trailingLeading + vPad * 2
                             radius: modeManager.scale(14)
                             color: root.theme ? root.theme.chipActiveBg : Qt.rgba(0.45, 0.45, 0.60, 0.20)
                             border.color: root.theme ? root.theme.chipInactiveBorder : Qt.rgba(0.55, 0.55, 0.68, 0.15)
                             border.width: 1
 
+                            FontMetrics {
+                                id: userMetrics
+                                font: userText.font
+                            }
+
                             Text {
                                 id: userText
-                                anchors.centerIn: parent
+                                anchors.top: parent.top
+                                anchors.topMargin: userBubble.vPad
+                                anchors.horizontalCenter: parent.horizontalCenter
                                 width: userBubble.width - userBubble.hPad * 2
                                 text: modelData.content
                                 wrapMode: Text.WordWrap
