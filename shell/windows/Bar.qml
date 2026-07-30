@@ -162,7 +162,17 @@ PanelWindow {
     Theme.ModeManager { id: modeManager; screenWidth: barWindow.width; settingsManager: settingsManager }
 
     readonly property Component defaultModuleBackground: Component {
-        Common.ModuleBackdrop {}
+        Common.ModuleBackdrop {
+            id: defaultBackdrop
+            readonly property var pal: Theme.ModulePalettes.byId(settingsManager.moduleBackdropPalette)
+
+            satMin: defaultBackdrop.pal.satMin
+            satMax: defaultBackdrop.pal.satMax
+            spin: defaultBackdrop.pal.spin
+            strength: defaultBackdrop.pal.strength
+            levels: defaultBackdrop.pal.levels
+            sourceIndex: defaultBackdrop.pal.sourceIndex
+        }
     }
 
     Theme.Colors { id: theme }
@@ -388,6 +398,7 @@ PanelWindow {
             ? modeManager.currentSurfaceBackground
             : (modeManager.currentModeInstance ? barWindow.defaultModuleBackground : null)
         moduleContext: modeManager.currentModeInstance
+        backdropSpread: settingsManager.moduleBackdropSpread
 
         theme: theme
 

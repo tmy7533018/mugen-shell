@@ -27,7 +27,7 @@ Item {
     signal restartAi()
 
     readonly property var categories: [
-        { id: "appearance", label: "Appearance",   types: ["theme", "gradient", "blur", "animation", "dateFormat", "clock", "weather", "calendarWeekStart", "barLayout"] },
+        { id: "appearance", label: "Appearance",   types: ["theme", "moduleBackground", "gradient", "blur", "animation", "dateFormat", "clock", "weather", "calendarWeekStart", "barLayout"] },
         { id: "sound",      label: "Sound",        types: ["notificationSound", "timerSound"] },
         { id: "notifications", label: "Notifications", types: ["doNotDisturb", "notificationTimeout"] },
         { id: "timer",      label: "Timer & Lock", types: ["timer", "lockTimer", "idlePower"] },
@@ -170,6 +170,7 @@ Item {
                                 case "theme":             return themeSection
                                 case "blur":              return blurSection
                                 case "timer":             return timerSection
+                                case "moduleBackground":  return moduleBackgroundSection
                                 case "gradient":          return gradientSection
                                 case "battery":           return batterySection
                                 case "animation":         return animationSection
@@ -245,6 +246,11 @@ Item {
         onApplyPreset: name => root.applyPreset(name)
     }}
     Component { id: timerSection; Settings.TimerSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: moduleBackgroundSection; Settings.ModuleBackgroundSection {
         theme: root.theme
         modeManager: root.modeManager
         settingsManager: root.settingsManager

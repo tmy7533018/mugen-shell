@@ -1,4 +1,5 @@
 import QtQuick
+import "../../lib" as Theme
 
 Item {
     id: root
@@ -7,26 +8,53 @@ Item {
     property var moduleContext: null
     property var theme: moduleContext ? moduleContext.theme : null
 
+    property real satMin: 0.22
+    property real satMax: 0.55
+    property real spin: 0
+    property var levels: [0.24, 0.10, 0.19, 0.06]
+    property var sourceIndex: [0, 1, 2, 0]
+
+    readonly property color fallback: Qt.rgba(0.65, 0.55, 0.85, 1.0)
+
+    readonly property var sources: [
+        root.theme ? root.theme.glowPrimary : root.fallback,
+        root.theme ? root.theme.glowSecondary : root.fallback,
+        root.theme ? root.theme.glowTertiary : root.fallback
+    ]
+
     property color baseTop: Qt.rgba(0.09, 0.09, 0.13, 1.0)
     property color baseBottom: Qt.rgba(0.04, 0.04, 0.06, 1.0)
-    property color colorA: root.hue(root.theme ? root.theme.glowPrimary : fallback, 0.24)
-    property color colorB: root.hue(root.theme ? root.theme.glowSecondary : fallback, 0.10)
-    property color colorC: root.hue(root.theme ? root.theme.glowTertiary : fallback, 0.19)
-    property color colorD: root.hue(root.theme ? root.theme.glowPrimary : fallback, 0.06)
+    property color colorA: root.slot(0)
+    property color colorB: root.slot(1)
+    property color colorC: root.slot(2)
+    property color colorD: root.slot(3)
 
     property real strength: 0.85
     property real spread: 0.06
     property real speed: 5.0
     property bool running: true
 
-    readonly property color fallback: Qt.rgba(0.65, 0.55, 0.85, 1.0)
-
     // Keeps the wallpaper's hue but pins lightness, so a bright accent can't
     // wash the surface out and a dark one can't collapse it to black.
-    function hue(c, lightness) {
+    function hue(c, lightness, degrees) {
         if (!c) return Qt.hsla(0.72, 0.35, lightness, 1.0)
-        return Qt.hsla(c.hslHue, Math.min(0.55, Math.max(0.22, c.hslSaturation)), lightness, 1.0)
+        return Qt.hsla((c.hslHue + (degrees || 0) / 360 + 1) % 1,
+                       Math.min(root.satMax, Math.max(root.satMin, c.hslSaturation)),
+                       lightness, 1.0)
     }
+
+    function slot(i) {
+        return root.hue(root.sources[root.sourceIndex[i]],
+                        root.levels[i],
+                        (i - 1.5) / 1.5 * root.spin)
+    }
+
+    Behavior on baseTop { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
+    Behavior on baseBottom { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
+    Behavior on colorA { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
+    Behavior on colorB { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
+    Behavior on colorC { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
+    Behavior on colorD { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }
 
     property real time: 0
     NumberAnimation on time {

@@ -175,11 +175,19 @@ Rectangle {
     }
 
     property var moduleContext: null
+    property real backdropSpread: 0.06
 
     Binding {
         target: moduleBackgroundLoader.item
         property: "surfaceRadius"
         value: surface.radius - 1
+        when: moduleBackgroundLoader.item !== null
+    }
+
+    Binding {
+        target: moduleBackgroundLoader.item
+        property: "spread"
+        value: surface.backdropSpread
         when: moduleBackgroundLoader.item !== null
     }
 

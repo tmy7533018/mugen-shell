@@ -18,6 +18,8 @@ QtObject {
     // 0 = disabled, otherwise the idle timeout (ms) before a mode auto-closes.
     property int autoCloseTimerInterval: 5000
     property bool barGradientEnabled: true
+    property string moduleBackdropPalette: "harmony"
+    property real moduleBackdropSpread: 0.06
     property bool batteryIndicatorEnabled: false
     property string animationSpeed: "normal"  // "slow" | "normal" | "fast" | "instant"
     property real animationDurationMultiplier: 1.0
@@ -125,7 +127,9 @@ QtObject {
                 "interval": autoCloseTimerInterval
             },
             "barBackground": {
-                "gradientEnabled": barGradientEnabled
+                "gradientEnabled": barGradientEnabled,
+                "palette": moduleBackdropPalette,
+                "spread": moduleBackdropSpread
             },
             "batteryIndicator": {
                 "enabled": batteryIndicatorEnabled
@@ -254,6 +258,12 @@ QtObject {
             if (settings.barBackground) {
                 if (settings.barBackground.gradientEnabled !== undefined) {
                     barGradientEnabled = settings.barBackground.gradientEnabled
+                }
+                if (settings.barBackground.palette !== undefined) {
+                    moduleBackdropPalette = settings.barBackground.palette
+                }
+                if (settings.barBackground.spread !== undefined) {
+                    moduleBackdropSpread = settings.barBackground.spread
                 }
             }
 
