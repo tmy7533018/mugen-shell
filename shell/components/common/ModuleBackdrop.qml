@@ -52,7 +52,9 @@ Item {
         property real spread: root.spread
         property real strength: root.strength
         property real aspect: height > 0 ? width / height : 1.0
-        property real radiusN: height > 0 ? root.surfaceRadius / height : 0
+        property real radiusN: height > 0
+            ? Math.min(root.surfaceRadius / height, 0.5, 0.5 * width / height)
+            : 0
         property real aaN: height > 0 ? 1.0 / height : 0.002
 
         fragmentShader: Qt.resolvedUrl("../../assets/shaders/aurora.frag.qsb")
