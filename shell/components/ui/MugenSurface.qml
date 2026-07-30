@@ -8,9 +8,11 @@ Rectangle {
     property bool gradientEnabled: true
     property bool reduceMotion: false
 
+    readonly property bool moduleCovered: moduleBackgroundLoader.opacity >= 1
+
     // Must not read the effective `visible` here: under the Yura panel's mask it
     // is opacity-driven, which forms a binding loop.
-    readonly property bool gradientsAnimating: gradientEnabled && !reduceMotion
+    readonly property bool gradientsAnimating: gradientEnabled && !reduceMotion && !moduleCovered
 
     readonly property color darkBase: Qt.rgba(20/255, 22/255, 26/255, 0.82)
     readonly property color darkBorderColor: Qt.rgba(0.35, 0.35, 0.40, 0.40)
@@ -197,7 +199,7 @@ Rectangle {
         anchors.fill: parent
         anchors.margins: 1
         radius: parent.radius - 1
-        visible: surface.gradientEnabled
+        visible: surface.gradientEnabled && !surface.moduleCovered
 
         property real slidePosition: 0.0
         property real dynamicOpacity: 0.0
@@ -284,7 +286,7 @@ Rectangle {
         anchors.fill: parent
         anchors.margins: 1
         radius: parent.radius - 1
-        visible: surface.gradientEnabled
+        visible: surface.gradientEnabled && !surface.moduleCovered
 
         property real slidePosition: 0.15
         property real dynamicOpacity: 0.0
@@ -372,7 +374,7 @@ Rectangle {
         anchors.fill: parent
         anchors.margins: 1
         radius: parent.radius - 1
-        visible: surface.gradientEnabled
+        visible: surface.gradientEnabled && !surface.moduleCovered
 
         property real slidePosition: 0.85
         property real dynamicOpacity: 0.0
