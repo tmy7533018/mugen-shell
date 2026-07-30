@@ -38,7 +38,7 @@ Item {
             readonly property real settledWidth: barSize ? moduleContext.width - barSize.leftMargin - barSize.rightMargin : width
             readonly property real settledHeight: barSize ? barSize.height : height
 
-            readonly property int artBleed: Math.round(settledHeight * 0.22)
+            readonly property real settledAspect: settledWidth > 0 ? settledHeight / settledWidth : 1
             property bool artRevealed: false
 
             Component.onCompleted: bg.artRevealed = true
@@ -48,9 +48,8 @@ Item {
                 anchors.fill: parent
                 visible: false
                 source: bg.art
-                frameWidth: bg.settledWidth
-                frameHeight: bg.settledHeight
-                bleed: bg.artBleed
+                frameWidth: Math.max(bg.width, bg.settledWidth)
+                frameHeight: frameWidth * bg.settledAspect
                 blurRadius: 64
                 blurTexels: 96
                 fadeDuration: Theme.Motion.slow
