@@ -16,7 +16,7 @@ Item {
 
     property real strength: 0.85
     property real spread: 0.06
-    property real speed: 1.4
+    property real speed: 5.0
     property bool running: true
 
     readonly property color fallback: Qt.rgba(0.65, 0.55, 0.85, 1.0)
