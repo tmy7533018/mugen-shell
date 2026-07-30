@@ -6,6 +6,8 @@ Item {
     id: root
 
     property string source: ""
+    property real frameWidth: width
+    property real frameHeight: height
     property int bleed: 0
     property int blurRadius: 64
     property int blurTexels: 96
@@ -52,6 +54,8 @@ Item {
 
         property var owner
         property string url: ""
+        property real frameWidth: 0
+        property real frameHeight: 0
         property int margin: 0
         property int texels: 96
         property int softness: 64
@@ -64,8 +68,9 @@ Item {
 
         Image {
             id: image
-            anchors.fill: parent
-            anchors.margins: -art.margin
+            anchors.centerIn: parent
+            width: art.frameWidth + art.margin * 2
+            height: art.frameHeight + art.margin * 2
             source: art.url
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
@@ -89,6 +94,8 @@ Item {
     ArtLayer {
         id: layerA
         owner: root
+        frameWidth: root.frameWidth
+        frameHeight: root.frameHeight
         margin: root.bleed
         texels: root.blurTexels
         softness: root.blurRadius
@@ -97,6 +104,8 @@ Item {
     ArtLayer {
         id: layerB
         owner: root
+        frameWidth: root.frameWidth
+        frameHeight: root.frameHeight
         margin: root.bleed
         texels: root.blurTexels
         softness: root.blurRadius

@@ -34,23 +34,22 @@ Item {
             readonly property var mgr: moduleContext ? moduleContext.musicManager : null
             readonly property string art: mgr && mgr.artUrl ? mgr.artUrl : ""
 
-            readonly property int artBleed: Math.round(height * 0.22)
+            readonly property var barSize: moduleContext ? moduleContext.requiredBarSize : null
+            readonly property real settledWidth: barSize ? moduleContext.width - barSize.leftMargin - barSize.rightMargin : width
+            readonly property real settledHeight: barSize ? barSize.height : height
+
+            readonly property int artBleed: Math.round(settledHeight * 0.22)
             property bool artRevealed: false
 
-            onWidthChanged: reshapeSettled.restart()
-            Component.onCompleted: reshapeSettled.restart()
-
-            Timer {
-                id: reshapeSettled
-                interval: 90
-                onTriggered: bg.artRevealed = true
-            }
+            Component.onCompleted: bg.artRevealed = true
 
             Common.CrossfadeArt {
                 id: artHolder
                 anchors.fill: parent
                 visible: false
                 source: bg.art
+                frameWidth: bg.settledWidth
+                frameHeight: bg.settledHeight
                 bleed: bg.artBleed
                 blurRadius: 64
                 blurTexels: 96
@@ -68,7 +67,7 @@ Item {
                 opacity: bg.artRevealed && bg.art !== "" ? 1 : 0
 
                 Behavior on opacity {
-                    NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.InOutCubic }
+                    NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic }
                 }
             }
 
