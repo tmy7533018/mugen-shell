@@ -9,11 +9,15 @@
 
 https://github.com/user-attachments/assets/beaaf135-5cdf-46d9-975d-91e3e6f04068
 
-Personal dotfiles for a Hyprland + Quickshell desktop, packaged so they can be installed via Nix flake or `make install`.
+Personal dotfiles for a Hyprland + Quickshell desktop, packaged so they can be installed via Nix flake or `make install`. Colors follow the wallpaper through Matugen, and a built-in assistant can drive the shell by chat or by voice.
 
-To try it without installing anything, boot the demo VM: `cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm` (autologins into Hyprland; credentials are `mugen` / `mugen`).
+Try it without installing anything — the demo VM autologins into Hyprland, with `mugen` / `mugen` as the credentials:
 
-For directory layout, install paths, dependencies, and keybindings see [SETUP.md](SETUP.md).
+```sh
+cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm
+```
+
+Install paths, dependencies, keybindings, and configuration all live in [SETUP.md](SETUP.md); `Super + /` also brings up the shortcut reference in a running shell. There is a longer walkthrough in this [TikTok demo](https://www.tiktok.com/@ripnk6498/video/7579183858038492433).
 
 ---
 
@@ -21,14 +25,14 @@ For directory layout, install paths, dependencies, and keybindings see [SETUP.md
 
 | | |
 |---|---|
-| OS | NixOS (also runs on Arch-based distros) |
+| OS | NixOS |
 | GPU | AMD Radeon RX 9070 XT |
-| WM | Hyprland (Lua config — the classic `.conf` twins are kept as a fallback) |
+| WM | Hyprland |
 | Shell | Zsh + Starship |
 | Terminal | Kitty |
 | Desktop Shell | Quickshell |
 | Wallpaper | awww / mpvpaper |
-| Colors | Matugen (Material You) |
+| Colors | Matugen |
 
 ---
 
@@ -38,59 +42,20 @@ https://github.com/user-attachments/assets/61328371-aa8e-4f96-aae8-2817fadf3ed4
 
 <sub><i>A casual hello in the bar; the corner pop-up shuffles the wallpaper, switches to light mode, and opens a browser through tool calls.</i></sub>
 
-Yura is the desktop chat assistant. It runs in two places: a single input row in the bar (`Super + Y`) and a chat panel anchored to a screen corner (`Super + Shift + Y`).
+Yura is the desktop assistant. It appears as an input row in the bar (`Super + Y`) and as a chat panel anchored to a screen corner (`Super + Shift + Y`), both sharing one conversation history. The backend is **mugen-ai**, a Go server in [`ai/`](ai/) that talks to local models through [Ollama](https://ollama.com), to Anthropic Claude, to Google Gemini, or to any OpenAI-compatible API.
 
-The backend is **mugen-ai**, a Go server in [`ai/`](ai/). It supports:
+Yura also runs the desktop. "Set volume to 30" or "set a 25 minute timer" reaches the same panels you would click. Tool calls can be switched off per category, launching apps goes through an allowlist, and power actions were never handed over. External [MCP](https://modelcontextprotocol.io) servers join the same set, with their writes held for approval.
 
-- Local models via [Ollama](https://ollama.com)
-- Anthropic Claude
-- Google Gemini
-- OpenAI-compatible APIs (OpenAI, OpenRouter, LM Studio, vLLM, etc.)
-
-Set up alongside mugen-shell via NixOS, Arch + Nix, or `make install`; see [SETUP.md](SETUP.md). All Yura configuration (providers, personality, tool toggles, allowed apps) lives under **Settings → AI / Yura**.
-
-### Features
-
-- Bar row and corner panel share the same conversations and stay in sync; the sidebar keeps multi-conversation history on disk.
-- Per-conversation model binding, plus a per-conversation Thinking toggle routed through each provider's reasoning channel.
-- Markdown replies with code-block copy, streaming with a stop button, IME-aware input.
-- Personality, providers, and every other Yura knob editable from the Settings GUI — Save & Apply hot-restarts the backend.
-- Voice input (optional): say **"Hey Yura"**, talk, and the reply is spoken back via VOICEVOX / AivisSpeech (or Piper for non-Japanese voices). The mic stays open for follow-ups, and both UIs get a push-to-talk button. Setup in [SETUP.md → Voice input](SETUP.md#voice-input-optional).
-- Strict-by-default app allowlist, per-category tool toggles, and external [MCP](https://modelcontextprotocol.io) servers merged into the same gated set.
-
-### Shell control by chat
-
-Yura drives the desktop through gated tool calls: volume, mic, brightness, theme, wallpaper, music, notifications, timers, calendar, panels, and an allowlisted app launcher. Reversible actions run immediately, destructive ones confirm in chat, and external MCP writes sit behind an Approve / Deny prompt. Power actions are deliberately not exposed. Try "set volume to 30", "shuffle the wallpaper", or "set a 25 minute timer" — the full domain table, gating details, and config are in [SETUP.md → Shell control by chat](SETUP.md#shell-control-by-chat).
-
----
-
-## Preview
-
-[TikTok demo — @ripnk6498](https://www.tiktok.com/@ripnk6498/video/7579183858038492433?is_from_webapp=1&sender_device=pc)
+Voice input is optional: say **"Hey Yura"**, talk, and the reply comes back spoken. The bundled voice is Japanese; other languages route to a Piper voice instead. Everything is configured under **Settings → AI / Yura**, and [SETUP.md](SETUP.md#configuring-mugen-ai) covers the rest.
 
 ---
 
 ## Features
 
-- Material You color scheme generated from the current wallpaper via Matugen
-- Video and image wallpaper switching (mpvpaper + awww) with a picker UI
-- Cava audio visualizer
-- Standalone Calendar window with month grid, events list, and inline add / edit
-- Countdown timer with preset durations, free-form M:SS input, a progress ring, and a remaining-time pill in the bar
-- Music player integration (playerctl / MPRIS) with YouTube thumbnail fallback and a seekable progress slider
-- Clipboard history and notification center
-- Speaker and microphone control sharing one volume panel
-- Laptop backlight slider with hardware-key integration (hidden on systems without a backlight)
-- WiFi, Bluetooth, and IME management
-- Battery indicator (optional water-level fill inside the power menu icon) and a collapsible system tray
-- App launcher, idle inhibitor toggle, screenshot capture with clipboard copy, screenshot gallery, power menu
-- Standalone Settings window: theme, blur, animations, sounds, lock timer, date format, plus the full Yura and Voice input sections
-
----
-
-## Usage
-
-After installation (see [SETUP.md](SETUP.md)), the bar starts automatically with the Hyprland session. Press `Super + /` for the shortcut reference. Right-clicking the power menu icon opens Settings, and the chevron next to the notification icon expands the system tray. The full keybind list is in [SETUP.md → Keybindings](SETUP.md#keybindings).
+- A Material You palette regenerated from whatever wallpaper is up, still or video
+- Panels for the everyday things — calendar, timer, music, clipboard, notifications, app launcher, screenshots, and more
+- The usual system controls: audio, backlight, WiFi, Bluetooth, IME, battery, tray
+- A standalone Settings window, so none of it needs a config file to change
 
 ---
 
@@ -98,7 +63,7 @@ After installation (see [SETUP.md](SETUP.md)), the bar starts automatically with
 
 mugen-shell stands on [Hyprland](https://hyprland.org/), [Quickshell](https://quickshell.outfoxxed.me/), and many other projects — the full list is in [SETUP.md → Credits](SETUP.md#credits).
 
-The bundled "Hey Yura" wake word model (`voice/models/hey_yura.onnx`) is a custom [openWakeWord](https://github.com/dscripka/openWakeWord) model trained on Japanese speech synthesized with [VOICEVOX](https://voicevox.hiroshiba.jp/).
+The "Hey Yura" wake word model is a custom [openWakeWord](https://github.com/dscripka/openWakeWord) model trained on speech synthesized with [VOICEVOX](https://voicevox.hiroshiba.jp/).
 
 ---
 
