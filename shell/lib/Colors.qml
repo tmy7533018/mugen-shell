@@ -39,9 +39,27 @@ QtObject {
         readThemeModeProcess.running = true
     }
 
-    property string primaryHex: "#a68cd9"
-    property string secondaryHex: "#b8a5e0"
-    property string tertiaryHex: "#c9b8e8"
+    // Read synchronously so the first frame already has the wallpaper's colours.
+    // The polled reload below still handles later changes, but arriving late on
+    // startup would drag every colour through the 3s Behavior from the literals.
+    property FileView colorsSeed: FileView {
+        path: palette.colorsJsonFile
+        blockLoading: true
+        printErrors: false
+    }
+
+    function seedHex(name, fallback) {
+        try {
+            let colors = JSON.parse(palette.colorsSeed.text()).colors
+            if (colors && colors[name] && colors[name].hex) return colors[name].hex
+        } catch (e) {
+        }
+        return fallback
+    }
+
+    property string primaryHex: palette.seedHex("primary", "#a68cd9")
+    property string secondaryHex: palette.seedHex("secondary", "#b8a5e0")
+    property string tertiaryHex: palette.seedHex("tertiary", "#c9b8e8")
     
     function loadFromJson() {
         readColorsProcess.running = true
