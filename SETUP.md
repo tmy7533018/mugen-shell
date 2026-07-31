@@ -308,7 +308,7 @@ disabled_categories = []
 
 ### Shell control by chat
 
-Tool calls from Yura are dispatched through `qs ipc call`, so the existing shell managers remain the single source of truth. Reversible tools run immediately. Built-in destructive tools (clearing notifications, deleting calendar events) ask for confirmation in chat, and external MCP tools that may write are held behind an Approve / Deny prompt (see *MCP servers* below).
+Tool calls from Yura are dispatched through `qs ipc call`, so the existing shell managers remain the single source of truth. Built-in tools all run immediately; the destructive ones (clearing notifications, deleting a calendar event, launching an unfamiliar app) carry a `[DESTRUCTIVE]` marker in their description so the model narrates the action first, and app launching is additionally held to the allowlist. Power actions are not exposed at all. The Approve / Deny prompt applies to external MCP tools that may write (see *MCP servers* below).
 
 | Domain | What Yura can do |
 |---|---|
