@@ -5,6 +5,7 @@ Rewrites the image in place when bars are found. Exits 0 and leaves the file
 untouched for anything it cannot improve, so callers can ignore the result.
 """
 
+import os
 import sys
 
 FLAT_TOLERANCE = 8
@@ -77,10 +78,17 @@ def main():
     if box[2] - box[0] < 8 or box[3] - box[1] < 8:
         return 0
 
+    staged = path + ".trim"
     try:
-        rgb.crop(box).save(path, format=image.format or "PNG")
+        rgb.crop(box).save(staged, format=image.format or "PNG")
     except Exception:
+        try:
+            os.remove(staged)
+        except OSError:
+            pass
         return 0
+
+    os.replace(staged, path)
     return 0
 
 
