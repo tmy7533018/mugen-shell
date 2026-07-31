@@ -166,6 +166,7 @@ PanelWindow {
             id: defaultBackdrop
             readonly property var pal: Theme.ModulePalettes.byId(settingsManager.moduleBackdropPalette)
 
+            theme: barWindow.themeRef
             satMin: defaultBackdrop.pal.satMin
             satMax: defaultBackdrop.pal.satMax
             spin: defaultBackdrop.pal.spin
@@ -176,6 +177,8 @@ PanelWindow {
     }
 
     Theme.Colors { id: theme }
+
+    readonly property var themeRef: theme
 
     Theme.Typography { id: typo }
 

@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import Quickshell
 import "." as MusicUI
 import "../common" as Common
 import "../../lib" as Theme
@@ -30,6 +29,8 @@ Item {
     readonly property Component surfaceBackground: Component {
         Common.ModuleBackdrop {
             id: bg
+
+            theme: root.theme
 
             readonly property var mgr: moduleContext ? moduleContext.musicManager : null
             readonly property string art: mgr && mgr.artUrl ? mgr.artUrl : ""
