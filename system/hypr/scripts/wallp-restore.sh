@@ -1,9 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CURRENT_WALLPAPER_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/mugen-shell/wallp/current_wallpaper_path.txt"
+WALLP_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/mugen-shell/wallp"
+CURRENT_WALLPAPER_FILE="$WALLP_DIR/current_wallpaper_path.txt"
+MPV_SOCKET="$WALLP_DIR/mpvpaper.sock"
 TRANS_OPTS=(--transition-type any --transition-fps 60)
-MPV_OPTS='no-config no-audio loop cache=yes profile=low-latency'
+
+# Must stay in step with change-wallpaper.sh. Without the ipc socket and the
+# auto-copy readback, the next change cannot screenshot this video, so it tears
+# the layer down with nothing underneath and the screen goes black first.
+MPV_OPTS="no-config no-audio loop cache=yes profile=low-latency \
+vo=gpu-next gpu-context=wayland \
+hwdec=auto-copy \
+keep-open=yes \
+input-ipc-server=${MPV_SOCKET} \
+screenshot-format=png screenshot-high-bit-depth=no screenshot-png-compression=1"
 
 is_image() { case "${1,,}" in *.png|*.jpg|*.jpeg|*.webp) return 0;; *) return 1;; esac; }
 is_video() { case "${1,,}" in *.mp4|*.webm|*.mkv|*.gif) return 0;; *) return 1;; esac; }
