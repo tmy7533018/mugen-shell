@@ -28,7 +28,7 @@ Item {
     function promote() {
         const front = root._aIsFront ? layerA : layerB
         const back = root._aIsFront ? layerB : layerA
-        if (back.url === "" || !back.loaded) return
+        if (!back.loaded || back.url !== root.source) return
         fade.stop()
         front.opacity = 1
         front.z = 0
