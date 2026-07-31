@@ -112,7 +112,11 @@ NixOS users go through the umbrella flake at `?dir=nixos`. It enables `programs.
           # System layer
           programs.mugen-shell.enable = true;
 
-          # User layer — same input, home-manager pieces
+          # User layer — same input, home-manager pieces.
+          # useGlobalPkgs is required: without it home-manager imports its own
+          # nixpkgs and never sees the overlay that defines pkgs.mugen-shell.
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
           home-manager.users.YOUR_USER = {
             imports = [ mugen-shell.homeManagerModules.default ];
             programs.mugen-shell.enable = true;
@@ -134,7 +138,7 @@ Hacking on the shell: inside the `home-manager.users.YOUR_USER` block (the optio
 
 #### Japanese (or other) input via fcitx5
 
-The module exposes a `fcitx5Addons` option that wires up `i18n.inputMethod`, which sets the GTK / Qt / SDL env vars system-wide. Installing fcitx5 directly into `systemPackages` does **not** do this on NixOS.
+The module exposes a `fcitx5Addons` option that wires up `i18n.inputMethod` with fcitx5's Wayland text-input frontend: it exports `XMODIFIERS` (plus the Qt input-method plugin path) system-wide and registers the IME for every login session. It deliberately leaves `GTK_IM_MODULE` / `QT_IM_MODULE` unset — Wayland clients reach fcitx5 through the text-input protocol. Installing fcitx5 directly into `systemPackages` does **not** do this on NixOS.
 
 ```nix
 programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
@@ -199,7 +203,7 @@ yay -S hyprland quickshell hypridle hyprlock zsh kitty starship libnotify \
        python-gobject
 ```
 
-Set `includeSystemDeps = true` to pull all of that into Nix instead. Useful when the distro doesn't package something or you want a hermetic install.
+Set `includeSystemDeps = true` to pull the user-space half of that list into Nix instead — Quickshell, hypridle, hyprlock, awww, mpvpaper, matugen, playerctl, kitty, thunar, firefox and the screenshot / clipboard / audio helpers. It does **not** install Hyprland itself, zsh, pipewire, NetworkManager, bluez, fcitx5, eza / bat / ugrep, or the font, cursor and GTK themes — keep those on pacman. A standalone home-manager profile cannot enable system services either, so this path never becomes fully hermetic; only the NixOS module's `includeSystemDeps` (Path A) covers the whole stack.
 
 Wiring Hyprland into your display manager or login session is left to you (`Hyprland` from TTY, sddm session entry, etc.).
 
@@ -252,7 +256,7 @@ Yura (`Super + Y` for the bar row, `Super + Shift + Y` for the corner pop-up) ta
 - **Providers**: read-only status card showing which API keys are set, each provider's host or base_url, and the models list. Refresh re-fetches.
 - **Bar Yura model**: pins the model used by the bar row and by voice turns (they share the Spotlight surface). Leave it on the default to follow whichever model the corner pop-up most recently selected.
 - **Bar Yura thinking**: routes the bar's chat through each provider's reasoning channel for capable models (qwen3, Claude sonnet+opus, Gemini 2.5, OpenAI o-series). Falls back silently otherwise.
-- **Tool categories**: toggle whole groups (audio, music, brightness, theme, wallpaper, notification, timer, calendar, panels, app launcher) on or off. Disabled categories disappear from Yura's tool list, and Yura reports back when you ask for something turned off.
+- **Tool categories**: toggle whole groups (audio, music, brightness, theme, wallpaper, notification, timer, calendar, panels, app launcher, memory, weather) on or off. Disabled categories disappear from Yura's tool list, and Yura reports back when you ask for something turned off.
 - **Allowed apps**: strict allowlist for `app_launch`. The default is empty, meaning Yura cannot open anything until you pick apps. The picker shows installed desktop apps with a search; toggle pills for individual apps, or use "All on / All off" against the current filter. Shell metacharacters (`; | & $` etc.) in launch requests are always rejected.
 - **Yura panel side**: Left or Right for the corner pop-up.
 
@@ -291,7 +295,8 @@ allowed_commands = ["firefox", "kitty", "code"]
 
 [tools]
 # Tool categories to hide from Yura (audio / music / brightness /
-# theme / wallpaper / notification / timer / calendar / panel / app).
+# theme / wallpaper / notification / timer / calendar / panel / app /
+# memory / weather). Disabling "memory" also hides saved memories.
 # Empty = every category enabled. Toggle via Settings → AI / Yura →
 # Tool categories.
 disabled_categories = []
@@ -303,7 +308,7 @@ disabled_categories = []
 - `[provider.openai]`: enables any OpenAI-compatible provider. Activated when either `OPENAI_API_KEY` is set (for cloud providers) or `base_url` points at a local server. `models` is optional; when empty the provider queries the backend's `/v1/models` endpoint.
 - `[provider.anthropic].models`: enables Claude. Requires `ANTHROPIC_API_KEY`. Omit `models` to default to `claude-haiku-4-5`. Recommended for tool-calling (fast, accurate, low cost).
 - `[tools.app_launch].allowed_commands`: strict allowlist for the `app_launch` tool. Empty (or block omitted) means no apps can be launched. Matched on binary basename. The backend resolves the basename to the real Exec path from the matching `.desktop` entry, so off-`$PATH` binaries (like Zen Browser's `/opt/zen-browser-bin/zen-bin`) launch correctly. Flatpak apps whose binary is `flatpak` rather than the app name (Discord, Spotify, etc.) are matched by display name as a fallback: as long as `flatpak` is in this list, asking Yura for "Discord" finds the matching `.desktop` entry and launches via its full Exec line.
-- `[tools].disabled_categories`: list any of `audio music brightness theme wallpaper notification timer calendar panel app` to hide that group of tools. An MCP server name (see below) also works here as a category.
+- `[tools].disabled_categories`: list any of `audio music brightness theme wallpaper notification timer calendar panel app memory weather` to hide that group of tools. Disabling `memory` also stops saved memories from being shown to the model. An MCP server name (see below) also works here as a category.
 - `[mcp.servers.<name>]`: registers an external [Model Context Protocol](https://modelcontextprotocol.io) server whose tools are merged into Yura's tool set. See *MCP servers* below.
 
 ### Shell control by chat
@@ -343,7 +348,7 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 
 `command` must be on the service's `PATH`. mugen-ai bundles no server runtimes: an `npx`-based server needs Node.js installed, a `uvx`-based one needs [uv](https://docs.astral.sh/uv/), and so on. Nix users should add the runtime (e.g. `nodejs`) to their `home.packages`.
 
-Each server is spawned as a stdio subprocess when mugen-ai starts. Its tools are merged under a `<name>__<tool>` prefix (`memory__read_graph`, `filesystem__read_file`), so the server name doubles as a tool category: disable a whole server from Yura by adding its name to `[tools].disabled_categories`. Use a short lowercase server name with no underscores so the prefix stays unambiguous. The same security gates as the built-in tools apply (audit log, category gate, result sanitisation), plus the approval prompt below.
+A server is reached one of two ways. `command` spawns it as a stdio subprocess when mugen-ai starts. Instead of `command`, `url = "https://example.com/mcp"` dials a remote Streamable HTTP server, so nothing is spawned locally and no runtime is needed; if both keys are set, `url` wins. Either way its tools are merged under a `<name>__<tool>` prefix (`memory__read_graph`, `filesystem__read_file`), so the server name doubles as a tool category: disable a whole server from Yura by adding its name to `[tools].disabled_categories`. Use a short lowercase server name with no underscores so the prefix stays unambiguous. The same security gates as the built-in tools apply (audit log, category gate, result sanitisation), plus the approval prompt below.
 
 A server that fails to spawn or complete the handshake is logged to the journal and skipped. The rest still load. If a connected server later crashes, it is re-dialed automatically the next time one of its tools is used. Restart `mugen-ai.service` after editing the config to pick up server changes.
 
@@ -465,14 +470,14 @@ For non-Nix setups (and `make install` users — voice is not covered there). On
    systemctl --user enable --now voicevox-engine.service yura-voice.service
    ```
 
-Runtime control lives in **Settings → Voice input**. An enable toggle stops the daemon listening at all when off (picked up live, no restart needed). A **wake word toggle, off by default**, decides whether "Hey Yura" can start a turn: with it off the microphone stays closed until you press the push-to-talk key, and the daemon idles at roughly a quarter of the memory. A follow-up toggle keeps the mic open a few seconds after a reply so the next utterance needs no wake word, returning to idle on silence. Voice enrollment (shown only while the wake word is on) teaches Yura your voice: say "Hey Yura" after each of ten beeps and it trains a speaker verifier, answering only to you from then on (Re-register redoes it). The rest: a summon target (panel / bar / none) for whatever starts a turn, a wake sensitivity slider (higher rejects more false wakes, lower catches quieter calls), a voice picker with per-voice preview, a speech-speed selector, a volume slider for spoken replies, a speech-recognition language (Auto / JA / EN), and cue sound pickers for the wake / follow-up / end chimes — the built-in beep, silence, or any audio file dropped into `~/.local/share/mugen-shell/sounds/` (shared with notification sounds; picking one previews it). Everything applies from the next utterance — the daemon watches `settings.json`. Both Yura UIs get a push-to-talk mic button that starts a turn without saying the wake word and flips into a cancel control while listening (it hides while voice input is toggled off).
+Runtime control lives in **Settings → Voice input**. An enable toggle stops the daemon listening at all when off (picked up live, no restart needed). A **wake word toggle, off by default**, decides whether "Hey Yura" can start a turn: with it off the microphone stays closed until you press the push-to-talk key, and the daemon idles at roughly a quarter of the memory. A follow-up toggle keeps the mic open a few seconds after a reply so the next utterance needs no wake word, returning to idle on silence. Voice enrollment (shown only while the wake word is on) teaches Yura your voice: say "Hey Yura" after each of ten beeps and it trains a speaker verifier, answering only to you from then on (Re-register redoes it). The rest: a summon target (panel / bar / none) for whatever starts a turn, a wake sensitivity slider (higher rejects more false wakes, lower catches quieter calls), a voice picker with per-voice preview, a Voice-per-language selector (Default / JA / EN) choosing which language that voice applies to, a speech-speed selector, a volume slider for spoken replies, and cue sound pickers for the wake / follow-up / end chimes — the built-in beep, silence, or any audio file dropped into `~/.local/share/mugen-shell/sounds/` (shared with notification sounds; picking one previews it). Everything applies from the next utterance — the daemon watches `settings.json`. Both Yura UIs get a push-to-talk mic button that starts a turn without saying the wake word and flips into a cancel control while listening (it hides while voice input is toggled off).
 
 ### Other languages
 
 Only the reply voice is engine-specific; everything else is multilingual already. To run Yura's voice in English (or any other language):
 
-- **TTS**: install [Piper](https://github.com/rhasspy/piper) (`piper` on `PATH`, or `YURA_PIPER_BIN`) and drop voices (`.onnx` + `.onnx.json` pairs from [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices)) into `~/.local/share/piper/voices/`. They appear in the same Settings voice picker as `Piper: <name>` entries — the picked voice carries the engine, so there is no separate engine switch. VOICEVOX is then optional.
-- **STT**: set Speech recognition to Auto (per-utterance detection) or a fixed language; whisper covers ~100 languages.
+- **TTS**: local voices run in-process through sherpa-onnx, so there is no `piper` binary to install. Take a model from the [sherpa-onnx TTS models release](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) (Piper/VITS and Kokoro both work) and unpack the whole **model directory** — the `.onnx` next to its `tokens.txt` and `espeak-ng-data/` — into `~/.local/share/mugen-shell/tts/`, or point `YURA_TTS_MODELS` (colon-separated search path, first match wins) somewhere else. Each directory shows up in the same Settings voice picker under its own name with the `vits-piper-` prefix stripped, stored as `local:<model-dir>` — the picked voice carries the engine, so there is no separate engine switch. VOICEVOX is then optional. The Nix path already ships `vits-piper-en_US-lessac-high`.
+- **STT**: the recognition language follows Settings → AI / Yura → Personality → Language — Auto (the default) detects per utterance, a fixed language pins it; whisper covers ~100 languages.
 - **Wake word**: with `YURA_WAKEWORD` unset, the daemon loads the shipped `voice/models/hey_yura.onnx`, which is tuned for Japanese pronunciation — retrain via `voice/train/` for other accents. Only if that file is missing does it fall back to openWakeWord's stock English `hey_jarvis`, downloaded on first run (manual path only; the Nix python env is read-only, so on that path point `YURA_WAKEWORD` at a downloaded model instead).
 - **Replies**: set the assistant's language under Settings → AI / Yura → Personality.
 
@@ -590,7 +595,7 @@ Most panel keybinds dispatch through `shell/scripts/mugen-shell-ipc.sh` over a U
 MusicPlayerManager, NotificationManager, ClipboardManager, WiFiManager, BluetoothManager, AudioManager, AudioLevel, CavaManager, MicCavaManager, BatteryManager, BrightnessManager, WallpaperManager, ScreenshotManager, IdleInhibitorManager, ImeStatus.
 
 ### Core libraries (`shell/lib/`)
-ModeManager, SettingsManager, TimerManager, Colors, Typography, Animations, IconProvider, IconResolver, AiBackend, IpcRouter, YuraState.
+ModeManager, SettingsManager, TimerManager, Colors, Typography, Motion, IconProvider, IconResolver, AiBackend, IpcRouter, YuraState.
 
 ---
 

@@ -112,7 +112,11 @@ NixOS では、アンブレラ flake (`?dir=nixos`) を使います。`programs.
           # System layer
           programs.mugen-shell.enable = true;
 
-          # User layer — same input, home-manager pieces
+          # User layer — same input, home-manager pieces.
+          # useGlobalPkgs is required: without it home-manager imports its own
+          # nixpkgs and never sees the overlay that defines pkgs.mugen-shell.
+          home-manager.useGlobalPkgs = true;
+          home-manager.useUserPackages = true;
           home-manager.users.YOUR_USER = {
             imports = [ mugen-shell.homeManagerModules.default ];
             programs.mugen-shell.enable = true;
@@ -134,7 +138,7 @@ shell をいじって開発するなら: `home-manager.users.YOUR_USER` ブロ�
 
 #### fcitx5 で日本語入力 (他言語も)
 
-モジュールが公開する `fcitx5Addons` オプションが `i18n.inputMethod` を設定し、GTK / Qt / SDL 用の環境変数をシステム全体に通します。NixOS では fcitx5 を直接 `systemPackages` に入れても**この設定は走りません**。
+モジュールが公開する `fcitx5Addons` オプションは、fcitx5 の Wayland text-input フロントエンドで `i18n.inputMethod` を設定します。`XMODIFIERS` (と Qt の input-method プラグインパス) をシステム全体にエクスポートし、ログインセッションごとに IME を登録します。`GTK_IM_MODULE` / `QT_IM_MODULE` は意図的に設定しません — Wayland クライアントは text-input プロトコル経由で fcitx5 に繋がるためです。NixOS では fcitx5 を直接 `systemPackages` に入れても**この設定は走りません**。
 
 ```nix
 programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
@@ -199,7 +203,7 @@ yay -S hyprland quickshell hypridle hyprlock zsh kitty starship libnotify \
        python-gobject
 ```
 
-これを Nix 側で全部抱えたいときは `includeSystemDeps = true` にしてください。ディストリ側でパッケージが揃わない場合や、hermetic に入れたい場合に便利です。
+`includeSystemDeps = true` にすると、このリストのうちユーザ空間側 — Quickshell、hypridle、hyprlock、awww、mpvpaper、matugen、playerctl、kitty、thunar、firefox、それにスクリーンショット / クリップボード / オーディオ系のヘルパ — を Nix 側で抱えられます。Hyprland 本体、zsh、pipewire、NetworkManager、bluez、fcitx5、eza / bat / ugrep、フォント・カーソル・GTK テーマは**入りません**ので、そちらは pacman のままにしてください。standalone の home-manager ではシステムサービスを有効化できないため、この経路が完全に hermetic になることはありません。フルスタックを Nix 側で持てるのは Path A (NixOS モジュール) の `includeSystemDeps` だけです。
 
 ディスプレイマネージャやログインセッションへの Hyprland の組み込み (TTY からの `Hyprland`、sddm の session entry など) は自分でやってください。
 
@@ -253,7 +257,7 @@ Yura (バー行が `Super + Y`、コーナーポップアップが `Super + Shif
 - **Providers**: 読み取り専用のステータスカード。どの API キーが入っているか、各プロバイダの host or base_url、モデル一覧を表示します。Refresh で取り直し。
 - **Bar Yura model**: バー行と音声ターンが使うモデルを固定します (両者は Spotlight を共有しているため同じ knob です)。デフォルトのままにしておけば、コーナーポップアップで直近に選んだモデルに追従します。
 - **Bar Yura thinking**: 対応モデル (qwen3、Claude sonnet+opus、Gemini 2.5、OpenAI o-series) では、バーのチャットを各プロバイダの reasoning チャンネルに流します。未対応モデルでは何も言わずチャットに戻ります。
-- **Tool categories**: グループ単位 (audio、music、brightness、theme、wallpaper、notification、timer、calendar、panel、app launcher) で ON/OFF。OFF にしたカテゴリは Yura のツール一覧から消えて、OFF のものを頼まれたら Yura がそう返します。
+- **Tool categories**: グループ単位 (audio、music、brightness、theme、wallpaper、notification、timer、calendar、panel、app launcher、memory、weather) で ON/OFF。OFF にしたカテゴリは Yura のツール一覧から消えて、OFF のものを頼まれたら Yura がそう返します。
 - **Allowed apps**: `app_launch` の strict allowlist。デフォルトは空で、ピッカーでアプリを選ぶまで Yura は何も開けません。ピッカーには検索付きでインストール済の desktop app が並びます。pill のトグルで個別に切り替えるか、検索結果に対して "All on / All off" が効きます。起動リクエストに混じったシェルメタ文字 (`; | & $` 等) は常に弾かれます。
 - **Yura panel side**: コーナーポップアップを左右どちらに置くか。
 
@@ -292,7 +296,8 @@ allowed_commands = ["firefox", "kitty", "code"]
 
 [tools]
 # Tool categories to hide from Yura (audio / music / brightness /
-# theme / wallpaper / notification / timer / calendar / panel / app).
+# theme / wallpaper / notification / timer / calendar / panel / app /
+# memory / weather). Disabling "memory" also hides saved memories.
 # Empty = every category enabled. Toggle via Settings → AI / Yura →
 # Tool categories.
 disabled_categories = []
@@ -304,7 +309,7 @@ disabled_categories = []
 - `[provider.openai]`: OpenAI 互換プロバイダ用。`OPENAI_API_KEY` が入っている (クラウド向け)、または `base_url` がローカルサーバを指している、のどちらかで有効になります。`models` は任意で、空ならバックエンドの `/v1/models` に聞きに行きます。
 - `[provider.anthropic].models`: Claude を有効化します (`ANTHROPIC_API_KEY` が必要)。`models` を省略すると `claude-haiku-4-5` がデフォルトに。tool-calling 用途におすすめ (速い、正確、低コスト)。
 - `[tools.app_launch].allowed_commands`: `app_launch` ツールの strict allowlist。空 (またはブロックそのものなし) ならどのアプリも起動できません。マッチはバイナリの basename で行います。バックエンドは basename を、対応する `.desktop` の Exec パスに解決するので、`$PATH` 外のバイナリ (例: Zen Browser の `/opt/zen-browser-bin/zen-bin`) もちゃんと起動できます。バイナリが `flatpak` でアプリ名と一致しない Flatpak アプリ (Discord、Spotify など) は、display name フォールバックで拾います。`flatpak` がリストに入っていれば、Yura に「Discord」と頼めば対応する `.desktop` から full Exec で起動します。
-- `[tools].disabled_categories`: `audio music brightness theme wallpaper notification timer calendar panel app` から任意のものをリストに入れると、そのグループのツールが Yura から隠れます。MCP サーバ名 (後述) もカテゴリとして使えます。
+- `[tools].disabled_categories`: `audio music brightness theme wallpaper notification timer calendar panel app memory weather` から任意のものをリストに入れると、そのグループのツールが Yura から隠れます。`memory` を切ると、保存済みの記憶がモデルに渡されるのも止まります。MCP サーバ名 (後述) もカテゴリとして使えます。
 - `[mcp.servers.<name>]`: 外部 [Model Context Protocol](https://modelcontextprotocol.io) サーバを登録し、そのツールを Yura のツールセットにマージします。下の *MCP サーバ* を参照。
 
 ### チャットからのシェル操作
@@ -344,7 +349,7 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 
 `command` はサービスの `PATH` 上にある必要があります。mugen-ai はサーバランタイムを同梱していないので、`npx` 系のサーバなら Node.js、`uvx` 系なら [uv](https://docs.astral.sh/uv/) が要ります。Nix ユーザは `home.packages` にランタイム (例: `nodejs`) を足しておいてください。
 
-各サーバは mugen-ai 起動時に stdio サブプロセスとして立ち上げられます。ツールは `<name>__<tool>` プレフィックス付き (`memory__read_graph`、`filesystem__read_file`) で取り込まれます。サーバ名がそのままツールカテゴリです。サーバ丸ごと Yura から外したいときは、サーバ名を `[tools].disabled_categories` に足してください。プレフィックスが曖昧にならないよう、サーバ名は小文字短めでアンダースコアなしを推奨します。組み込みツールと同じセキュリティゲート (監査ログ、カテゴリゲート、結果サニタイズ) と、下の承認プロンプトがそのまま効きます。
+サーバへの繋ぎ方は 2 通りです。`command` を書くと、mugen-ai 起動時に stdio サブプロセスとして立ち上がります。`command` の代わりに `url = "https://example.com/mcp"` を書くと、リモートの Streamable HTTP サーバに接続します。ローカルでは何も起動しないのでランタイムは不要です (両方書いた場合は `url` が優先されます)。どちらの場合も、ツールは `<name>__<tool>` プレフィックス付き (`memory__read_graph`、`filesystem__read_file`) で取り込まれます。サーバ名がそのままツールカテゴリです。サーバ丸ごと Yura から外したいときは、サーバ名を `[tools].disabled_categories` に足してください。プレフィックスが曖昧にならないよう、サーバ名は小文字短めでアンダースコアなしを推奨します。組み込みツールと同じセキュリティゲート (監査ログ、カテゴリゲート、結果サニタイズ) と、下の承認プロンプトがそのまま効きます。
 
 起動やハンドシェイクに失敗したサーバは journal にログを残してスキップされます。残りのサーバは普通にロードされます。一度繋がったあとにクラッシュした場合は、そのサーバのツールが次に呼ばれたタイミングで自動で再ダイヤルされます。設定を編集したあとは `mugen-ai.service` を再起動して変更を反映してください。
 
@@ -466,14 +471,14 @@ Nix を使わない環境 (と `make install` ユーザ — 音声はカバー�
    systemctl --user enable --now voicevox-engine.service yura-voice.service
    ```
 
-実行中の制御は **Settings → Voice input** から。有効トグルは OFF でデーモンが一切聞かなくなります (再起動なしで即反映)。**Wake word トグルは既定 OFF** で、「Hey Yura」でターンを始められるかを決めます。OFF の間は push-to-talk キーを押すまでマイクを開かず、アイドル時のメモリも 1/4 程度で済みます。連続会話トグルは返答のあと数秒マイクを開けたままにして、wake word 無しで次の発話を聞きます (無音なら idle へ)。声の登録 (Voice enrollment、wake word が ON のときだけ表示) は Yura に自分の声を教える機能で、ビープに合わせて「Hey Yura」を 10 回言うと話者照合モデルを訓練し、以後は登録した声にだけ反応します (Re-register でやり直し)。ほかにターン開始時に開く先 (panel / bar / none)、Wake sensitivity スライダー (上げるほど誤反応が減り、下げるほど小声を拾う)、試聴ボタン付きのボイスピッカー、話速セレクタ、読み上げ音量のスライダー、音声認識の言語 (Auto / JA / EN)、wake / follow-up / end 各チャイムのサウンドピッカー — 内蔵ビープ・無音・`~/.local/share/mugen-shell/sounds/` に置いた任意の音声ファイル (通知音とフォルダ共有、選ぶと試聴されます) から選べます。どれも次の発話から反映されます (デーモンが `settings.json` を監視)。両方の Yura UI に push-to-talk のマイクボタンが付き、wake word を言わなくてもその場で聞き取りを始められます (listening 中はキャンセルボタンに変わり、Voice input が OFF の間は非表示)。
+実行中の制御は **Settings → Voice input** から。有効トグルは OFF でデーモンが一切聞かなくなります (再起動なしで即反映)。**Wake word トグルは既定 OFF** で、「Hey Yura」でターンを始められるかを決めます。OFF の間は push-to-talk キーを押すまでマイクを開かず、アイドル時のメモリも 1/4 程度で済みます。連続会話トグルは返答のあと数秒マイクを開けたままにして、wake word 無しで次の発話を聞きます (無音なら idle へ)。声の登録 (Voice enrollment、wake word が ON のときだけ表示) は Yura に自分の声を教える機能で、ビープに合わせて「Hey Yura」を 10 回言うと話者照合モデルを訓練し、以後は登録した声にだけ反応します (Re-register でやり直し)。ほかにターン開始時に開く先 (panel / bar / none)、Wake sensitivity スライダー (上げるほど誤反応が減り、下げるほど小声を拾う)、試聴ボタン付きのボイスピッカー、そのボイスをどの言語に適用するかを選ぶ Voice per language (Default / JA / EN)、話速セレクタ、読み上げ音量のスライダー、wake / follow-up / end 各チャイムのサウンドピッカー — 内蔵ビープ・無音・`~/.local/share/mugen-shell/sounds/` に置いた任意の音声ファイル (通知音とフォルダ共有、選ぶと試聴されます) から選べます。どれも次の発話から反映されます (デーモンが `settings.json` を監視)。両方の Yura UI に push-to-talk のマイクボタンが付き、wake word を言わなくてもその場で聞き取りを始められます (listening 中はキャンセルボタンに変わり、Voice input が OFF の間は非表示)。
 
 ### 他言語で使う
 
 エンジン依存なのは返答の声だけで、それ以外はもともと多言語対応です。英語 (や他の言語) で Yura の音声を使うには:
 
-- **TTS**: [Piper](https://github.com/rhasspy/piper) を入れて (`PATH` 上の `piper`、または `YURA_PIPER_BIN`)、[rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices) の声 (`.onnx` + `.onnx.json` のペア) を `~/.local/share/piper/voices/` に置きます。Settings の同じボイスピッカーに `Piper: <名前>` として並び、**選んだ声がエンジンを決める**ので、別途エンジン切替はありません。この場合 VOICEVOX は無くても動きます。
-- **STT**: Speech recognition を Auto (発話ごとに自動判定) か固定言語に。whisper は約 100 言語をカバーします。
+- **TTS**: ローカルのボイスは sherpa-onnx でインプロセス実行されるので、`piper` バイナリを入れる必要はありません。[sherpa-onnx の TTS モデル配布](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) からモデルを取ってきて (Piper/VITS でも Kokoro でも動きます)、`.onnx` と `tokens.txt`・`espeak-ng-data/` を含む**モデルディレクトリごと** `~/.local/share/mugen-shell/tts/` に展開します。`YURA_TTS_MODELS` (コロン区切りの検索パス、先勝ち) で別の場所を指すこともできます。各ディレクトリは Settings の同じボイスピッカーに `vits-piper-` を除いた名前で並び、値は `local:<モデルディレクトリ名>` として保存されます。**選んだ声がエンジンを決める**ので、別途エンジン切替はありません。この場合 VOICEVOX は無くても動きます。Nix 経路には `vits-piper-en_US-lessac-high` が同梱済みです。
+- **STT**: 認識言語は Settings → AI / Yura → Personality の Language に従います。Auto (既定) なら発話ごとに whisper が判定し、言語を固定するとそれに固定されます。whisper は約 100 言語をカバーします。
 - **Wake word**: `YURA_WAKEWORD` 未設定ならデーモンは同梱の `voice/models/hey_yura.onnx` を読みます。これは日本語発音チューニングなので、他のアクセント向けには `voice/train/` で再訓練を。このファイルが無いときだけ openWakeWord 標準の英語モデル `hey_jarvis` に fallback します (初回にダウンロード — 手動セットアップ限定。Nix 経路の Python 環境は read-only なので、代わりに `YURA_WAKEWORD` でダウンロード済みモデルを指してください)。
 - **返答の言語**: Settings → AI / Yura → Personality の language で指定します。
 
@@ -591,7 +596,7 @@ context.modules = [
 MusicPlayerManager、NotificationManager、ClipboardManager、WiFiManager、BluetoothManager、AudioManager、AudioLevel、CavaManager、MicCavaManager、BatteryManager、BrightnessManager、WallpaperManager、ScreenshotManager、IdleInhibitorManager、ImeStatus。
 
 ### コアライブラリ (`shell/lib/`)
-ModeManager、SettingsManager、TimerManager、Colors、Typography、Animations、IconProvider、IconResolver、AiBackend、IpcRouter、YuraState。
+ModeManager、SettingsManager、TimerManager、Colors、Typography、Motion、IconProvider、IconResolver、AiBackend、IpcRouter、YuraState。
 
 ---
 
