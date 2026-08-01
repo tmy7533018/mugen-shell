@@ -2,20 +2,9 @@
 
 # mugen-shell — Setup Guide
 
-## Directory Structure
+## Runtime data
 
-```
-mugen-shell/
-├── shell/      # Quickshell QML tree — the desktop UI itself
-├── ai/         # mugen-ai, the Go backend
-├── voice/      # Yura voice input daemon (optional)
-├── system/     # Dotfiles for Hyprland, kitty, matugen, cava, systemd units
-├── nix/        # home-manager module — the user layer of every Nix path
-├── nixos/      # NixOS module, umbrella flake, bootable demo VM
-└── Makefile    # `make install` for non-Nix users
-```
-
-Runtime data lives outside the repo under XDG dirs:
+Everything lives outside the repo, under XDG dirs:
 
 | Where | What |
 |---|---|
@@ -25,7 +14,7 @@ Runtime data lives outside the repo under XDG dirs:
 | `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/}` | User-supplied media |
 | `$XDG_PICTURES_DIR/mugen-screenshots/` | Captured screenshots |
 
-User-supplied media goes under the corresponding XDG path, and the notification sound dropdown rescans every time Settings opens. Quickest way to get a sound working:
+The notification sound dropdown rescans every time Settings opens. Quickest way to get a sound working:
 
 ```bash
 mkdir -p ~/.local/share/mugen-shell/sounds && cp /usr/share/sounds/freedesktop/stereo/{bell,message,message-new-instant}.oga ~/.local/share/mugen-shell/sounds/
@@ -37,11 +26,12 @@ mkdir -p ~/.local/share/mugen-shell/sounds && cp /run/current-system/sw/share/so
 
 ## Install
 
-Three install paths. Pick whichever matches your setup.
+Three install paths — open the one that matches your setup.
 
-### Path A — NixOS
+<details>
+<summary><b>Path A — NixOS</b></summary>
 
-NixOS users go through the umbrella flake at `?dir=nixos`. It enables `programs.hyprland`, adds the runtime stack to `environment.systemPackages`, and re-exports the home-manager module so the per-user pieces (mugen-ai user service, dotfiles) come from the same input.
+NixOS users go through the umbrella flake at `?dir=nixos`:
 
 ```nix
 # /etc/nixos/flake.nix
@@ -64,9 +54,7 @@ NixOS users go through the umbrella flake at `?dir=nixos`. It enables `programs.
           # System layer
           programs.mugen-shell.enable = true;
 
-          # User layer — same input, home-manager pieces.
-          # useGlobalPkgs is required: without it home-manager imports its own
-          # nixpkgs and never sees the overlay that defines pkgs.mugen-shell.
+          # Required — home-manager won't see the mugen-shell overlay without it
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.users.YOUR_USER = {
@@ -84,13 +72,9 @@ NixOS users go through the umbrella flake at `?dir=nixos`. It enables `programs.
 
 Then `nixos-rebuild switch --flake /etc/nixos#mybox`.
 
-To try everything in a throwaway VM first: `cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm` (autologin straight into Hyprland; user `mugen`, password `mugen`).
+**Japanese (or other) input via fcitx5**
 
-Hacking on the shell: inside the `home-manager.users.YOUR_USER` block (the option lives in the home-manager module, not the system one), `programs.mugen-shell.qmlDir = "/home/you/mugen-shell/shell";` points `~/.config/quickshell/mugen-shell` at a live checkout instead of the packaged (read-only) store tree, so QML edits hot-reload without a rebuild.
-
-#### Japanese (or other) input via fcitx5
-
-The module exposes a `fcitx5Addons` option that wires up `i18n.inputMethod` with fcitx5's Wayland text-input frontend: it exports `XMODIFIERS` (plus the Qt input-method plugin path) system-wide and registers the IME for every login session. It deliberately leaves `GTK_IM_MODULE` / `QT_IM_MODULE` unset — Wayland clients reach fcitx5 through the text-input protocol. Installing fcitx5 directly into `systemPackages` does **not** do this on NixOS.
+Set `fcitx5Addons` and the module registers the IME for every login session. Installing fcitx5 into `systemPackages` yourself does **not** work on NixOS.
 
 ```nix
 programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
@@ -98,11 +82,12 @@ programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
 # or:  [ fcitx5-hangul ]  for Korean
 ```
 
-The default is `[]` (no IME). The `source = ime.conf` line in `hyprland.conf` is safe to keep either way; Hyprland just exports the same env vars a second time.
+</details>
 
-### Path B — Arch / Garuda / any non-NixOS Linux + Nix
+<details>
+<summary><b>Path B — Arch or any non-NixOS Linux, with Nix</b></summary>
 
-If you have Nix with flakes enabled but you're not on NixOS, point at the user-level flake (the repo root) and install the Wayland and compositor stack via pacman.
+Point at the user-level flake (the repo root); the Wayland and compositor stack comes from pacman.
 
 ```nix
 # ~/.config/home-manager/flake.nix
@@ -155,25 +140,25 @@ yay -S hyprland quickshell hypridle hyprlock zsh kitty starship libnotify \
        python-gobject
 ```
 
-Set `includeSystemDeps = true` to pull the user-space half of that list into Nix instead — Quickshell, hypridle, hyprlock, awww, mpvpaper, matugen, playerctl, kitty, thunar, firefox and the screenshot / clipboard / audio helpers. It does **not** install Hyprland itself, zsh, pipewire, NetworkManager, bluez, fcitx5, eza / bat / ugrep, or the font, cursor and GTK themes — keep those on pacman. A standalone home-manager profile cannot enable system services either, so this path never becomes fully hermetic; only the NixOS module's `includeSystemDeps` (Path A) covers the whole stack.
+`includeSystemDeps = true` pulls the user-space tools on that list (Quickshell, hypridle, awww, matugen, kitty, …) into Nix instead; Hyprland itself, the system services, and the themes stay on pacman either way.
 
 Wiring Hyprland into your display manager or login session is left to you (`Hyprland` from TTY, sddm session entry, etc.).
 
-The home-manager activation copies the shipped `system/hypr/` defaults into `~/.config/hypr/` only when the directory does not exist yet, so first-time users get a working Hyprland config with mugen-shell autostart configured. If you already have your own `~/.config/hypr/hyprland.conf`, the copy is skipped. To adopt the mugen-shell autostart, add this line to your existing config:
+Activation copies the shipped `system/hypr/` into `~/.config/hypr/`, but only when that directory does not exist yet. If you already have your own config, add the autostart to it by hand — without it nothing spawns `quickshell -c mugen-shell`:
 
 ```hypr
 source = ~/.config/hypr/configs/mugen-shell.conf
 ```
 
-That file ships in the package output (`$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.conf`): copy it into `~/.config/hypr/configs/` once and the `source =` line keeps it up to date across rebuilds. Without it nothing spawns `quickshell -c mugen-shell`, and the bar and Yura panels will not start.
+Copy that file out of the package output once: `$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.conf`.
 
-**Lua config (Hyprland 0.55+).** hyprlang is deprecated in favour of Lua, and mugen-shell ships a complete Lua config alongside the legacy `.conf` set — `hyprland.lua` (the per-file confs consolidated into one) plus `configs/mugen-shell.lua` and the generated `colors.lua` / `configs/blur.lua`. Hyprland prefers `hyprland.lua` when it exists, so the two sit side-by-side and removing the `.lua` restores the legacy config. **The Lua config is the recommended path** — it is what the author's own machine runs daily; the `.conf` set is maintained as a fallback for stock hyprlang setups. On a fresh install the shipped `hyprland.lua` is picked up automatically. If you already keep your own Lua config, adopt the mugen-shell autostart with the Lua equivalent of the `source =` line:
+**Using a Lua config instead?** The equivalent line is:
 
 ```lua
 dofile(os.getenv("HOME") .. "/.config/hypr/configs/mugen-shell.lua")
 ```
 
-That snippet also sets `HYPR_CONFIG_LUA=1`, which the shell's dispatch layer reads to emit Lua dispatchers (`hl.dsp.*`) instead of the legacy strings Hyprland rejects under a Lua config. A relog is required to switch config languages (`hyprctl reload` does not).
+Switching config languages needs a relog; `hyprctl reload` is not enough.
 
 Two Arch-specific items the NixOS module handles automatically:
 
@@ -182,45 +167,39 @@ Two Arch-specific items the NixOS module handles automatically:
   sudo curl -fsSL https://raw.githubusercontent.com/hyprwm/hyprlock/main/pam/hyprlock \
     -o /etc/pam.d/hyprlock
   ```
-- **fcitx5 env vars.** `fcitx5` itself does not export `XMODIFIERS`. The shipped `system/hypr/configs/ime.conf` covers Hyprland sessions; for non-Hyprland processes (login shells, GUI apps started outside the compositor), put it in `/etc/environment` too. Do **not** set `GTK_IM_MODULE` / `QT_IM_MODULE` / `SDL_IM_MODULE`: Wayland clients reach fcitx5 through its text-input frontend, and those variables force the legacy module path instead — fcitx5 raises a "Wayland Diagnose" notification when it sees them. `XMODIFIERS` stays because XWayland clients still go through XIM.
+- **fcitx5 env vars.** The shipped `system/hypr/configs/ime.conf` exports `XMODIFIERS` for Hyprland sessions; add it to `/etc/environment` for anything started outside the compositor. Do **not** set `GTK_IM_MODULE` / `QT_IM_MODULE` / `SDL_IM_MODULE` — they force a broken legacy input path.
 
-### Path C — Pure manual (no Nix)
+</details>
+
+<details>
+<summary><b>Path C — no Nix at all</b></summary>
 
 ```bash
 git clone https://github.com/tmy7533018/mugen-shell.git ~/mugen-shell
 cd ~/mugen-shell
-make install        # symlinks + builds and enables mugen-ai
+make install
 ```
 
-`make install` runs:
-- `install-symlinks`: points `~/.config/quickshell/mugen-shell`, `~/.config/{cava,fastfetch,hypr,kitty,matugen}`, and `~/.config/starship.toml` at the checkout.
-- `install-ai`: `go install` the mugen-ai binary, install and enable the systemd user unit.
+Symlinks the configs at the checkout, then builds and enables mugen-ai — this one needs Go. Same `yay -S` list as Path B for the system stack; `make uninstall` reverses it.
 
-`make install-symlinks` and `make install-ai` are independent if you only want one. Remove with `make uninstall`. Same `yay -S` list as Path B for the system stack. `mugen-ai` requires Go on this path; Paths A and B ship a prebuilt binary.
+</details>
 
 ---
 
 ## Configuring mugen-ai
 
-Yura (`Super + Y` for the bar row, `Super + Shift + Y` for the corner pop-up) talks to the local Go server. Configuration lives under **Settings → AI / Yura**. Every panel writes through the backend's HTTP API and triggers a hot restart, so a terminal trip is not required.
+Everything is configured under **Settings → AI / Yura** — personality, provider status, model, tool categories, allowed apps, panel side — and saving bounces the service for you. **Edit toml** on the same page opens `~/.config/mugen-ai/config.toml` in `$EDITOR` when you would rather write it by hand.
 
-- **Personality**: name, tone, language, and system prompt. Save & Apply writes `~/.config/mugen-ai/config.toml` and bounces the systemd unit. Two escape hatches sit on the same row: **Edit toml** opens the file in `$EDITOR`, and **Restart AI** restarts the service after manual edits.
-- **Providers**: read-only status card showing which API keys are set, each provider's host or base_url, and the models list. Refresh re-fetches.
-- **Bar Yura model**: pins the model used by the bar row and by voice turns (they share the Spotlight surface). Leave it on the default to follow whichever model the corner pop-up most recently selected.
-- **Bar Yura thinking**: routes the bar's chat through each provider's reasoning channel for capable models (qwen3, Claude sonnet+opus, Gemini 2.5, OpenAI o-series). Falls back silently otherwise.
-- **Tool categories**: toggle whole groups (audio, music, brightness, theme, wallpaper, notification, timer, calendar, panels, app launcher, memory, weather) on or off. Disabled categories disappear from Yura's tool list, and Yura reports back when you ask for something turned off.
-- **Allowed apps**: strict allowlist for `app_launch`. The default is empty, meaning Yura cannot open anything until you pick apps. The picker shows installed desktop apps with a search; toggle pills for individual apps, or use "All on / All off" against the current filter. Shell metacharacters (`; | & $` etc.) in launch requests are always rejected.
-- **Yura panel side**: Left or Right for the corner pop-up.
+Two defaults worth knowing: **Allowed apps starts empty**, so Yura cannot launch anything until you pick apps there, and when `mugen-ai.service` is not running the bar shows an install hint instead of the chat UI.
 
-When `mugen-ai.service` is not running, the bar shows an install hint instead of the chat UI. The bar icon is safe to ignore if you skip this feature.
+A full annotated template lives at `ai/config.toml.example` (or `$(nix path-info .#mugen-ai)/share/mugen-ai/config.toml.example` if you installed via Nix).
 
-A full annotated template lives at `ai/config.toml.example` (or `$(nix path-info .#mugen-ai)/share/mugen-ai/config.toml.example` if you installed via Nix). A minimal `~/.config/mugen-ai/config.toml`:
+<details>
+<summary>A minimal <code>~/.config/mugen-ai/config.toml</code></summary>
 
 ```toml
 [personality]
-# Optional auto-header. When name is empty (or "Yura"), a default
-# gender-neutral assistant identity is used. Leave all three of
-# name/tone/language empty to use system_prompt verbatim.
+# Optional auto-header. Leave all three empty to use system_prompt verbatim.
 name = "Yura"
 tone = "calm"
 language = "en"
@@ -240,52 +219,26 @@ models = ["claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-7"]
 # models = ["gpt-4o-mini", "gpt-4o"]            # leave empty to query /v1/models
 
 [tools.app_launch]
-# Strict by default: empty list = Yura cannot launch anything. The
-# Settings → AI / Yura → Allowed apps picker is the easiest way to
-# populate this. Hand-editing also works.
+# Empty = Yura cannot launch anything. The Allowed apps picker fills this.
 allowed_commands = ["firefox", "kitty", "code"]
 
 [tools]
-# Tool categories to hide from Yura (audio / music / brightness /
-# theme / wallpaper / notification / timer / calendar / panel / app /
-# memory / weather). Disabling "memory" also hides saved memories.
-# Empty = every category enabled. Toggle via Settings → AI / Yura →
-# Tool categories.
+# Categories to hide from Yura (audio / music / brightness / theme /
+# wallpaper / notification / timer / calendar / panel / app / memory /
+# weather). Disabling "memory" also hides saved memories.
 disabled_categories = []
 ```
 
-- `[personality]`: `name`, `tone`, and `language` build the auto-header. `system_prompt` is appended as free-form text. Empty fields are skipped.
-- `[provider.ollama]`: local Ollama is enabled out of the box at `http://localhost:11434`. Override `host` only if your Ollama daemon lives elsewhere.
-- `[provider.google].models`: enables Gemini. Requires `GEMINI_API_KEY`. The legacy single-string `model` is still honoured when `models` is empty.
-- `[provider.openai]`: enables any OpenAI-compatible provider. Activated when either `OPENAI_API_KEY` is set (for cloud providers) or `base_url` points at a local server. `models` is optional; when empty the provider queries the backend's `/v1/models` endpoint.
-- `[provider.anthropic].models`: enables Claude. Requires `ANTHROPIC_API_KEY`. Omit `models` to default to `claude-haiku-4-5`. Recommended for tool-calling (fast, accurate, low cost).
-- `[tools.app_launch].allowed_commands`: strict allowlist for the `app_launch` tool. Empty (or block omitted) means no apps can be launched. Matched on binary basename. The backend resolves the basename to the real Exec path from the matching `.desktop` entry, so off-`$PATH` binaries (like Zen Browser's `/opt/zen-browser-bin/zen-bin`) launch correctly. Flatpak apps whose binary is `flatpak` rather than the app name (Discord, Spotify, etc.) are matched by display name as a fallback: as long as `flatpak` is in this list, asking Yura for "Discord" finds the matching `.desktop` entry and launches via its full Exec line.
-- `[tools].disabled_categories`: list any of `audio music brightness theme wallpaper notification timer calendar panel app memory weather` to hide that group of tools. Disabling `memory` also stops saved memories from being shown to the model. An MCP server name (see below) also works here as a category.
-- `[mcp.servers.<name>]`: registers an external [Model Context Protocol](https://modelcontextprotocol.io) server whose tools are merged into Yura's tool set. See *MCP servers* below.
+- `[provider.ollama]`: enabled out of the box at `http://localhost:11434`. Override `host` only if your daemon lives elsewhere.
+- `[provider.google].models` needs `GEMINI_API_KEY`; `[provider.anthropic].models` needs `ANTHROPIC_API_KEY` (omit `models` and it defaults to `claude-haiku-4-5`).
+- `[provider.openai]`: any OpenAI-compatible provider. Active once `OPENAI_API_KEY` is set or `base_url` points at a local server. Leave `models` empty to query the backend's `/v1/models`.
+- `[tools.app_launch].allowed_commands`: matched on binary basename — off-`$PATH` binaries resolve through their `.desktop` entry, and Flatpak apps match by display name once `flatpak` itself is listed.
+- `[tools].disabled_categories`: an MCP server name works here too, which disables that whole server.
 
-### Shell control by chat
+</details>
 
-Tool calls from Yura are dispatched through `qs ipc call`, so the existing shell managers remain the single source of truth. Built-in tools all run immediately; the destructive ones (clearing notifications, deleting a calendar event, launching an unfamiliar app) carry a `[DESTRUCTIVE]` marker in their description so the model narrates the action first, and app launching is additionally held to the allowlist. Power actions are not exposed at all. The Approve / Deny prompt applies to external MCP tools that may write (see *MCP servers* below).
-
-| Domain | What Yura can do |
-|---|---|
-| Audio output | set / read volume, toggle mute |
-| Audio input | set / read mic volume, toggle mic mute |
-| Display | set / read brightness |
-| Theme | switch dark / light, toggle, read |
-| Wallpaper | switch, list available, read current |
-| Music (MPRIS) | play / pause, next, previous |
-| Notifications | set / toggle DnD, clear history, read unread count |
-| Apps | launch any app enabled in Settings → AI / Yura → Allowed apps (off-$PATH binaries resolved via `.desktop` Exec) |
-| Timer | start / pause / resume / cancel, read state |
-| Calendar | add / delete events, list today or a date range |
-| Panels | open named panel, close any panel |
-
-Each row can be disabled as a category in Settings → AI / Yura → Tool categories, and app launches are additionally gated by the Allowed apps picker — "launch firefox" only works once firefox is enabled there. Power actions (lock, suspend, logout, reboot, shutdown) are not exposed to Yura; use the Power Menu directly.
-
-Example prompts that work today: "set volume to 30", "lower the brightness", "switch to light mode", "shuffle the wallpaper", "next track", "DnD on", "open settings", "set a 25 minute timer", "add a calendar event tomorrow at 3pm", "launch firefox".
-
-### MCP servers
+<details>
+<summary><b>MCP servers</b> — pulling in external tools</summary>
 
 mugen-ai can pull tools from external [Model Context Protocol](https://modelcontextprotocol.io) servers (memory, filesystem, GitHub, etc.) and expose them to Yura alongside the built-in shell tools. Add one `[mcp.servers.<name>]` block per server:
 
@@ -298,15 +251,15 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 # trusted = false    # true = skip the approval prompt for this server's tools
 ```
 
-`command` must be on the service's `PATH`. mugen-ai bundles no server runtimes: an `npx`-based server needs Node.js installed, a `uvx`-based one needs [uv](https://docs.astral.sh/uv/), and so on. Nix users should add the runtime (e.g. `nodejs`) to their `home.packages`.
+`command` must be on the service's `PATH`, and mugen-ai bundles no server runtimes — an `npx`-based server needs Node.js, a `uvx`-based one needs [uv](https://docs.astral.sh/uv/). Nix users add the runtime to `home.packages`. Use `url = "https://example.com/mcp"` instead of `command` to dial a remote Streamable HTTP server, which needs no local runtime at all.
 
-A server is reached one of two ways. `command` spawns it as a stdio subprocess when mugen-ai starts. Instead of `command`, `url = "https://example.com/mcp"` dials a remote Streamable HTTP server, so nothing is spawned locally and no runtime is needed; if both keys are set, `url` wins. Either way its tools are merged under a `<name>__<tool>` prefix (`memory__read_graph`, `filesystem__read_file`), so the server name doubles as a tool category: disable a whole server from Yura by adding its name to `[tools].disabled_categories`. Use a short lowercase server name with no underscores so the prefix stays unambiguous. The same security gates as the built-in tools apply (audit log, category gate, result sanitisation), plus the approval prompt below.
+Tools are merged under a `<name>__<tool>` prefix, so keep the server name short, lowercase, and free of underscores. Restart `mugen-ai.service` after editing to pick up server changes.
 
-A server that fails to spawn or complete the handshake is logged to the journal and skipped. The rest still load. If a connected server later crashes, it is re-dialed automatically the next time one of its tools is used. Restart `mugen-ai.service` after editing the config to pick up server changes.
+**Approval prompt.** A tool that may make an irreversible change is held when Yura calls it, and an Approve / Deny prompt appears in the chat UI. Denial, timeout, and a closed chat all count as declined. Set `trusted = true` on a server you fully control to skip the prompt.
 
-**Approval prompt.** A tool that may make an irreversible change (sending a message, deleting a record) is held when Yura calls it. An Approve / Deny prompt appears in the chat UI, and the tool runs only if approved. A denial, a timeout, or a closed chat all count as "declined" and are reported back to Yura. mugen-ai decides which tools are gated from the server's `readOnlyHint` and `destructiveHint` tool annotations, falling back to the tool name when a server sends neither (a leading `get` / `list` / `read` / `search` / etc. verb counts as a read). Set `trusted = true` on a server you fully control to run all of its tools without the prompt.
+**Secrets in `env`.** `${VAR}` references resolve from mugen-ai's own environment. Put the token in `~/.config/mugen-ai/.env` and write `env = { GITHUB_TOKEN = "${GITHUB_TOKEN}" }`, so it stays out of `config.toml`.
 
-**Secrets in `env`.** Values in a server's `env` table support `${VAR}` references, resolved from mugen-ai's own environment. Put a token in `~/.config/mugen-ai/.env` (loaded by the systemd unit) and reference it as `env = { GITHUB_TOKEN = "${GITHUB_TOKEN}" }` so the secret stays out of `config.toml`. `config.toml` itself is kept at mode `600` regardless.
+</details>
 
 ### Provider API keys
 
@@ -322,60 +275,17 @@ chmod 600 ~/.config/mugen-ai/.env
 systemctl --user restart mugen-ai.service
 ```
 
-Only keys with a non-empty value enable their provider. Leave a line blank to opt out of a provider entirely.
+Only keys with a non-empty value enable their provider.
 
 ### Choosing a model for shell control
 
-Yura acts on the desktop through function-calling tools, so how reliably it can *do* things (not just chat) depends on the model's tool-calling skill.
-
-- **Hosted API models** (Claude, Gemini) are the most reliable. They emit structured tool calls consistently even with the full tool set.
-- **Local Ollama**: prefer a recent, mid-sized model. `qwen3:14b` drives the tools reliably. `qwen3:4b` works too, but turn the **Thinking** toggle on for it. With thinking off, it leaks reasoning into the reply. Older or small models (such as `qwen2.5:7b`) tend to print tool calls as plain text instead of emitting them: fine for chat, unreliable for shell control.
-
-A model with no tool support at all is detected and the conversation falls back to chat-only automatically.
+How reliably Yura can *do* things (not just chat) depends on the model's tool-calling skill. Hosted API models (Claude, Gemini) are the most reliable; on local Ollama, prefer a recent mid-sized model — `qwen3:14b` drives the tools well, and `qwen3:4b` does too with the **Thinking** toggle on. A model with no tool support falls back to chat-only automatically.
 
 ### Listen address
 
-`mugen-ai serve --port 11436` switches the listen port for that invocation. To make it sticky for the systemd unit, set `MUGEN_AI_PORT` (and optionally `MUGEN_AI_HOST`, default `127.0.0.1`) in `~/.config/mugen-ai/.env`. The same env vars are read by the shell client (`shell/lib/AiBackend.qml`) so the bar and floating panels stay in sync.
+The server listens on `127.0.0.1:11435`. To move it, set `MUGEN_AI_PORT` (and optionally `MUGEN_AI_HOST`) in `~/.config/mugen-ai/.env` and restart the service — the shell reads the same variables, so the two never disagree.
 
-```sh
-echo 'MUGEN_AI_PORT=11436' >> ~/.config/mugen-ai/.env
-systemctl --user restart mugen-ai.service
-```
-
-### HTTP API
-
-`mugen-ai serve` listens on `127.0.0.1:11435` by default, and the shell talks to it over plain HTTP. Conversations and messages are persisted in SQLite at `~/.local/state/mugen-ai/history.db`.
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/chat` | Send a message, receive an SSE stream. Body: `{message, conversation_id, model, thinking?}`. `conversation_id: 0` auto-creates a new conversation, `>0` appends to that one. `thinking` is an optional bool: absent inherits the conversation's stored value, present overrides it (and persists for that conversation). The first SSE event is `{conversation_id, model}` so the client can sync state. The model bound to a conversation always wins; the request's `model` field only seeds the model on a brand-new conversation. |
-| POST | `/chat/confirm` | Answer an approval prompt raised mid-`/chat` by a destructive MCP tool. Body: `{confirm_id, approved}`. `confirm_id` arrives in the stream's `tool_confirm` event. The chat UI calls this. A 404 means the prompt already lapsed (answered or timed out). |
-| GET | `/health` | Server status and active model. |
-| GET | `/models` | List available models. |
-| PUT | `/model` | Set the default model for the *next* new conversation (`{"model": "name"}`). Existing conversations keep their bound model. |
-| GET | `/conversations` | List every conversation (id, title, model, thinking, timestamps). |
-| GET | `/conversations/current` | Current conversation with its messages. |
-| GET | `/conversations/{id}` | A specific conversation with its messages. |
-| POST | `/conversations` | Create an empty conversation explicitly. |
-| POST | `/conversations/{id}/select` | Make a conversation current. |
-| DELETE | `/conversations/{id}` | Delete a conversation. |
-| DELETE | `/conversations` | Delete every conversation. The Settings GUI calls this behind a confirm step. |
-| GET | `/conversations/stats` | History database path, conversation count, and on-disk size. |
-| GET | `/conversations/export` | Every conversation with its messages as one JSON document. |
-| GET | `/events` | Server-Sent Events stream of state changes (new conversations / messages) for live UI sync. |
-| GET | `/tools` | List the tools the backend exposes to the LLM: built-in shell tools plus any MCP server tools. |
-| POST | `/tools/call` | Debug path: invoke a tool by name with no LLM involvement. Body: `{name, args}`. |
-| GET | `/mcp/servers` | Startup status of each configured MCP server (`{name, connected, tool_count, error, disabled}`). |
-| GET | `/mcp/discover` | Scan the npm global root for installable MCP servers. The Settings Discover button calls this. |
-| POST | `/mcp` | Stateless Streamable HTTP endpoint exposing mugen-shell's own tools to external MCP clients. Off unless `[mcp_expose]` is enabled. |
-| GET | `/memories` | Every long-term memory Yura has saved. |
-| DELETE | `/memories/{id}` | Delete one memory. |
-| DELETE | `/memories` | Delete every memory. The Settings GUI calls this behind a confirm step. |
-| GET | `/config` | Read the on-disk config plus an `api_key_configured` map (provider env-var presence; value never exposed). |
-| PUT | `/config` | Patch the on-disk config atomically — the body is decoded over the current config, so sections it omits are kept and maps are merged rather than replaced. The Settings GUI uses this. Response is `{saved: true, restart_required: true}`. |
-| POST | `/config/restart` | Bounce the systemd unit so changes from `/config` take effect. Requires the service to be managed by systemd. |
-
-For terminal use: `mugen-ai chat`.
+Conversations live in SQLite at `~/.local/state/mugen-ai/history.db`. For terminal use: `mugen-ai chat`.
 
 ---
 
@@ -389,7 +299,8 @@ mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp
 
 The default stack is Japanese-first but not Japanese-only (see *Other languages* below). There are two ways to set it up; both sit on top of a running mugen-ai.
 
-### Nix path
+<details>
+<summary><b>Nix path</b> — one option, everything packaged</summary>
 
 The home-manager module (Paths A and B) packages the whole stack:
 
@@ -398,19 +309,20 @@ programs.mugen-shell.voice.enable = true;
 # programs.mugen-shell.voice.aivis.enable = false;   # skip the AivisSpeech engine
 ```
 
-This wires up two user services, both attached to `graphical-session.target`. `yura-voice` runs the daemon with a Python environment carrying openwakeword (ONNX inference; the base models are pre-seeded into the store, so nothing is fetched at runtime), a Vulkan build of whisper.cpp, and the `large-v3-turbo` model fetched into the store. `aivisspeech-engine` — on by default, disable with `voice.aivis.enable = false` — serves the VOICEVOX-compatible API on `127.0.0.1:10101` in CPU mode. Its first start downloads the default voice model plus BERT (~900 MB), so it needs the network once. `nix-ld` is not required on this path: the engine bundle is patchelf'd to run from the store as-is.
+Everything comes from the store — no checkout, and `nix-ld` is not needed. The AivisSpeech engine downloads its default voice model (~900 MB) on first start, so it needs the network once. Replies are routed at it automatically, so they are audible before any voice is picked in Settings. VOICEVOX is not part of the Nix wiring; set it up manually (step 3 below) to put its voices next to the Aivis ones.
 
-The daemon runs `yurad.py` from the package, so no checkout is needed; point `programs.mugen-shell.voice.sourceDir` at a live `voice/` directory to hack on it with only a service restart, the same idea as `qmlDir`. Replies are routed at AivisSpeech automatically, so they are audible before any voice is picked in Settings.
+The engine starts on demand (it costs ~2.6 GB resident) and stops after `voice.idleStopMin` minutes without synthesis (default 10, hand-edited in `settings.json`). Set `YURA_TTS_SERVICE=` empty in the unit to run it yourself instead.
 
-**The AivisSpeech engine is started on demand, not at login.** It costs ~2.6 GB resident and unloading its voice models frees none of that, so the daemon starts the unit the moment a turn begins — the ~5 s it needs to answer is spent on speech recognition and the LLM, which run first anyway — and stops it once nothing has been synthesized for `voice.idleStopMin` minutes (default 10, hand-edited in `settings.json`). A turn that routes to a local Piper voice never starts it at all. Opening the Settings voice picker does start it, because a stopped engine reports none of its voices to list or audition. Set `YURA_TTS_SERVICE=` (empty) in the unit to run the engine yourself instead; nothing will then start or stop it. VOICEVOX is not part of the Nix wiring — set it up manually (step 3 below) if you want its voices next to the Aivis ones.
+Coming from the manual path below, delete the `~/.config/systemd/user/{yura-voice,aivisspeech-engine}.service` symlinks before switching — home-manager writes units under those names and refuses to overwrite files it does not own.
 
-Coming from the manual path below, delete the `~/.config/systemd/user/{yura-voice,aivisspeech-engine}.service` symlinks before switching: home-manager writes units under those same names and its activation refuses to overwrite files it does not own.
+</details>
 
-### Manual path
+<details>
+<summary><b>Manual path</b> — venv, whisper.cpp, and TTS by hand</summary>
 
-For non-Nix setups (and `make install` users — voice is not covered there). On NixOS this route needs `programs.nix-ld.enable = true` (the pip wheels — onnxruntime, sounddevice — and the prebuilt AivisSpeech engine are dynamically linked FHS binaries):
+For non-Nix setups, `make install` included — voice is not part of the Makefile. On NixOS this route needs `programs.nix-ld.enable = true` (the pip wheels and the prebuilt AivisSpeech engine are FHS binaries):
 
-1. **Python venv** for the daemon (Python 3.14 has no tflite wheel, so openwakeword is installed `--no-deps` and runs its ONNX path; the pinned runtime deps are listed in `voice/requirements.txt`):
+1. **Python venv** for the daemon. openwakeword goes in `--no-deps` on purpose (no tflite wheel on Python 3.14):
    ```bash
    cd ~/mugen-shell/voice
    python -m venv .venv
@@ -418,7 +330,7 @@ For non-Nix setups (and `make install` users — voice is not covered there). On
    .venv/bin/pip install onnxruntime numpy scipy scikit-learn tqdm requests sounddevice sherpa-onnx
    ```
 2. **whisper.cpp** built locally, with the server binary at `~/.local/src/whisper.cpp/build/bin/whisper-server` and a model at `~/.local/share/whisper/ggml-large-v3-turbo.bin` (override via `YURA_WHISPER_BIN` / `YURA_WHISPER_MODEL`). The daemon spawns and supervises the server itself.
-3. **VOICEVOX engine** answering on `127.0.0.1:50021`. The shipped `voicevox-engine.service` expects the nixpkgs `voicevox-engine` on `~/.nix-profile/bin`; adjust `ExecStart` for other install methods. Optionally add [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine) — a VOICEVOX-compatible engine with much more natural Style-BERT-VITS2 voices — extracted to `~/.local/opt/aivisspeech-engine` (port `10101`, `aivisspeech-engine.service` ships alongside); its voices join the same picker as `Aivis:` entries.
+3. **VOICEVOX engine** answering on `127.0.0.1:50021`. The shipped `voicevox-engine.service` expects the nixpkgs `voicevox-engine` on `~/.nix-profile/bin`; adjust `ExecStart` for other install methods. [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine) is an optional VOICEVOX-compatible alternative with far more natural voices — extract it to `~/.local/opt/aivisspeech-engine` (port `10101`, unit ships alongside) and its voices join the same picker.
 4. **systemd units**:
    ```bash
    ln -s ~/mugen-shell/system/systemd/user/{yura-voice,voicevox-engine,aivisspeech-engine}.service ~/.config/systemd/user/
@@ -427,20 +339,30 @@ For non-Nix setups (and `make install` users — voice is not covered there). On
    systemctl --user enable --now voicevox-engine.service yura-voice.service
    ```
 
-Runtime control lives in **Settings → Voice input**. An enable toggle stops the daemon listening at all when off (picked up live, no restart needed). A **wake word toggle, off by default**, decides whether "Hey Yura" can start a turn: with it off the microphone stays closed until you press the push-to-talk key, and the daemon idles at roughly a quarter of the memory. A follow-up toggle keeps the mic open a few seconds after a reply so the next utterance needs no wake word, returning to idle on silence. Voice enrollment (shown only while the wake word is on) teaches Yura your voice: say "Hey Yura" after each of ten beeps and it trains a speaker verifier, answering only to you from then on (Re-register redoes it). The rest: a summon target (panel / bar / none) for whatever starts a turn, a wake sensitivity slider (higher rejects more false wakes, lower catches quieter calls), a voice picker with per-voice preview, a Voice-per-language selector (Default / JA / EN) choosing which language that voice applies to, a speech-speed selector, a volume slider for spoken replies, and cue sound pickers for the wake / follow-up / end chimes — the built-in beep, silence, or any audio file dropped into `~/.local/share/mugen-shell/sounds/` (shared with notification sounds; picking one previews it). Everything applies from the next utterance — the daemon watches `settings.json`. Both Yura UIs get a push-to-talk mic button that starts a turn without saying the wake word and flips into a cancel control while listening (it hides while voice input is toggled off).
+</details>
 
-### Other languages
+Runtime control lives in **Settings → Voice input** — voice picker, wake sensitivity, speech speed, cue sounds, and the rest. Everything applies from the next utterance; the daemon watches `settings.json`, so nothing needs a restart.
 
-Only the reply voice is engine-specific; everything else is multilingual already. To run Yura's voice in English (or any other language):
+Two of those are worth knowing up front. **The wake word is off by default**: until you turn it on, the microphone stays closed and a turn starts from the push-to-talk button in either Yura UI. And once it is on, voice enrollment appears — say "Hey Yura" after each of ten beeps and Yura answers only to you from then on.
 
-- **TTS**: local voices run in-process through sherpa-onnx, so there is no `piper` binary to install. Take a model from the [sherpa-onnx TTS models release](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) (Piper/VITS and Kokoro both work) and unpack the whole **model directory** — the `.onnx` next to its `tokens.txt` and `espeak-ng-data/` — into `~/.local/share/mugen-shell/tts/`, or point `YURA_TTS_MODELS` (colon-separated search path, first match wins) somewhere else. Each directory shows up in the same Settings voice picker under its own name with the `vits-piper-` prefix stripped, stored as `local:<model-dir>` — the picked voice carries the engine, so there is no separate engine switch. VOICEVOX is then optional. The Nix path already ships `vits-piper-en_US-lessac-high`.
+<details>
+<summary><b>Running Yura's voice in another language</b></summary>
+
+Only the reply voice is engine-specific; everything else is multilingual already:
+
+- **TTS**: local voices run in-process through sherpa-onnx, so there is no `piper` binary to install. Take a model from the [sherpa-onnx TTS models release](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) (Piper/VITS and Kokoro both work) and unpack the whole **model directory** — the `.onnx` next to its `tokens.txt` and `espeak-ng-data/` — into `~/.local/share/mugen-shell/tts/`, or point `YURA_TTS_MODELS` somewhere else. Each directory then appears in the Settings voice picker, and VOICEVOX becomes optional. The Nix path already ships `vits-piper-en_US-lessac-high`.
 - **STT**: the recognition language follows Settings → AI / Yura → Personality → Language — Auto (the default) detects per utterance, a fixed language pins it; whisper covers ~100 languages.
-- **Wake word**: with `YURA_WAKEWORD` unset, the daemon loads the shipped `voice/models/hey_yura.onnx`, which is tuned for Japanese pronunciation — retrain via `voice/train/` for other accents. Only if that file is missing does it fall back to openWakeWord's stock English `hey_jarvis`, downloaded on first run (manual path only; the Nix python env is read-only, so on that path point `YURA_WAKEWORD` at a downloaded model instead).
+- **Wake word**: the shipped `voice/models/hey_yura.onnx` is tuned for Japanese pronunciation. Retrain via [`voice/train/`](voice/train/README.md) for other accents, or point `YURA_WAKEWORD` at your own model.
 - **Replies**: set the assistant's language under Settings → AI / Yura → Personality.
 
-Environment knobs, set in the unit or a drop-in: `YURA_WAKEWORD` (path to a custom model; defaults to the shipped `voice/models/hey_yura.onnx`), `YURA_WAKE_THRESHOLD` (bootstrap default, `0.85` in the shipped units to match the Wake sensitivity slider — the daemon re-reads `voice.wakeThreshold` from `settings.json` every frame, so the slider wins once the shell has saved), `YURA_WAKE_PATIENCE` (consecutive frames over the threshold; default `2`), `YURA_SILERO_VAD` (path to `silero_vad.onnx` for endpointing; unset falls back to the copy openWakeWord downloads, which is the only way a manual install gets one), `YURA_TTS` (voice used when `settings.json` names none, as `<engine>:<style-id>` or just `<engine>:` to take that engine's first style — the Nix path sets `aivis:`), `YURA_VOICEVOX_SPEAKER` (default `14`), `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`, `YURA_AIVIS_URL`.
+**Environment knobs**, set in the unit or a drop-in: `YURA_WAKEWORD`, `YURA_WAKE_THRESHOLD`, `YURA_WAKE_PATIENCE`, `YURA_SILERO_VAD`, `YURA_TTS` (`<engine>:<style-id>`), `YURA_VOICEVOX_SPEAKER`, `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`, `YURA_AIVIS_URL`. Anything Settings also exposes wins from `settings.json` once the shell has saved it.
 
-**Speakers instead of headphones?** Media audio reaching the mic both causes false wakes and drowns out real ones. PipeWire's WebRTC echo cancellation solves both — it subtracts whatever the default sink is playing from the mic, so the wake word works even mid-playback. Drop this into `~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` (set `target.object` to your mic's `node.name` from `wpctl inspect`), restart PipeWire, then make the new source the default input with `wpctl set-default <id>`:
+</details>
+
+<details>
+<summary><b>Using speakers instead of headphones</b> — echo cancellation</summary>
+
+PipeWire's WebRTC echo cancellation subtracts what the speakers are playing from the mic, so the wake word works even mid-playback. Drop this into `~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` (set `target.object` to your mic's `node.name` from `wpctl inspect`), restart PipeWire, then make the new source the default input with `wpctl set-default <id>`:
 
 ```
 context.modules = [
@@ -455,9 +377,7 @@ context.modules = [
 ]
 ```
 
-### Wake word model
-
-`voice/models/hey_yura.onnx` is a custom openWakeWord model trained on VOICEVOX-synthesized Japanese pronunciations of "Hey Yura" (127 speaker styles, ~9,600 clips), so it fits Japanese-accented speech much better than the stock English models. Held-out recall@0.7 is 0.91 with 2.8% false positives on deliberately similar phrases. The full pipeline — clip generation, augmentation, training, verification — lives in [`voice/train/`](voice/train/README.md) and runs locally (ROCm GPU supported).
+</details>
 
 ---
 

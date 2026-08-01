@@ -2,20 +2,9 @@
 
 # mugen-shell — セットアップガイド
 
-## ディレクトリ構成
+## ランタイムデータ
 
-```
-mugen-shell/
-├── shell/      # Quickshell QML ツリー — デスクトップ UI 本体
-├── ai/         # Go バックエンド mugen-ai
-├── voice/      # Yura 音声入力デーモン (オプション)
-├── system/     # Hyprland / kitty / matugen / cava / systemd unit の dotfiles
-├── nix/        # home-manager モジュール — 全 Nix 経路の user 層
-├── nixos/      # NixOS モジュール、アンブレラ flake、起動可能なデモ VM
-└── Makefile    # Nix を使わない場合の `make install`
-```
-
-ランタイムデータはリポジトリ外、XDG ディレクトリ配下に置かれます。
+すべてリポジトリ外、XDG ディレクトリ配下に置かれます。
 
 | 場所 | 中身 |
 |---|---|
@@ -25,7 +14,7 @@ mugen-shell/
 | `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/}` | ユーザが置くメディア |
 | `$XDG_PICTURES_DIR/mugen-screenshots/` | キャプチャしたスクリーンショット |
 
-メディア類は対応する XDG パスに置きます。通知音のドロップダウンは Settings を開くたびに再スキャンします。音をすぐ鳴らしたいときは:
+通知音のドロップダウンは Settings を開くたびに再スキャンします。音をすぐ鳴らしたいときは:
 
 ```bash
 mkdir -p ~/.local/share/mugen-shell/sounds && cp /usr/share/sounds/freedesktop/stereo/{bell,message,message-new-instant}.oga ~/.local/share/mugen-shell/sounds/
@@ -37,11 +26,12 @@ mkdir -p ~/.local/share/mugen-shell/sounds && cp /run/current-system/sw/share/so
 
 ## インストール
 
-インストール経路は 3 つあります。環境に合うものを選んでください。
+インストール経路は 3 つあります。環境に合うものを開いてください。
 
-### Path A — NixOS
+<details>
+<summary><b>Path A — NixOS</b></summary>
 
-NixOS では、アンブレラ flake (`?dir=nixos`) を使います。`programs.hyprland` の有効化、ランタイムスタックの `environment.systemPackages` への投入、home-manager モジュールの再エクスポートまでまとめて面倒を見てくれるので、ユーザ単位の部品 (mugen-ai の user service、dotfiles) も同じ input から取れます。
+NixOS では、アンブレラ flake (`?dir=nixos`) を使います:
 
 ```nix
 # /etc/nixos/flake.nix
@@ -64,9 +54,7 @@ NixOS では、アンブレラ flake (`?dir=nixos`) を使います。`programs.
           # System layer
           programs.mugen-shell.enable = true;
 
-          # User layer — same input, home-manager pieces.
-          # useGlobalPkgs is required: without it home-manager imports its own
-          # nixpkgs and never sees the overlay that defines pkgs.mugen-shell.
+          # Required — home-manager won't see the mugen-shell overlay without it
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.users.YOUR_USER = {
@@ -84,13 +72,9 @@ NixOS では、アンブレラ flake (`?dir=nixos`) を使います。`programs.
 
 そのあと `nixos-rebuild switch --flake /etc/nixos#mybox`。
 
-先に使い捨て VM で全部試すこともできます: `cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm` (Hyprland に自動ログイン。資格情報は `mugen` / `mugen`)。
+**fcitx5 で日本語入力 (他言語も)**
 
-shell をいじって開発するなら: `home-manager.users.YOUR_USER` ブロックの中で (このオプションは home-manager モジュール側にあり、システム側にはありません) `programs.mugen-shell.qmlDir = "/home/you/mugen-shell/shell";` を設定すると、`~/.config/quickshell/mugen-shell` がパッケージ済み (read-only な store) ツリーの代わりに live checkout を指すようになり、QML の編集が rebuild なしで hot-reload されます。
-
-#### fcitx5 で日本語入力 (他言語も)
-
-モジュールが公開する `fcitx5Addons` オプションは、fcitx5 の Wayland text-input フロントエンドで `i18n.inputMethod` を設定します。`XMODIFIERS` (と Qt の input-method プラグインパス) をシステム全体にエクスポートし、ログインセッションごとに IME を登録します。`GTK_IM_MODULE` / `QT_IM_MODULE` は意図的に設定しません — Wayland クライアントは text-input プロトコル経由で fcitx5 に繋がるためです。NixOS では fcitx5 を直接 `systemPackages` に入れても**この設定は走りません**。
+`fcitx5Addons` を設定すると、モジュールがログインセッションごとに IME を登録します。NixOS では fcitx5 を自分で `systemPackages` に入れても**動きません**。
 
 ```nix
 programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
@@ -98,11 +82,12 @@ programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
 # または: [ fcitx5-hangul ]  韓国語
 ```
 
-デフォルトは `[]` (IME なし)。`hyprland.conf` の `source = ime.conf` 行はどちらでも残して大丈夫です。Hyprland が同じ環境変数を 2 回エクスポートするだけです。
+</details>
 
-### Path B — Arch / Garuda / NixOS 以外の Linux + Nix
+<details>
+<summary><b>Path B — Arch や NixOS 以外の Linux + Nix</b></summary>
 
-NixOS ではないけど Nix (flakes) は使える、という環境では、リポジトリ root の user レベル flake を使い、Wayland とコンポジタ系は pacman 側で入れます。
+リポジトリ root の user レベル flake を使い、Wayland とコンポジタ系は pacman 側で入れます。
 
 ```nix
 # ~/.config/home-manager/flake.nix
@@ -155,25 +140,25 @@ yay -S hyprland quickshell hypridle hyprlock zsh kitty starship libnotify \
        python-gobject
 ```
 
-`includeSystemDeps = true` にすると、このリストのうちユーザ空間側 — Quickshell、hypridle、hyprlock、awww、mpvpaper、matugen、playerctl、kitty、thunar、firefox、それにスクリーンショット / クリップボード / オーディオ系のヘルパ — を Nix 側で抱えられます。Hyprland 本体、zsh、pipewire、NetworkManager、bluez、fcitx5、eza / bat / ugrep、フォント・カーソル・GTK テーマは**入りません**ので、そちらは pacman のままにしてください。standalone の home-manager ではシステムサービスを有効化できないため、この経路が完全に hermetic になることはありません。フルスタックを Nix 側で持てるのは Path A (NixOS モジュール) の `includeSystemDeps` だけです。
+`includeSystemDeps = true` にすると、このリストのうちユーザ空間側のツール (Quickshell、hypridle、awww、matugen、kitty など) を Nix 側で抱えられます。Hyprland 本体・システムサービス・テーマ類はどちらにせよ pacman のままです。
 
 ディスプレイマネージャやログインセッションへの Hyprland の組み込み (TTY からの `Hyprland`、sddm の session entry など) は自分でやってください。
 
-既に `~/.config/hypr/` があるなら何も起きません。home-manager アクティベートは、ディレクトリがまだ存在しないときだけ同梱の `system/hypr/` デフォルトをコピーします — 初回ユーザはそれで mugen-shell autostart 入りの Hyprland 設定がそのまま手に入ります。既存の設定に mugen-shell の autostart を取り込むには、この 1 行を足してください:
+アクティベートは同梱の `system/hypr/` を `~/.config/hypr/` にコピーしますが、そのディレクトリがまだ無いときだけです。既に自前の設定があるなら、autostart は自分で足してください。この行がないと `quickshell -c mugen-shell` が走りません:
 
 ```hypr
 source = ~/.config/hypr/configs/mugen-shell.conf
 ```
 
-このファイルはパッケージ出力 (`$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.conf`) に含まれるので、一度 `~/.config/hypr/configs/` にコピーすれば `source =` 行のおかげで rebuild 後も追従します。この行がないと `quickshell -c mugen-shell` が走らず、バーも Yura パネルも立ち上がりません。
+このファイルはパッケージ出力から一度コピーしておきます: `$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.conf`。
 
-**Lua config (Hyprland 0.55+)。** hyprlang は Lua への置き換えが進んでいて (deprecated)、mugen-shell は legacy な `.conf` 一式と並行して完全な Lua config を同梱しています — `hyprland.lua` (ファイル別だった conf 群を 1 本に統合) に加えて `configs/mugen-shell.lua`、生成物の `colors.lua` / `configs/blur.lua`。Hyprland は `hyprland.lua` があればそちらを優先するので両者は同居でき、`.lua` を退かせば legacy 設定に戻ります。**推奨は Lua config** — 作者の実機が日常的に動かしているのはこちらで、`.conf` 一式は素の hyprlang 環境向けの fallback として維持しています。フレッシュインストールでは同梱の `hyprland.lua` が自動で使われます。既に自前の Lua config を持っている場合は、`source =` 行の Lua 版で mugen-shell の autostart を取り込んでください:
+**自前の config が Lua なら**、同じ行の Lua 版はこれです:
 
 ```lua
 dofile(os.getenv("HOME") .. "/.config/hypr/configs/mugen-shell.lua")
 ```
 
-この snippet は `HYPR_CONFIG_LUA=1` もセットします。shell の dispatch 層がこれを読み、Lua config が拒否する legacy 文字列の代わりに Lua dispatcher (`hl.dsp.*`) を送るようになります。config 言語の切り替えには relog が必要です (`hyprctl reload` では切り替わりません)。
+config 言語の切り替えには relog が必要で、`hyprctl reload` では切り替わりません。
 
 NixOS モジュールが自動でやってくれる、Arch 固有のハマりどころが 2 つあります:
 
@@ -182,46 +167,39 @@ NixOS モジュールが自動でやってくれる、Arch 固有のハマりど
   sudo curl -fsSL https://raw.githubusercontent.com/hyprwm/hyprlock/main/pam/hyprlock \
     -o /etc/pam.d/hyprlock
   ```
-- **fcitx5 の環境変数。** `fcitx5` 本体は `XMODIFIERS` を自分でエクスポートしません。同梱の `system/hypr/configs/ime.conf` が Hyprland セッションをカバーします。Hyprland 外のプロセス (ログインシェル、コンポジタ外から起動した GUI アプリ) 向けには `/etc/environment` にも書いておきます。`GTK_IM_MODULE` / `QT_IM_MODULE` / `SDL_IM_MODULE` は**設定しないでください**。Wayland クライアントは fcitx5 の text-input フロントエンド経由で繋がるため、これらを設定すると旧来のモジュール経路に引き戻され、fcitx5 が「Wayland Diagnose」通知を出します。`XMODIFIERS` は XWayland クライアントが XIM を使うので残します。
+- **fcitx5 の環境変数。** 同梱の `system/hypr/configs/ime.conf` が Hyprland セッション向けに `XMODIFIERS` をエクスポートします。コンポジタ外から起動するもの向けには `/etc/environment` にも書いておきます。`GTK_IM_MODULE` / `QT_IM_MODULE` / `SDL_IM_MODULE` は**設定しないでください** — 壊れた旧経路に引き戻されます。
 
-### Path C — 純粋な手動インストール (Nix 不使用)
+</details>
+
+<details>
+<summary><b>Path C — Nix なし</b></summary>
 
 ```bash
 git clone https://github.com/tmy7533018/mugen-shell.git ~/mugen-shell
 cd ~/mugen-shell
-make install        # symlinks + mugen-ai のビルドと有効化
+make install
 ```
 
-`make install` がやること:
+設定を checkout に symlink したあと、mugen-ai をビルドして有効化します — この経路だけ Go が要ります。システムスタックは Path B と同じ `yay -S` リスト。`make uninstall` で外せます。
 
-- `install-symlinks`: `~/.config/quickshell/mugen-shell`、`~/.config/{cava,fastfetch,hypr,kitty,matugen}`、`~/.config/starship.toml` をチェックアウト先に向けます。
-- `install-ai`: mugen-ai バイナリを `go install` して、systemd user unit を入れて有効化します。
-
-`make install-symlinks` と `make install-ai` は独立しているので、片方だけ走らせることもできます。`make uninstall` で外せます。システムスタックは Path B と同じ `yay -S` リスト。この経路では `mugen-ai` に Go が必要です (Path A・B はビルド済みバイナリを同梱しています)。
+</details>
 
 ---
 
 ## mugen-ai の設定
 
-Yura (バー行が `Super + Y`、コーナーポップアップが `Super + Shift + Y`) は、ローカルの Go サーバと通信します。設定は **Settings → AI / Yura** にまとまっています。各パネルはバックエンドの HTTP API 経由で書き込んで、裏でホットリスタートまでやってくれるので、ターミナルを開かなくても済みます。
+設定は **Settings → AI / Yura** に全部あります — personality、プロバイダの状態、モデル、tool categories、allowed apps、パネルの左右。保存すると裏でサービスの再起動までやってくれます。手で書きたいときは同じページの **Edit toml** から `~/.config/mugen-ai/config.toml` を `$EDITOR` で開けます。
 
-- **Personality**: 名前、トーン、言語、システムプロンプト。Save & Apply で `~/.config/mugen-ai/config.toml` を書き出して、systemd unit を再起動します。同じ行に escape hatch が 2 つ: **Edit toml** で `$EDITOR` でファイルを開けて、**Restart AI** で手書き編集後にサービスを再起動できます。
-- **Providers**: 読み取り専用のステータスカード。どの API キーが入っているか、各プロバイダの host or base_url、モデル一覧を表示します。Refresh で取り直し。
-- **Bar Yura model**: バー行と音声ターンが使うモデルを固定します (両者は Spotlight を共有しているため同じ knob です)。デフォルトのままにしておけば、コーナーポップアップで直近に選んだモデルに追従します。
-- **Bar Yura thinking**: 対応モデル (qwen3、Claude sonnet+opus、Gemini 2.5、OpenAI o-series) では、バーのチャットを各プロバイダの reasoning チャンネルに流します。未対応モデルでは何も言わずチャットに戻ります。
-- **Tool categories**: グループ単位 (audio、music、brightness、theme、wallpaper、notification、timer、calendar、panel、app launcher、memory、weather) で ON/OFF。OFF にしたカテゴリは Yura のツール一覧から消えて、OFF のものを頼まれたら Yura がそう返します。
-- **Allowed apps**: `app_launch` の strict allowlist。デフォルトは空で、ピッカーでアプリを選ぶまで Yura は何も開けません。ピッカーには検索付きでインストール済の desktop app が並びます。pill のトグルで個別に切り替えるか、検索結果に対して "All on / All off" が効きます。起動リクエストに混じったシェルメタ文字 (`; | & $` 等) は常に弾かれます。
-- **Yura panel side**: コーナーポップアップを左右どちらに置くか。
+既定値で 2 つだけ知っておくと楽です。**Allowed apps は空から始まる**ので、そこでアプリを選ぶまで Yura は何も起動できません。それと `mugen-ai.service` が動いていないと、バーはチャット UI の代わりにインストール案内を出します。
 
-`mugen-ai.service` が動いていないと、バーはチャット UI の代わりにインストール案内を出します。AI 機能を使わないなら、バーのアイコンは無視して大丈夫です。
+注釈付きのフル版テンプレートは `ai/config.toml.example` (Nix インストールなら `$(nix path-info .#mugen-ai)/share/mugen-ai/config.toml.example`) にあります。
 
-注釈付きのフル版テンプレートは `ai/config.toml.example` (Nix インストールなら `$(nix path-info .#mugen-ai)/share/mugen-ai/config.toml.example`) にあります。最小構成の `~/.config/mugen-ai/config.toml` はこんな感じ:
+<details>
+<summary>最小構成の <code>~/.config/mugen-ai/config.toml</code></summary>
 
 ```toml
 [personality]
-# Optional auto-header. When name is empty (or "Yura"), a default
-# gender-neutral assistant identity is used. Leave all three of
-# name/tone/language empty to use system_prompt verbatim.
+# Optional auto-header. Leave all three empty to use system_prompt verbatim.
 name = "Yura"
 tone = "calm"
 language = "en"
@@ -241,52 +219,26 @@ models = ["claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-7"]
 # models = ["gpt-4o-mini", "gpt-4o"]            # leave empty to query /v1/models
 
 [tools.app_launch]
-# Strict by default: empty list = Yura cannot launch anything. The
-# Settings → AI / Yura → Allowed apps picker is the easiest way to
-# populate this. Hand-editing also works.
+# Empty = Yura cannot launch anything. The Allowed apps picker fills this.
 allowed_commands = ["firefox", "kitty", "code"]
 
 [tools]
-# Tool categories to hide from Yura (audio / music / brightness /
-# theme / wallpaper / notification / timer / calendar / panel / app /
-# memory / weather). Disabling "memory" also hides saved memories.
-# Empty = every category enabled. Toggle via Settings → AI / Yura →
-# Tool categories.
+# Categories to hide from Yura (audio / music / brightness / theme /
+# wallpaper / notification / timer / calendar / panel / app / memory /
+# weather). Disabling "memory" also hides saved memories.
 disabled_categories = []
 ```
 
-- `[personality]`: `name`、`tone`、`language` が auto-header を組み立てます。`system_prompt` はそのあとに自由記述として足されます。空欄のフィールドはスキップ。
-- `[provider.ollama]`: ローカル Ollama は `http://localhost:11434` で最初から有効です。Ollama デーモンが別の場所にあるときだけ `host` を上書きしてください。
-- `[provider.google].models`: Gemini を有効化します (`GEMINI_API_KEY` が必要)。`models` が空のときは、レガシの単数 `model` も認識します。
-- `[provider.openai]`: OpenAI 互換プロバイダ用。`OPENAI_API_KEY` が入っている (クラウド向け)、または `base_url` がローカルサーバを指している、のどちらかで有効になります。`models` は任意で、空ならバックエンドの `/v1/models` に聞きに行きます。
-- `[provider.anthropic].models`: Claude を有効化します (`ANTHROPIC_API_KEY` が必要)。`models` を省略すると `claude-haiku-4-5` がデフォルトに。tool-calling 用途におすすめ (速い、正確、低コスト)。
-- `[tools.app_launch].allowed_commands`: `app_launch` ツールの strict allowlist。空 (またはブロックそのものなし) ならどのアプリも起動できません。マッチはバイナリの basename で行います。バックエンドは basename を、対応する `.desktop` の Exec パスに解決するので、`$PATH` 外のバイナリ (例: Zen Browser の `/opt/zen-browser-bin/zen-bin`) もちゃんと起動できます。バイナリが `flatpak` でアプリ名と一致しない Flatpak アプリ (Discord、Spotify など) は、display name フォールバックで拾います。`flatpak` がリストに入っていれば、Yura に「Discord」と頼めば対応する `.desktop` から full Exec で起動します。
-- `[tools].disabled_categories`: `audio music brightness theme wallpaper notification timer calendar panel app memory weather` から任意のものをリストに入れると、そのグループのツールが Yura から隠れます。`memory` を切ると、保存済みの記憶がモデルに渡されるのも止まります。MCP サーバ名 (後述) もカテゴリとして使えます。
-- `[mcp.servers.<name>]`: 外部 [Model Context Protocol](https://modelcontextprotocol.io) サーバを登録し、そのツールを Yura のツールセットにマージします。下の *MCP サーバ* を参照。
+- `[provider.ollama]`: ローカル Ollama は `http://localhost:11434` で最初から有効です。デーモンが別の場所にあるときだけ `host` を上書きしてください。
+- `[provider.google].models` には `GEMINI_API_KEY`、`[provider.anthropic].models` には `ANTHROPIC_API_KEY` が要ります (後者は `models` を省略すると `claude-haiku-4-5` になります)。
+- `[provider.openai]`: OpenAI 互換プロバイダ用。`OPENAI_API_KEY` が入っているか、`base_url` がローカルサーバを指していれば有効です。`models` を空にするとバックエンドの `/v1/models` に聞きに行きます。
+- `[tools.app_launch].allowed_commands`: マッチはバイナリの basename です。`$PATH` 外のバイナリは `.desktop` 経由で解決され、Flatpak アプリは `flatpak` 自体を入れておけば display name で拾えます。
+- `[tools].disabled_categories`: MCP サーバ名も書けて、その場合はそのサーバ全体が無効になります。
 
-### チャットからのシェル操作
+</details>
 
-Yura からのツール呼び出しは `qs ipc call` を経由します。既存の shell manager がそのまま single source of truth として残る形です。組み込みツールはすべてその場で実行されます。破壊的なもの (通知履歴のクリア、カレンダーイベントの削除、見慣れないアプリの起動) は説明文に `[DESTRUCTIVE]` が付いていて、モデルが先に何をするか述べるようになっており、アプリ起動はさらに許可リストで縛られます。電源まわりはそもそも公開していません。Approve / Deny プロンプトが出るのは、書き込みが入りうる外部 MCP ツールです (下の *MCP サーバ* を参照)。
-
-| ドメイン | Yura ができること |
-|---|---|
-| 音声出力 | 音量の設定 / 取得、ミュート切替 |
-| 音声入力 | マイク音量の設定 / 取得、マイクミュート切替 |
-| ディスプレイ | 輝度の設定 / 取得 |
-| テーマ | ダーク / ライト切替、トグル、取得 |
-| 壁紙 | 切替、一覧、現在のものを取得 |
-| 音楽 (MPRIS) | 再生 / 一時停止、次へ、前へ |
-| 通知 | DnD の設定 / トグル、履歴クリア、未読数取得 |
-| アプリ | Settings → AI / Yura → Allowed apps で ON にしたアプリを起動 (PATH 外のバイナリは `.desktop` の Exec から解決) |
-| タイマー | 開始 / 一時停止 / 再開 / キャンセル、状態取得 |
-| カレンダー | イベント追加 / 削除、当日 or 範囲指定で一覧 |
-| パネル | 名前指定でパネルを開く、任意のパネルを閉じる |
-
-各行は Settings → AI / Yura → Tool categories でカテゴリ単位で OFF にできます。アプリ起動は Allowed apps ピッカー側でも縛られるので、「firefox 開いて」と言っても firefox を ON にするまでは動きません。電源操作 (ロック、サスペンド、ログアウト、再起動、シャットダウン) は Yura に公開していません。Power Menu から直接どうぞ。
-
-今動くプロンプト例: 「音量 30 にして」「輝度下げて」「ライトモードに」「壁紙シャッフルして」「次の曲」「DnD on」「設定開いて」「25 分タイマー」「明日 15 時にカレンダーイベント追加」「firefox 起動」。
-
-### MCP サーバ
+<details>
+<summary><b>MCP サーバ</b> — 外部ツールを取り込む</summary>
 
 mugen-ai は外部の [Model Context Protocol](https://modelcontextprotocol.io) サーバ (memory、filesystem、GitHub など) からツールを引っ張ってきて、組み込みのシェルツールと並べて Yura に渡せます。サーバごとに `[mcp.servers.<name>]` ブロックを 1 つ書きます:
 
@@ -299,15 +251,15 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 # trusted = false    # true にすると、このサーバのツールでは承認プロンプトを省略
 ```
 
-`command` はサービスの `PATH` 上にある必要があります。mugen-ai はサーバランタイムを同梱していないので、`npx` 系のサーバなら Node.js、`uvx` 系なら [uv](https://docs.astral.sh/uv/) が要ります。Nix ユーザは `home.packages` にランタイム (例: `nodejs`) を足しておいてください。
+`command` はサービスの `PATH` 上にある必要があります。mugen-ai はサーバランタイムを同梱していないので、`npx` 系なら Node.js、`uvx` 系なら [uv](https://docs.astral.sh/uv/) が要ります。Nix ユーザは `home.packages` に足しておいてください。`command` の代わりに `url = "https://example.com/mcp"` を書けばリモートの Streamable HTTP サーバに繋がるので、その場合はローカルのランタイムが要りません。
 
-サーバへの繋ぎ方は 2 通りです。`command` を書くと、mugen-ai 起動時に stdio サブプロセスとして立ち上がります。`command` の代わりに `url = "https://example.com/mcp"` を書くと、リモートの Streamable HTTP サーバに接続します。ローカルでは何も起動しないのでランタイムは不要です (両方書いた場合は `url` が優先されます)。どちらの場合も、ツールは `<name>__<tool>` プレフィックス付き (`memory__read_graph`、`filesystem__read_file`) で取り込まれます。サーバ名がそのままツールカテゴリです。サーバ丸ごと Yura から外したいときは、サーバ名を `[tools].disabled_categories` に足してください。プレフィックスが曖昧にならないよう、サーバ名は小文字短めでアンダースコアなしを推奨します。組み込みツールと同じセキュリティゲート (監査ログ、カテゴリゲート、結果サニタイズ) と、下の承認プロンプトがそのまま効きます。
+ツールは `<name>__<tool>` プレフィックス付きで取り込まれるため、サーバ名は小文字短めでアンダースコアなしにしてください。設定を編集したあとは `mugen-ai.service` を再起動すると反映されます。
 
-起動やハンドシェイクに失敗したサーバは journal にログを残してスキップされます。残りのサーバは普通にロードされます。一度繋がったあとにクラッシュした場合は、そのサーバのツールが次に呼ばれたタイミングで自動で再ダイヤルされます。設定を編集したあとは `mugen-ai.service` を再起動して変更を反映してください。
+**承認プロンプト。** 取り返しのつかない変更を起こしうるツールは、Yura が呼んだ時点で止まり、チャット UI に Approve / Deny プロンプトが出ます。Deny、タイムアウト、チャットを閉じた、はすべて拒否扱いです。完全に信頼できるサーバには `trusted = true` を付けるとプロンプトを飛ばせます。
 
-**承認プロンプト。** 取り返しのつかない変更を起こしうるツール (メッセージ送信、レコード削除など) は、Yura が呼んだ時点でいったん止まります。チャット UI に Approve / Deny プロンプトが出て、承認したときだけ実行されます。Deny、タイムアウト、チャットを閉じた、はすべて「拒否」として扱われ、Yura に伝わります。どのツールをゲートするかは、サーバが返す `readOnlyHint` / `destructiveHint` のアノテーションで判定します。どちらも来ない場合はツール名でフォールバック判定します (先頭が `get` / `list` / `read` / `search` などなら read 扱い)。完全に信頼できるサーバには `trusted = true` を付けると、全ツールがプロンプト無しで通ります。
+**`env` のシークレット。** `${VAR}` 参照は mugen-ai 自身の環境から解決されます。トークンは `~/.config/mugen-ai/.env` に置いて `env = { GITHUB_TOKEN = "${GITHUB_TOKEN}" }` と書けば、`config.toml` に残らずに済みます。
 
-**`env` のシークレット。** サーバの `env` テーブルの値では `${VAR}` 参照が使えます。mugen-ai 自身の環境から解決されます。トークンは `~/.config/mugen-ai/.env` (systemd unit が読み込みます) に置いて、`env = { GITHUB_TOKEN = "${GITHUB_TOKEN}" }` のように書けば、シークレットが `config.toml` に残らずに済みます。`config.toml` 自体はパーミッション `600` で保護されています。
+</details>
 
 ### プロバイダ API キー
 
@@ -323,60 +275,17 @@ chmod 600 ~/.config/mugen-ai/.env
 systemctl --user restart mugen-ai.service
 ```
 
-値が入っているキーだけがそのプロバイダを有効化します。使わないプロバイダの行は空のままにしておけば OK です。
+値が入っているキーだけがそのプロバイダを有効化します。
 
 ### シェル操作に向くモデル
 
-Yura は function-calling ツールでデスクトップを操作するので、「ちゃんと動かせるか」(チャットするだけでなく) はモデルの tool-calling 性能に左右されます。
-
-- **ホスト API モデル** (Claude、Gemini) が一番安定です。ツールセットが多めでも構造化されたツール呼び出しを安定して返してくれます。
-- **ローカル Ollama**: 最近の中規模モデルがおすすめです。`qwen3:14b` は安定してツールを動かせます。`qwen3:4b` も動きますが、**Thinking** トグルを ON にしてください。Thinking OFF だと reasoning が返信に漏れ出します。古めや小さめのモデル (例: `qwen2.5:7b`) は、ツール呼び出しをただのテキストとして出してしまいがちで、チャットには使えてもシェル操作には頼りにくいです。
-
-ツールサポートが一切ないモデルは検出して、自動でチャット専用にフォールバックします。
+「ちゃんと動かせるか」(チャットするだけでなく) はモデルの tool-calling 性能に左右されます。ホスト API モデル (Claude、Gemini) が一番安定です。ローカル Ollama なら最近の中規模モデル — `qwen3:14b` は安定してツールを動かせますし、`qwen3:4b` も **Thinking** を ON にすれば動きます。ツール未対応のモデルは自動でチャット専用にフォールバックします。
 
 ### リスナーアドレス
 
-その起動分だけポートを変えるなら `mugen-ai serve --port 11436`。systemd unit にずっと反映させたいときは、`~/.config/mugen-ai/.env` で `MUGEN_AI_PORT` (お好みで `MUGEN_AI_HOST`、デフォルト `127.0.0.1`) を設定してください。同じ環境変数はシェル側のクライアント (`shell/lib/AiBackend.qml`) からも読まれるので、バーとフローティングパネルがずれません。
+サーバは `127.0.0.1:11435` で listen します。変えたいときは `~/.config/mugen-ai/.env` に `MUGEN_AI_PORT` (お好みで `MUGEN_AI_HOST`) を書いてサービスを再起動してください。シェル側も同じ変数を読むので、両者がずれることはありません。
 
-```sh
-echo 'MUGEN_AI_PORT=11436' >> ~/.config/mugen-ai/.env
-systemctl --user restart mugen-ai.service
-```
-
-### HTTP API
-
-`mugen-ai serve` はデフォルトで `127.0.0.1:11435` を listen し、シェルとはプレーン HTTP で話します。会話とメッセージは SQLite (`~/.local/state/mugen-ai/history.db`) に保存されます。
-
-| Method | Path | 説明 |
-|--------|------|-------------|
-| POST | `/chat` | メッセージを送って SSE ストリームを受け取ります。Body: `{message, conversation_id, model, thinking?}`。`conversation_id: 0` で新規会話を自動作成、`>0` ならその会話に追記します。`thinking` は任意の bool で、未指定なら会話に保存された値を継承、指定すればその会話に永続化されます。最初の SSE イベントは `{conversation_id, model}` でクライアントが状態を合わせられるようにしています。会話にバインドされたモデルが常に優先されます。リクエストの `model` フィールドは新規会話のときだけモデルのシードに使われます。 |
-| POST | `/chat/confirm` | `/chat` 中に destructive な MCP ツールが上げた承認プロンプトに答えます。Body: `{confirm_id, approved}`。`confirm_id` はストリームの `tool_confirm` イベントから来ます。チャット UI が呼びます。404 が返るのはプロンプトが既に失効した (回答済 or タイムアウト) ときです。 |
-| GET | `/health` | サーバの状態とアクティブモデル。 |
-| GET | `/models` | 利用可能なモデル一覧。 |
-| PUT | `/model` | *次に*作る新規会話のデフォルトモデルを設定します (`{"model": "name"}`)。既存の会話はそれぞれのバインド済モデルのままです。 |
-| GET | `/conversations` | 全会話の一覧 (id、title、model、thinking、timestamps)。 |
-| GET | `/conversations/current` | 現在の会話とそのメッセージ。 |
-| GET | `/conversations/{id}` | 指定 ID の会話とそのメッセージ。 |
-| POST | `/conversations` | 空の会話を明示的に作成。 |
-| POST | `/conversations/{id}/select` | 指定の会話をカレントにします。 |
-| DELETE | `/conversations/{id}` | 会話を削除します。 |
-| DELETE | `/conversations` | 全会話を削除します。Settings GUI が confirm を挟んで呼びます。 |
-| GET | `/conversations/stats` | 履歴 DB のパス、会話数、ディスク上のサイズ。 |
-| GET | `/conversations/export` | 全会話とそのメッセージを 1 つの JSON にまとめて返します。 |
-| GET | `/events` | 状態変化 (新規会話 / メッセージ) を流す Server-Sent Events ストリーム。UI のライブ同期用。 |
-| GET | `/tools` | バックエンドが LLM に公開しているツール一覧 (組み込みシェルツール + MCP サーバのツール)。 |
-| POST | `/tools/call` | デバッグ用。名前指定でツールを LLM 抜きで呼びます。Body: `{name, args}`。 |
-| GET | `/mcp/servers` | 設定済 MCP サーバの起動ステータス (`{name, connected, tool_count, error, disabled}`)。 |
-| GET | `/mcp/discover` | npm の global root を走査してインストール可能な MCP サーバを探します。Settings の Discover ボタンが呼びます。 |
-| POST | `/mcp` | mugen-shell 自身のツールを外部 MCP クライアントに公開する stateless Streamable HTTP エンドポイント。`[mcp_expose]` を有効にしない限り無効です。 |
-| GET | `/memories` | Yura が保存した長期記憶の全件。 |
-| DELETE | `/memories/{id}` | 記憶を 1 件削除します。 |
-| DELETE | `/memories` | 記憶を全件削除します。Settings GUI は確認ステップを挟んで呼びます。 |
-| GET | `/config` | ディスク上の設定と `api_key_configured` マップ (プロバイダ環境変数の有無のみで値そのものは返しません) を返します。 |
-| PUT | `/config` | ディスク上の設定をアトミックに更新します。ボディは現在の設定に上書きデコードされるので、送らなかったセクションは残り、map は置換ではなくマージされます。Settings GUI が使います。レスポンスは `{saved: true, restart_required: true}`。 |
-| POST | `/config/restart` | systemd unit を再起動して `/config` での変更を反映します。サービスが systemd 管理であることが前提です。 |
-
-ターミナル用途は `mugen-ai chat`。
+会話とメッセージは SQLite (`~/.local/state/mugen-ai/history.db`) に保存されます。ターミナル用途は `mugen-ai chat`。
 
 ---
 
@@ -390,7 +299,8 @@ mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp
 
 デフォルト構成は日本語ファーストですが、日本語専用ではありません (後述の「他言語で使う」参照)。セットアップ経路は 2 つ。どちらも mugen-ai が動いている前提です。
 
-### Nix 経路
+<details>
+<summary><b>Nix 経路</b> — 一行で全部入る</summary>
 
 home-manager モジュール (Path A・B) がスタック一式をパッケージしています:
 
@@ -399,19 +309,20 @@ programs.mugen-shell.voice.enable = true;
 # programs.mugen-shell.voice.aivis.enable = false;   # AivisSpeech エンジンを外す場合
 ```
 
-これで user service が 2 つ配線されます (どちらも `graphical-session.target` 所属)。`yura-voice` はデーモン本体で、openwakeword (ONNX 推論。ベースモデルは store に同梱済みなので実行時に何も取りに行きません)、Vulkan ビルドの whisper.cpp、store に取り込んだ `large-v3-turbo` モデルを積んだ Python 環境で動きます。`aivisspeech-engine` はデフォルト ON (`voice.aivis.enable = false` で外せます) で、VOICEVOX 互換 API を `127.0.0.1:10101` で CPU モード稼働。初回起動だけデフォルト音声モデル + BERT (約 900 MB) をダウンロードするので、一度ネットワークが要ります。この経路に `nix-ld` は不要です — エンジンのバンドルは patchelf 済みで、store からそのまま動きます。
+必要なものは全部 store から来るので clone は不要ですし、`nix-ld` も要りません。AivisSpeech エンジンだけは初回起動でデフォルト音声モデル (約 900 MB) を取りに行くので、一度ネットワークが要ります。返答の読み上げは自動でここに向くため、Settings で声を選ぶ前から音が出ます。VOICEVOX は Nix 配線に含まれないので、Aivis と並べたければ下の手順 3 で手動追加してください。
 
-デーモンはパッケージ内の `yurad.py` から動くので clone は不要です。`yurad.py` をいじりたいときは `programs.mugen-shell.voice.sourceDir` に live な `voice/` を指定すれば、サービス再起動だけで反映されます (`qmlDir` と同じ発想)。返答の読み上げは自動で AivisSpeech に向くので、Settings で声を選ぶ前から音が出ます。VOICEVOX は Nix 配線に含まれないので、Aivis と並べて使いたければ下の手順 3 で手動追加します。
+エンジンは必要になった時に起動し (常駐で ~2.6GB 使うため)、合成が `voice.idleStopMin` 分 (既定 10、`settings.json` を直接編集) 途切れたら止まります。自分で管理したい場合は unit の `YURA_TTS_SERVICE=` を空にしてください。
 
-**AivisSpeech エンジンはログイン時ではなく必要になった時に起動します。** 常駐で ~2.6GB 使ううえ音声モデルを unload しても 1MB も戻らないので、ターンが始まった瞬間にデーモンが unit を start し (応答まで ~5 秒かかりますが、その間どのみち音声認識と LLM が走るので待ち時間は隠れます)、合成が `voice.idleStopMin` 分 (既定 10、`settings.json` を直接編集) 途切れたら stop します。ローカルの Piper ボイスに向くターンでは最初から起動しません。Settings のボイスピッカーを開いたときは起動します — 止まっているエンジンは自分の声を 1 つも報告しないので、一覧も試聴もできないためです。自分でエンジンを管理したい場合は unit の `YURA_TTS_SERVICE=` を空にすれば、こちらからは一切触りません。
+下の手動セットアップから移行する場合は、切り替える前に `~/.config/systemd/user/{yura-voice,aivisspeech-engine}.service` の symlink を消してください。home-manager が同じ名前で unit を書くので、管理外のファイルがあると activation が失敗します。
 
-下の手動セットアップから移行する場合は、切り替える前に `~/.config/systemd/user/{yura-voice,aivisspeech-engine}.service` の symlink を消してください。home-manager が同じ名前で unit を書くので、自分の管理外のファイルがあると activation が失敗します。
+</details>
 
-### 手動セットアップ
+<details>
+<summary><b>手動セットアップ</b> — venv・whisper.cpp・TTS を自分で</summary>
 
-Nix を使わない環境 (と `make install` ユーザ — 音声はカバー外) 向け。NixOS でこのルートを通すには `programs.nix-ld.enable = true` が必要です (pip の wheel — onnxruntime、sounddevice — と AivisSpeech エンジンのプレビルドバイナリが FHS 前提の動的リンクなため):
+Nix を使わない環境向けです。`make install` も音声はカバーしていないので、こちらを使います。NixOS でこのルートを通すには `programs.nix-ld.enable = true` が必要です (pip の wheel と AivisSpeech エンジンのプレビルドが FHS 前提のバイナリなため):
 
-1. **デーモン用の Python venv** (Python 3.14 には tflite の wheel が無いので、openwakeword は `--no-deps` で入れて ONNX 経路で動かします。ピン留めしたランタイム依存は `voice/requirements.txt` にあります):
+1. **デーモン用の Python venv**。openwakeword を `--no-deps` で入れるのは意図的です (Python 3.14 に tflite の wheel が無いため):
    ```bash
    cd ~/mugen-shell/voice
    python -m venv .venv
@@ -419,7 +330,7 @@ Nix を使わない環境 (と `make install` ユーザ — 音声はカバー�
    .venv/bin/pip install onnxruntime numpy scipy scikit-learn tqdm requests sounddevice sherpa-onnx
    ```
 2. **whisper.cpp** をローカルビルドして、サーババイナリを `~/.local/src/whisper.cpp/build/bin/whisper-server`、モデルを `~/.local/share/whisper/ggml-large-v3-turbo.bin` に配置 (`YURA_WHISPER_BIN` / `YURA_WHISPER_MODEL` で上書き可)。サーバの起動と監視はデーモンがやります。
-3. **VOICEVOX engine** を `127.0.0.1:50021` で待受。同梱の `voicevox-engine.service` は nixpkgs の `voicevox-engine` が `~/.nix-profile/bin` にある前提なので、他の入れ方をした場合は `ExecStart` を調整してください。オプションで [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine)(VOICEVOX 互換 API で、Style-BERT-VITS2 のずっと自然な声が使えるエンジン)を `~/.local/opt/aivisspeech-engine` に展開すると (ポート `10101`、`aivisspeech-engine.service` 同梱)、同じピッカーに `Aivis:` として並びます。
+3. **VOICEVOX engine** を `127.0.0.1:50021` で待受。同梱の `voicevox-engine.service` は nixpkgs の `voicevox-engine` が `~/.nix-profile/bin` にある前提なので、他の入れ方をした場合は `ExecStart` を調整してください。[AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine) は VOICEVOX 互換のもっと自然な声が使える選択肢で、`~/.local/opt/aivisspeech-engine` に展開すると (ポート `10101`、unit 同梱) 同じピッカーに並びます。
 4. **systemd unit**:
    ```bash
    ln -s ~/mugen-shell/system/systemd/user/{yura-voice,voicevox-engine,aivisspeech-engine}.service ~/.config/systemd/user/
@@ -428,20 +339,30 @@ Nix を使わない環境 (と `make install` ユーザ — 音声はカバー�
    systemctl --user enable --now voicevox-engine.service yura-voice.service
    ```
 
-実行中の制御は **Settings → Voice input** から。有効トグルは OFF でデーモンが一切聞かなくなります (再起動なしで即反映)。**Wake word トグルは既定 OFF** で、「Hey Yura」でターンを始められるかを決めます。OFF の間は push-to-talk キーを押すまでマイクを開かず、アイドル時のメモリも 1/4 程度で済みます。連続会話トグルは返答のあと数秒マイクを開けたままにして、wake word 無しで次の発話を聞きます (無音なら idle へ)。声の登録 (Voice enrollment、wake word が ON のときだけ表示) は Yura に自分の声を教える機能で、ビープに合わせて「Hey Yura」を 10 回言うと話者照合モデルを訓練し、以後は登録した声にだけ反応します (Re-register でやり直し)。ほかにターン開始時に開く先 (panel / bar / none)、Wake sensitivity スライダー (上げるほど誤反応が減り、下げるほど小声を拾う)、試聴ボタン付きのボイスピッカー、そのボイスをどの言語に適用するかを選ぶ Voice per language (Default / JA / EN)、話速セレクタ、読み上げ音量のスライダー、wake / follow-up / end 各チャイムのサウンドピッカー — 内蔵ビープ・無音・`~/.local/share/mugen-shell/sounds/` に置いた任意の音声ファイル (通知音とフォルダ共有、選ぶと試聴されます) から選べます。どれも次の発話から反映されます (デーモンが `settings.json` を監視)。両方の Yura UI に push-to-talk のマイクボタンが付き、wake word を言わなくてもその場で聞き取りを始められます (listening 中はキャンセルボタンに変わり、Voice input が OFF の間は非表示)。
+</details>
 
-### 他言語で使う
+実行中の制御は **Settings → Voice input** から — ボイスピッカー、Wake sensitivity、話速、チャイム音、その他ひととおり揃っています。どれも次の発話から反映されます。デーモンが `settings.json` を監視しているので、再起動は要りません。
 
-エンジン依存なのは返答の声だけで、それ以外はもともと多言語対応です。英語 (や他の言語) で Yura の音声を使うには:
+最初に知っておくと楽なものが 2 つ。**Wake word は既定 OFF** で、ON にするまでマイクは開かず、ターンはどちらの Yura UI にもある push-to-talk ボタンから始めます。そして ON にすると声の登録が出てきて、ビープに合わせて「Hey Yura」を 10 回言うと、以後 Yura は自分の声にだけ反応するようになります。
 
-- **TTS**: ローカルのボイスは sherpa-onnx でインプロセス実行されるので、`piper` バイナリを入れる必要はありません。[sherpa-onnx の TTS モデル配布](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) からモデルを取ってきて (Piper/VITS でも Kokoro でも動きます)、`.onnx` と `tokens.txt`・`espeak-ng-data/` を含む**モデルディレクトリごと** `~/.local/share/mugen-shell/tts/` に展開します。`YURA_TTS_MODELS` (コロン区切りの検索パス、先勝ち) で別の場所を指すこともできます。各ディレクトリは Settings の同じボイスピッカーに `vits-piper-` を除いた名前で並び、値は `local:<モデルディレクトリ名>` として保存されます。**選んだ声がエンジンを決める**ので、別途エンジン切替はありません。この場合 VOICEVOX は無くても動きます。Nix 経路には `vits-piper-en_US-lessac-high` が同梱済みです。
+<details>
+<summary><b>Yura の音声を他の言語で使う</b></summary>
+
+エンジン依存なのは返答の声だけで、それ以外はもともと多言語対応です:
+
+- **TTS**: ローカルのボイスは sherpa-onnx でインプロセス実行されるので、`piper` バイナリを入れる必要はありません。[sherpa-onnx の TTS モデル配布](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) からモデルを取ってきて (Piper/VITS でも Kokoro でも動きます)、`.onnx` と `tokens.txt`・`espeak-ng-data/` を含む**モデルディレクトリごと** `~/.local/share/mugen-shell/tts/` に展開します。`YURA_TTS_MODELS` で別の場所も指せます。展開したディレクトリはそのまま Settings のボイスピッカーに並び、この場合 VOICEVOX は無くても動きます。Nix 経路には `vits-piper-en_US-lessac-high` が同梱済みです。
 - **STT**: 認識言語は Settings → AI / Yura → Personality の Language に従います。Auto (既定) なら発話ごとに whisper が判定し、言語を固定するとそれに固定されます。whisper は約 100 言語をカバーします。
-- **Wake word**: `YURA_WAKEWORD` 未設定ならデーモンは同梱の `voice/models/hey_yura.onnx` を読みます。これは日本語発音チューニングなので、他のアクセント向けには `voice/train/` で再訓練を。このファイルが無いときだけ openWakeWord 標準の英語モデル `hey_jarvis` に fallback します (初回にダウンロード — 手動セットアップ限定。Nix 経路の Python 環境は read-only なので、代わりに `YURA_WAKEWORD` でダウンロード済みモデルを指してください)。
+- **Wake word**: 同梱の `voice/models/hey_yura.onnx` は日本語発音チューニングです。他のアクセント向けには [`voice/train/`](voice/train/README.md) で再訓練するか、`YURA_WAKEWORD` で自分のモデルを指してください。
 - **返答の言語**: Settings → AI / Yura → Personality の language で指定します。
 
-環境変数ノブ (unit か drop-in で設定): `YURA_WAKEWORD` (カスタムモデルのパス。デフォルトは同梱の `voice/models/hey_yura.onnx`)、`YURA_WAKE_THRESHOLD` (起動時のデフォルト。同梱 unit は Wake sensitivity スライダーの既定と揃えて `0.85` — デーモンは `settings.json` の `voice.wakeThreshold` を毎フレーム読み直すので、シェルが保存したあとはスライダー側が効きます)、`YURA_WAKE_PATIENCE` (閾値を連続で超えるべきフレーム数。デフォルト `2`)、`YURA_SILERO_VAD` (発話区間検出に使う `silero_vad.onnx` のパス。未設定なら openWakeWord がダウンロードするコピーに fallback — 手動インストールで唯一入手できる経路)、`YURA_TTS` (`settings.json` に声の指定が無いときに使う声。`<engine>:<style-id>` 形式か、`<engine>:` だけならそのエンジンの先頭スタイル — Nix 経路は `aivis:` を設定)、`YURA_VOICEVOX_SPEAKER` (デフォルト `14`)、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。
+**環境変数ノブ** (unit か drop-in で設定): `YURA_WAKEWORD`、`YURA_WAKE_THRESHOLD`、`YURA_WAKE_PATIENCE`、`YURA_SILERO_VAD`、`YURA_TTS` (`<engine>:<style-id>`)、`YURA_VOICEVOX_SPEAKER`、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。Settings 側にもある項目は、シェルが保存した時点で `settings.json` が勝ちます。
 
-**ヘッドホンじゃなくてスピーカー派?** メディア音声がマイクに入ると、誤起動の原因になる上に本物の呼びかけも埋もれます。PipeWire の WebRTC エコーキャンセルで両方解決できます — デフォルト sink の再生内容をマイク入力から差し引くので、再生中でも wake word が通ります。`~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` に以下を置いて (`target.object` は `wpctl inspect` で調べた自分のマイクの `node.name` に)、PipeWire を再起動後、`wpctl set-default <id>` で新しいソースをデフォルト入力にします:
+</details>
+
+<details>
+<summary><b>ヘッドホンじゃなくてスピーカー派?</b> — エコーキャンセル</summary>
+
+PipeWire の WebRTC エコーキャンセルがスピーカーの再生内容をマイク入力から差し引くので、再生中でも wake word が通ります。`~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` に以下を置いて (`target.object` は `wpctl inspect` で調べた自分のマイクの `node.name` に)、PipeWire を再起動後、`wpctl set-default <id>` で新しいソースをデフォルト入力にします:
 
 ```
 context.modules = [
@@ -456,9 +377,7 @@ context.modules = [
 ]
 ```
 
-### wake word モデル
-
-`voice/models/hey_yura.onnx` は、VOICEVOX で合成した「Hey Yura」の日本語発音 (127 スピーカースタイル、約 9,600 クリップ) で訓練した自作 openWakeWord モデルです。既製の英語モデルより日本語アクセントにずっと良く合います。held-out での recall@0.7 は 0.91、わざと似せたフレーズへの誤反応は 2.8%。クリップ生成〜augmentation〜訓練〜検証のパイプライン一式は [`voice/train/`](voice/train/README.md) にあり、ローカルで回せます (ROCm GPU 対応)。
+</details>
 
 ---
 
