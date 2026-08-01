@@ -6,62 +6,13 @@
 
 ```
 mugen-shell/
-├── shell/                    # Quickshell QML ツリー (デスクトップ UI 本体)
-│   ├── assets/
-│   │   ├── branding/         # ロゴとバナー
-│   │   └── icons/            # SVG アイコン
-│   ├── components/
-│   │   ├── bar/              # バー (左/右セクション + サブウィジェット)
-│   │   ├── common/           # 共有 UI プリミティブ
-│   │   ├── content/          # mode 別の content panel
-│   │   │   ├── ai/           # Yura の orb、コードブロック、tool chip、モデルセレクタ
-│   │   │   ├── bluetooth/    # ペアリング済 / 利用可能デバイスのデリゲート
-│   │   │   ├── settings/     # Settings の行ごとに 1 ファイル
-│   │   │   └── volume/       # オーディオデバイスのドロップダウン
-│   │   ├── managers/         # Audio、WiFi、Bluetooth など
-│   │   ├── notification/     # 通知コンポーネント
-│   │   ├── ui/               # 時計、ワークスペース、Power Menu など
-│   │   └── yura/             # Yura コーナーポップアップ用のコンポーネント
-│   ├── lib/                  # ModeManager、Colors、Typography、YuraState など
-│   ├── scripts/              # Shell / Python スクリプト (blur preset、ロックタイマーなど)
-│   ├── windows/              # Bar.qml (トップレベルサーフェス)
-│   ├── settings.default.json # OSS 向けデフォルト
-│   ├── shell.qml             # メイン Quickshell エントリ (バー + 通知)
-│   ├── yura-shell.qml        # Yura 用スタンドアロン Quickshell エントリ (別プロセス)
-│   ├── settings-shell.qml    # スタンドアロン Settings ウィンドウ
-│   ├── calendar-shell.qml    # スタンドアロン Calendar ウィンドウ
-│   └── shortcuts-shell.qml   # スタンドアロンキーボードショートカットリファレンスウィンドウ
-├── ai/                       # mugen-ai Go バックエンド
-│   ├── cmd/                  # CLI サブコマンド (chat、serve)
-│   ├── internal/             # プロバイダレジストリ、サーバ (HTTP + SSE /events)、履歴など
-│   └── contrib/systemd/      # systemd user unit
-├── voice/                    # Yura 音声入力デーモン (オプション。音声入力の節を参照)
-│   ├── yurad.py              # デーモンの 11 行のエントリポイント
-│   ├── yura/                 # パイプライン本体: wake word -> VAD -> whisper.cpp -> /chat -> TTS
-│   ├── models/               # 自作「Hey Yura」openWakeWord モデル
-│   └── train/                # wake word 訓練パイプライン (VOICEVOX ベース)
-├── system/                   # 周辺ツール用 dotfiles
-│   ├── hypr/                 # Hyprland (hyprland.lua + legacy hyprland.conf、scripts/)
-│   │   └── configs/          # autostart.conf / keybinds.conf / ... + mugen-shell.lua / blur.lua
-│   ├── kitty/                # Kitty terminal
-│   ├── fastfetch/            # システム情報表示
-│   ├── matugen/              # Material You カラー生成 + テンプレート
-│   ├── cava/                 # 音声ビジュアライザ (テーマ + GLSL シェーダ)
-│   ├── systemd/user/         # user unit (yura-voice、voicevox-engine、event notifier)
-│   └── starship.toml         # Starship prompt
-├── nix/
-│   ├── gi-typelib-dirs.nix   # 両 Nix モジュールで共有する GI typelib dir リスト
-│   └── home-manager.nix      # home-manager モジュール (全 Nix 経路の user 層)
-├── nixos/
-│   ├── flake.nix             # アンブレラ NixOS flake (root を再エクスポート + nixosModules 追加)
-│   ├── module.nix            # NixOS システムモジュール本体
-│   └── vm.nix                # 起動可能なデモ VM (インストール前のお試し用)
-├── flake.nix                 # ルート Nix flake (user レベル、home-manager 用)
-├── flake.lock
-├── Makefile                  # Nix を使わない場合の `make install`
-├── .zshrc
-├── README.md / README.ja.md
-└── SETUP.md / SETUP.ja.md    # このガイド (英/日)
+├── shell/      # Quickshell QML ツリー — デスクトップ UI 本体
+├── ai/         # Go バックエンド mugen-ai
+├── voice/      # Yura 音声入力デーモン (オプション)
+├── system/     # Hyprland / kitty / matugen / cava / systemd unit の dotfiles
+├── nix/        # home-manager モジュール — 全 Nix 経路の user 層
+├── nixos/      # NixOS モジュール、アンブレラ flake、起動可能なデモ VM
+└── Makefile    # Nix を使わない場合の `make install`
 ```
 
 ランタイムデータはリポジトリ外、XDG ディレクトリ配下に置かれます。
@@ -513,128 +464,20 @@ context.modules = [
 
 ## キーバインド
 
-### Mugen Shell
+起動中のシェルで `Super + /` を押すと全一覧が出ます。その前に知っておくと便利なものだけ挙げます。
 
-| キー | アクション |
-|-----------|--------|
+| キー | 動作 |
+|---|---|
 | `Super + R` | アプリランチャー |
-| `Super + W` | 壁紙ピッカー |
-| `Super + P` | Power Menu |
-| `Super + V` | クリップボード履歴 |
-| `Super + M` | 音楽プレイヤー |
-| `Super + T` | 通知センター |
-| `Super + Y` | Yura (バー) |
-| `Super + Shift + Y` | Yura (コーナーポップアップ) |
-| `Super + C` | カレンダー |
-| `Super + S` | スクリーンショットギャラリー |
-| `Super + U` | 音量 / マイクコントロール |
-| `Super + I` | WiFi パネル |
-| `Super + E` | Bluetooth パネル |
+| `Super + Y` / `Super + Shift + Y` | Yura — バーの入力行 / コーナーパネル |
 | `Super + ,` | Settings |
-| `Super + Shift + T` | カウントダウンタイマー |
-| `Super + /` | キーボードショートカット一覧 |
-| `Super + Shift + I` | Idle inhibitor のトグル |
-
-ほとんどのパネルキーバインドは `shell/scripts/mugen-shell-ipc.sh` を介して Unix socket で投げます。スタンドアロンのウィンドウ (カレンダー、Settings、キーボードショートカット) は別の Quickshell プロセスで動いていて、対応する `toggle-*.sh` スクリプトでトグルします。
-
-### ウィンドウ管理
-
-| キー | アクション |
-|-----------|--------|
-| `Super + Enter` | ターミナル (`autostart.conf` の `$terminal`、デフォルト: kitty) |
-| `Super + N` | ファイルマネージャ (`$fileManager`、デフォルト: thunar) |
-| `Super + B` | ブラウザ (`$browser`、デフォルト: firefox) |
-| `Super + Backspace` | アクティブウィンドウを閉じる |
+| `Super + Enter` | ターミナル |
+| `Super + Backspace` | アクティブなウィンドウを閉じる |
 | `Super + 1-5` | ワークスペース切替 |
-| `Super + Shift + 1-5` | ウィンドウを別ワークスペースへ (silent) |
-| `Alt + Shift + 1-5` | ウィンドウを別ワークスペースへ |
-| `Super + Tab` | ワークスペース内のウィンドウを循環 |
-| `Super + hjkl` | ウィンドウ間のフォーカス移動 (vim 風) |
-| `Super + Shift + hjkl` | タイル内のウィンドウ移動 (vim 風) |
-| `Super + Shift + Space` | フローティングのトグル |
-| `Super + F` | フルスクリーン |
-| `Super + F12` / `Print` | 範囲スクリーンショット (grim + slurp + wl-copy) |
-| `Super + Shift + S` | special workspace のトグル |
-| `Super + Shift + R` | Hyprland 設定のリロード |
+| `Super + hjkl` | フォーカス移動 (vim 風) |
+| `Print` | 範囲スクリーンショット、クリップボードへコピー |
 
-### メディア & システム
-
-| キー | アクション |
-|-----------|--------|
-| `XF86AudioLowerVolume` | 音量ダウン |
-| `XF86AudioRaiseVolume` | 音量アップ |
-| `XF86AudioMute` | ミュート切替 |
-| `XF86AudioMicMute` | マイクミュート切替 |
-| `XF86AudioPlay` | 再生 / 一時停止 |
-| `XF86AudioNext` | 次のトラック |
-| `XF86AudioPrev` | 前のトラック |
-| `XF86MonBrightnessUp` | 輝度アップ (バックライト付きラップトップ) |
-| `XF86MonBrightnessDown` | 輝度ダウン (バックライト付きラップトップ) |
-
----
-
-## コンポーネント
-
-### コンテンツパネル (`shell/components/content/`)
-- **AppLauncherContent**: アプリの検索と起動。
-- **MusicPlayerContent**: シーク可能な進捗スライダ付きの音楽プレイヤー UI。
-- **NotificationContent**: 通知センター。
-- **ClipboardContent**: クリップボード履歴。
-- **WiFiContent**: WiFi 管理 UI。
-- **BluetoothContent**: Bluetooth 管理 UI。
-- **VolumeContent**: 音量 / マイクコントロール UI。
-- **BrightnessContent**: バックライトスライダ (ラップトップ専用、バックライトが無いマシンでは非表示)。
-- **WallpaperContent**: 壁紙管理 UI。
-- **PowerMenuContent**: Power Menu。
-- **ScreenshotGalleryContent**: スクリーンショットギャラリー。
-- **CalendarFloatingContent**: SQLite 保存のイベント付きスタンドアロン 2 ペインカレンダー。`Super + C` で独自ウィンドウとして開きます。
-- **TimerContent**: カウントダウンタイマー UI (idle / running、リング + プリセット、キーボード操作)。
-- **SettingsFloatingContent**: サイドバーカテゴリ付きスタンドアロン Settings ウィンドウ (各行は `settings/`)。
-- **KeyboardShortcutsContent**: スタンドアロンのキーボードショートカット一覧 (`Super + /`)。
-- **AiAssistantContent**: バー入力行 (`Super + Y`)。
-- **AiAssistantFloatingContent**: Yura コーナーパネル内のチャット (サイドバー、メッセージリスト、モデルドロップダウン、パネル内 Yura インジケータ)。
-
-### Yura (`shell/components/yura/`、`shell/yura-shell.qml`)
-- **yura-shell.qml**: スタンドアロン Quickshell プロセス。Hyprland から自動起動され、`qs ipc call yura toggle` でトグルされます。
-- **YuraChatPanel**: `AiAssistantFloatingContent` を読み込むサイドアンカーの layer-shell ウィンドウ。インジケータの orb は別オーバーレイではなくパネル内に描画されます。
-
-### マネージャ (`shell/components/managers/`)
-MusicPlayerManager、NotificationManager、ClipboardManager、WiFiManager、BluetoothManager、AudioManager、AudioLevel、CavaManager、MicCavaManager、BatteryManager、BrightnessManager、WallpaperManager、ScreenshotManager、IdleInhibitorManager、ImeStatus。
-
-### コアライブラリ (`shell/lib/`)
-ModeManager、SettingsManager、TimerManager、Colors、Typography、Motion、IconProvider、IconResolver、AiBackend、IpcRouter、YuraState。
-
----
-
-## トラブルシューティング
-
-### USB キーボード / マウスが反応しなくなる (例: pavucontrol を開いたとき)
-
-**症状:** `pavucontrol` を開いたあと、キーボードとマウスが効かなくなる。
-**原因:** USB のポーリングがワイヤレスドングルを省電力 (suspend) モードに入れる。
-**対処:** カーネルパラメータで USB autosuspend を無効化する。
-
-```bash
-sudo nano /etc/default/grub
-# 追加: GRUB_CMDLINE_LINUX_DEFAULT="... usbcore.autosuspend=-1"
-sudo grub-mkconfig -o /boot/grub/grub.cfg
-```
-
-NixOS では宣言で: `boot.kernelParams = [ "usbcore.autosuspend=-1" ];`
-
-### ワイヤレスヘッドセット使用時に音声 / 動画がフリーズ
-
-**症状:** ワイヤレスヘッドセットに切り替えると音声が落ちる。ログに `Failed to get percentage from UPower`。
-**対処:** `sudo systemctl enable --now upower` (NixOS: `services.upower.enable = true;`)
-
-### Firefox / Zen Browser が PipeWire と競合
-
-**症状:** ブラウザ起動中に音声設定を開くとクラッシュ。
-**対処:** `about:config` で `media.cubeb.sandbox` を `false` にして、ブラウザを再起動。
-
-### 使っていない音声出力デバイスが出てくる
-
-**対処:** `pavucontrol` → Configuration タブで、使わないデバイス (GPU オーディオなど) を Off に。
+メディアキー、マイク、輝度キーは他と同じように効きます。定義はすべて `system/hypr/hyprland.lua` にあります。
 
 ---
 
