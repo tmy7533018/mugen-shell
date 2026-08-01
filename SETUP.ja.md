@@ -11,7 +11,7 @@
 | `$XDG_CONFIG_HOME/mugen-shell/settings.json` | 保存されたユーザ設定 |
 | `$XDG_STATE_HOME/mugen-shell/{theme-mode,idle-inhibitor.json}` | トグル状態 |
 | `$XDG_CACHE_HOME/mugen-shell/{colors.json,wallp/,wallpaper-thumbs/}` | 再生成できるキャッシュ |
-| `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/}` | ユーザが置くメディア |
+| `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/,timer-sounds/,tts/}` | ユーザが置くメディア |
 | `$XDG_PICTURES_DIR/mugen-screenshots/` | キャプチャしたスクリーンショット |
 
 通知音のドロップダウンは Settings を開くたびに再スキャンします。音をすぐ鳴らしたいときは:
@@ -144,7 +144,7 @@ yay -S hyprland quickshell hypridle hyprlock zsh kitty starship libnotify \
 
 ディスプレイマネージャやログインセッションへの Hyprland の組み込み (TTY からの `Hyprland`、sddm の session entry など) は自分でやってください。
 
-アクティベートは同梱の `system/hypr/` を `~/.config/hypr/` にコピーしますが、そのディレクトリがまだ無いときだけです。既に自前の設定があるなら、autostart は自分で足してください。この行がないと `quickshell -c mugen-shell` が走りません:
+アクティベートは同梱の `system/hypr/` を `~/.config/hypr/` にコピーします。`cava` / `kitty` / `matugen` / `fastfetch` と `starship.toml` も同様です。どれもそのパスがまだ無いときだけなので、既にある設定には触りません。既に自前の Hyprland 設定があるなら、autostart は自分で足してください。この行がないと `quickshell -c mugen-shell` が走りません:
 
 ```hypr
 source = ~/.config/hypr/configs/mugen-shell.conf
@@ -306,8 +306,11 @@ home-manager モジュール (Path A・B) がスタック一式をパッケー�
 
 ```nix
 programs.mugen-shell.voice.enable = true;
-# programs.mugen-shell.voice.aivis.enable = false;   # AivisSpeech エンジンを外す場合
+# programs.mugen-shell.voice.aivis.enable = false;      # AivisSpeech エンジンを外す場合
+# programs.mugen-shell.voice.wakeWord.enable = false;   # closure を約 200MiB 削る
 ```
+
+`wakeWord.enable` を ON のままにしておくと openWakeWord が入るので、後から「Hey Yura」を有効にできます。OFF にしても push-to-talk・マイクボタン・読み上げはそのまま使えます。
 
 必要なものは全部 store から来るので clone は不要ですし、`nix-ld` も要りません。AivisSpeech エンジンだけは初回起動でデフォルト音声モデル (約 900 MB) を取りに行くので、一度ネットワークが要ります。返答の読み上げは自動でここに向くため、Settings で声を選ぶ前から音が出ます。VOICEVOX は Nix 配線に含まれないので、Aivis と並べたければ下の手順 3 で手動追加してください。
 
@@ -343,7 +346,7 @@ Nix を使わない環境向けです。`make install` も音声はカバーし�
 
 実行中の制御は **Settings → Voice input** から — ボイスピッカー、Wake sensitivity、話速、チャイム音、その他ひととおり揃っています。どれも次の発話から反映されます。デーモンが `settings.json` を監視しているので、再起動は要りません。
 
-最初に知っておくと楽なものが 2 つ。**Wake word は既定 OFF** で、ON にするまでマイクは開かず、ターンはどちらの Yura UI にもある push-to-talk ボタンから始めます。そして ON にすると声の登録が出てきて、ビープに合わせて「Hey Yura」を 10 回言うと、以後 Yura は自分の声にだけ反応するようになります。
+最初に知っておくと楽なものが 2 つ。**Wake word は既定 OFF** で、ON にするまでマイクは開かず、ターンは `Super + Z` の長押しか、どちらの Yura UI にもある push-to-talk ボタンから始めます。そして ON にすると声の登録が出てきて、ビープに合わせて「Hey Yura」を 10 回言うと、以後 Yura は自分の声にだけ反応するようになります。
 
 <details>
 <summary><b>Yura の音声を他の言語で使う</b></summary>
@@ -392,8 +395,9 @@ context.modules = [
 | `Super + ,` | Settings |
 | `Super + Enter` | ターミナル |
 | `Super + Backspace` | アクティブなウィンドウを閉じる |
-| `Super + 1-5` | ワークスペース切替 |
+| `Super + 1-9` / `Super + 0` | ワークスペース 1-10 へ切替 |
 | `Super + hjkl` | フォーカス移動 (vim 風) |
+| `Super + Z` | 長押しで Yura に話しかける |
 | `Print` | 範囲スクリーンショット、クリップボードへコピー |
 
 メディアキー、マイク、輝度キーは他と同じように効きます。定義はすべて `system/hypr/hyprland.lua` にあります。

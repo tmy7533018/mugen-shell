@@ -171,6 +171,8 @@ Item {
                         return paths
                     }
                     property int currentPathIndex: 0
+                    onIconPathsChanged: currentPathIndex = 0
+
                     property string directImage: root.currentNotification && root.currentNotification.image
                         ? root.currentNotification.image
                         : ""

@@ -11,7 +11,7 @@ Everything lives outside the repo, under XDG dirs:
 | `$XDG_CONFIG_HOME/mugen-shell/settings.json` | Persisted user settings |
 | `$XDG_STATE_HOME/mugen-shell/{theme-mode,idle-inhibitor.json}` | Toggleable state |
 | `$XDG_CACHE_HOME/mugen-shell/{colors.json,wallp/,wallpaper-thumbs/}` | Regenerable cache |
-| `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/}` | User-supplied media |
+| `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/,timer-sounds/,tts/}` | User-supplied media |
 | `$XDG_PICTURES_DIR/mugen-screenshots/` | Captured screenshots |
 
 The notification sound dropdown rescans every time Settings opens. Quickest way to get a sound working:
@@ -144,7 +144,7 @@ yay -S hyprland quickshell hypridle hyprlock zsh kitty starship libnotify \
 
 Wiring Hyprland into your display manager or login session is left to you (`Hyprland` from TTY, sddm session entry, etc.).
 
-Activation copies the shipped `system/hypr/` into `~/.config/hypr/`, but only when that directory does not exist yet. If you already have your own config, add the autostart to it by hand — without it nothing spawns `quickshell -c mugen-shell`:
+Activation copies the shipped `system/hypr/` into `~/.config/hypr/`, and does the same for `cava`, `kitty`, `matugen`, `fastfetch` and `starship.toml` — each only when that path does not exist yet, so configs you already have are left alone. If you already have a Hyprland config, add the autostart to it by hand — without it nothing spawns `quickshell -c mugen-shell`:
 
 ```hypr
 source = ~/.config/hypr/configs/mugen-shell.conf
@@ -306,8 +306,11 @@ The home-manager module (Paths A and B) packages the whole stack:
 
 ```nix
 programs.mugen-shell.voice.enable = true;
-# programs.mugen-shell.voice.aivis.enable = false;   # skip the AivisSpeech engine
+# programs.mugen-shell.voice.aivis.enable = false;      # skip the AivisSpeech engine
+# programs.mugen-shell.voice.wakeWord.enable = false;   # drop ~200 MiB of closure
 ```
+
+Leaving `wakeWord.enable` on keeps openWakeWord installed so "Hey Yura" *can* be turned on later; turning it off still leaves push-to-talk, the mic button and read-aloud working.
 
 Everything comes from the store — no checkout, and `nix-ld` is not needed. The AivisSpeech engine downloads its default voice model (~900 MB) on first start, so it needs the network once. Replies are routed at it automatically, so they are audible before any voice is picked in Settings. VOICEVOX is not part of the Nix wiring; set it up manually (step 3 below) to put its voices next to the Aivis ones.
 
@@ -343,7 +346,7 @@ For non-Nix setups, `make install` included — voice is not part of the Makefil
 
 Runtime control lives in **Settings → Voice input** — voice picker, wake sensitivity, speech speed, cue sounds, and the rest. Everything applies from the next utterance; the daemon watches `settings.json`, so nothing needs a restart.
 
-Two of those are worth knowing up front. **The wake word is off by default**: until you turn it on, the microphone stays closed and a turn starts from the push-to-talk button in either Yura UI. And once it is on, voice enrollment appears — say "Hey Yura" after each of ten beeps and Yura answers only to you from then on.
+Two of those are worth knowing up front. **The wake word is off by default**: until you turn it on, the microphone stays closed and a turn starts from `Super + Z` held down, or from the push-to-talk button in either Yura UI. And once it is on, voice enrollment appears — say "Hey Yura" after each of ten beeps and Yura answers only to you from then on.
 
 <details>
 <summary><b>Running Yura's voice in another language</b></summary>
@@ -392,8 +395,9 @@ context.modules = [
 | `Super + ,` | Settings |
 | `Super + Enter` | Terminal |
 | `Super + Backspace` | Close the active window |
-| `Super + 1-5` | Switch workspace |
+| `Super + 1-9` / `Super + 0` | Switch to workspace 1-10 |
 | `Super + hjkl` | Move focus, vim-style |
+| `Super + Z` | Hold to talk to Yura |
 | `Print` | Region screenshot, copied to the clipboard |
 
 Media, microphone and brightness keys work as they do anywhere else. Every binding is defined in `system/hypr/hyprland.lua`.
