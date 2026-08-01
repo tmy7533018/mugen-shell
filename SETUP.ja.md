@@ -180,7 +180,7 @@ cd ~/mugen-shell
 make install
 ```
 
-設定を checkout に symlink したあと、mugen-ai をビルドして有効化します — この経路だけ Go が要ります。システムスタックは Path B と同じ `yay -S` リスト。`make uninstall` で外せます。
+設定を checkout に symlink したあと、mugen-ai をビルドして有効化します — この経路だけ Go が要ります。システムスタックは Path B と同じ `yay -S` リスト。`make uninstall` で外せます。`~/.config/hypr`・`kitty`・`cava`・`matugen`・`fastfetch` と `starship.toml` は clone への symlink になるので、あとから設定をいじるとその差分が `git status` に出ます。
 
 </details>
 
@@ -398,7 +398,7 @@ context.modules = [
 | `Super + 1-9` / `Super + 0` | ワークスペース 1-10 へ切替 |
 | `Super + hjkl` | フォーカス移動 (vim 風) |
 | `Super + Z` | 長押しで Yura に話しかける |
-| `Print` | 範囲スクリーンショット、クリップボードへコピー |
+| `Print` / `Super + F12` | 範囲スクリーンショット、クリップボードへコピー |
 
 メディアキー、マイク、輝度キーは他と同じように効きます。定義はすべて `system/hypr/hyprland.lua` にあります。
 

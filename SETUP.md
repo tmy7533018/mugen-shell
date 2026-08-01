@@ -180,7 +180,7 @@ cd ~/mugen-shell
 make install
 ```
 
-Symlinks the configs at the checkout, then builds and enables mugen-ai — this one needs Go. Same `yay -S` list as Path B for the system stack; `make uninstall` reverses it.
+Symlinks the configs at the checkout, then builds and enables mugen-ai — this one needs Go. Same `yay -S` list as Path B for the system stack; `make uninstall` reverses it. `~/.config/hypr`, `kitty`, `cava`, `matugen`, `fastfetch` and `starship.toml` become symlinks into the clone, so later edits to any of them show up in `git status`.
 
 </details>
 
@@ -398,7 +398,7 @@ context.modules = [
 | `Super + 1-9` / `Super + 0` | Switch to workspace 1-10 |
 | `Super + hjkl` | Move focus, vim-style |
 | `Super + Z` | Hold to talk to Yura |
-| `Print` | Region screenshot, copied to the clipboard |
+| `Print` / `Super + F12` | Region screenshot, copied to the clipboard |
 
 Media, microphone and brightness keys work as they do anywhere else. Every binding is defined in `system/hypr/hyprland.lua`.
 

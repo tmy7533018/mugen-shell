@@ -7,7 +7,7 @@
 
 <p align="center"><i>Quickshell + Hyprland で組んだ、夢幻デスクトップ。</i></p>
 
-https://github.com/user-attachments/assets/beaaf135-5cdf-46d9-975d-91e3e6f04068
+https://github.com/user-attachments/assets/375659b6-8b1d-4d08-8621-7451d6791e71
 
 Hyprland + Quickshell デスクトップ向けの個人 dotfiles を、Nix flake または `make install` で入れられる形にまとめたものです。色は Matugen が壁紙から起こし、アシスタントがチャットと音声でシェルを動かします。
 
@@ -17,7 +17,7 @@ Hyprland + Quickshell デスクトップ向けの個人 dotfiles を、Nix flake
 cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm
 ```
 
-インストール先、依存、キーバインド、それに Yura まわりの設定項目はすべて [SETUP.ja.md](SETUP.ja.md) にまとめました。シェルを起動したあとなら `Super + /` でも一覧が出ます。長めの実演は [TikTok のデモ](https://www.tiktok.com/@ripnk6498/video/7579183858038492433)で見られます。
+インストール先、依存、キーバインド、それに Yura まわりの設定項目はすべて [SETUP.ja.md](SETUP.ja.md) にまとめました。シェルを起動したあとなら `Super + /` でも一覧が出ます。
 
 ---
 
@@ -38,10 +38,6 @@ cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./resul
 
 ## Yura
 
-https://github.com/user-attachments/assets/61328371-aa8e-4f96-aae8-2817fadf3ed4
-
-<sub><i>バーで軽く挨拶した後、コーナーの Yura が壁紙をシャッフル、ライトモードに切替え、ツール呼び出しでブラウザを開きます。</i></sub>
-
 Yura はデスクトップのアシスタントです。バーの入力 (`Super + Y`) と画面コーナーのチャットパネル (`Super + Shift + Y`) の 2 か所に出てきて、会話履歴は共有します。バックエンドは [`ai/`](ai/) 配下の Go サーバ **mugen-ai** で、[Ollama](https://ollama.com) 経由のローカルモデル、Anthropic Claude、Google Gemini、OpenAI 互換 API に対応しています。
 
 Yura はデスクトップの操作も可能です。「音量 30 にして」「25 分タイマー」と言えば、自分でクリックするのと同じパネルに届きます。ツール呼び出しはカテゴリ単位で塞げますし、アプリの起動は許可リスト制です。電源まわりは最初から渡していません。外部の [MCP](https://modelcontextprotocol.io) サーバも同じ枠に入り、書き込み系は実行前に確認します。
@@ -54,7 +50,7 @@ Yura はデスクトップの操作も可能です。「音量 30 にして」�
 
 - 壁紙から Material You のパレットを起こし直します。静止画でも動画でも同じように扱います
 - 日常のためのパネルが揃っています — カレンダー、タイマー、音楽、クリップボード、通知、アプリランチャー、スクリーンショットなど
-- ひととおりのシステム操作ができます — 音声、バックライト、WiFi、Bluetooth、IME、バッテリー、トレイ
+- ひととおりのシステム操作ができます — オーディオ、バックライト、WiFi、Bluetooth、IME、バッテリー、システムトレイ
 - Settings ウィンドウが独立しているので、設定ファイルを開かずにカスタマイズできます
 
 ---
