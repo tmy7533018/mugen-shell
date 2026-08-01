@@ -14,7 +14,7 @@ mugen-shell/
 │   │   ├── bar/              # バー (左/右セクション + サブウィジェット)
 │   │   ├── common/           # 共有 UI プリミティブ
 │   │   ├── content/          # mode 別の content panel
-│   │   │   ├── ai/           # AI メッセージバブル + モデルセレクタ
+│   │   │   ├── ai/           # Yura の orb、コードブロック、tool chip、モデルセレクタ
 │   │   │   ├── bluetooth/    # ペアリング済 / 利用可能デバイスのデリゲート
 │   │   │   ├── settings/     # Settings の行ごとに 1 ファイル
 │   │   │   └── volume/       # オーディオデバイスのドロップダウン
@@ -36,7 +36,8 @@ mugen-shell/
 │   ├── internal/             # プロバイダレジストリ、サーバ (HTTP + SSE /events)、履歴など
 │   └── contrib/systemd/      # systemd user unit
 ├── voice/                    # Yura 音声入力デーモン (オプション。音声入力の節を参照)
-│   ├── yurad.py              # wake word -> VAD -> whisper.cpp -> /chat -> VOICEVOX
+│   ├── yurad.py              # デーモンの 11 行のエントリポイント
+│   ├── yura/                 # パイプライン本体: wake word -> VAD -> whisper.cpp -> /chat -> TTS
 │   ├── models/               # 自作「Hey Yura」openWakeWord モデル
 │   └── train/                # wake word 訓練パイプライン (VOICEVOX ベース)
 ├── system/                   # 周辺ツール用 dotfiles
@@ -415,8 +416,13 @@ systemctl --user restart mugen-ai.service
 | GET | `/tools` | バックエンドが LLM に公開しているツール一覧 (組み込みシェルツール + MCP サーバのツール)。 |
 | POST | `/tools/call` | デバッグ用。名前指定でツールを LLM 抜きで呼びます。Body: `{name, args}`。 |
 | GET | `/mcp/servers` | 設定済 MCP サーバの起動ステータス (`{name, connected, tool_count, error, disabled}`)。 |
+| GET | `/mcp/discover` | npm の global root を走査してインストール可能な MCP サーバを探します。Settings の Discover ボタンが呼びます。 |
+| POST | `/mcp` | mugen-shell 自身のツールを外部 MCP クライアントに公開する stateless Streamable HTTP エンドポイント。`[mcp_expose]` を有効にしない限り無効です。 |
+| GET | `/memories` | Yura が保存した長期記憶の全件。 |
+| DELETE | `/memories/{id}` | 記憶を 1 件削除します。 |
+| DELETE | `/memories` | 記憶を全件削除します。Settings GUI は確認ステップを挟んで呼びます。 |
 | GET | `/config` | ディスク上の設定と `api_key_configured` マップ (プロバイダ環境変数の有無のみで値そのものは返しません) を返します。 |
-| PUT | `/config` | ディスク上の設定をアトミックに置き換えます。Settings GUI が使います。レスポンスは `{saved: true, restart_required: true}`。 |
+| PUT | `/config` | ディスク上の設定をアトミックに更新します。ボディは現在の設定に上書きデコードされるので、送らなかったセクションは残り、map は置換ではなくマージされます。Settings GUI が使います。レスポンスは `{saved: true, restart_required: true}`。 |
 | POST | `/config/restart` | systemd unit を再起動して `/config` での変更を反映します。サービスが systemd 管理であることが前提です。 |
 
 ターミナル用途は `mugen-ai chat`。
@@ -448,7 +454,7 @@ programs.mugen-shell.voice.enable = true;
 
 **AivisSpeech エンジンはログイン時ではなく必要になった時に起動します。** 常駐で ~2.6GB 使ううえ音声モデルを unload しても 1MB も戻らないので、ターンが始まった瞬間にデーモンが unit を start し (応答まで ~5 秒かかりますが、その間どのみち音声認識と LLM が走るので待ち時間は隠れます)、合成が `voice.idleStopMin` 分 (既定 10、`settings.json` を直接編集) 途切れたら stop します。ローカルの Piper ボイスに向くターンでは最初から起動しません。Settings のボイスピッカーを開いたときは起動します — 止まっているエンジンは自分の声を 1 つも報告しないので、一覧も試聴もできないためです。自分でエンジンを管理したい場合は unit の `YURA_TTS_SERVICE=` を空にすれば、こちらからは一切触りません。
 
-下の手動セットアップから移行する場合は、切り替える前に `~/.config/systemd/user/{yura-voice,voicevox-engine,aivisspeech-engine}.service` の symlink を消してください。home-manager が同じ名前で unit を書くので、自分の管理外のファイルがあると activation が失敗します。
+下の手動セットアップから移行する場合は、切り替える前に `~/.config/systemd/user/{yura-voice,aivisspeech-engine}.service` の symlink を消してください。home-manager が同じ名前で unit を書くので、自分の管理外のファイルがあると activation が失敗します。
 
 ### 手動セットアップ
 
@@ -459,7 +465,7 @@ Nix を使わない環境 (と `make install` ユーザ — 音声はカバー�
    cd ~/mugen-shell/voice
    python -m venv .venv
    .venv/bin/pip install --no-deps openwakeword==0.6.0
-   .venv/bin/pip install onnxruntime numpy scipy scikit-learn tqdm requests sounddevice
+   .venv/bin/pip install onnxruntime numpy scipy scikit-learn tqdm requests sounddevice sherpa-onnx
    ```
 2. **whisper.cpp** をローカルビルドして、サーババイナリを `~/.local/src/whisper.cpp/build/bin/whisper-server`、モデルを `~/.local/share/whisper/ggml-large-v3-turbo.bin` に配置 (`YURA_WHISPER_BIN` / `YURA_WHISPER_MODEL` で上書き可)。サーバの起動と監視はデーモンがやります。
 3. **VOICEVOX engine** を `127.0.0.1:50021` で待受。同梱の `voicevox-engine.service` は nixpkgs の `voicevox-engine` が `~/.nix-profile/bin` にある前提なので、他の入れ方をした場合は `ExecStart` を調整してください。オプションで [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine)(VOICEVOX 互換 API で、Style-BERT-VITS2 のずっと自然な声が使えるエンジン)を `~/.local/opt/aivisspeech-engine` に展開すると (ポート `10101`、`aivisspeech-engine.service` 同梱)、同じピッカーに `Aivis:` として並びます。

@@ -14,7 +14,7 @@ mugen-shell/
 │   │   ├── bar/              # Bar (left/right sections + sub-widgets)
 │   │   ├── common/           # Shared UI primitives
 │   │   ├── content/          # Per-mode content panels
-│   │   │   ├── ai/           # AI message bubble + model selector
+│   │   │   ├── ai/           # Yura orb, code blocks, tool chips, model selector
 │   │   │   ├── bluetooth/    # Paired / available device delegates
 │   │   │   ├── settings/     # One file per Settings row
 │   │   │   └── volume/       # Audio device dropdown
@@ -36,7 +36,8 @@ mugen-shell/
 │   ├── internal/             # Provider registry, server (HTTP + SSE /events), history, ...
 │   └── contrib/systemd/      # systemd user unit
 ├── voice/                    # Yura voice input daemon (optional; see Voice input)
-│   ├── yurad.py              # wake word -> VAD -> whisper.cpp -> /chat -> VOICEVOX
+│   ├── yurad.py              # 11-line entry point for the daemon
+│   ├── yura/                 # the pipeline: wake word -> VAD -> whisper.cpp -> /chat -> TTS
 │   ├── models/               # custom "Hey Yura" openWakeWord model
 │   └── train/                # wake word training pipeline (VOICEVOX-based)
 ├── system/                   # Dotfiles for the surrounding tools
@@ -414,8 +415,13 @@ systemctl --user restart mugen-ai.service
 | GET | `/tools` | List the tools the backend exposes to the LLM: built-in shell tools plus any MCP server tools. |
 | POST | `/tools/call` | Debug path: invoke a tool by name with no LLM involvement. Body: `{name, args}`. |
 | GET | `/mcp/servers` | Startup status of each configured MCP server (`{name, connected, tool_count, error, disabled}`). |
+| GET | `/mcp/discover` | Scan the npm global root for installable MCP servers. The Settings Discover button calls this. |
+| POST | `/mcp` | Stateless Streamable HTTP endpoint exposing mugen-shell's own tools to external MCP clients. Off unless `[mcp_expose]` is enabled. |
+| GET | `/memories` | Every long-term memory Yura has saved. |
+| DELETE | `/memories/{id}` | Delete one memory. |
+| DELETE | `/memories` | Delete every memory. The Settings GUI calls this behind a confirm step. |
 | GET | `/config` | Read the on-disk config plus an `api_key_configured` map (provider env-var presence; value never exposed). |
-| PUT | `/config` | Replace the on-disk config atomically. The Settings GUI uses this. Response is `{saved: true, restart_required: true}`. |
+| PUT | `/config` | Patch the on-disk config atomically — the body is decoded over the current config, so sections it omits are kept and maps are merged rather than replaced. The Settings GUI uses this. Response is `{saved: true, restart_required: true}`. |
 | POST | `/config/restart` | Bounce the systemd unit so changes from `/config` take effect. Requires the service to be managed by systemd. |
 
 For terminal use: `mugen-ai chat`.
@@ -447,7 +453,7 @@ The daemon runs `yurad.py` from the package, so no checkout is needed; point `pr
 
 **The AivisSpeech engine is started on demand, not at login.** It costs ~2.6 GB resident and unloading its voice models frees none of that, so the daemon starts the unit the moment a turn begins — the ~5 s it needs to answer is spent on speech recognition and the LLM, which run first anyway — and stops it once nothing has been synthesized for `voice.idleStopMin` minutes (default 10, hand-edited in `settings.json`). A turn that routes to a local Piper voice never starts it at all. Opening the Settings voice picker does start it, because a stopped engine reports none of its voices to list or audition. Set `YURA_TTS_SERVICE=` (empty) in the unit to run the engine yourself instead; nothing will then start or stop it. VOICEVOX is not part of the Nix wiring — set it up manually (step 3 below) if you want its voices next to the Aivis ones.
 
-Coming from the manual path below, delete the `~/.config/systemd/user/{yura-voice,voicevox-engine,aivisspeech-engine}.service` symlinks before switching: home-manager writes units under those same names and its activation refuses to overwrite files it does not own.
+Coming from the manual path below, delete the `~/.config/systemd/user/{yura-voice,aivisspeech-engine}.service` symlinks before switching: home-manager writes units under those same names and its activation refuses to overwrite files it does not own.
 
 ### Manual path
 
@@ -458,7 +464,7 @@ For non-Nix setups (and `make install` users — voice is not covered there). On
    cd ~/mugen-shell/voice
    python -m venv .venv
    .venv/bin/pip install --no-deps openwakeword==0.6.0
-   .venv/bin/pip install onnxruntime numpy scipy scikit-learn tqdm requests sounddevice
+   .venv/bin/pip install onnxruntime numpy scipy scikit-learn tqdm requests sounddevice sherpa-onnx
    ```
 2. **whisper.cpp** built locally, with the server binary at `~/.local/src/whisper.cpp/build/bin/whisper-server` and a model at `~/.local/share/whisper/ggml-large-v3-turbo.bin` (override via `YURA_WHISPER_BIN` / `YURA_WHISPER_MODEL`). The daemon spawns and supervises the server itself.
 3. **VOICEVOX engine** answering on `127.0.0.1:50021`. The shipped `voicevox-engine.service` expects the nixpkgs `voicevox-engine` on `~/.nix-profile/bin`; adjust `ExecStart` for other install methods. Optionally add [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine) — a VOICEVOX-compatible engine with much more natural Style-BERT-VITS2 voices — extracted to `~/.local/opt/aivisspeech-engine` (port `10101`, `aivisspeech-engine.service` ships alongside); its voices join the same picker as `Aivis:` entries.
