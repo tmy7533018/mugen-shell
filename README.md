@@ -46,7 +46,7 @@ Yura is the desktop assistant. It appears as an input row in the bar (`Super + Y
 
 Yura also runs the desktop. "Set volume to 30" or "set a 25 minute timer" reaches the same panels you would click. Tool calls can be switched off per category, launching apps goes through an allowlist, and power actions were never handed over. External [MCP](https://modelcontextprotocol.io) servers join the same set, with their writes held for approval.
 
-Voice input is optional: say **"Hey Yura"**, talk, and the reply comes back spoken. The bundled voice is Japanese; other languages route to a Piper voice instead. Everything is configured under **Settings → AI / Yura**, and [SETUP.md](SETUP.md#configuring-mugen-ai) covers the rest.
+Voice input is optional. Say **"Hey Yura"**, talk, and the reply comes back spoken; the voice that ships is Japanese, and other languages route to a Piper voice instead. Everything is configured under **Settings → AI / Yura**, and [SETUP.md](SETUP.md#configuring-mugen-ai) covers the rest.
 
 ---
 

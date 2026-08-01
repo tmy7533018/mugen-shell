@@ -17,7 +17,7 @@ Hyprland + Quickshell デスクトップ向けの個人 dotfiles を、Nix flake
 cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm
 ```
 
-インストール先、依存、キーバインド、設定はすべて [SETUP.ja.md](SETUP.ja.md) にあります。起動中のシェルなら `Super + /` でもショートカット一覧が出ます。長めの実演は [TikTok のデモ](https://www.tiktok.com/@ripnk6498/video/7579183858038492433)にあります。
+インストール先、依存、キーバインド、それに Yura まわりの設定項目はすべて [SETUP.ja.md](SETUP.ja.md) にまとめました。シェルを起動したあとなら `Super + /` でも一覧が出ます。長めの実演は [TikTok のデモ](https://www.tiktok.com/@ripnk6498/video/7579183858038492433)で見られます。
 
 ---
 
