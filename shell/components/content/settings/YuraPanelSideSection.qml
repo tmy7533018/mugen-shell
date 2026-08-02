@@ -50,6 +50,7 @@ Rectangle {
                 model: ["left", "right"]
 
                 Rectangle {
+                    id: sideChip
                     required property string modelData
                     width: 64
                     height: 28
@@ -72,12 +73,12 @@ Rectangle {
                     Text {
                         anchors.centerIn: parent
                         text: modelData
-                        color: parent.isSelected
+                        color: sideChip.isSelected
                             ? (section.theme ? section.theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95))
                             : (section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90))
                         font.pixelSize: 11
                         font.family: "M PLUS 2"
-                        font.weight: parent.isSelected ? Font.Medium : Font.Normal
+                        font.weight: sideChip.isSelected ? Font.Medium : Font.Normal
                     }
 
                     MouseArea {

@@ -429,6 +429,7 @@ Rectangle {
                 clip: true
 
                 delegate: Rectangle {
+                    id: appRow
                     required property var modelData
                     width: appList.width
                     height: 32
@@ -451,7 +452,7 @@ Rectangle {
 
                             Text {
                                 Layout.fillWidth: true
-                                text: parent.parent.parent.modelData.display
+                                text: appRow.modelData.display
                                 color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.92)
                                 font.pixelSize: 11
                                 font.family: "M PLUS 2"
@@ -461,7 +462,7 @@ Rectangle {
 
                             Text {
                                 Layout.fillWidth: true
-                                text: parent.parent.parent.modelData.binary
+                                text: appRow.modelData.binary
                                 color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.65)
                                 font.pixelSize: 9
                                 font.family: "M PLUS 2"
@@ -477,7 +478,7 @@ Rectangle {
                             Layout.alignment: Qt.AlignVCenter
                             radius: 10
 
-                            readonly property bool on: section.isAllowed(parent.parent.modelData.binary)
+                            readonly property bool on: section.isAllowed(appRow.modelData.binary)
 
                             color: pill.on
                                 ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.55) : Qt.rgba(0.65, 0.55, 0.85, 0.55))
@@ -505,7 +506,7 @@ Rectangle {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: section.toggleAllowed(parent.modelData.binary)
+                        onClicked: section.toggleAllowed(appRow.modelData.binary)
                     }
                 }
             }

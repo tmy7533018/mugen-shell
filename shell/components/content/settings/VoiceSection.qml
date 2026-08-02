@@ -338,6 +338,7 @@ Rectangle {
             boundsBehavior: Flickable.StopAtBounds
 
             delegate: Rectangle {
+                id: cueRow
                 required property var modelData
                 width: cueList.width
                 height: 30
@@ -371,14 +372,14 @@ Rectangle {
                     anchors.leftMargin: 10
                     anchors.right: parent.right
                     anchors.rightMargin: 10
-                    text: parent.modelData.label
+                    text: cueRow.modelData.label
                     elide: Text.ElideRight
-                    color: parent.isSelected
+                    color: cueRow.isSelected
                         ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.85, 1.0, 1.0))
                         : (section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
                     font.pixelSize: 11
                     font.family: "M PLUS 2"
-                    font.weight: parent.isSelected ? Font.Medium : Font.Normal
+                    font.weight: cueRow.isSelected ? Font.Medium : Font.Normal
                 }
             }
         }
@@ -654,6 +655,7 @@ Rectangle {
             boundsBehavior: Flickable.StopAtBounds
 
             delegate: Rectangle {
+                id: voiceRow
                 required property var modelData
                 width: voiceList.width
                 height: 30
@@ -689,14 +691,14 @@ Rectangle {
                     anchors.leftMargin: 10
                     anchors.right: playChip.left
                     anchors.rightMargin: 8
-                    text: parent.modelData.label
+                    text: voiceRow.modelData.label
                     elide: Text.ElideRight
-                    color: parent.isSelected
+                    color: voiceRow.isSelected
                         ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.85, 1.0, 1.0))
                         : (section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
                     font.pixelSize: 11
                     font.family: "M PLUS 2"
-                    font.weight: parent.isSelected ? Font.Medium : Font.Normal
+                    font.weight: voiceRow.isSelected ? Font.Medium : Font.Normal
                 }
 
                 Rectangle {
@@ -707,7 +709,7 @@ Rectangle {
                     width: 26
                     height: 20
                     radius: 10
-                    visible: parent.modelData.value !== ""
+                    visible: voiceRow.modelData.value !== ""
                         && (rowMouse.containsMouse || playMouse.containsMouse)
                     color: playMouse.containsMouse
                         ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.5) : Qt.rgba(0.65, 0.55, 0.85, 0.5))
@@ -725,7 +727,7 @@ Rectangle {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: section.preview(parent.parent.modelData.value)
+                        onClicked: section.preview(voiceRow.modelData.value)
                     }
                 }
             }

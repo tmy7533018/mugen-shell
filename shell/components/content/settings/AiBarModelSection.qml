@@ -110,6 +110,7 @@ Rectangle {
             model: section.options
 
             Rectangle {
+                id: modelRow
                 required property string modelData
                 width: parent ? parent.width : 0
                 height: 32
@@ -126,12 +127,12 @@ Rectangle {
                     anchors.left: parent.left
                     anchors.leftMargin: 12
                     text: section.labelFor(modelData)
-                    color: parent.isSelected
+                    color: modelRow.isSelected
                         ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.85, 1.0, 1.0))
                         : (section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
                     font.pixelSize: 11
                     font.family: "M PLUS 2"
-                    font.weight: parent.isSelected ? Font.Medium : Font.Normal
+                    font.weight: modelRow.isSelected ? Font.Medium : Font.Normal
                     font.italic: modelData === ""
                 }
 

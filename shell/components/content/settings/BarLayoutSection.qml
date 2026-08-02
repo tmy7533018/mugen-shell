@@ -37,6 +37,7 @@ Rectangle {
             model: section.rows
 
             RowLayout {
+                id: settingRow
                 required property var modelData
 
                 Layout.fillWidth: true
@@ -45,7 +46,7 @@ Rectangle {
 
                 Text {
                     Layout.fillWidth: true
-                    text: parent.modelData.label
+                    text: settingRow.modelData.label
                     color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                     font.pixelSize: 12
                     font.family: "M PLUS 2"

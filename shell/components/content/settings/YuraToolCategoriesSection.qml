@@ -321,6 +321,7 @@ Rectangle {
             model: section.categories
 
             RowLayout {
+                id: categoryRow
                 required property var modelData
                 Layout.fillWidth: true
                 spacing: 8
@@ -332,7 +333,7 @@ Rectangle {
 
                     Text {
                         Layout.fillWidth: true
-                        text: parent.parent.modelData.label
+                        text: categoryRow.modelData.label
                         color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.92)
                         font.pixelSize: 11
                         font.family: "M PLUS 2"
@@ -342,7 +343,7 @@ Rectangle {
 
                     Text {
                         Layout.fillWidth: true
-                        text: parent.parent.modelData.desc
+                        text: categoryRow.modelData.desc
                         color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.60)
                         font.pixelSize: 9
                         font.family: "M PLUS 2"
@@ -358,7 +359,7 @@ Rectangle {
                     Layout.alignment: Qt.AlignVCenter
                     radius: 10
 
-                    readonly property bool on: section.isEnabled(parent.modelData.id)
+                    readonly property bool on: section.isEnabled(categoryRow.modelData.id)
 
                     color: pill.on
                         ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.55) : Qt.rgba(0.65, 0.55, 0.85, 0.55))
@@ -383,7 +384,7 @@ Rectangle {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: section.setEnabled(parent.parent.modelData.id, !pill.on)
+                        onClicked: section.setEnabled(categoryRow.modelData.id, !pill.on)
                     }
                 }
             }

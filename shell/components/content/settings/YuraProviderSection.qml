@@ -180,6 +180,7 @@ Rectangle {
             model: section.rows
 
             Rectangle {
+                id: providerRow
                 required property var modelData
                 Layout.fillWidth: true
                 Layout.preferredHeight: providerBody.implicitHeight + 16
@@ -206,13 +207,13 @@ Rectangle {
                             Layout.preferredWidth: 8
                             Layout.preferredHeight: 8
                             radius: 4
-                            color: parent.parent.parent.modelData.active
+                            color: providerRow.modelData.active
                                 ? Qt.rgba(0.45, 0.85, 0.55, 0.95)
                                 : Qt.rgba(0.85, 0.45, 0.45, 0.7)
                         }
 
                         Text {
-                            text: parent.parent.parent.modelData.name
+                            text: providerRow.modelData.name
                             color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.95)
                             font.pixelSize: 12
                             font.family: "M PLUS 2"
@@ -222,7 +223,7 @@ Rectangle {
                         Text {
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
-                            text: parent.parent.parent.modelData.keyLabel
+                            text: providerRow.modelData.keyLabel
                             color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70)
                             font.pixelSize: 10
                             font.family: "M PLUS 2"
@@ -234,7 +235,7 @@ Rectangle {
 
                     Text {
                         Layout.fillWidth: true
-                        text: parent.parent.modelData.detail
+                        text: providerRow.modelData.detail
                         color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.85)
                         font.pixelSize: 10
                         font.family: "M PLUS 2"
@@ -244,8 +245,8 @@ Rectangle {
 
                     Text {
                         Layout.fillWidth: true
-                        visible: parent.parent.modelData.models && parent.parent.modelData.models.length > 0
-                        text: (parent.parent.modelData.models || []).join("  ·  ")
+                        visible: providerRow.modelData.models && providerRow.modelData.models.length > 0
+                        text: (providerRow.modelData.models || []).join("  ·  ")
                         color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.85)
                         font.pixelSize: 10
                         font.family: "M PLUS 2"
