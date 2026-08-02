@@ -99,6 +99,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /conversations/{id}", s.handleGetConversation)
 	mux.HandleFunc("DELETE /conversations/{id}", s.handleDeleteConversation)
 	mux.HandleFunc("POST /conversations/{id}/select", s.handleSelectConversation)
+	mux.HandleFunc("DELETE /conversations/{id}/messages/{msgId}", s.handleTruncateConversation)
 
 	mux.HandleFunc("GET /events", s.handleEvents)
 
@@ -694,6 +695,46 @@ func (s *Server) handleDeleteConversation(w http.ResponseWriter, r *http.Request
 	}
 	s.events.broadcast("conversations", nil)
 	writeJSON(w, map[string]any{"current_id": s.history.ConvID()})
+}
+
+// Rewinds a conversation to just before msgId so the caller can resend. Retry
+// and edit are the same operation from the server's side: truncate, then POST
+// /chat as usual.
+func (s *Server) handleTruncateConversation(w http.ResponseWriter, r *http.Request) {
+	id, ok := parsePathID(r, "id")
+	if !ok {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	msgID, ok := parsePathID(r, "msgId")
+	if !ok {
+		http.Error(w, "invalid message id", http.StatusBadRequest)
+		return
+	}
+	conv, err := s.store.GetConversation(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if conv == nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	removed, err := s.history.TruncateFrom(id, msgID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	msgs, err := s.store.ListMessages(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if msgs == nil {
+		msgs = []store.Message{}
+	}
+	s.events.broadcast("conversations", nil)
+	writeJSON(w, map[string]any{"removed": removed, "messages": msgs})
 }
 
 func (s *Server) handleSelectConversation(w http.ResponseWriter, r *http.Request) {

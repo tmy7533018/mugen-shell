@@ -28,6 +28,9 @@ type Conversation struct {
 }
 
 type Message struct {
+	// ID is what retry and edit address: both truncate the conversation from
+	// one message onward before resending.
+	ID      int64  `json:"id"`
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
@@ -325,7 +328,7 @@ func (s *Store) AppendMessage(convID int64, role, content string) error {
 
 func (s *Store) ListMessages(convID int64) ([]Message, error) {
 	rows, err := s.db.Query(
-		`SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC, id ASC`,
+		`SELECT id, role, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC, id ASC`,
 		convID,
 	)
 	if err != nil {
@@ -335,7 +338,7 @@ func (s *Store) ListMessages(convID int64) ([]Message, error) {
 	var out []Message
 	for rows.Next() {
 		var m Message
-		if err := rows.Scan(&m.Role, &m.Content); err != nil {
+		if err := rows.Scan(&m.ID, &m.Role, &m.Content); err != nil {
 			return nil, err
 		}
 		out = append(out, m)
@@ -350,6 +353,35 @@ func (s *Store) RemoveLastMessage(convID int64) error {
 		SELECT id FROM messages WHERE conversation_id = ? ORDER BY created_at DESC, id DESC LIMIT 1
 	)`, convID)
 	return err
+}
+
+// TruncateFrom drops msgID and everything after it. Message ids come from a
+// single AUTOINCREMENT sequence, so ordering by id matches the chronological
+// order ListMessages returns. Returns how many messages were removed.
+func (s *Store) TruncateFrom(convID, msgID int64) (int64, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(
+		`DELETE FROM messages WHERE conversation_id = ? AND id >= ?`,
+		convID, msgID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	removed, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	if _, err := tx.Exec(`UPDATE conversations SET updated_at = ? WHERE id = ?`, nowUnix(), convID); err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return removed, nil
 }
 
 func (s *Store) GetCurrentConversationID() (int64, error) {

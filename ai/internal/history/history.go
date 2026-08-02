@@ -226,6 +226,27 @@ func (h *History) RemoveLastFrom(convID int64) {
 	}
 }
 
+// TruncateFrom drops msgID and everything after it, which is how retry and
+// edit rewind a conversation before resending. Reloads the in-memory copy so
+// the next turn is built from the shortened history rather than the stale one.
+func (h *History) TruncateFrom(convID, msgID int64) (int64, error) {
+	if convID == 0 || msgID == 0 {
+		return 0, nil
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	removed, err := h.store.TruncateFrom(convID, msgID)
+	if err != nil {
+		return 0, err
+	}
+	if convID == h.convID {
+		if err := h.switchLocked(convID); err != nil {
+			return removed, err
+		}
+	}
+	return removed, nil
+}
+
 func (h *History) Messages() []provider.Message {
 	h.mu.Lock()
 	defer h.mu.Unlock()
