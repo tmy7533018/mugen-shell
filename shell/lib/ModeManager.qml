@@ -265,14 +265,14 @@ QtObject {
     }
     
     Component.onDestruction: {
-        Qt.createQmlObject('
+        Qt.createQmlObject(`
             import QtQuick
             import Quickshell.Io
             Process {
-                command: ["rm", "-f", "' + manager.ipcFile + '"]
+                command: ["rm", "-f", ${JSON.stringify(manager.ipcFile)}]
                 running: true
             }
-        ', manager)
+        `, manager)
     }
     
 }

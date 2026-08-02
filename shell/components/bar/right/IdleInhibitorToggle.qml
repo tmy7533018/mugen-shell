@@ -8,16 +8,12 @@ Common.IconButton {
 
     required property var theme
     required property var icons
-    required property var modeManager
     required property var idleInhibitorManager
     required property real spacing
-
-    function scaled(v) { return modeManager ? modeManager.scale(v) : v }
+    required modeManager
 
     Layout.alignment: Qt.AlignVCenter
     Layout.leftMargin: spacing
-    modeManager: idleToggleButton.modeManager
-    iconSize: scaled(24)
     opacityDuration: 150
 
     property bool isBlinking: false

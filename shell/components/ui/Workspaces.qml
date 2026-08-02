@@ -69,7 +69,7 @@ Item {
         target: Hyprland
 
         function onFocusedWorkspaceChanged() {
-            if (workspacesRoot.visible && parent.visible) {
+            if (workspacesRoot.visible) {
                 workspaceDebounceTimer.restart()
             }
         }
@@ -83,7 +83,7 @@ Item {
             Quickshell.shellDir + "/scripts/hyprland_ipc_monitor.py"
         ]
 
-        running: workspacesRoot.visible && parent.visible
+        running: workspacesRoot.visible
 
         stdout: SplitParser {
             onRead: data => {
@@ -99,7 +99,7 @@ Item {
         }
 
         onExited: {
-            if (workspacesRoot.visible && parent.visible && exitCode !== 0) {
+            if (workspacesRoot.visible && exitCode !== 0) {
                 restartTimer.restart()
             }
         }
@@ -109,7 +109,7 @@ Item {
         interval: 2000
         repeat: false
         onTriggered: {
-            if (workspacesRoot.visible && parent.visible) {
+            if (workspacesRoot.visible) {
                 hyprlandIpcMonitor.running = true
             }
         }
@@ -119,7 +119,7 @@ Item {
         interval: 200
         repeat: false
         onTriggered: {
-            if (workspacesRoot.visible && parent.visible && !workspacesProc.running) {
+            if (workspacesRoot.visible && !workspacesProc.running) {
                 workspacesRoot.updateWorkspaces();
             }
         }

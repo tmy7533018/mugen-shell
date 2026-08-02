@@ -7,14 +7,10 @@ Common.IconButton {
 
     required property var theme
     required property var icons
-    required property var modeManager
     required property var airplaneManager
-
-    function scaled(v) { return modeManager ? modeManager.scale(v) : v }
+    required modeManager
 
     Layout.alignment: Qt.AlignVCenter
-    modeManager: airplaneToggleButton.modeManager
-    iconSize: scaled(24)
     opacityDuration: 150
 
     iconSource: airplaneToggleButton.icons ? airplaneToggleButton.icons.airplaneSvg : ""
