@@ -14,7 +14,8 @@ import numpy as np
 import sounddevice as sd
 
 SR = 16000
-OUT = os.path.expanduser("~/.local/share/mugen-shell/verifier/positive")
+_DATA_HOME = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+OUT = os.path.join(_DATA_HOME, "mugen-shell", "verifier", "positive")
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 20
 DUR = 2.0
 

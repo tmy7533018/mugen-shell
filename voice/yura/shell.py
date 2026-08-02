@@ -3,8 +3,9 @@ import queue
 import subprocess
 import threading
 
-YURA_SHELL_QML = os.path.expanduser(
-    "~/.config/quickshell/mugen-shell/yura-shell.qml")
+from .const import QS_CONFIG_DIR
+
+YURA_SHELL_QML = os.path.join(QS_CONFIG_DIR, "yura-shell.qml")
 
 
 _ipc_queue: queue.Queue[list[str]] = queue.Queue()

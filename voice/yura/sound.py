@@ -6,13 +6,12 @@ import time
 import numpy as np
 import sounddevice as sd
 
+from .const import DATA_DIR
 from .settings import voice_settings
 
 # Shared with the shell's notification sounds; the Settings voice pickers
 # list files from here.
-SOUNDS_DIR = os.path.join(
-    os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"),
-    "mugen-shell", "sounds")
+SOUNDS_DIR = os.path.join(DATA_DIR, "sounds")
 
 
 def beep(freq: float, dur: float = 0.12, vol: float = 0.2) -> None:

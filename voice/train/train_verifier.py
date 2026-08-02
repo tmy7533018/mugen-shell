@@ -12,7 +12,8 @@ import sys
 
 from openwakeword.custom_verifier_model import train_custom_verifier
 
-BASE = os.path.expanduser("~/.local/share/mugen-shell/verifier")
+_DATA_HOME = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+BASE = os.path.join(_DATA_HOME, "mugen-shell", "verifier")
 POS = os.path.join(BASE, "positive")
 NEG = os.path.join(BASE, "negative")
 OUT = os.path.join(BASE, "hey_yura_verifier.pkl")

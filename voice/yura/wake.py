@@ -4,7 +4,7 @@ import wave
 
 import numpy as np
 
-from .const import SR
+from .const import DATA_DIR, SR
 from .log import log
 
 BUNDLED_WAKEWORD = os.path.join(
@@ -23,7 +23,7 @@ WAKE_VAD_GATE = float(os.environ.get("YURA_WAKE_VAD_GATE", "0.3"))
 # Per-user model that re-scores a wake as "was this the owner's voice" — the
 # only defense against another *human* voice (a phone video) saying the phrase.
 # Enrollment (POST /enroll) trains it; dormant until the file exists.
-VERIFIER_DIR = os.path.expanduser("~/.local/share/mugen-shell/verifier")
+VERIFIER_DIR = os.path.join(DATA_DIR, "verifier")
 WAKE_VERIFIER = os.path.expanduser(os.environ.get(
     "YURA_VERIFIER", os.path.join(VERIFIER_DIR, "hey_yura_verifier.pkl")))
 WAKE_VERIFIER_THRESHOLD = float(os.environ.get("YURA_VERIFIER_THRESHOLD", "0.4"))
@@ -32,7 +32,7 @@ ENROLL_CLIPS = int(os.environ.get("YURA_ENROLL_CLIPS", "10"))
 # filesystem, so this marker exists while an enrollment is running.
 ENROLL_MARKER = os.path.join(VERIFIER_DIR, ".enrolling")
 # Every wake archives its preceding audio for retraining, ring-capped.
-WAKE_DUMP_DIR = os.path.expanduser("~/.local/share/mugen-shell/wake-debug")
+WAKE_DUMP_DIR = os.path.join(DATA_DIR, "wake-debug")
 WAKE_DUMP_KEEP = 100
 
 

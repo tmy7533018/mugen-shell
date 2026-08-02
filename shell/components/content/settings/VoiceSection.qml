@@ -44,7 +44,7 @@ Rectangle {
     Process {
         id: enrollCheck
         command: ["bash", "-c",
-            "d=\"$HOME/.local/share/mugen-shell/verifier\"; "
+            "d=\"" + Theme.Paths.dataDir + "/verifier\"; "
             + "echo \"$(stat -c %Y \"$d/hey_yura_verifier.pkl\" 2>/dev/null || echo 0) "
             + "$(test -e \"$d/.enrolling\" && echo 1 || echo 0)\""]
         stdout: SplitParser {

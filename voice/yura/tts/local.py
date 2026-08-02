@@ -13,15 +13,13 @@ import os
 import threading
 import wave
 
+from ..const import DATA_DIR
 from ..log import log
 
 # Colon-separated, first match wins, so a voice dropped in the writable dir
 # shadows a packaged one of the same name.
 MODEL_PATH = os.environ.get(
-    "YURA_TTS_MODELS",
-    os.path.join(
-        os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"),
-        "mugen-shell", "tts"))
+    "YURA_TTS_MODELS", os.path.join(DATA_DIR, "tts"))
 
 
 def search_dirs() -> list[str]:
