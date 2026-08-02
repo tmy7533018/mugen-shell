@@ -18,8 +18,13 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE")
     hl.exec_cmd("systemctl --user start mugen-shell-session.target")
     hl.exec_cmd("sh -lc 'sleep 1; ~/.config/hypr/scripts/wallp-restore.sh'")
-    hl.exec_cmd("quickshell -c mugen-shell")
-    hl.exec_cmd("quickshell -p ~/.config/quickshell/mugen-shell/yura-shell.qml")
+    -- fcitx's Wayland frontend only reaches a surface Qt has activated, and a
+    -- layer shell never becomes the application's focus window, so text input
+    -- here has to go over fcitx's DBus frontend instead. Scoped to these two
+    -- processes: exporting QT_IM_MODULE session-wide is what fcitx5 warns
+    -- about, and every other app is fine on the Wayland frontend.
+    hl.exec_cmd("env QT_IM_MODULE=fcitx quickshell -c mugen-shell")
+    hl.exec_cmd("env QT_IM_MODULE=fcitx quickshell -p ~/.config/quickshell/mugen-shell/yura-shell.qml")
     hl.exec_cmd("~/.config/quickshell/mugen-shell/scripts/blur-preset.sh boot")
     hl.exec_cmd("~/.config/hypr/scripts/hypridle-auto-start.sh")
     hl.exec_cmd("wl-paste --type text  --watch cliphist store")
