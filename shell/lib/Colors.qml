@@ -18,7 +18,6 @@ QtObject {
 
     property string colorsJsonFile: cacheDir + "/colors.json"
     property string themeModeFile: stateDir + "/theme-mode"
-    property string lastModified: ""
 
     property string themeMode: "dark"
 
@@ -39,13 +38,31 @@ QtObject {
         readThemeModeProcess.running = true
     }
 
-    // Read synchronously so the first frame already has the wallpaper's colours.
-    // The polled reload below still handles later changes, but arriving late on
-    // startup would drag every colour through the 3s Behavior from the literals.
+    // Read synchronously so the first frame already has the wallpaper's colours;
+    // arriving late on startup would drag every colour through the 3s Behavior
+    // from the literals.
     property FileView colorsSeed: FileView {
         path: palette.colorsJsonFile
         blockLoading: true
+        watchChanges: true
         printErrors: false
+
+        onFileChanged: colorsSeed.reload()
+
+        // reload() is asynchronous: text() called right after it still returns
+        // the previous contents, so the parse has to happen here.
+        onLoaded: palette.applyColors(colorsSeed.text())
+    }
+
+    function applyColors(raw) {
+        try {
+            const colors = JSON.parse(String(raw).trim()).colors
+            if (!colors) return
+            if (colors.primary && colors.primary.hex) palette.primaryHex = colors.primary.hex
+            if (colors.secondary && colors.secondary.hex) palette.secondaryHex = colors.secondary.hex
+            if (colors.tertiary && colors.tertiary.hex) palette.tertiaryHex = colors.tertiary.hex
+        } catch (e) {
+        }
     }
 
     function seedHex(name, fallback) {
@@ -60,69 +77,6 @@ QtObject {
     property string primaryHex: palette.seedHex("primary", "#a68cd9")
     property string secondaryHex: palette.seedHex("secondary", "#b8a5e0")
     property string tertiaryHex: palette.seedHex("tertiary", "#c9b8e8")
-    
-    function loadFromJson() {
-        readColorsProcess.running = true
-    }
-    
-    property Process readColorsProcess: Process {
-        command: ["cat", palette.colorsJsonFile]
-        running: false
-        property string output: ""
-        
-        stdout: SplitParser {
-            onRead: data => { readColorsProcess.output += data }
-        }
-        
-        onExited: (exitCode) => {
-            if (exitCode === 0 && readColorsProcess.output.trim().length > 0) {
-                try {
-                    let json = JSON.parse(readColorsProcess.output.trim())
-                    if (json.colors && json.colors.primary && json.colors.primary.hex) {
-                        palette.primaryHex = json.colors.primary.hex
-                    }
-                    if (json.colors && json.colors.secondary && json.colors.secondary.hex) {
-                        palette.secondaryHex = json.colors.secondary.hex
-                    }
-                    if (json.colors && json.colors.tertiary && json.colors.tertiary.hex) {
-                        palette.tertiaryHex = json.colors.tertiary.hex
-                    }
-                } catch (e) {
-                }
-            }
-            readColorsProcess.output = ""
-        }
-    }
-    
-    property Process statProcess: Process {
-        command: ["stat", "-c", "%Y", palette.colorsJsonFile]
-        running: false
-        property string output: ""
-        
-        stdout: SplitParser {
-            onRead: data => { statProcess.output += data }
-        }
-        
-        onExited: (exitCode) => {
-            if (exitCode === 0) {
-                let modified = statProcess.output.trim()
-                if (modified !== palette.lastModified && modified.length > 0) {
-                    palette.lastModified = modified
-                    palette.loadFromJson()
-                }
-            }
-            statProcess.output = ""
-        }
-    }
-    
-    property Timer checkTimer: Timer {
-        interval: 500
-        running: true
-        repeat: true
-        onTriggered: {
-            statProcess.running = true
-        }
-    }
     
     property FileView themeModeWatcher: FileView {
         path: palette.themeModeFile
@@ -162,8 +116,6 @@ QtObject {
     
     Component.onCompleted: {
         loadThemeMode()
-        loadFromJson()
-        statProcess.running = true
     }
     
     property color _glowPrimary: Qt.rgba(

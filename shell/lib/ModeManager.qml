@@ -99,98 +99,30 @@ QtObject {
         }
         return runtimeDir + "/mugen-shell-ipc"
     }
-    // A stalled reader takes external keybinds down with it.
-    property bool ipcReadInFlight: false
-    
-    property Timer ipcPollTimer: Timer {
-        interval: 500
-        running: true
-        repeat: true
-        
-        onTriggered: {
-            readIpcFile()
-        }
-    }
-    
-    property Process ipcReader: Process {
-        command: ["bash", "-c", 
-            "if [ -f '" + manager.ipcFile + "' ] && [ -s '" + manager.ipcFile + "' ]; then " +
-            "  cat '" + manager.ipcFile + "'; " +
-            "else " +
-            "  exit 1; " +
-            "fi"
-        ]
-        running: false
-        property string output: ""
-        
-        stdout: SplitParser {
-            onRead: data => {
-                // SplitParser drops the trailing newline; without restoring it
-                // queued commands concatenate into one unparseable line.
-                if (data) {
-                    ipcReader.output += data + "\n"
-                }
-            }
-        }
-        
-        stderr: SplitParser {
-            onRead: data => {
-            }
-        }
-        
-        onExited: (exitCode) => {
-            ipcReaderTimeout.stop()
-            manager.ipcReadInFlight = false
+    // scripts/mugen-shell-ipc.sh appends a line here; that is how keybinds and
+    // anything outside the shell reach this manager.
+    property FileView ipcWatcher: FileView {
+        path: manager.ipcFile
+        watchChanges: true
+        printErrors: false
 
-            if (exitCode !== 0 && ipcReader.output.length === 0) {
-                ipcReader.output = ""
-                return
+        onFileChanged: ipcWatcher.reload()
+
+        // reload() is asynchronous: text() called right after it still returns
+        // the previous contents, so the read has to happen here.
+        onLoaded: {
+            const queued = String(ipcWatcher.text()).trim()
+            if (queued === "") return
+            // Cleared before dispatching so the resulting write, which comes
+            // back through onFileChanged, finds nothing left to replay.
+            ipcWatcher.setText("")
+            for (const line of queued.split("\n")) {
+                const command = line.trim()
+                if (command) manager.handleIpcCommand(command)
             }
-            
-            let trimmed = ipcReader.output.trim()
-            if (trimmed) {
-                let lines = trimmed.split('\n')
-                for (let i = 0; i < lines.length; i++) {
-                    let line = lines[i].trim()
-                    if (line) {
-                            manager.handleIpcCommand(line)
-                    }
-                }
-                if (trimmed.length > 0) {
-                    ipcClearProcess.running = true
-                }
-            }
-            ipcReader.output = ""
         }
     }
-    
-    property Process ipcClearProcess: Process {
-        command: ["bash", "-c", "> '" + manager.ipcFile + "' 2>/dev/null || true"]
-        running: false
-    }
-    
-    // Without this a stalled reader wedges IPC permanently.
-    property Timer ipcReaderTimeout: Timer {
-        interval: 1200
-        running: false
-        repeat: false
-        onTriggered: {
-            if (ipcReader.running) {
-                ipcReader.running = false
-            }
-            ipcReader.output = ""
-            manager.ipcReadInFlight = false
-        }
-    }
-    
-    function readIpcFile() {
-        if (!ipcReader.running && ipcFile && ipcFile !== "") {
-            manager.ipcReadInFlight = true
-            ipcReader.running = true
-            ipcReaderTimeout.restart()
-        }
-    }
-    
+
     function handleIpcCommand(command) {
         let parts = command.trim().split(" ")
         let cmd = parts[0]
