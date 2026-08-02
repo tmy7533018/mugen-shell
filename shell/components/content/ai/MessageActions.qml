@@ -10,9 +10,13 @@ Row {
     required property var icons
     property bool canSpeak: false
     property bool speaking: false
+    property bool canRetry: false
+    property bool canEdit: false
 
     signal copyRequested()
     signal speakToggled()
+    signal retryRequested()
+    signal editRequested()
 
     spacing: modeManager.scale(4)
 
@@ -99,5 +103,22 @@ Row {
         glyphSize: root.modeManager.scale(11)
         lit: root.speaking
         onTriggered: root.speakToggled()
+    }
+
+    ActionButton {
+        visible: root.canRetry
+        mgr: root.modeManager
+        pal: root.theme
+        iconSource: root.icons ? root.icons.refreshSvg : ""
+        onTriggered: root.retryRequested()
+    }
+
+    ActionButton {
+        visible: root.canEdit
+        mgr: root.modeManager
+        pal: root.theme
+        glyph: "✎"
+        glyphSize: root.modeManager.scale(14)
+        onTriggered: root.editRequested()
     }
 }

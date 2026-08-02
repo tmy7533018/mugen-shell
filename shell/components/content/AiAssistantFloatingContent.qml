@@ -100,8 +100,12 @@ FocusScope {
         if (streaming) {
             streamRevealed = 0
             revealActive = typingSpeed !== "instant"
+            editingIndex = -1
         }
     }
+
+    // An index only means something against the conversation it came from.
+    onCurrentConvIdChanged: editingIndex = -1
 
     Timer {
         id: revealTimer
@@ -130,6 +134,7 @@ FocusScope {
         let copy = messages.slice()
         let last = copy[copy.length - 1]
         copy[copy.length - 1] = {
+            id: last.id,
             role: last.role,
             content: last.content + content,
             toolCalls: last.toolCalls || []
@@ -151,6 +156,7 @@ FocusScope {
             pending: true
         }))
         copy[copy.length - 1] = {
+            id: last.id,
             role: last.role,
             content: last.content,
             toolCalls: existing.concat(added)
@@ -175,6 +181,7 @@ FocusScope {
             }
         })
         copy[copy.length - 1] = {
+            id: last.id,
             role: last.role,
             content: last.content,
             toolCalls: updated
@@ -194,6 +201,13 @@ FocusScope {
 
     function sendMessage(text) {
         if (!text || streaming) return
+        if (root.pendingRewindId !== 0) {
+            truncateProcess.messageId = root.pendingRewindId
+            truncateProcess.queuedText = text
+            root.pendingRewindId = 0
+            truncateProcess.running = true
+            return
+        }
         appendMessage("user", text)
         appendMessage("assistant", "")
         streaming = true
@@ -205,6 +219,44 @@ FocusScope {
             thinking: currentThinking
         })
         chatProcess.running = true
+    }
+
+    // Retry and edit are the same server-side move: drop this message and
+    // everything after it, then send again. Only messages the server has
+    // persisted carry an id, which is why both actions gate on one.
+    property int pendingRewindId: 0
+    property int editingIndex: -1
+
+    function retryFrom(index) {
+        if (streaming || index < 0 || index >= messages.length) return
+        for (let i = index; i >= 0; i--) {
+            if (messages[i].role === "user" && messages[i].id) {
+                root.pendingRewindId = messages[i].id
+                root.sendMessage(messages[i].content)
+                return
+            }
+        }
+    }
+
+    function beginEdit(index) {
+        if (streaming || index < 0 || index >= messages.length) return
+        const msg = messages[index]
+        if (!msg.id || msg.role !== "user") return
+        root.editingIndex = index
+    }
+
+    function cancelEdit() {
+        root.editingIndex = -1
+    }
+
+    function submitEdit(text) {
+        const index = root.editingIndex
+        root.editingIndex = -1
+        if (index < 0 || index >= messages.length) return
+        const msg = messages[index]
+        if (!text || text === msg.content || !msg.id) return
+        root.pendingRewindId = msg.id
+        root.sendMessage(text)
     }
 
     function readAloud(index, text) {
@@ -766,6 +818,8 @@ FocusScope {
                 implicitHeight: msgCol.implicitHeight + modeManager.scale(8)
 
                 readonly property bool isAssistant: modelData.role === "assistant"
+                readonly property bool hasServerId: !!modelData.id
+                readonly property bool isEditing: root.editingIndex === index
                 readonly property bool isLatest: index === root.messages.length - 1
                 readonly property bool isThinking: root.streaming
                     && isLatest
@@ -798,12 +852,21 @@ FocusScope {
                             readonly property real hPad: modeManager.scale(12)
                             readonly property real vPad: modeManager.scale(8)
                             readonly property real trailingLeading: (userText.lineHeight - 1) * userMetrics.lineSpacing
-                            width: Math.min(userText.implicitWidth + hPad * 2, parent.width * 0.85)
-                            height: userText.height - trailingLeading + vPad * 2
+                            // Editing takes the full allowance so the text has
+                            // somewhere to grow rather than reflowing per keystroke.
+                            width: delegateRoot.isEditing
+                                ? parent.width * 0.85
+                                : Math.min(userText.implicitWidth + hPad * 2, parent.width * 0.85)
+                            height: (delegateRoot.isEditing
+                                ? userEdit.implicitHeight
+                                : userText.height - trailingLeading) + vPad * 2
                             radius: modeManager.scale(14)
                             color: root.theme ? root.theme.chipActiveBg : Qt.rgba(0.45, 0.45, 0.60, 0.20)
-                            border.color: root.theme ? root.theme.chipInactiveBorder : Qt.rgba(0.55, 0.55, 0.68, 0.15)
+                            border.color: delegateRoot.isEditing
+                                ? (root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))
+                                : (root.theme ? root.theme.chipInactiveBorder : Qt.rgba(0.55, 0.55, 0.68, 0.15))
                             border.width: 1
+                            Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
 
                             FontMetrics {
                                 id: userMetrics
@@ -812,6 +875,7 @@ FocusScope {
 
                             Text {
                                 id: userText
+                                visible: !delegateRoot.isEditing
                                 anchors.top: parent.top
                                 anchors.topMargin: userBubble.vPad
                                 anchors.horizontalCenter: parent.horizontalCenter
@@ -823,6 +887,46 @@ FocusScope {
                                 font.family: "M PLUS 2"
                                 font.letterSpacing: 0.3
                                 lineHeight: 1.4
+                            }
+
+                            TextEdit {
+                                id: userEdit
+                                visible: delegateRoot.isEditing
+                                anchors.top: parent.top
+                                anchors.topMargin: userBubble.vPad
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                width: userBubble.width - userBubble.hPad * 2
+                                wrapMode: TextEdit.Wrap
+                                selectByMouse: true
+                                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                                selectionColor: root.theme
+                                    ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.35)
+                                    : Qt.rgba(0.65, 0.55, 0.85, 0.35)
+                                font.pixelSize: root.modeManager.scale(14)
+                                font.family: "M PLUS 2"
+                                font.letterSpacing: 0.3
+
+                                onVisibleChanged: {
+                                    if (!visible) return
+                                    userEdit.text = modelData.content
+                                    userEdit.cursorPosition = userEdit.text.length
+                                    userEdit.forceActiveFocus()
+                                }
+
+                                Keys.onPressed: (event) => {
+                                    root.userActivity()
+                                    if (event.key === Qt.Key_Escape) {
+                                        root.cancelEdit()
+                                        event.accepted = true
+                                        return
+                                    }
+                                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                        // Unaccepted, so TextEdit inserts the newline itself.
+                                        if (event.modifiers & Qt.ShiftModifier) return
+                                        root.submitEdit(userEdit.text.trim())
+                                        event.accepted = true
+                                    }
+                                }
                             }
                         }
                     }
@@ -892,6 +996,10 @@ FocusScope {
                             icons: root.icons
                             canSpeak: delegateRoot.isAssistant && root.canReadAloud
                             speaking: root.speakingIndex === index
+                            canRetry: delegateRoot.isAssistant && !root.streaming
+                                && delegateRoot.hasServerId
+                            canEdit: !delegateRoot.isAssistant && !root.streaming
+                                && delegateRoot.hasServerId && !delegateRoot.isEditing
                             // Stays put while it reads, so the stop button
                             // doesn't vanish when the pointer moves away.
                             opacity: (msgHover.hovered || msgActions.speaking) ? 1.0 : 0.0
@@ -906,6 +1014,8 @@ FocusScope {
                                 if (root.speakingIndex === index) root.stopReadAloud()
                                 else root.readAloud(index, modelData.content)
                             }
+                            onRetryRequested: root.retryFrom(index)
+                            onEditRequested: root.beginEdit(index)
                         }
                     }
 
@@ -1506,6 +1616,9 @@ FocusScope {
                 root.updateLastMessage("\n[connection failed]")
             }
             root.refreshConversations()
+            // Message ids only exist server-side, and retry/edit address them,
+            // so the turn that just landed has to be read back to be actionable.
+            root.loadCurrentConversation()
         }
     }
 
@@ -1524,6 +1637,31 @@ FocusScope {
                 let obj = JSON.parse(listConvProcess.buf)
                 root.conversations = obj.conversations || []
             } catch (e) {}
+        }
+    }
+
+    Process {
+        id: truncateProcess
+        running: false
+        property int messageId: 0
+        property string queuedText: ""
+        command: ["curl", "-sS", "-X", "DELETE", "--max-time", "3",
+            root._baseUrl + "/conversations/" + root.currentConvId
+                + "/messages/" + truncateProcess.messageId]
+
+        onExited: (exitCode) => {
+            const text = truncateProcess.queuedText
+            truncateProcess.queuedText = ""
+            if (exitCode !== 0) return
+            // Drop the rewound tail locally too, so the resend does not append
+            // under messages the server has already forgotten.
+            let kept = []
+            for (const m of root.messages) {
+                if (m.id && m.id >= truncateProcess.messageId) break
+                kept.push(m)
+            }
+            root.messages = kept
+            root.sendMessage(text)
         }
     }
 
@@ -1560,9 +1698,9 @@ FocusScope {
                 root.messages = msgs.map(m => {
                     if (m.role === "assistant") {
                         let tc = prevTools[ai++]
-                        if (tc) return { role: m.role, content: m.content, toolCalls: tc }
+                        if (tc) return { id: m.id, role: m.role, content: m.content, toolCalls: tc }
                     }
-                    return { role: m.role, content: m.content }
+                    return { id: m.id, role: m.role, content: m.content }
                 })
                 if (root.currentConvId !== 0 && obj.model) {
                     root.currentModel = obj.model

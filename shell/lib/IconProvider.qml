@@ -48,6 +48,7 @@ QtObject {
 
     readonly property string clipboardSvg: basePath + "/clipboard.svg"
     readonly property string copySvg: basePath + "/copy.svg"
+    readonly property string refreshSvg: basePath + "/refresh-outline.svg"
 
     readonly property string aiSvg: basePath + "/ai.svg"
     readonly property string micSvg: basePath + "/mic.svg"
