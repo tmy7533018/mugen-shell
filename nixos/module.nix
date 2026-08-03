@@ -93,6 +93,9 @@ in
       # xdg-document-portal (pulled in by hyprland) FUSE-mounts /run/user/*/doc
       # and fails every boot without the setuid fusermount3 wrapper.
       programs.fuse.enable = true;
+      # Hyprland's own portal carries only the screencast interfaces, so a file
+      # chooser needs a backend that implements FileChooser.
+      xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
 
       services.pipewire = {
         enable = true;

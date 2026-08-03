@@ -23,8 +23,10 @@ hl.on("hyprland.start", function()
     -- here has to go over fcitx's DBus frontend instead. Scoped to these two
     -- processes: exporting QT_IM_MODULE session-wide is what fcitx5 warns
     -- about, and every other app is fine on the Wayland frontend.
-    hl.exec_cmd("env QT_IM_MODULE=fcitx quickshell -c mugen-shell")
-    hl.exec_cmd("env QT_IM_MODULE=fcitx quickshell -p ~/.config/quickshell/mugen-shell/yura-shell.qml")
+    -- Qt picks no platform theme under XDG_CURRENT_DESKTOP=Hyprland, and
+    -- without one its FileDialog is self-drawn rather than the desktop's.
+    hl.exec_cmd("env QT_IM_MODULE=fcitx QT_QPA_PLATFORMTHEME=xdgdesktopportal quickshell -c mugen-shell")
+    hl.exec_cmd("env QT_IM_MODULE=fcitx QT_QPA_PLATFORMTHEME=xdgdesktopportal quickshell -p ~/.config/quickshell/mugen-shell/yura-shell.qml")
     hl.exec_cmd("~/.config/quickshell/mugen-shell/scripts/blur-preset.sh boot")
     hl.exec_cmd("~/.config/hypr/scripts/hypridle-auto-start.sh")
     hl.exec_cmd("wl-paste --type text  --watch cliphist store")
