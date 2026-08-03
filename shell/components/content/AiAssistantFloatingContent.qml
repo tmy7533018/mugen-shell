@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Dialogs
 import Qt5Compat.GraphicalEffects
 import Quickshell.Io
 import "../../lib" as Theme
@@ -84,6 +85,30 @@ FocusScope {
     // destructive MCP tool. Shape: { confirm_id, name, arguments }.
     property var pendingConfirm: null
 
+    readonly property bool rewinding: truncateProcess.running
+    readonly property bool busy: streaming || rewinding
+
+    // Absolute paths staged for the next turn; the backend reads the files.
+    property var pendingAttachments: []
+    // Matches the backend's per-message cap.
+    readonly property int maxAttachments: 4
+
+    function addAttachments(urls) {
+        let next = root.pendingAttachments.slice()
+        for (const url of urls) {
+            const path = String(url).replace(/^file:\/\//, "")
+            if (next.length >= root.maxAttachments) break
+            if (next.indexOf(path) === -1) next.push(path)
+        }
+        root.pendingAttachments = next
+    }
+
+    function removeAttachment(index) {
+        let next = root.pendingAttachments.slice()
+        next.splice(index, 1)
+        root.pendingAttachments = next
+    }
+
     // Reveal state lives here, not in the delegate: each chunk reassigns
     // `messages` and rebuilds the delegates.
     readonly property string typingSpeed: settingsManager ? settingsManager.yuraTypingSpeed : "instant"
@@ -123,9 +148,9 @@ FocusScope {
         }
     }
 
-    function appendMessage(role, content) {
+    function appendMessage(role, content, attachments) {
         let copy = messages.slice()
-        copy.push({ role: role, content: content })
+        copy.push({ role: role, content: content, attachments: attachments || [] })
         messages = copy
     }
 
@@ -199,26 +224,35 @@ FocusScope {
         pendingConfirm = null
     }
 
-    function sendMessage(text) {
-        if (!text || streaming) return
+    function sendMessage(text, attachments) {
+        const files = attachments || []
+        if ((!text && files.length === 0) || streaming) return
         if (root.pendingRewindId !== 0) {
             truncateProcess.messageId = root.pendingRewindId
             truncateProcess.queuedText = text
+            truncateProcess.queuedFiles = files
             root.pendingRewindId = 0
             truncateProcess.running = true
             return
         }
-        appendMessage("user", text)
+        appendMessage("user", text, files)
         appendMessage("assistant", "")
         streaming = true
         userScrolled = false
         chatProcess.payload = JSON.stringify({
             message: text,
+            attachments: files,
             conversation_id: currentConvId,
             model: currentModel,
             thinking: currentThinking
         })
         chatProcess.running = true
+    }
+
+    function sendComposed(text) {
+        const files = root.pendingAttachments
+        root.pendingAttachments = []
+        root.sendMessage(text, files)
     }
 
     // Retry and edit are the same server-side move: drop this message and
@@ -228,18 +262,18 @@ FocusScope {
     property int editingIndex: -1
 
     function retryFrom(index) {
-        if (streaming || index < 0 || index >= messages.length) return
+        if (busy || index < 0 || index >= messages.length) return
         for (let i = index; i >= 0; i--) {
             if (messages[i].role === "user" && messages[i].id) {
                 root.pendingRewindId = messages[i].id
-                root.sendMessage(messages[i].content)
+                root.sendMessage(messages[i].content, messages[i].attachments)
                 return
             }
         }
     }
 
     function beginEdit(index) {
-        if (streaming || index < 0 || index >= messages.length) return
+        if (busy || index < 0 || index >= messages.length) return
         const msg = messages[index]
         if (!msg.id || msg.role !== "user") return
         root.editingIndex = index
@@ -251,12 +285,13 @@ FocusScope {
 
     function submitEdit(text) {
         const index = root.editingIndex
+        if (busy) return
         root.editingIndex = -1
         if (index < 0 || index >= messages.length) return
         const msg = messages[index]
         if (!text || text === msg.content || !msg.id) return
         root.pendingRewindId = msg.id
-        root.sendMessage(text)
+        root.sendMessage(text, msg.attachments)
     }
 
     function readAloud(index, text) {
@@ -773,7 +808,7 @@ FocusScope {
                 theme: root.theme
                 prompts: root.suggestedPrompts
                 onPromptChosen: text => {
-                    if (!root.streaming) root.sendMessage(text)
+                    if (!root.busy) root.sendMessage(text)
                 }
             }
         }
@@ -827,6 +862,7 @@ FocusScope {
                     && modelData.content === ""
                 readonly property bool showInlineOrb: isAssistant && isLatest
                 readonly property var toolCalls: modelData.toolCalls || []
+                readonly property var attachments: modelData.attachments || []
                 readonly property string displayContent: (isAssistant && isLatest && root.revealActive)
                     ? modelData.content.substring(0, root.streamRevealed)
                     : modelData.content
@@ -840,6 +876,21 @@ FocusScope {
                     id: msgCol
                     width: parent.width
                     spacing: modeManager.scale(6)
+
+                    Item {
+                        id: bubbleAttachments
+                        visible: delegateRoot.attachments.length > 0
+                        width: parent.width
+                        height: visible ? attachedThumbs.height : 0
+
+                        Ai.AttachmentThumbs {
+                            id: attachedThumbs
+                            anchors.right: parent.right
+                            modeManager: root.modeManager
+                            theme: root.theme
+                            paths: delegateRoot.attachments
+                        }
+                    }
 
                     Item {
                         visible: !delegateRoot.isAssistant && modelData.content !== ""
@@ -996,9 +1047,9 @@ FocusScope {
                             icons: root.icons
                             canSpeak: delegateRoot.isAssistant && root.canReadAloud
                             speaking: root.speakingIndex === index
-                            canRetry: delegateRoot.isAssistant && !root.streaming
+                            canRetry: delegateRoot.isAssistant && !root.busy
                                 && delegateRoot.hasServerId
-                            canEdit: !delegateRoot.isAssistant && !root.streaming
+                            canEdit: !delegateRoot.isAssistant && !root.busy
                                 && delegateRoot.hasServerId && !delegateRoot.isEditing
                             // Stays put while it reads, so the stop button
                             // doesn't vanish when the pointer moves away.
@@ -1085,7 +1136,7 @@ FocusScope {
         visible: root.aiAvailable && root.hasModel
 
         readonly property real rowHeight: modeManager.scale(46)
-        height: Math.max(rowHeight, inputFlick.height + modeManager.scale(22))
+        height: attachStrip.height + Math.max(rowHeight, inputFlick.height + modeManager.scale(22))
 
         Behavior on height { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
@@ -1110,9 +1161,37 @@ FocusScope {
             }
         }
 
+        Item {
+            id: attachStrip
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: root.pendingAttachments.length > 0
+                ? composerThumbs.height + root.modeManager.scale(10)
+                : 0
+            clip: true
+
+            Behavior on height { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
+
+            Ai.AttachmentThumbs {
+                id: composerThumbs
+                anchors.left: parent.left
+                anchors.leftMargin: root.modeManager.scale(42)
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: root.modeManager.scale(6)
+                modeManager: root.modeManager
+                theme: root.theme
+                paths: root.pendingAttachments
+                thumbSize: root.modeManager.scale(52)
+                removable: true
+                onRemoveRequested: index => root.removeAttachment(index)
+            }
+        }
+
         Flickable {
             id: inputFlick
-            anchors.left: parent.left
+            anchors.left: attachIcon.right
+            anchors.leftMargin: modeManager.scale(8)
             // Invisible items keep their geometry, so the mic slot has to be
             // anchored around when voice input is off.
             anchors.right: micIcon.visible ? listenViz.left : sendIcon.left
@@ -1120,6 +1199,7 @@ FocusScope {
             // Grows symmetrically around the row, so a single line sits where
             // it did before Shift+Enter existed.
             anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: attachStrip.height / 2
             height: Math.min(inputField.implicitHeight, modeManager.scale(110))
             contentWidth: width
             contentHeight: inputField.implicitHeight
@@ -1153,8 +1233,8 @@ FocusScope {
                         // Unaccepted, so TextEdit inserts the newline itself.
                         if (event.modifiers & Qt.ShiftModifier) return
                         let txt = inputField.text.trim()
-                        if (txt.length > 0 && !root.streaming) {
-                            root.sendMessage(txt)
+                        if ((txt.length > 0 || root.pendingAttachments.length > 0) && !root.busy) {
+                            root.sendComposed(txt)
                             inputField.text = ""
                         }
                         event.accepted = true
@@ -1174,6 +1254,50 @@ FocusScope {
                     visible: parent.text.length === 0
                         && parent.preeditText.length === 0
                         && !parent.inputMethodComposing
+                }
+            }
+        }
+
+        Item {
+            id: attachIcon
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: root.modeManager.scale(6)
+            width: root.modeManager.scale(34)
+            height: root.modeManager.scale(34)
+            enabled: root.pendingAttachments.length < root.maxAttachments
+            opacity: !enabled ? 0.25 : (attachHover.hovered ? 1.0 : 0.5)
+
+            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: attachHover.hovered
+                    ? (root.theme ? Qt.rgba(root.theme.glowSecondary.r, root.theme.glowSecondary.g, root.theme.glowSecondary.b, 0.32) : Qt.rgba(0.55, 0.75, 0.85, 0.32))
+                    : "transparent"
+
+                Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
+            }
+
+            UI.SvgIcon {
+                anchors.centerIn: parent
+                width: root.modeManager.scale(17)
+                height: root.modeManager.scale(17)
+                source: root.icons ? root.icons.plusSvg : ""
+                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
+            }
+
+            HoverHandler {
+                id: attachHover
+                cursorShape: Qt.PointingHandCursor
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    root.userActivity()
+                    attachDialog.open()
                 }
             }
         }
@@ -1271,7 +1395,8 @@ FocusScope {
             anchors.bottomMargin: modeManager.scale(6)
             width: modeManager.scale(34)
             height: modeManager.scale(34)
-            opacity: (root.streaming || inputField.text.trim().length > 0) ? 1.0 : 0.35
+            opacity: (root.streaming || inputField.text.trim().length > 0
+                || root.pendingAttachments.length > 0) ? 1.0 : 0.35
 
             Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
 
@@ -1303,16 +1428,25 @@ FocusScope {
                 onClicked: {
                     if (root.streaming) {
                         root.stopStreaming()
-                    } else {
+                    } else if (!root.rewinding) {
                         let txt = inputField.text.trim()
-                        if (txt.length > 0) {
-                            root.sendMessage(txt)
+                        if (txt.length > 0 || root.pendingAttachments.length > 0) {
+                            root.sendComposed(txt)
                             inputField.text = ""
                         }
                     }
                 }
             }
         }
+    }
+
+    FileDialog {
+        id: attachDialog
+        // The portal shows the caller's title, so Hyprland matches on this too.
+        title: "Open Files"
+        fileMode: FileDialog.OpenFiles
+        nameFilters: ["All files (*)", "Images (*.png *.jpg *.jpeg *.webp *.gif)"]
+        onAccepted: root.addAttachments(attachDialog.selectedFiles)
     }
 
     Rectangle {
@@ -1645,14 +1779,23 @@ FocusScope {
         running: false
         property int messageId: 0
         property string queuedText: ""
-        command: ["curl", "-sS", "-X", "DELETE", "--max-time", "3",
+        property var queuedFiles: []
+        // -f: without it a 404 exits 0 and reads as a successful rewind.
+        command: ["curl", "-sS", "-f", "-X", "DELETE", "--max-time", "3",
             root._baseUrl + "/conversations/" + root.currentConvId
                 + "/messages/" + truncateProcess.messageId]
 
         onExited: (exitCode) => {
             const text = truncateProcess.queuedText
+            const files = truncateProcess.queuedFiles
             truncateProcess.queuedText = ""
-            if (exitCode !== 0) return
+            truncateProcess.queuedFiles = []
+            if (exitCode !== 0) {
+                inputField.text = text
+                inputField.forceActiveFocus()
+                root.pendingAttachments = files
+                return
+            }
             // Drop the rewound tail locally too, so the resend does not append
             // under messages the server has already forgotten.
             let kept = []
@@ -1661,7 +1804,7 @@ FocusScope {
                 kept.push(m)
             }
             root.messages = kept
-            root.sendMessage(text)
+            root.sendMessage(text, files)
         }
     }
 
@@ -1700,7 +1843,12 @@ FocusScope {
                         let tc = prevTools[ai++]
                         if (tc) return { id: m.id, role: m.role, content: m.content, toolCalls: tc }
                     }
-                    return { id: m.id, role: m.role, content: m.content }
+                    return {
+                        id: m.id,
+                        role: m.role,
+                        content: m.content,
+                        attachments: m.attachments || []
+                    }
                 })
                 if (root.currentConvId !== 0 && obj.model) {
                     root.currentModel = obj.model
