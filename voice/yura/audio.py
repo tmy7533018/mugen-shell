@@ -9,31 +9,33 @@ from typing import Callable
 import numpy as np
 import sounddevice as sd
 
-from .const import CHUNK, SR
+from .const import CHUNK, DATA_DIR, SR
 from .log import log
 
 PREROLL_S = 0.4                   # audio kept from before speech onset
 SILENCE_END_S = 0.9               # this much trailing silence ends a turn
 MAX_UTTERANCE_S = 15.0
-LISTEN_TIMEOUT_S = 6.0            # wake with no speech -> give up
+LISTEN_TIMEOUT_S = 6.0            # a turn with no speech -> give up
 FOLLOWUP_TIMEOUT_S = 4.0          # post-reply window before returning to idle
 VAD_THRESHOLD = 0.35              # silero speech probability
 PTT_TAP_S = 0.3                   # shorter hold than this = tap, not push-to-talk
+# Audio behind a barge-in is kept for retraining, ring-capped.
+DUMP_DIR = os.path.join(DATA_DIR, "audio-debug")
+DUMP_KEEP = 100
 
 
 SILERO_VAD = os.environ.get("YURA_SILERO_VAD", "")
 
 
 def silero_path() -> str:
-    if SILERO_VAD:
-        return SILERO_VAD
-    import openwakeword
-    return os.path.join(os.path.dirname(openwakeword.__file__),
-                        "resources", "models", "silero_vad.onnx")
+    if not SILERO_VAD:
+        raise RuntimeError(
+            "YURA_SILERO_VAD is unset — point it at a silero_vad.onnx")
+    return SILERO_VAD
 
 
 class SileroVAD:
-    """Thin wrapper over silero_vad.onnx, the model openWakeWord also ships."""
+    """Thin wrapper over silero_vad.onnx, which endpoints every capture."""
 
     def __init__(self):
         import onnxruntime as ort
@@ -65,6 +67,19 @@ def frames_to_wav(frames: list[np.ndarray]) -> bytes:
         w.setframerate(SR)
         w.writeframes(np.concatenate(frames).tobytes())
     return buf.getvalue()
+
+
+def dump_audio(frames, tag: str) -> None:
+    """Archive audio that made a decision, ring-capped. `tag` names the caller."""
+    try:
+        os.makedirs(DUMP_DIR, exist_ok=True)
+        name = time.strftime("%Y%m%d-%H%M%S") + f"-{tag}.wav"
+        with open(os.path.join(DUMP_DIR, name), "wb") as f:
+            f.write(frames_to_wav(list(frames)))
+        for old in sorted(os.listdir(DUMP_DIR))[:-DUMP_KEEP]:
+            os.remove(os.path.join(DUMP_DIR, old))
+    except Exception as e:
+        log("dump", str(e))
 
 
 class Capture:

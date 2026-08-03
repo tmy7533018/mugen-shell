@@ -291,10 +291,10 @@ systemctl --user restart mugen-ai.service
 
 ## 音声入力 (オプション)
 
-Yura はハンズフリーでも操作できます。**「Hey Yura」**と呼びかけて話すと、返答が読み上げられます。
+Yura は声でも操作できます。`Super + Z` を押しながら話すと、返答が読み上げられます。
 
 ```
-mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp → mugen-ai /chat → TTS (VOICEVOX / AivisSpeech / Piper)
+mic → silero VAD → whisper.cpp → mugen-ai /chat → TTS (VOICEVOX / AivisSpeech / Piper)
 ```
 
 デフォルト構成は日本語ファーストですが、日本語専用ではありません (後述の「他言語で使う」参照)。セットアップ経路は 2 つ。どちらも mugen-ai が動いている前提です。
@@ -307,10 +307,7 @@ home-manager モジュール (Path A・B) がスタック一式をパッケー�
 ```nix
 programs.mugen-shell.voice.enable = true;
 # programs.mugen-shell.voice.aivis.enable = false;      # AivisSpeech エンジンを外す場合
-# programs.mugen-shell.voice.wakeWord.enable = false;   # closure を約 200MiB 削る
 ```
-
-`wakeWord.enable` を ON のままにしておくと openWakeWord が入るので、後から「Hey Yura」を有効にできます。OFF にしても push-to-talk・マイクボタン・読み上げはそのまま使えます。
 
 必要なものは全部 store から来るので clone は不要ですし、`nix-ld` も要りません。AivisSpeech エンジンだけは初回起動でデフォルト音声モデル (約 900 MB) を取りに行くので、一度ネットワークが要ります。返答の読み上げは自動でここに向くため、Settings で声を選ぶ前から音が出ます。VOICEVOX は Nix 配線に含まれないので、Aivis と並べたければ下の手順 3 で手動追加してください。
 
@@ -325,12 +322,14 @@ programs.mugen-shell.voice.enable = true;
 
 Nix を使わない環境向けです。`make install` も音声はカバーしていないので、こちらを使います。NixOS でこのルートを通すには `programs.nix-ld.enable = true` が必要です (pip の wheel と AivisSpeech エンジンのプレビルドが FHS 前提のバイナリなため):
 
-1. **デーモン用の Python venv**。openwakeword を `--no-deps` で入れるのは意図的です (Python 3.14 に tflite の wheel が無いため):
+1. **デーモン用の Python venv** と、unit が指す VAD モデル:
    ```bash
    cd ~/mugen-shell/voice
    python -m venv .venv
-   .venv/bin/pip install --no-deps openwakeword==0.6.0
-   .venv/bin/pip install onnxruntime numpy scipy scikit-learn tqdm requests sounddevice sherpa-onnx
+   .venv/bin/pip install onnxruntime numpy requests sounddevice sherpa-onnx
+   mkdir -p ~/.local/share/mugen-shell
+   curl -Lo ~/.local/share/mugen-shell/silero_vad.onnx \
+     https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/silero_vad.onnx
    ```
 2. **whisper.cpp** をローカルビルドして、サーババイナリを `~/.local/src/whisper.cpp/build/bin/whisper-server`、モデルを `~/.local/share/whisper/ggml-large-v3-turbo.bin` に配置 (`YURA_WHISPER_BIN` / `YURA_WHISPER_MODEL` で上書き可)。サーバの起動と監視はデーモンがやります。
 3. **VOICEVOX engine** を `127.0.0.1:50021` で待受。同梱の `voicevox-engine.service` は nixpkgs の `voicevox-engine` が `~/.nix-profile/bin` にある前提なので、他の入れ方をした場合は `ExecStart` を調整してください。[AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine) は VOICEVOX 互換のもっと自然な声が使える選択肢で、`~/.local/opt/aivisspeech-engine` に展開すると (ポート `10101`、unit 同梱) 同じピッカーに並びます。
@@ -344,9 +343,9 @@ Nix を使わない環境向けです。`make install` も音声はカバーし�
 
 </details>
 
-実行中の制御は **Settings → Voice input** から — ボイスピッカー、Wake sensitivity、話速、チャイム音、その他ひととおり揃っています。どれも次の発話から反映されます。デーモンが `settings.json` を監視しているので、再起動は要りません。
+実行中の制御は **Settings → Voice input** から — ボイスピッカー、話速、チャイム音、その他ひととおり揃っています。どれも次の発話から反映されます。デーモンが `settings.json` を監視しているので、再起動は要りません。
 
-最初に知っておくと楽なものが 2 つ。**Wake word は既定 OFF** で、ON にするまでマイクは開かず、ターンは `Super + Z` の長押しか、どちらの Yura UI にもある push-to-talk ボタンから始めます。そして ON にすると声の登録が出てきて、ビープに合わせて「Hey Yura」を 10 回言うと、以後 Yura は自分の声にだけ反応するようになります。
+マイクはターンが始まるまで開きません。ターンは `Super + Z` の長押しか、どちらの Yura UI にもある push-to-talk ボタンから始めます。
 
 <details>
 <summary><b>Yura の音声を他の言語で使う</b></summary>
@@ -355,17 +354,16 @@ Nix を使わない環境向けです。`make install` も音声はカバーし�
 
 - **TTS**: ローカルのボイスは sherpa-onnx でインプロセス実行されるので、`piper` バイナリを入れる必要はありません。[sherpa-onnx の TTS モデル配布](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) からモデルを取ってきて (Piper/VITS でも Kokoro でも動きます)、`.onnx` と `tokens.txt`・`espeak-ng-data/` を含む**モデルディレクトリごと** `~/.local/share/mugen-shell/tts/` に展開します。`YURA_TTS_MODELS` で別の場所も指せます。展開したディレクトリはそのまま Settings のボイスピッカーに並び、この場合 VOICEVOX は無くても動きます。Nix 経路には `vits-piper-en_US-lessac-high` が同梱済みです。
 - **STT**: 認識言語は Settings → AI / Yura → Personality の Language に従います。Auto (既定) なら発話ごとに whisper が判定し、言語を固定するとそれに固定されます。whisper は約 100 言語をカバーします。
-- **Wake word**: 同梱の `voice/models/hey_yura.onnx` は日本語発音チューニングです。他のアクセント向けには [`voice/train/`](voice/train/README.md) で再訓練するか、`YURA_WAKEWORD` で自分のモデルを指してください。
 - **返答の言語**: Settings → AI / Yura → Personality の language で指定します。
 
-**環境変数ノブ** (unit か drop-in で設定): `YURA_WAKEWORD`、`YURA_WAKE_THRESHOLD`、`YURA_WAKE_PATIENCE`、`YURA_SILERO_VAD`、`YURA_TTS` (`<engine>:<style-id>`)、`YURA_VOICEVOX_SPEAKER`、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。Settings 側にもある項目は、シェルが保存した時点で `settings.json` が勝ちます。
+**環境変数ノブ** (unit か drop-in で設定): `YURA_SILERO_VAD`、`YURA_TTS` (`<engine>:<style-id>`)、`YURA_VOICEVOX_SPEAKER`、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。Settings 側にもある項目は、シェルが保存した時点で `settings.json` が勝ちます。
 
 </details>
 
 <details>
 <summary><b>ヘッドホンじゃなくてスピーカー派?</b> — エコーキャンセル</summary>
 
-PipeWire の WebRTC エコーキャンセルがスピーカーの再生内容をマイク入力から差し引くので、再生中でも wake word が通ります。`~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` に以下を置いて (`target.object` は `wpctl inspect` で調べた自分のマイクの `node.name` に)、PipeWire を再起動後、`wpctl set-default <id>` で新しいソースをデフォルト入力にします:
+PipeWire の WebRTC エコーキャンセルがスピーカーの再生内容をマイク入力から差し引くので、返答の再生中に話しかけても通ります。`~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` に以下を置いて (`target.object` は `wpctl inspect` で調べた自分のマイクの `node.name` に)、PipeWire を再起動後、`wpctl set-default <id>` で新しいソースをデフォルト入力にします:
 
 ```
 context.modules = [
@@ -414,9 +412,8 @@ context.modules = [
 - [playerctl](https://github.com/altdesktop/playerctl) — メディアプレイヤー制御
 - [grim](https://sr.ht/~emersion/grim/) / [slurp](https://github.com/emersion/slurp) — スクリーンショットツール
 - [cliphist](https://github.com/sentriz/cliphist) — クリップボード履歴
-- [openWakeWord](https://github.com/dscripka/openWakeWord) — ウェイクワード検出
 - [Silero VAD](https://github.com/snakers4/silero-vad) — 音声区間検出
 - [whisper.cpp](https://github.com/ggml-org/whisper.cpp) — 音声認識
-- [VOICEVOX](https://voicevox.hiroshiba.jp/) — TTS エンジン。同梱の `hey_yura.onnx` ウェイクワードモデルの学習に使った合成音声の生成元でもあります
+- [VOICEVOX](https://voicevox.hiroshiba.jp/) — TTS エンジン
 - [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine) — VOICEVOX 互換の Style-Bert-VITS2 系 TTS。モデルは [AivisHub](https://hub.aivis-project.com/) から
 - [Piper](https://github.com/rhasspy/piper) — 日本語以外の声向け TTS

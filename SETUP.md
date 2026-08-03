@@ -291,10 +291,10 @@ Conversations live in SQLite at `~/.local/state/mugen-ai/history.db`. For termin
 
 ## Voice input (optional)
 
-Yura can also be driven hands-free: say **"Hey Yura"**, speak, and the reply is read aloud.
+Yura also takes spoken input: hold `Super + Z`, speak, and the reply is read aloud.
 
 ```
-mic → openWakeWord (voice/models/hey_yura.onnx) → silero VAD → whisper.cpp → mugen-ai /chat → TTS (VOICEVOX / AivisSpeech / Piper)
+mic → silero VAD → whisper.cpp → mugen-ai /chat → TTS (VOICEVOX / AivisSpeech / Piper)
 ```
 
 The default stack is Japanese-first but not Japanese-only (see *Other languages* below). There are two ways to set it up; both sit on top of a running mugen-ai.
@@ -307,10 +307,7 @@ The home-manager module (Paths A and B) packages the whole stack:
 ```nix
 programs.mugen-shell.voice.enable = true;
 # programs.mugen-shell.voice.aivis.enable = false;      # skip the AivisSpeech engine
-# programs.mugen-shell.voice.wakeWord.enable = false;   # drop ~200 MiB of closure
 ```
-
-Leaving `wakeWord.enable` on keeps openWakeWord installed so "Hey Yura" *can* be turned on later; turning it off still leaves push-to-talk, the mic button and read-aloud working.
 
 Everything comes from the store — no checkout, and `nix-ld` is not needed. The AivisSpeech engine downloads its default voice model (~900 MB) on first start, so it needs the network once. Replies are routed at it automatically, so they are audible before any voice is picked in Settings. VOICEVOX is not part of the Nix wiring; set it up manually (step 3 below) to put its voices next to the Aivis ones.
 
@@ -325,12 +322,14 @@ Coming from the manual path below, delete the `~/.config/systemd/user/{yura-voic
 
 For non-Nix setups, `make install` included — voice is not part of the Makefile. On NixOS this route needs `programs.nix-ld.enable = true` (the pip wheels and the prebuilt AivisSpeech engine are FHS binaries):
 
-1. **Python venv** for the daemon. openwakeword goes in `--no-deps` on purpose (no tflite wheel on Python 3.14):
+1. **Python venv** for the daemon, and the VAD model the unit points at:
    ```bash
    cd ~/mugen-shell/voice
    python -m venv .venv
-   .venv/bin/pip install --no-deps openwakeword==0.6.0
-   .venv/bin/pip install onnxruntime numpy scipy scikit-learn tqdm requests sounddevice sherpa-onnx
+   .venv/bin/pip install onnxruntime numpy requests sounddevice sherpa-onnx
+   mkdir -p ~/.local/share/mugen-shell
+   curl -Lo ~/.local/share/mugen-shell/silero_vad.onnx \
+     https://github.com/dscripka/openWakeWord/releases/download/v0.5.1/silero_vad.onnx
    ```
 2. **whisper.cpp** built locally, with the server binary at `~/.local/src/whisper.cpp/build/bin/whisper-server` and a model at `~/.local/share/whisper/ggml-large-v3-turbo.bin` (override via `YURA_WHISPER_BIN` / `YURA_WHISPER_MODEL`). The daemon spawns and supervises the server itself.
 3. **VOICEVOX engine** answering on `127.0.0.1:50021`. The shipped `voicevox-engine.service` expects the nixpkgs `voicevox-engine` on `~/.nix-profile/bin`; adjust `ExecStart` for other install methods. [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine) is an optional VOICEVOX-compatible alternative with far more natural voices — extract it to `~/.local/opt/aivisspeech-engine` (port `10101`, unit ships alongside) and its voices join the same picker.
@@ -344,9 +343,9 @@ For non-Nix setups, `make install` included — voice is not part of the Makefil
 
 </details>
 
-Runtime control lives in **Settings → Voice input** — voice picker, wake sensitivity, speech speed, cue sounds, and the rest. Everything applies from the next utterance; the daemon watches `settings.json`, so nothing needs a restart.
+Runtime control lives in **Settings → Voice input** — voice picker, speech speed, cue sounds, and the rest. Everything applies from the next utterance; the daemon watches `settings.json`, so nothing needs a restart.
 
-Two of those are worth knowing up front. **The wake word is off by default**: until you turn it on, the microphone stays closed and a turn starts from `Super + Z` held down, or from the push-to-talk button in either Yura UI. And once it is on, voice enrollment appears — say "Hey Yura" after each of ten beeps and Yura answers only to you from then on.
+The microphone stays closed until a turn starts, from `Super + Z` held down or from the push-to-talk button in either Yura UI.
 
 <details>
 <summary><b>Running Yura's voice in another language</b></summary>
@@ -355,17 +354,16 @@ Only the reply voice is engine-specific; everything else is multilingual already
 
 - **TTS**: local voices run in-process through sherpa-onnx, so there is no `piper` binary to install. Take a model from the [sherpa-onnx TTS models release](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) (Piper/VITS and Kokoro both work) and unpack the whole **model directory** — the `.onnx` next to its `tokens.txt` and `espeak-ng-data/` — into `~/.local/share/mugen-shell/tts/`, or point `YURA_TTS_MODELS` somewhere else. Each directory then appears in the Settings voice picker, and VOICEVOX becomes optional. The Nix path already ships `vits-piper-en_US-lessac-high`.
 - **STT**: the recognition language follows Settings → AI / Yura → Personality → Language — Auto (the default) detects per utterance, a fixed language pins it; whisper covers ~100 languages.
-- **Wake word**: the shipped `voice/models/hey_yura.onnx` is tuned for Japanese pronunciation. Retrain via [`voice/train/`](voice/train/README.md) for other accents, or point `YURA_WAKEWORD` at your own model.
 - **Replies**: set the assistant's language under Settings → AI / Yura → Personality.
 
-**Environment knobs**, set in the unit or a drop-in: `YURA_WAKEWORD`, `YURA_WAKE_THRESHOLD`, `YURA_WAKE_PATIENCE`, `YURA_SILERO_VAD`, `YURA_TTS` (`<engine>:<style-id>`), `YURA_VOICEVOX_SPEAKER`, `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`, `YURA_AIVIS_URL`. Anything Settings also exposes wins from `settings.json` once the shell has saved it.
+**Environment knobs**, set in the unit or a drop-in: `YURA_SILERO_VAD`, `YURA_TTS` (`<engine>:<style-id>`), `YURA_VOICEVOX_SPEAKER`, `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`, `YURA_AIVIS_URL`. Anything Settings also exposes wins from `settings.json` once the shell has saved it.
 
 </details>
 
 <details>
 <summary><b>Using speakers instead of headphones</b> — echo cancellation</summary>
 
-PipeWire's WebRTC echo cancellation subtracts what the speakers are playing from the mic, so the wake word works even mid-playback. Drop this into `~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` (set `target.object` to your mic's `node.name` from `wpctl inspect`), restart PipeWire, then make the new source the default input with `wpctl set-default <id>`:
+PipeWire's WebRTC echo cancellation subtracts what the speakers are playing from the mic, so speaking over a reply works. Drop this into `~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` (set `target.object` to your mic's `node.name` from `wpctl inspect`), restart PipeWire, then make the new source the default input with `wpctl set-default <id>`:
 
 ```
 context.modules = [
@@ -414,9 +412,8 @@ Media, microphone and brightness keys work as they do anywhere else. Every bindi
 - [playerctl](https://github.com/altdesktop/playerctl) — Media player control
 - [grim](https://sr.ht/~emersion/grim/) / [slurp](https://github.com/emersion/slurp) — Screenshot tools
 - [cliphist](https://github.com/sentriz/cliphist) — Clipboard history
-- [openWakeWord](https://github.com/dscripka/openWakeWord) — Wake word detection
 - [Silero VAD](https://github.com/snakers4/silero-vad) — Voice activity detection
 - [whisper.cpp](https://github.com/ggml-org/whisper.cpp) — Speech-to-text
-- [VOICEVOX](https://voicevox.hiroshiba.jp/) — TTS engine; also the source of the synthesized Japanese speech used to train the bundled `hey_yura.onnx` wake word model
+- [VOICEVOX](https://voicevox.hiroshiba.jp/) — TTS engine
 - [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine) — VOICEVOX-compatible TTS with Style-Bert-VITS2 voices, models from [AivisHub](https://hub.aivis-project.com/)
 - [Piper](https://github.com/rhasspy/piper) — TTS for non-Japanese voices

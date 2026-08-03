@@ -9,7 +9,7 @@ from .log import log
 from .tts import prewarm_tts, speak_guarded
 
 # The shell drives the daemon over this socket: read-aloud, starting and
-# cancelling a turn, and voice enrollment. A socket rather than signals or a
+# cancelling a turn. A socket rather than signals or a
 # second process — signals carry no arguments and give no answer, and on the
 # Nix path yurad.py lives in the store behind a wrapped interpreter, so it
 # can't be re-invoked as a one-shot.
@@ -140,8 +140,6 @@ class _CtlHandler(http.server.BaseHTTPRequestHandler):
             daemon.request_ptt(False)
         elif self.path == "/cancel":
             daemon.request_cancel()
-        elif self.path == "/enroll":
-            daemon.request_enroll()
         else:
             self._reply(404, {"error": "unknown endpoint"})
             return

@@ -3,7 +3,6 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import "../../common" as Common
-import "../../managers" as Managers
 import "../../../lib" as Theme
 
 Rectangle {
@@ -20,86 +19,8 @@ Rectangle {
     border.width: 1
     border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
 
-    readonly property var wakeOpenOptions: ["panel", "bar", "none"]
-    readonly property bool wakeWordOn:
-        settingsManager ? settingsManager.voiceWakeWord : false
+    readonly property var turnOpenOptions: ["panel", "bar", "none"]
     readonly property var speedOptions: [0.9, 1.0, 1.1, 1.2]
-
-    // The daemon owns enrollment (POST /enroll); the verifier pkl is the only
-    // "enrolled?" signal across the process boundary.
-    property bool enrolling: false
-    // mtime (epoch secs), 0 = never registered. mtime rather than existence,
-    // so a re-register waits for a NEW file instead of stopping instantly on
-    // the previous registration's leftover pkl.
-    property real pklMtime: 0
-    property real enrollStartTime: 0
-    readonly property bool enrolled: pklMtime > 0
-    // Mirrors the daemon's .enrolling marker, which clears on every exit path,
-    // including an abort that never writes a verifier.
-    property bool daemonEnrolling: false
-    property bool sawDaemonEnrolling: false
-
-    Managers.MicCavaManager { id: enrollCava }
-
-    Process {
-        id: enrollCheck
-        command: ["bash", "-c",
-            "d=\"" + Theme.Paths.dataDir + "/verifier\"; "
-            + "echo \"$(stat -c %Y \"$d/hey_yura_verifier.pkl\" 2>/dev/null || echo 0) "
-            + "$(test -e \"$d/.enrolling\" && echo 1 || echo 0)\""]
-        stdout: SplitParser {
-            onRead: d => {
-                const parts = d.trim().split(/\s+/)
-                section.pklMtime = parseInt(parts[0]) || 0
-                section.daemonEnrolling = parts[1] === "1"
-            }
-        }
-    }
-
-    // Training lands the pkl a while after the last clip, with no signal back.
-    Timer {
-        id: enrollPoll
-        interval: 2000
-        repeat: true
-        running: section.enrolling
-        onTriggered: {
-            enrollCheck.running = true
-            if (section.pklMtime > section.enrollStartTime) {
-                section.stopEnroll()
-            } else if (section.daemonEnrolling) {
-                section.sawDaemonEnrolling = true
-            } else if (section.sawDaemonEnrolling) {
-                // Marker cleared with no new verifier: the daemon aborted.
-                // Gated on having seen it, because the daemon only reads the
-                // signal between turns — possibly tens of seconds into a
-                // reply — and giving up early leaves it recording unattended.
-                section.stopEnroll()
-            }
-        }
-    }
-
-    // Enrollment runs minutes at most; never leave the mic tapped forever.
-    Timer {
-        id: enrollTimeout
-        interval: 4 * 60 * 1000
-        running: section.enrolling
-        onTriggered: section.stopEnroll()
-    }
-
-    function startEnroll() {
-        section.enrollStartTime = Math.floor(Date.now() / 1000)
-        section.daemonEnrolling = false
-        section.sawDaemonEnrolling = false
-        section.enrolling = true
-        enrollCava.start()
-        Theme.YuraCtl.post("/enroll")
-    }
-
-    function stopEnroll() {
-        section.enrolling = false
-        enrollCava.stop()
-        enrollCheck.running = true
-    }
 
     // Values carry an engine prefix ("aivis:<id>" | "local:<model-dir>") to
     // match what voice.tts expects. The daemon assembles the list: it already
@@ -256,7 +177,6 @@ Rectangle {
 
     Component.onCompleted: {
         voicesProc.running = true
-        enrollCheck.running = true
         cueSoundsProc.running = true
     }
 
@@ -419,29 +339,8 @@ Rectangle {
             spacing: 12
 
             Common.SettingLabel { theme: section.theme;
-                title: "Wake word"
-                desc: "Listen for “Hey Yura”; off releases the mic until you press the key"
-            }
-
-            Common.Switch {
-                Layout.alignment: Qt.AlignVCenter
-                theme: section.theme
-                checked: section.wakeWordOn
-                onToggled: {
-                    if (!section.settingsManager) return
-                    section.settingsManager.voiceWakeWord = checked
-                    section.save()
-                }
-            }
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 12
-
-            Common.SettingLabel { theme: section.theme;
                 title: "Follow-up listening"
-                desc: "After a reply, keep listening — no wake word needed"
+                desc: "After a reply, keep listening — no key press needed"
             }
 
             Common.Switch {
@@ -477,59 +376,13 @@ Rectangle {
             }
         }
 
-        ColumnLayout {
-            visible: section.wakeWordOn
-            Layout.fillWidth: true
-            spacing: 8
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 12
-
-                Common.SettingLabel { theme: section.theme;
-                    title: "Voice enrollment"
-                    desc: section.enrolling
-                        ? "Say “Hey Yura” after each beep…"
-                        : (section.enrolled
-                            ? "Registered — Yura answers only to your voice"
-                            : "Teach Yura your voice so others can’t wake it")
-                }
-
-                Common.BarVisualizer {
-                    visible: section.enrolling
-                    Layout.alignment: Qt.AlignVCenter
-                    cavaManager: enrollCava
-                    barCount: 12
-                    barIndices: [15, 12, 9, 6, 3, 0, 1, 4, 7, 10, 13, 14]
-                    maxHeightMultipliers: [0.5, 0.65, 0.8, 0.9, 1.0, 1.0, 1.0, 1.0, 0.9, 0.8, 0.65, 0.5]
-                    barColor: section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
-                    baseColor: section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
-                }
-
-                Common.Chip { theme: section.theme;
-                    label: section.enrolling
-                        ? "Cancel"
-                        : (section.enrolled ? "Re-register" : "Register my voice")
-                    selected: section.enrolling
-                    onClicked: {
-                        if (section.enrolling) {
-                            Theme.YuraCtl.post("/cancel")
-                            section.stopEnroll()
-                        } else {
-                            section.startEnroll()
-                        }
-                    }
-                }
-            }
-        }
-
         RowLayout {
             Layout.fillWidth: true
             spacing: 12
 
             Common.SettingLabel { theme: section.theme;
                 title: "On summon"
-                desc: "What opens when a wake word or the push-to-talk key starts a turn"
+                desc: "What opens when the push-to-talk key or the mic button starts a turn"
             }
 
             Row {
@@ -537,46 +390,20 @@ Rectangle {
                 Layout.alignment: Qt.AlignVCenter
 
                 Repeater {
-                    model: section.wakeOpenOptions
+                    model: section.turnOpenOptions
 
                     Common.Chip { theme: section.theme;
                         required property string modelData
                         label: modelData.charAt(0).toUpperCase() + modelData.slice(1)
                         selected: section.settingsManager
-                            && section.settingsManager.voiceWakeOpens === modelData
+                            && section.settingsManager.voiceTurnOpens === modelData
                         onClicked: {
                             if (!section.settingsManager) return
-                            section.settingsManager.voiceWakeOpens = modelData
+                            section.settingsManager.voiceTurnOpens = modelData
                             section.save()
                         }
                     }
                 }
-            }
-        }
-
-        RowLayout {
-            visible: section.wakeWordOn
-            Layout.fillWidth: true
-            spacing: 12
-
-            Common.SettingLabel { theme: section.theme;
-                title: "Wake sensitivity"
-                desc: "Higher rejects more false wakes; lower catches quiet calls"
-            }
-
-            Common.Slider {
-                Layout.alignment: Qt.AlignVCenter
-                Layout.preferredWidth: 180
-                theme: section.theme
-                from: 0.5
-                to: 0.95
-                stepSize: 0.01
-                value: section.settingsManager ? section.settingsManager.voiceWakeThreshold : 0.85
-                display: value.toFixed(2)
-                onMoved: nv => {
-                    if (section.settingsManager) section.settingsManager.voiceWakeThreshold = nv
-                }
-                onReleased: section.save()
             }
         }
 
@@ -811,7 +638,7 @@ Rectangle {
         }
 
         SoundPicker {
-            title: "Wake sound"
+            title: "Start sound"
             desc: "When Yura starts listening"
             settingKey: "soundWake"
             options: section.cueOptions

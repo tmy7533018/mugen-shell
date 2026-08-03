@@ -1,12 +1,9 @@
 import os
-import queue
 import re
 import signal
 import threading
 import time
-from collections import deque
 
-import numpy as np
 import requests
 
 from .audio import (
@@ -18,12 +15,11 @@ from .audio import (
 )
 from .barge import BargeMonitor, NullMonitor, enabled as barge_enabled
 from .chat import Chat
-from .const import CHUNK, SR
+from .const import SR
 from .control import ReadAloud, serve_control_socket
-from .enroll import run_enrollment
 from .log import log
 from .messages import msg
-from .settings import voice_float, voice_settings
+from .settings import voice_settings
 from .shell import (
     open_panel,
     set_listening,
@@ -36,37 +32,22 @@ from .shell import state as shell_state
 from .sound import beep, cue
 from .stt import ensure_whisper_server, transcribe
 from .tts import join_spoken, prewarm_tts, speak_guarded
-from .wake import (
-    ENROLL_MARKER,
-    WAKE_PATIENCE,
-    WAKE_THRESHOLD,
-    WAKE_VAD_GATE,
-    WakeDetector,
-    dump_wake_audio,
-)
-
-
-def wake_word_on() -> bool:
-    return bool(voice_settings().get("wakeWord", False))
 
 
 class Daemon:
     def __init__(self):
         self.running = True
-        # Raised by the control socket, consumed by the wake loop between
-        # frames: trigger starts a turn without a wake word, trigger_fresh does
-        # the same into a new conversation, cancel drops capture (or stops
-        # speech at a sentence break), enroll starts voice registration.
+        # Raised by the control socket, consumed by the idle loop between
+        # turns: trigger starts a turn, trigger_fresh does the same into a new
+        # conversation, cancel drops capture (or stops speech at a sentence
+        # break).
         self.trigger = threading.Event()
         self.trigger_fresh = threading.Event()
-        self.enroll = threading.Event()
         self.cancel = threading.Event()
         self.ptt_held = threading.Event()
         self.ptt_turn = threading.Event()
         self.summons = threading.Event()
         self.capture = Capture(lambda: self.running, self.cancel)
-        self.wake: WakeDetector | None = None
-        self._wake_failed = False
         self.chat = Chat()
         self.read_aloud = ReadAloud()
         # Its own VAD: sharing capture's would tangle the two streams' state.
@@ -93,16 +74,8 @@ class Daemon:
         self.cancel.set()
         self.read_aloud.stop()
 
-    def request_enroll(self) -> None:
-        # Clear now rather than in run_enrollment: the wake loop only dequeues
-        # this between turns, and a cancel sent in that gap must still land.
-        self.cancel.clear()
-        self.enroll.set()
-        self.summons.set()
-
     def state(self) -> dict:
         return {**shell_state(),
-                "enrolling": self.enroll.is_set() or os.path.exists(ENROLL_MARKER),
                 "conversation_id": self.chat.conversation_id}
 
     def _handle_turn(self, surface_up: bool = False) -> None:
@@ -114,7 +87,7 @@ class Daemon:
         # A summons outranks a message being read aloud, and the mic would
         # otherwise capture it.
         self.read_aloud.stop()
-        # After a spoken reply, keep listening without the wake word. Silence,
+        # After a spoken reply, keep listening without a new trigger. Silence,
         # cancel, or an empty turn drops back to idle.
         first = True
         while self.running and not self.cancel.is_set():
@@ -148,7 +121,10 @@ class Daemon:
         set_listening(True)
         try:
             if open_surface:
-                opens = voice_settings().get("wakeOpens", "panel")
+                # wakeOpens is the pre-retirement name, still in any
+                # settings.json the shell has not rewritten yet.
+                opens = voice_settings().get(
+                    "turnOpens", voice_settings().get("wakeOpens", "panel"))
                 if opens == "panel":
                     open_panel()
                 elif opens == "bar":
@@ -226,39 +202,16 @@ class Daemon:
         return not self.cancel.is_set()
 
     def run(self) -> None:
-        # SIGTERM exits hard (os._exit skips finally), so a kill mid-enrollment
-        # leaves the marker behind and the UI would read it as still running.
-        try:
-            os.remove(ENROLL_MARKER)
-        except OSError:
-            pass
         self.whisper_proc = ensure_whisper_server()
         try:
             while self.running:
                 if not voice_settings().get("enabled", True):
                     time.sleep(2)
                     continue
-                if self._wake_ready():
-                    self._wake_session()
-                else:
-                    self._idle_session()
+                self._idle_session()
         finally:
             if self.whisper_proc:
                 self.whisper_proc.terminate()
-
-    def _wake_ready(self) -> bool:
-        if not wake_word_on():
-            return False
-        if self.wake is None and not self._wake_failed:
-            try:
-                self.wake = WakeDetector()
-            except Exception as e:
-                self._wake_failed = True
-                log("wake", f"unavailable, push-to-talk only: {e}")
-                return False
-            log("wake", f"model={self.wake.name} "
-                        f"threshold={voice_float('wakeThreshold', WAKE_THRESHOLD, 0.05, 1.0)}")
-        return self.wake is not None
 
     def _take_trigger(self) -> bool:
         fresh = self.trigger_fresh.is_set()
@@ -266,7 +219,7 @@ class Daemon:
         self.trigger.clear()
         if fresh:
             self.chat.reset()
-        log("wake", self._trigger_name() + (" (new chat)" if fresh else ""))
+        log("turn", self._trigger_name() + (" (new chat)" if fresh else ""))
         return not self.ptt_turn.is_set()
 
     def _run_turn(self, surface_up: bool) -> None:
@@ -279,8 +232,6 @@ class Daemon:
                 speak_guarded(msg("error"))
             except Exception:
                 pass
-        if self.wake is not None:
-            self.wake.reset()
         self.capture.drain()
         self.trigger.clear()
         self.trigger_fresh.clear()
@@ -292,75 +243,13 @@ class Daemon:
         log("ready", "push to talk")
         while self.running:
             if not self.summons.wait(1.0):
-                if not voice_settings().get("enabled", True) or self._wake_ready():
+                if not voice_settings().get("enabled", True):
                     return
                 continue
             self.summons.clear()
-            if self.enroll.is_set():
-                self.enroll.clear()
-                log("enroll", "wake word is off, nothing to enrol against")
-                continue
             surface_up = self._take_trigger()
             self.capture.prewarm()
             with self.capture.stream():
-                self._run_turn(surface_up)
-
-    def _wake_session(self) -> None:
-        wake = self.wake
-        self.capture.prewarm()
-        with self.capture.stream():
-            log("ready", "say the wake word")
-            last_check = time.time()
-            wake_streak = 0
-            wake_ring: deque[np.ndarray] = deque(maxlen=int(2.5 / (CHUNK / SR)))
-            vad_recent: deque[float] = deque(maxlen=int(1.0 / (CHUNK / SR)))
-            while self.running:
-                try:
-                    frame = self.capture.queue.get(timeout=1)
-                except queue.Empty:
-                    frame = None
-                if self.enroll.is_set():
-                    self.enroll.clear()
-                    run_enrollment(self.capture, self.cancel,
-                                   lambda: self.running, wake.build)
-                    wake.reset()
-                    self.capture.drain()
-                    continue
-                surface_up = False
-                if self.trigger_fresh.is_set() or self.trigger.is_set():
-                    surface_up = self._take_trigger()
-                elif frame is None:
-                    continue
-                else:
-                    wake_ring.append(frame)
-                    vad_recent.append(self.capture.vad.prob(frame))
-                    score = wake.predict(frame)
-                    # Floor above zero: a 0 threshold would wake on every frame.
-                    threshold = voice_float("wakeThreshold", WAKE_THRESHOLD, 0.05, 1.0)
-                    if score < threshold:
-                        wake_streak = 0
-                        if time.time() - last_check > 2:
-                            last_check = time.time()
-                            if not voice_settings().get("enabled", True):
-                                log("voice", "disabled, releasing mic")
-                                return
-                            if not wake_word_on():
-                                log("wake", "switched off, releasing mic")
-                                return
-                        continue
-                    wake_streak += 1
-                    if wake_streak < WAKE_PATIENCE:
-                        continue
-                    wake_streak = 0
-                    if max(vad_recent, default=0.0) < WAKE_VAD_GATE:
-                        log("wake", f"gated: score={score:.2f} vad={max(vad_recent, default=0.0):.2f}")
-                        dump_wake_audio(wake_ring, score)
-                        continue
-                    log("wake", f"score={score:.2f}")
-                    dump_wake_audio(wake_ring, score)
-                    # Each wake is a fresh summons. Follow-up turns still share
-                    # the conversation bound this session.
-                    self.chat.reset()
                 self._run_turn(surface_up)
 
 

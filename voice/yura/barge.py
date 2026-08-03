@@ -15,10 +15,10 @@ import threading
 
 import numpy as np
 
+from .audio import dump_audio
 from .const import CHUNK, SR
 from .log import log
 from .settings import voice_float, voice_settings
-from .wake import dump_audio
 
 # Above the capture threshold (0.35): a false trigger here costs the user the
 # rest of a sentence, while a missed one just means they say it again.

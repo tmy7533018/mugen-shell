@@ -1,11 +1,5 @@
-# Python 3.14: tflite-runtime has no wheel, so openwakeword must be
-# installed with --no-deps and we pin its runtime deps here (ONNX path only).
-openwakeword==0.6.0
 onnxruntime>=1.27
 numpy
-scipy
-scikit-learn
-tqdm
 requests
 sounddevice
 # Local TTS (Piper/VITS and Kokoro model dirs) — see yura/tts/local.py.

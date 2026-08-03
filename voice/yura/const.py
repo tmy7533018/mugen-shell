@@ -13,4 +13,4 @@ DATA_DIR = os.path.join(_DATA_HOME, "mugen-shell")
 QS_CONFIG_DIR = os.path.join(_CONFIG_HOME, "quickshell", "mugen-shell")
 
 SR = 16000
-CHUNK = 1280                      # 80 ms, what openWakeWord expects
+CHUNK = 1280                      # 80 ms

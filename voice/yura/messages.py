@@ -5,19 +5,9 @@ from .lang import configured_lang
 MESSAGES = {
     "ja": {
         "error": "ごめんね、エラーで返事できなかった。",
-        "enroll_start": "声の登録を始めるよ。ピコンって鳴ったら、ヘイユラ、って言ってね。全部で{n}回だよ。",
-        "enroll_more": "いいね、あと{n}回。",
-        "enroll_retry": "うまく録れなかった。もう一回お願い。",
-        "enroll_done": "登録完了。これからは君の声だけ聞くね。",
-        "enroll_fail": "ごめん、登録に失敗しちゃった。",
     },
     "en": {
         "error": "Sorry, something went wrong and I couldn't reply.",
-        "enroll_start": "Let's register your voice. After each beep, say: Hey Yura. {n} times in total.",
-        "enroll_more": "Nice, {n} to go.",
-        "enroll_retry": "That one didn't come through. One more time, please.",
-        "enroll_done": "All set. From now on I'll only answer to your voice.",
-        "enroll_fail": "Sorry, the enrollment failed.",
     },
 }
 

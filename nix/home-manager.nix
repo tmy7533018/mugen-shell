@@ -22,11 +22,6 @@ let
       ps.onnxruntime
       ps.sherpa-onnx
     ]
-    ++ lib.optionals cfg.voice.wakeWord.enable [
-      (ps.callPackage ./voice/openwakeword.nix { })
-      ps.scipy
-      ps.scikit-learn
-    ]
   );
 
   # Pinned to a revision rather than resolve/main: main would only fail the
@@ -108,7 +103,7 @@ in
     };
 
     voice = {
-      enable = lib.mkEnableOption "the Yura voice input daemon (wake word → STT → chat → TTS)";
+      enable = lib.mkEnableOption "the Yura voice input daemon (push-to-talk → STT → chat → TTS)";
 
       sourceDir = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -125,18 +120,6 @@ in
         type = lib.types.bool;
         default = true;
         description = "Run the AivisSpeech engine (primary Japanese TTS) as a user service.";
-      };
-
-      wakeWord.enable = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = ''
-          Install openWakeWord so "Hey Yura" can start a turn. Turning this off
-          drops ~200 MiB of closure (scipy, scikit-learn) and leaves
-          push-to-talk, the mic button and read-aloud working. Whether the
-          daemon actually listens is the separate voice.wakeWord setting in
-          settings.json, which defaults to off.
-        '';
       };
     };
   };
@@ -235,7 +218,7 @@ in
 
     systemd.user.services.yura-voice = lib.mkIf cfg.voice.enable {
       Unit = {
-        Description = "Yura voice input daemon (wake word → STT → chat → TTS)";
+        Description = "Yura voice input daemon (push-to-talk → STT → chat → TTS)";
         After = [
           "graphical-session.target"
           "aivisspeech-engine.service"
@@ -245,12 +228,7 @@ in
       };
       Service = {
         WorkingDirectory = voiceDir;
-        # Bootstrap only — yurad re-reads voice.wakeThreshold from settings.json,
-        # which the shell writes on its first save of any setting. Keep this
-        # equal to the GUI default or an unrelated change moves the wake gate.
         Environment = [
-          "YURA_WAKEWORD=${voiceDir}/models/hey_yura.onnx"
-          "YURA_WAKE_THRESHOLD=0.85"
           "YURA_SILERO_VAD=${sileroVad}"
           "YURA_WHISPER_BIN=${pkgs.whisper-cpp-vulkan}/bin/whisper-server"
           "YURA_WHISPER_MODEL=${whisperModel}"

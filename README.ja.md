@@ -42,7 +42,7 @@ Yura はデスクトップのアシスタントです。バーの入力 (`Super 
 
 Yura はデスクトップの操作も可能です。「音量 30 にして」「25 分タイマー」と言えば、自分でクリックするのと同じパネルに届きます。ツール呼び出しはカテゴリ単位で塞げますし、アプリの起動は許可リスト制です。電源まわりは最初から渡していません。外部の [MCP](https://modelcontextprotocol.io) サーバも同じ枠に入り、書き込み系は実行前に確認します。
 
-音声入力は任意です。**「Hey Yura」**と呼びかけて話すと、返事は声で返ってきます。既定の声は日本語で、どの言語もそのまま読み上げます。言語ごとに別の声を割り当てたいときは Settings で選べます。設定は **Settings → AI / Yura** に集約してあり、残りは [SETUP.ja.md](SETUP.ja.md#mugen-ai-の設定) にまとめました。
+音声入力は任意です。`Super + Z` を押しながら話すと、返事は声で返ってきます。既定の声は日本語で、どの言語もそのまま読み上げます。言語ごとに別の声を割り当てたいときは Settings で選べます。設定は **Settings → AI / Yura** に集約してあり、残りは [SETUP.ja.md](SETUP.ja.md#mugen-ai-の設定) にまとめました。
 
 ---
 
@@ -58,8 +58,6 @@ Yura はデスクトップの操作も可能です。「音量 30 にして」�
 ## クレジット
 
 mugen-shell は [Hyprland](https://hyprland.org/) と [Quickshell](https://quickshell.outfoxxed.me/) をはじめ、多くのプロジェクトの上に成り立っています。全リストは [SETUP.ja.md → クレジット](SETUP.ja.md#クレジット) にあります。
-
-「Hey Yura」のウェイクワードモデルは、[VOICEVOX](https://voicevox.hiroshiba.jp/) の音声で学習した [openWakeWord](https://github.com/dscripka/openWakeWord) のカスタムモデルです。
 
 ---
 

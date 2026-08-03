@@ -64,8 +64,7 @@ QtObject {
 
     // Voice input (yurad reads these straight from settings.json).
     property bool voiceEnabled: true
-    property bool voiceWakeWord: false
-    property string voiceWakeOpens: "panel"  // "panel" | "bar" | "none"
+    property string voiceTurnOpens: "panel"  // "panel" | "bar" | "none"
     property real voiceSpeed: 1.0
     property string voiceTts: ""
     // Per-language overrides of voiceTts, keyed by 2-letter code. Japanese
@@ -78,9 +77,6 @@ QtObject {
     // Off by default: a false trigger costs the rest of a spoken reply, so it
     // stays opt-in until it has been lived with.
     property bool voiceBargeIn: false
-    // Kept equal to the shipped units' YURA_WAKE_THRESHOLD so the first save of
-    // any setting (which persists this key) can't move the wake gate on its own.
-    property real voiceWakeThreshold: 0.85
     property real voiceVolume: 1.0  // 0..1
     // Cue sounds from the notification sounds dir; "" = built-in beep, "none" = silent
     property string voiceSoundWake: ""
@@ -202,15 +198,13 @@ QtObject {
             },
             "voice": {
                 "enabled": voiceEnabled,
-                "wakeWord": voiceWakeWord,
-                "wakeOpens": voiceWakeOpens,
+                "turnOpens": voiceTurnOpens,
                 "speed": voiceSpeed,
                 "tts": voiceTts,
                 "ttsByLang": voiceTtsByLang,
                 "editingLang": voiceEditingLang,
                 "followUp": voiceFollowUp,
                 "bargeIn": voiceBargeIn,
-                "wakeThreshold": voiceWakeThreshold,
                 "volume": voiceVolume,
                 "soundWake": voiceSoundWake,
                 "soundFollowUp": voiceSoundFollowUp,
@@ -425,11 +419,12 @@ QtObject {
                 if (settings.voice.enabled !== undefined) {
                     voiceEnabled = settings.voice.enabled
                 }
-                if (settings.voice.wakeWord !== undefined) {
-                    voiceWakeWord = settings.voice.wakeWord
-                }
-                if (settings.voice.wakeOpens !== undefined) {
-                    voiceWakeOpens = settings.voice.wakeOpens
+                // wakeOpens is the pre-retirement name, still in any
+                // settings.json the shell has not rewritten yet.
+                const opens = settings.voice.turnOpens !== undefined
+                    ? settings.voice.turnOpens : settings.voice.wakeOpens
+                if (opens !== undefined) {
+                    voiceTurnOpens = opens
                 }
                 if (settings.voice.speed !== undefined) {
                     voiceSpeed = settings.voice.speed
@@ -452,9 +447,6 @@ QtObject {
                 }
                 if (settings.voice.bargeIn !== undefined) {
                     voiceBargeIn = settings.voice.bargeIn
-                }
-                if (settings.voice.wakeThreshold !== undefined) {
-                    voiceWakeThreshold = settings.voice.wakeThreshold
                 }
                 if (settings.voice.volume !== undefined) {
                     voiceVolume = settings.voice.volume
