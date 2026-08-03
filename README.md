@@ -38,7 +38,7 @@ Install paths, dependencies, keybindings, and configuration all live in [SETUP.m
 
 ## Yura
 
-Yura is the desktop assistant. It appears as an input row in the bar (`Super + Y`) and as a chat panel anchored to a screen corner (`Super + Shift + Y`), both sharing one conversation history. The backend is **mugen-ai**, a Go server in [`ai/`](ai/) that talks to local models through [Ollama](https://ollama.com), to Anthropic Claude, to Google Gemini, or to any OpenAI-compatible API.
+Yura is the desktop assistant. It appears as an input row in the bar (`Super + Y`) and as a chat panel anchored to a screen corner (`Super + Shift + Y`), both sharing one conversation history. The backend is **mugen-ai**, a Go server in [`ai/`](ai/) that talks to local models through [Ollama](https://ollama.com), to Anthropic Claude, to Google Gemini, or to any OpenAI-compatible API. Files can ride along with a message: images go to models that can see, and anything that decodes as text is folded into the prompt, so a model without vision still reads what you attached.
 
 Yura also runs the desktop. "Set volume to 30" or "set a 25 minute timer" reaches the same panels you would click. Tool calls can be switched off per category, launching apps goes through an allowlist, and power actions were never handed over. External [MCP](https://modelcontextprotocol.io) servers join the same set, with their writes held for approval.
 

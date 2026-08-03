@@ -38,7 +38,7 @@ cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./resul
 
 ## Yura
 
-Yura はデスクトップのアシスタントです。バーの入力 (`Super + Y`) と画面コーナーのチャットパネル (`Super + Shift + Y`) の 2 か所に出てきて、会話履歴は共有します。バックエンドは [`ai/`](ai/) 配下の Go サーバ **mugen-ai** で、[Ollama](https://ollama.com) 経由のローカルモデル、Anthropic Claude、Google Gemini、OpenAI 互換 API に対応しています。
+Yura はデスクトップのアシスタントです。バーの入力 (`Super + Y`) と画面コーナーのチャットパネル (`Super + Shift + Y`) の 2 か所に出てきて、会話履歴は共有します。バックエンドは [`ai/`](ai/) 配下の Go サーバ **mugen-ai** で、[Ollama](https://ollama.com) 経由のローカルモデル、Anthropic Claude、Google Gemini、OpenAI 互換 API に対応しています。メッセージにはファイルを添えられます。画像は目のあるモデルへ渡り、テキストとして読めるものはプロンプトに畳み込むので、視覚のないモデルでも中身は届きます。
 
 Yura はデスクトップの操作も可能です。「音量 30 にして」「25 分タイマー」と言えば、自分でクリックするのと同じパネルに届きます。ツール呼び出しはカテゴリ単位で塞げますし、アプリの起動は許可リスト制です。電源まわりは最初から渡していません。外部の [MCP](https://modelcontextprotocol.io) サーバも同じ枠に入り、書き込み系は実行前に確認します。
 
