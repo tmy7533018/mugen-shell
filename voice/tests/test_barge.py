@@ -54,6 +54,9 @@ def frame(value: int = 1) -> np.ndarray:
 def run_monitor(script, frames, wait=2.0):
     cap = _FakeCapture()
     m = barge.BargeMonitor(cap, _FakeVAD(script))
+    # A trigger archives its audio; without this the suite writes wavs into
+    # the real data dir, where they read as false barge-ins later.
+    saved_dump, barge.dump_audio = barge.dump_audio, lambda *a, **k: None
     m.start()
     for i in range(frames):
         cap.queue.put(frame(i + 1))
@@ -62,6 +65,7 @@ def run_monitor(script, frames, wait=2.0):
         time.sleep(0.01)
     time.sleep(0.05)
     seed = m.stop()
+    barge.dump_audio = saved_dump
     return m, seed
 
 
