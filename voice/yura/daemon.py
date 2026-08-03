@@ -62,11 +62,11 @@ class Daemon:
     def _trigger_name(self) -> str:
         return "ptt key" if self.ptt_turn.is_set() else "mic button"
 
-    def request_ptt(self, down: bool) -> None:
+    def request_ptt(self, down: bool, fresh: bool = False) -> None:
         if down:
             self.ptt_held.set()
             self.ptt_turn.set()
-            self.request_turn(fresh=True)
+            self.request_turn(fresh=fresh)
         else:
             self.ptt_held.clear()
 

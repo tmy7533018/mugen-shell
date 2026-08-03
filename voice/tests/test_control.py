@@ -126,6 +126,24 @@ class TakeTrigger(unittest.TestCase):
         d.request_turn()
         self.assertTrue(d._take_trigger())
 
+    def test_ptt_continues_the_conversation_the_shell_is_showing(self):
+        # The shell passes the verdict: it is the side that knows whether a
+        # Yura surface is up, and asking it back would delay the mic opening.
+        d = bare_daemon()
+        d.chat = types.SimpleNamespace(reset=lambda: setattr(d, "_reset", True))
+        d._reset = False
+        d.request_ptt(True)
+        d._take_trigger()
+        self.assertFalse(d._reset)
+
+    def test_ptt_with_nothing_on_screen_starts_a_new_conversation(self):
+        d = bare_daemon()
+        d.chat = types.SimpleNamespace(reset=lambda: setattr(d, "_reset", True))
+        d._reset = False
+        d.request_ptt(True, fresh=True)
+        d._take_trigger()
+        self.assertTrue(d._reset)
+
 
 class RequestCancel(unittest.TestCase):
     def test_raises_cancel_and_silences_read_aloud(self):

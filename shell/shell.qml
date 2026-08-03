@@ -21,7 +21,7 @@ ShellRoot {
         name: "ptt"
         description: "Hold to talk to Yura"
 
-        onPressed: Lib.YuraCtl.pttDown()
+        onPressed: Lib.YuraCtl.pttDown(!barWindow.yuraSurfaceOpen)
         onReleased: Lib.YuraCtl.pttUp()
     }
 

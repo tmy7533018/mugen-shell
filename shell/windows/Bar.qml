@@ -275,6 +275,8 @@ PanelWindow {
     property bool yuraListening: false
     property bool yuraSpeaking: false
     property bool yuraPanelOpen: false
+    // A visible conversation is the one a voice turn continues.
+    readonly property bool yuraSurfaceOpen: yuraPanelOpen || modeManager.isMode("ai")
 
     IpcHandler {
         target: "yura"

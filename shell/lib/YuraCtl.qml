@@ -24,8 +24,8 @@ QtObject {
         Quickshell.execDetached(args)
     }
 
-    function pttDown() {
-        post("/ptt/start")
+    function pttDown(fresh) {
+        post("/ptt/start", { fresh: fresh === true })
     }
 
     function pttUp() {
