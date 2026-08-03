@@ -25,10 +25,13 @@ from .wake import dump_audio
 BARGE_VAD_THRESHOLD = float(os.environ.get("YURA_BARGE_VAD", "0.5"))
 # Speech has to hold for this long. A cough, a keyboard clack or a door is
 # loud but brief, and every one of them used to be a plausible stop signal.
-BARGE_HOLD_S = float(os.environ.get("YURA_BARGE_HOLD", "0.3"))
+# The echo canceller also breaks down on loud passages, and that residual
+# measured 0.24 s at its longest — under 0.3 s it read as someone talking.
+BARGE_HOLD_S = float(os.environ.get("YURA_BARGE_HOLD", "0.6"))
 # Audio kept from before the trigger, so the first syllables survive the
-# handover to capture.
-BARGE_PREROLL_S = 0.8
+# handover to capture. Has to stay ahead of the hold, or the words that
+# triggered it are already out of the buffer.
+BARGE_PREROLL_S = 1.1
 
 
 def enabled() -> bool:
