@@ -19,16 +19,16 @@ Item {
         source: root.source
         fillMode: Image.PreserveAspectFit
         smooth: true
-        visible: !_overlayReady
+        visible: !root._overlayReady
         
         // 2x so the icon stays crisp when hover-scaled
         sourceSize.width: Math.max(root.width, 24) * 2
         sourceSize.height: Math.max(root.height, 24) * 2
         
         onStatusChanged: {
-            if (status === Image.Ready && !_overlayReady) {
+            if (status === Image.Ready && !root._overlayReady) {
                 Qt.callLater(() => {
-                    _overlayReady = true
+                    root._overlayReady = true
                 })
             }
         }
@@ -38,12 +38,12 @@ Item {
         anchors.fill: iconImage
         source: iconImage
         color: root.color
-        visible: _overlayReady
+        visible: root._overlayReady
     }
     
     Component.onCompleted: {
         if (root.source === "") {
-            _overlayReady = true
+            root._overlayReady = true
         }
     }
 }
