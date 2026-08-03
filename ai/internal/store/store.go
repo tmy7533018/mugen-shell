@@ -3,6 +3,7 @@ package store
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -33,6 +34,8 @@ type Message struct {
 	ID      int64  `json:"id"`
 	Role    string `json:"role"`
 	Content string `json:"content"`
+	// Absolute paths; the bytes are read per request, never copied in here.
+	Attachments []string `json:"attachments,omitempty"`
 }
 
 // Memory is one durable fact about the user. The full list is injected into
@@ -103,6 +106,9 @@ func (s *Store) migrate() error {
 		return err
 	}
 	if err := s.ensureColumn("conversations", "thinking", "INTEGER NOT NULL DEFAULT 0"); err != nil {
+		return err
+	}
+	if err := s.ensureColumn("messages", "attachments", "TEXT NOT NULL DEFAULT ''"); err != nil {
 		return err
 	}
 	return nil
@@ -307,7 +313,11 @@ func (s *Store) SizeBytes() int64 {
 	return info.Size()
 }
 
-func (s *Store) AppendMessage(convID int64, role, content string) error {
+func (s *Store) AppendMessage(convID int64, role, content string, attachments []string) error {
+	encoded, err := encodeAttachments(attachments)
+	if err != nil {
+		return err
+	}
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
@@ -315,8 +325,8 @@ func (s *Store) AppendMessage(convID int64, role, content string) error {
 	defer tx.Rollback()
 	now := nowUnix()
 	if _, err := tx.Exec(
-		`INSERT INTO messages (conversation_id, role, content, created_at) VALUES (?, ?, ?, ?)`,
-		convID, role, content, now,
+		`INSERT INTO messages (conversation_id, role, content, attachments, created_at) VALUES (?, ?, ?, ?, ?)`,
+		convID, role, content, encoded, now,
 	); err != nil {
 		return err
 	}
@@ -328,7 +338,7 @@ func (s *Store) AppendMessage(convID int64, role, content string) error {
 
 func (s *Store) ListMessages(convID int64) ([]Message, error) {
 	rows, err := s.db.Query(
-		`SELECT id, role, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC, id ASC`,
+		`SELECT id, role, content, attachments FROM messages WHERE conversation_id = ? ORDER BY created_at ASC, id ASC`,
 		convID,
 	)
 	if err != nil {
@@ -338,12 +348,36 @@ func (s *Store) ListMessages(convID int64) ([]Message, error) {
 	var out []Message
 	for rows.Next() {
 		var m Message
-		if err := rows.Scan(&m.ID, &m.Role, &m.Content); err != nil {
+		var attachments string
+		if err := rows.Scan(&m.ID, &m.Role, &m.Content, &attachments); err != nil {
 			return nil, err
 		}
+		m.Attachments = decodeAttachments(attachments)
 		out = append(out, m)
 	}
 	return out, rows.Err()
+}
+
+func encodeAttachments(paths []string) (string, error) {
+	if len(paths) == 0 {
+		return "", nil
+	}
+	b, err := json.Marshal(paths)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+func decodeAttachments(encoded string) []string {
+	if encoded == "" {
+		return nil
+	}
+	var paths []string
+	if err := json.Unmarshal([]byte(encoded), &paths); err != nil {
+		return nil
+	}
+	return paths
 }
 
 // RemoveLastMessage drops the most recent message, for when a chat fails after

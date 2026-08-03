@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tmy7533018/mugen-ai/internal/attach"
 	"github.com/tmy7533018/mugen-ai/internal/config"
 	"github.com/tmy7533018/mugen-ai/internal/history"
 	"github.com/tmy7533018/mugen-ai/internal/mcp"
@@ -164,6 +165,8 @@ func isLoopbackOrigin(origin string) bool {
 type chatRequest struct {
 	Message        string `json:"message"`
 	ConversationID int64  `json:"conversation_id"`
+	// Absolute paths; the bytes are read here rather than sent.
+	Attachments []string `json:"attachments,omitempty"`
 	// Used only when ConversationID == 0; existing conversations always run
 	// on the model bound to their row.
 	Model string `json:"model,omitempty"`
@@ -237,7 +240,11 @@ func (s *Server) beginChatTurn(req chatRequest) (convID int64, model string, thi
 		}
 	}
 
-	if err = s.history.Add("user", req.Message, model, thinking); err != nil {
+	att, err := attach.Load(req.Attachments)
+	if err != nil {
+		return 0, "", false, nil, http.StatusBadRequest, err
+	}
+	if err = s.history.AddWithAttachments("user", req.Message, model, thinking, req.Attachments, att); err != nil {
 		return 0, "", false, nil, http.StatusInternalServerError, err
 	}
 
@@ -248,7 +255,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBody)
 
 	var req chatRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Message == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil ||
+		(req.Message == "" && len(req.Attachments) == 0) {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
@@ -290,6 +298,16 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	flusher.Flush()
 
 	providerName := s.registry.ProviderNameFor(r.Context(), model)
+
+	// Behind the persona and tool instructions, an attachment with no prompt
+	// reads as "nothing was asked" and the model declines.
+	if last := len(msgs) - 1; last >= 0 && req.Message == "" && len(req.Attachments) > 0 {
+		ask := "Describe what is attached."
+		if len(msgs[last].Images) > 0 && len(msgs[last].Content) == 0 {
+			ask = "Describe the attached image."
+		}
+		msgs[last].Content = ask + "\n\n" + msgs[last].Content
+	}
 
 	// Transient rider: never persisted, so stale snapshots don't pile up in
 	// history and the earlier message prefix stays byte-stable for prompt

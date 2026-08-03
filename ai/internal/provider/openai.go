@@ -241,6 +241,19 @@ func openAIMessages(messages []Message) ([]map[string]any, error) {
 				"role":    m.Role,
 				"content": m.Content,
 			}
+			if len(m.Images) > 0 {
+				parts := make([]map[string]any, 0, 1+len(m.Images))
+				for _, img := range m.Images {
+					parts = append(parts, map[string]any{
+						"type":      "image_url",
+						"image_url": map[string]any{"url": "data:" + img.MediaType + ";base64," + img.Data},
+					})
+				}
+				if m.Content != "" {
+					parts = append(parts, map[string]any{"type": "text", "text": m.Content})
+				}
+				msg["content"] = parts
+			}
 			if len(m.ToolCalls) > 0 {
 				calls := make([]map[string]any, 0, len(m.ToolCalls))
 				for _, tc := range m.ToolCalls {

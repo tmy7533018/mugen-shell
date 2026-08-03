@@ -84,7 +84,15 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 			role = "model"
 		}
 
-		parts := make([]map[string]any, 0, 1+len(m.ToolCalls))
+		parts := make([]map[string]any, 0, 1+len(m.Images)+len(m.ToolCalls))
+		for _, img := range m.Images {
+			parts = append(parts, map[string]any{
+				"inlineData": map[string]any{
+					"mimeType": img.MediaType,
+					"data":     img.Data,
+				},
+			})
+		}
 		if m.Content != "" {
 			parts = append(parts, map[string]any{"text": m.Content})
 		}

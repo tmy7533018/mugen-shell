@@ -1,14 +1,20 @@
 package history
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/tmy7533018/mugen-ai/internal/attach"
 	"github.com/tmy7533018/mugen-ai/internal/provider"
 	"github.com/tmy7533018/mugen-ai/internal/store"
 )
+
+// 1x1 transparent PNG.
+const onePixelPNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
 
 func TestTruncateKeepsUserLeading(t *testing.T) {
 	// A tiny budget forces the drop to land mid-exchange.
@@ -76,6 +82,73 @@ func seedExchange(t *testing.T, h *History, turns int) int64 {
 		}
 	}
 	return convID
+}
+
+func TestAttachmentsSurviveReload(t *testing.T) {
+	h, s := newTestHistory(t)
+	data, err := base64.StdEncoding.DecodeString(onePixelPNG)
+	if err != nil {
+		t.Fatalf("decode fixture: %v", err)
+	}
+	path := filepath.Join(t.TempDir(), "shot.png")
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	convID, err := h.NewConversation("m", false)
+	if err != nil {
+		t.Fatalf("new conversation: %v", err)
+	}
+	att, err := attach.Load([]string{path})
+	if err != nil {
+		t.Fatalf("load attachment: %v", err)
+	}
+	if err := h.AddWithAttachments("user", "what is this", "m", false, []string{path}, att); err != nil {
+		t.Fatalf("add: %v", err)
+	}
+
+	stored, _ := s.ListMessages(convID)
+	if len(stored) != 1 || len(stored[0].Attachments) != 1 || stored[0].Attachments[0] != path {
+		t.Fatalf("attachment path not persisted: %+v", stored)
+	}
+
+	// Reload from the database rather than the in-memory copy.
+	if _, err := h.NewConversation("m", false); err != nil {
+		t.Fatalf("second conversation: %v", err)
+	}
+	if err := h.Switch(convID); err != nil {
+		t.Fatalf("switch back: %v", err)
+	}
+	msgs := h.Messages()
+	if len(msgs) != 1 || len(msgs[0].Images) != 1 {
+		t.Fatalf("images not restored: %+v", msgs)
+	}
+	if msgs[0].Images[0].MediaType != "image/png" {
+		t.Fatalf("media type: %q", msgs[0].Images[0].MediaType)
+	}
+}
+
+func TestAttachmentsDroppedWhenFileIsGone(t *testing.T) {
+	h, s := newTestHistory(t)
+	convID, err := h.NewConversation("m", false)
+	if err != nil {
+		t.Fatalf("new conversation: %v", err)
+	}
+	missing := filepath.Join(t.TempDir(), "deleted.png")
+	if err := s.AppendMessage(convID, "user", "look", []string{missing}); err != nil {
+		t.Fatalf("append: %v", err)
+	}
+
+	if err := h.Switch(0); err != nil {
+		t.Fatalf("switch away: %v", err)
+	}
+	if err := h.Switch(convID); err != nil {
+		t.Fatalf("switch back: %v", err)
+	}
+	msgs := h.Messages()
+	if len(msgs) != 1 || len(msgs[0].Images) != 0 {
+		t.Fatalf("want the message with no images, got %+v", msgs)
+	}
 }
 
 func TestTruncateFromDropsTailAndReloads(t *testing.T) {

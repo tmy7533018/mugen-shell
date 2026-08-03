@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -20,6 +21,9 @@ type Ollama struct {
 	http      *http.Client
 	// Overridden in tests, which can't wait out the real window.
 	stallTimeout time.Duration
+
+	visionMu    sync.Mutex
+	visionCache map[string]bool
 }
 
 // Ollama withholds the response headers until the model is loaded and the
@@ -37,7 +41,52 @@ func NewOllama(host string, numCtx int, keepAlive string) *Ollama {
 		keepAlive:    keepAlive,
 		http:         streamingHTTPClient(),
 		stallTimeout: ollamaStallTimeout,
+		visionCache:  map[string]bool{},
 	}
+}
+
+func (o *Ollama) supportsVision(ctx context.Context, model string) bool {
+	o.visionMu.Lock()
+	cached, ok := o.visionCache[model]
+	o.visionMu.Unlock()
+	if ok {
+		return cached
+	}
+
+	body, err := json.Marshal(map[string]any{"model": model})
+	if err != nil {
+		return true
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, o.host+"/api/show", bytes.NewReader(body))
+	if err != nil {
+		return true
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := o.http.Do(req)
+	if err != nil {
+		return true
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return true
+	}
+	var shown struct {
+		Capabilities []string `json:"capabilities"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&shown); err != nil {
+		return true
+	}
+	vision := false
+	for _, c := range shown.Capabilities {
+		if c == "vision" {
+			vision = true
+			break
+		}
+	}
+	o.visionMu.Lock()
+	o.visionCache[model] = vision
+	o.visionMu.Unlock()
+	return vision
 }
 
 func (o *Ollama) Name() string { return "ollama" }
@@ -72,6 +121,16 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 		msg := map[string]any{
 			"role":    m.Role,
 			"content": m.Content,
+		}
+		if len(m.Images) > 0 {
+			if !o.supportsVision(ctx, model) {
+				return fmt.Errorf("%s cannot read images — switch to a vision model", model)
+			}
+			data := make([]string, len(m.Images))
+			for i, img := range m.Images {
+				data[i] = img.Data
+			}
+			msg["images"] = data
 		}
 		if len(m.ToolCalls) > 0 {
 			calls := make([]map[string]any, 0, len(m.ToolCalls))

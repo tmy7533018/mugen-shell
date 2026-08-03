@@ -88,6 +88,16 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		}
 
 		var content []map[string]any
+		for _, img := range m.Images {
+			content = append(content, map[string]any{
+				"type": "image",
+				"source": map[string]any{
+					"type":       "base64",
+					"media_type": img.MediaType,
+					"data":       img.Data,
+				},
+			})
+		}
 		if m.Content != "" {
 			content = append(content, map[string]any{"type": "text", "text": m.Content})
 		}

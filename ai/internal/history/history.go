@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/tmy7533018/mugen-ai/internal/attach"
 	"github.com/tmy7533018/mugen-ai/internal/provider"
 	"github.com/tmy7533018/mugen-ai/internal/store"
 )
@@ -36,6 +37,13 @@ func New(s *store.Store, systemPrompt string, maxTokens int) (*History, error) {
 // guessing 3 keeps the result inside the model's real window either way.
 func estimateTokens(s string) int {
 	return len(s)/3 + 1
+}
+
+// Roughly what a full-frame image costs on the providers that bill for one.
+const imageTokens = 1600
+
+func messageTokens(m provider.Message) int {
+	return estimateTokens(m.Content) + len(m.Images)*imageTokens
 }
 
 func (h *History) loadCurrent() error {
@@ -83,7 +91,12 @@ func (h *History) switchLocked(id int64) error {
 	}
 	h.messages = h.messages[:0]
 	for _, m := range msgs {
-		h.messages = append(h.messages, provider.Message{Role: m.Role, Content: m.Content})
+		att := attach.LoadBestEffort(m.Attachments)
+		h.messages = append(h.messages, provider.Message{
+			Role:    m.Role,
+			Content: att.Prompt(m.Content),
+			Images:  att.Images,
+		})
 	}
 	h.truncateLocked()
 	return nil
@@ -149,6 +162,11 @@ func (h *History) Switch(id int64) error {
 }
 
 func (h *History) Add(role, content, model string, thinking bool) error {
+	return h.AddWithAttachments(role, content, model, thinking, nil, attach.Attachments{})
+}
+
+// AddWithAttachments takes what the caller already decoded from the paths.
+func (h *History) AddWithAttachments(role, content, model string, thinking bool, paths []string, att attach.Attachments) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.convID == 0 {
@@ -172,10 +190,14 @@ func (h *History) Add(role, content, model string, thinking bool) error {
 			_ = h.store.UpdateConversationTitle(h.convID, store.DeriveTitle(content))
 		}
 	}
-	if err := h.store.AppendMessage(h.convID, role, content); err != nil {
+	if err := h.store.AppendMessage(h.convID, role, content, paths); err != nil {
 		return err
 	}
-	h.messages = append(h.messages, provider.Message{Role: role, Content: content})
+	h.messages = append(h.messages, provider.Message{
+		Role:    role,
+		Content: att.Prompt(content),
+		Images:  att.Images,
+	})
 	h.truncateLocked()
 	return nil
 }
@@ -200,7 +222,7 @@ func (h *History) AddAssistantTo(convID int64, content string) error {
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if err := h.store.AppendMessage(convID, "assistant", content); err != nil {
+	if err := h.store.AppendMessage(convID, "assistant", content, nil); err != nil {
 		return err
 	}
 	if convID == h.convID {
@@ -330,13 +352,13 @@ func (h *History) truncateLocked() {
 	if h.maxTokens > 0 {
 		total := 0
 		for i := range h.messages {
-			total += estimateTokens(h.messages[i].Content)
+			total += messageTokens(h.messages[i])
 		}
 		// Keep at least the trailing exchange so a single oversized message
 		// can't empty the conversation.
 		drop := 0
 		for total > h.maxTokens && drop < len(h.messages)-2 {
-			total -= estimateTokens(h.messages[drop].Content)
+			total -= messageTokens(h.messages[drop])
 			drop++
 		}
 		if drop > 0 {
