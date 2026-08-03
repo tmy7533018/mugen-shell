@@ -48,8 +48,9 @@
             };
           };
 
-          # hypr/ is exposed so users with their own hyprland.conf can grab the
-          # snippet via `$(nix path-info .#mugen-shell)/hypr/configs/...`.
+          # hypr/ is exposed so users with their own Hyprland config can grab
+          # the autostart snippet, in either config language, via
+          # `$(nix path-info .#mugen-shell)/hypr/configs/...`.
           mugen-shell = pkgs.runCommand "mugen-shell-0.1.0" {
             meta = {
               description = "Quickshell desktop UI for mugen-shell";
@@ -61,6 +62,7 @@
             cp -r ${./shell}/. $out/
             mkdir -p $out/hypr/configs
             cp ${./system/hypr/configs/mugen-shell.conf} $out/hypr/configs/mugen-shell.conf
+            cp ${./system/hypr/configs/mugen-shell.lua} $out/hypr/configs/mugen-shell.lua
             # Voice daemon runtime, so the service works without a checkout.
             # yura/ is the pipeline itself — yurad.py is only its entry point
             # and imports from it, so shipping the one file crashes on start.
