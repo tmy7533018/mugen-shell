@@ -355,6 +355,9 @@ func (s *Store) RemoveLastMessage(convID int64) error {
 	return err
 }
 
+// ErrMessageNotInConversation also covers an unknown msgID.
+var ErrMessageNotInConversation = errors.New("message does not belong to this conversation")
+
 // TruncateFrom drops msgID and everything after it. Message ids come from a
 // single AUTOINCREMENT sequence, so ordering by id matches the chronological
 // order ListMessages returns. Returns how many messages were removed.
@@ -364,6 +367,15 @@ func (s *Store) TruncateFrom(convID, msgID int64) (int64, error) {
 		return 0, err
 	}
 	defer tx.Rollback()
+	var owner int64
+	switch err := tx.QueryRow(`SELECT conversation_id FROM messages WHERE id = ?`, msgID).Scan(&owner); {
+	case errors.Is(err, sql.ErrNoRows):
+		return 0, ErrMessageNotInConversation
+	case err != nil:
+		return 0, err
+	case owner != convID:
+		return 0, ErrMessageNotInConversation
+	}
 	res, err := tx.Exec(
 		`DELETE FROM messages WHERE conversation_id = ? AND id >= ?`,
 		convID, msgID,

@@ -1,6 +1,7 @@
 package history
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -140,13 +141,34 @@ func TestTruncateFromUnknownMessageKeepsEverything(t *testing.T) {
 	before, _ := s.ListMessages(convID)
 
 	removed, err := h.TruncateFrom(convID, 9999)
-	if err != nil {
-		t.Fatalf("truncate: %v", err)
+	if !errors.Is(err, store.ErrMessageNotInConversation) {
+		t.Fatalf("want ErrMessageNotInConversation, got %v", err)
 	}
 	if removed != 0 {
 		t.Fatalf("want 0 removed, got %d", removed)
 	}
 	after, _ := s.ListMessages(convID)
+	if len(after) != len(before) {
+		t.Fatalf("conversation changed: %d -> %d", len(before), len(after))
+	}
+}
+
+func TestTruncateFromForeignMessageIsRejected(t *testing.T) {
+	h, s := newTestHistory(t)
+	foreign := seedExchange(t, h, 1)
+	foreignMsgs, _ := s.ListMessages(foreign)
+
+	target := seedExchange(t, h, 2)
+	before, _ := s.ListMessages(target)
+
+	removed, err := h.TruncateFrom(target, foreignMsgs[0].ID)
+	if !errors.Is(err, store.ErrMessageNotInConversation) {
+		t.Fatalf("want ErrMessageNotInConversation, got %v", err)
+	}
+	if removed != 0 {
+		t.Fatalf("want 0 removed, got %d", removed)
+	}
+	after, _ := s.ListMessages(target)
 	if len(after) != len(before) {
 		t.Fatalf("conversation changed: %d -> %d", len(before), len(after))
 	}

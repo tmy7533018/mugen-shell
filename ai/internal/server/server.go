@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -721,6 +722,10 @@ func (s *Server) handleTruncateConversation(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	removed, err := s.history.TruncateFrom(id, msgID)
+	if errors.Is(err, store.ErrMessageNotInConversation) {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
