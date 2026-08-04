@@ -336,6 +336,9 @@ Nix を使わない環境向けです。`make install` も音声はカバーし�
 4. **systemd unit**:
    ```bash
    ln -s ~/mugen-shell/system/systemd/user/{yura-voice,voicevox-engine,aivisspeech-engine}.service ~/.config/systemd/user/
+   # graphical-session.target refuses a manual start, so the shell brings
+   # up this one instead; without it nothing bound to the session starts.
+   ln -s ~/mugen-shell/system/systemd/user/mugen-shell-session.target ~/.config/systemd/user/
    systemctl --user daemon-reload
    # 使う声の TTS エンジンだけ enable する
    systemctl --user enable --now voicevox-engine.service yura-voice.service

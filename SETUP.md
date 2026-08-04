@@ -336,6 +336,9 @@ For non-Nix setups, `make install` included — voice is not part of the Makefil
 4. **systemd units**:
    ```bash
    ln -s ~/mugen-shell/system/systemd/user/{yura-voice,voicevox-engine,aivisspeech-engine}.service ~/.config/systemd/user/
+   # graphical-session.target refuses a manual start, so the shell brings
+   # up this one instead; without it nothing bound to the session starts.
+   ln -s ~/mugen-shell/system/systemd/user/mugen-shell-session.target ~/.config/systemd/user/
    systemctl --user daemon-reload
    # enable whichever TTS engine(s) your picked voices use
    systemctl --user enable --now voicevox-engine.service yura-voice.service
