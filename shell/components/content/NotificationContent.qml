@@ -86,62 +86,56 @@ Item {
         }
     }
     
+    // Dismissals overlap, so each carries its own deadline.
+    property var pendingDismissals: ({})
+
+    readonly property int dismissAnimationMs: 500
+    readonly property int dismissFlagClearMs: 950
+
     function removeNotification(notificationId) {
         let notifIdStr = String(notificationId)
-        
+
         if (removingNotifications[notifIdStr] !== undefined) {
             return
         }
-        
+
         let newRemoving = Object.assign({}, removingNotifications)
         newRemoving[notifIdStr] = Date.now()
         removingNotifications = newRemoving
-        
-        removeTimer.notificationId = notifIdStr
-        removeTimer.restart()
+
+        pendingDismissals[notifIdStr] = { at: Date.now(), dispatched: false }
+        dismissSweeper.start()
     }
-    
+
     Timer {
-        id: removeTimer
-        property string notificationId: ""
-        interval: 500
+        id: dismissSweeper
+        interval: 100
+        repeat: true
         onTriggered: {
-            if (!notificationId) return
-            
-            let notifId = isNaN(notificationId) ? notificationId : Number(notificationId)
-            notificationManager.removeNotification(notifId)
-            
-            removeFlagTimer.notificationId = notificationId
-            removeFlagTimer.restart()
-            
-            notificationId = ""
-        }
-    }
-    
-    Timer {
-        id: removeFlagTimer
-        property string notificationId: ""
-        interval: 450
-        onTriggered: {
-            if (!notificationId) return
-            
-            let stillExists = false
-            for (let i = 0; i < notifications.length; i++) {
-                if (String(notifications[i].id) === notificationId) {
-                    stillExists = true
-                    break
+            const now = Date.now()
+            let stillRemoving = Object.assign({}, root.removingNotifications)
+            let flagsChanged = false
+
+            for (const key in root.pendingDismissals) {
+                const entry = root.pendingDismissals[key]
+                const age = now - entry.at
+
+                if (age >= root.dismissAnimationMs && !entry.dispatched) {
+                    entry.dispatched = true
+                    notificationManager.removeNotification(isNaN(key) ? key : Number(key))
+                }
+
+                if (age < root.dismissFlagClearMs) continue
+
+                if (!root.notifications.some(n => String(n.id) === key)) {
+                    delete root.pendingDismissals[key]
+                    delete stillRemoving[key]
+                    flagsChanged = true
                 }
             }
-            
-            if (!stillExists) {
-                Qt.callLater(() => {
-                    let updatedRemoving = Object.assign({}, removingNotifications)
-                    delete updatedRemoving[notificationId]
-                    removingNotifications = updatedRemoving
-                })
-            }
-            
-            notificationId = ""
+
+            if (flagsChanged) root.removingNotifications = stillRemoving
+            if (Object.keys(root.pendingDismissals).length === 0) dismissSweeper.stop()
         }
     }
     
@@ -208,6 +202,8 @@ Item {
             notificationListModel.clear()
             notificationManager.clearAll()
             removingNotifications = {}
+            pendingDismissals = {}
+            dismissSweeper.stop()
             isClearingAll = false
             clearAllCurrentIndex = 0
         }
