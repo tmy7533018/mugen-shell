@@ -200,7 +200,7 @@ QtObject {
 
     property Process headphoneProcess: Process {
         running: false
-        command: ["bash", "-c", "DEFAULT_SINK=$(pactl info | grep 'Default Sink:' | cut -d' ' -f3); if [ -n \"$DEFAULT_SINK\" ]; then echo \"NAME:$DEFAULT_SINK\"; pactl list sinks | awk -v sink=\"$DEFAULT_SINK\" '/Name: / {flag=0} \\$0 ~ (\"Name: \" sink) {flag=1} flag {print}' | tr '\\n' ' '; fi"]
+        command: ["bash", "-c", "DEFAULT_SINK=$(pactl info | grep 'Default Sink:' | cut -d' ' -f3); if [ -n \"$DEFAULT_SINK\" ]; then echo \"NAME:$DEFAULT_SINK\"; pactl list sinks | awk -v sink=\"$DEFAULT_SINK\" '/Name: / {flag=0} $0 ~ (\"Name: \" sink) {flag=1} flag {print}' | tr '\\n' ' '; fi"]
 
         property string outputData: ""
 
