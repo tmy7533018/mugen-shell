@@ -75,31 +75,17 @@ keep-open=yes \
 input-ipc-server=${MPV_SOCKET} \
 screenshot-format=png screenshot-high-bit-depth=no screenshot-png-compression=1"
 
-# Remove stale lock files older than 60 seconds
-find "$THUMB_DIR" -name '.wallp.lock' -mmin +1 -delete 2>/dev/null || true
-
+# Unlinking the lock while a run still holds fd 9 lets the next one lock a
+# fresh inode at the same path and proceed alongside it. An abandoned lock
+# needs no age check: the kernel drops the flock when the holder dies.
 exec 9>"$LOCK"
 if ! flock -n 9; then
-  if [[ -f "$LOCK" ]]; then
-    lock_age=$(($(date +%s) - $(stat -c %Y "$LOCK" 2>/dev/null || echo 0)))
-    if ((lock_age > 60)); then
-      echo "Stale lock file detected (${lock_age}s old), removing..." >&2
-      rm -f "$LOCK"
-      exec 9>"$LOCK"
-      flock -n 9 || { echo "Still cannot acquire lock" >&2; exit 1; }
-    else
-      echo "Already running (locked ${lock_age}s ago)" >&2
-      exit 1
-    fi
-  else
-    echo "Already running" >&2
-    exit 1
-  fi
+  echo "Already running" >&2
+  exit 1
 fi
 cleanup() {
   debug_log "Cleanup: releasing lock"
   exec 9>&-
-  rm -f "$LOCK"
   find "$THUMB_DIR" -name 'wprev.*.png' -mmin +5 -delete 2>/dev/null || true
   debug_log "========== EXECUTION COMPLETED =========="
 }
