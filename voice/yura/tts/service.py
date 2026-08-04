@@ -11,6 +11,7 @@ from ..settings import voice_float
 SERVICE = os.environ.get("YURA_TTS_SERVICE", "")
 ENGINE = "aivis"
 READY_TIMEOUT_S = float(os.environ.get("YURA_TTS_READY_TIMEOUT", "40"))
+_start_failed = False
 IDLE_STOP_MIN = 10.0
 
 _lock = threading.Lock()
@@ -49,6 +50,12 @@ def wait_ready(base_url: str) -> bool:
             mark_used()
             return True
         except requests.RequestException:
+            if _start_failed:
+                # A unit that is missing or refuses to start is never going to
+                # answer; waiting out the window would stall the voice picker
+                # every time it opens.
+                log("tts", f"{SERVICE} did not start, not waiting for it")
+                return False
             if time.time() >= deadline:
                 log("tts", f"engine did not come up within {READY_TIMEOUT_S:.0f}s")
                 return False
@@ -66,10 +73,13 @@ def revive(base_url: str) -> bool:
 
 
 def _systemctl(verb: str) -> None:
+    global _start_failed
     r = subprocess.run(["systemctl", "--user", verb, "--no-block", SERVICE],
                        capture_output=True, text=True)
     if r.returncode != 0:
         log("tts", f"systemctl {verb} {SERVICE}: {r.stderr.strip()}")
+    if verb == "start":
+        _start_failed = r.returncode != 0
 
 
 def _watch() -> None:
