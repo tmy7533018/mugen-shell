@@ -31,9 +31,6 @@ QtObject {
         isConnecting = true
         connectionError = ""
 
-        connectToNetworkProcess.ssid = ssid
-        connectToNetworkProcess.password = password
-
         // /proc/<pid>/cmdline is world-readable and /proc/<pid>/environ is not,
         // so the key travels in the environment. The SSID rides in as $1 rather
         // than being quoted into the script.
@@ -171,8 +168,6 @@ QtObject {
     property Process connectToNetworkProcess: Process {
         running: false
 
-        property string ssid: ""
-        property string password: ""
         property string outputData: ""
         property string errorData: ""
 
