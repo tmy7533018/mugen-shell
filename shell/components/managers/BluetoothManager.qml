@@ -257,7 +257,9 @@ QtObject {
     }
 
     property Process bluetoothScanProcess: Process {
-        command: ["bash", "-c", "stdbuf -oL -eL bash -c \"(echo 'scan on'; sleep 10; echo 'scan off') | bluetoothctl\" 2>&1"]
+        // One process, not a bash pipeline: stopping this Process only signals
+        // its direct child, so a nested bluetoothctl would keep discovery on.
+        command: ["stdbuf", "-oL", "-eL", "bluetoothctl", "--timeout", "10", "scan", "on"]
         running: false
 
         property var devices: []
