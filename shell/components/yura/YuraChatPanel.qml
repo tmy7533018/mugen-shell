@@ -496,20 +496,16 @@ PanelWindow {
                     pressH = yuraState.panelHeight
                 }
                 onPositionChanged: (mouse) => {
-                    if (!pressed) return
+                    if (!pressed || !chatWindow.settingsManager) return
                     let p = mapToItem(chatWindow.contentItem, mouse.x, mouse.y)
                     let dx = p.x - pressX
                     let dy = p.y - pressY
                     let widthSign = yuraState.isLeft ? 1 : -1
-                    yuraState.panelWidth = Math.max(480, Math.min(1100, pressW + dx * widthSign))
-                    yuraState.panelHeight = Math.max(480, Math.min(1100, pressH - dy))
+                    chatWindow.settingsManager.yuraPanelWidth = Math.max(480, Math.min(1100, pressW + dx * widthSign))
+                    chatWindow.settingsManager.yuraPanelHeight = Math.max(480, Math.min(1100, pressH - dy))
                 }
                 onReleased: {
-                    if (chatWindow.settingsManager) {
-                        chatWindow.settingsManager.yuraPanelWidth = yuraState.panelWidth
-                        chatWindow.settingsManager.yuraPanelHeight = yuraState.panelHeight
-                        chatWindow.settingsManager.saveSettings()
-                    }
+                    if (chatWindow.settingsManager) chatWindow.settingsManager.saveSettings()
                 }
             }
         }
