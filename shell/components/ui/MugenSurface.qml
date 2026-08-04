@@ -165,13 +165,34 @@ Rectangle {
         id: moduleBackgroundLoader
         anchors.fill: parent
         anchors.margins: 1
-        sourceComponent: surface.moduleBackground
+        // Binding sourceComponent straight to moduleBackground destroys the
+        // item the instant it goes null, so the fade-out has nothing left to
+        // animate. The last component is held until the fade finishes.
+        property Component shown: null
+        sourceComponent: shown
         opacity: surface.moduleBackground ? 1 : 0
         z: 0.5
 
         Behavior on opacity {
             NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.InOutCubic }
         }
+
+        onOpacityChanged: {
+            if (opacity === 0 && !surface.moduleBackground) {
+                moduleBackgroundLoader.shown = null
+            }
+        }
+
+        Connections {
+            target: surface
+            function onModuleBackgroundChanged() {
+                if (surface.moduleBackground) {
+                    moduleBackgroundLoader.shown = surface.moduleBackground
+                }
+            }
+        }
+
+        Component.onCompleted: if (surface.moduleBackground) shown = surface.moduleBackground
     }
 
     property var moduleContext: null
