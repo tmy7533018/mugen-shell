@@ -198,6 +198,40 @@ in
       };
     };
 
+    # Both packages ship a share/systemd/user unit, which systemd finds when the
+    # NixOS module puts them in systemPackages but not from a home-manager
+    # profile — there, mugen-shell.lua's `systemctl --user start` would report
+    # Unit not found. No [Install]: the shell starts them itself, and hypridle
+    # in particular must stay off when the idle inhibitor is on.
+    systemd.user.services.hypridle = lib.mkIf cfg.includeSystemDeps {
+      Unit = {
+        Description = "Hyprland's idle daemon";
+        PartOf = [ "graphical-session.target" ];
+        After = [ "graphical-session.target" ];
+        ConditionEnvironment = "WAYLAND_DISPLAY";
+      };
+      Service = {
+        Type = "simple";
+        ExecStart = "${pkgs.hypridle}/bin/hypridle";
+        Restart = "on-failure";
+      };
+    };
+
+    systemd.user.services.hyprpolkitagent = lib.mkIf cfg.includeSystemDeps {
+      Unit = {
+        Description = "Hyprland Polkit Authentication Agent";
+        PartOf = [ "graphical-session.target" ];
+        After = [ "graphical-session.target" ];
+        ConditionEnvironment = "WAYLAND_DISPLAY";
+      };
+      Service = {
+        ExecStart = "${pkgs.hyprpolkitagent}/libexec/hyprpolkitagent";
+        Slice = "session.slice";
+        TimeoutStopSec = "5sec";
+        Restart = "on-failure";
+      };
+    };
+
     systemd.user.services.mugen-ai = lib.mkIf cfg.ai.enable {
       Unit = {
         Description = "mugen-ai backend server";
