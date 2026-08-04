@@ -1,6 +1,7 @@
 import os
 import re
 import signal
+import subprocess
 import threading
 import time
 
@@ -54,6 +55,12 @@ class Daemon:
         self._barge_vad = SileroVAD()
         # Audio a barge-in cut in with, waiting to become the next utterance.
         self._barge_seed: list | None = None
+        self.whisper_proc: subprocess.Popen | None = None
+
+    def stop_whisper(self) -> None:
+        if self.whisper_proc:
+            self.whisper_proc.terminate()
+            self.whisper_proc = None
 
     def request_turn(self, fresh: bool = False) -> None:
         (self.trigger_fresh if fresh else self.trigger).set()
@@ -210,8 +217,7 @@ class Daemon:
                     continue
                 self._idle_session()
         finally:
-            if self.whisper_proc:
-                self.whisper_proc.terminate()
+            self.stop_whisper()
 
     def _take_trigger(self) -> bool:
         fresh = self.trigger_fresh.is_set()
@@ -258,6 +264,9 @@ def main() -> None:
 
     def stop(*_):
         daemon.running = False
+        # os._exit skips run()'s finally, so the ~1.5 GB whisper-server would
+        # outlive a Ctrl-C. systemd reaps it by cgroup; a terminal does not.
+        daemon.stop_whisper()
         os._exit(0)
 
     signal.signal(signal.SIGINT, stop)
