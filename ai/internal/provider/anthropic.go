@@ -17,6 +17,7 @@ type Anthropic struct {
 	models         []string
 	maxTokens      int
 	thinkingBudget int
+	baseURL        string
 }
 
 func NewAnthropic(apiKey string, models []string, maxTokens, thinkingBudget int) *Anthropic {
@@ -36,6 +37,7 @@ func NewAnthropic(apiKey string, models []string, maxTokens, thinkingBudget int)
 		models:         models,
 		maxTokens:      maxTokens,
 		thinkingBudget: thinkingBudget,
+		baseURL:        "https://api.anthropic.com",
 	}
 }
 
@@ -88,6 +90,14 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		}
 
 		var content []map[string]any
+		// Has to lead the turn, and only counts when signed.
+		if opts.Thinking && m.Thinking != "" && m.ThinkingSignature != "" {
+			content = append(content, map[string]any{
+				"type":      "thinking",
+				"thinking":  m.Thinking,
+				"signature": m.ThinkingSignature,
+			})
+		}
 		for _, img := range m.Images {
 			content = append(content, map[string]any{
 				"type": "image",
@@ -165,7 +175,7 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.anthropic.com/v1/messages", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.baseURL+"/v1/messages", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -204,6 +214,16 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 	}
 	pending := map[int]*pendingTool{}
 	var accumulated []ToolCall
+	var thinkingBuf strings.Builder
+	var thinkingSignature string
+
+	finalChunk := func() ChatChunk {
+		c := ChatChunk{Done: true, Thinking: thinkingBuf.String(), ThinkingSignature: thinkingSignature}
+		if len(accumulated) > 0 {
+			c.ToolCalls = accumulated
+		}
+		return c
+	}
 
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
@@ -230,6 +250,8 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 				Text        string `json:"text"`
 				PartialJSON string `json:"partial_json"`
 				StopReason  string `json:"stop_reason"`
+				Thinking    string `json:"thinking"`
+				Signature   string `json:"signature"`
 			} `json:"delta"`
 		}
 		if err := json.Unmarshal([]byte(data), &evt); err != nil {
@@ -255,6 +277,12 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 					p.JSONBuf.WriteString(evt.Delta.PartialJSON)
 				}
 			}
+			if evt.Delta.Type == "thinking_delta" {
+				thinkingBuf.WriteString(evt.Delta.Thinking)
+			}
+			if evt.Delta.Type == "signature_delta" {
+				thinkingSignature = evt.Delta.Signature
+			}
 		case "content_block_stop":
 			if p, ok := pending[evt.Index]; ok {
 				args := map[string]any{}
@@ -272,18 +300,10 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 			}
 		case "message_delta":
 			if evt.Delta.StopReason != "" {
-				final := ChatChunk{Done: true}
-				if len(accumulated) > 0 {
-					final.ToolCalls = accumulated
-				}
-				return fn(final)
+				return fn(finalChunk())
 			}
 		case "message_stop":
-			final := ChatChunk{Done: true}
-			if len(accumulated) > 0 {
-				final.ToolCalls = accumulated
-			}
-			return fn(final)
+			return fn(finalChunk())
 		}
 	}
 	return scanner.Err()

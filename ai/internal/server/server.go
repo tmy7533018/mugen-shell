@@ -394,6 +394,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		}
 		var iterContent string
 		var iterToolCalls []provider.ToolCall
+		var iterThinking, iterThinkingSig string
 
 		err := s.registry.ChatWith(r.Context(), model, msgs, opts, func(chunk provider.ChatChunk) error {
 			if chunk.Content != "" {
@@ -404,6 +405,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			}
 			if chunk.Done {
 				iterToolCalls = chunk.ToolCalls
+				iterThinking = chunk.Thinking
+				iterThinkingSig = chunk.ThinkingSignature
 			}
 			return nil
 		})
@@ -427,9 +430,11 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		}
 
 		msgs = append(msgs, provider.Message{
-			Role:      "assistant",
-			Content:   iterContent,
-			ToolCalls: iterToolCalls,
+			Role:              "assistant",
+			Content:           iterContent,
+			ToolCalls:         iterToolCalls,
+			Thinking:          iterThinking,
+			ThinkingSignature: iterThinkingSig,
 		})
 
 		sendEvent(map[string]any{"tool_calls": iterToolCalls})
