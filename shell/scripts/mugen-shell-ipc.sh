@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 
-IPC_FILE="${XDG_RUNTIME_DIR:-/tmp}/mugen-shell-ipc"
+if [ -n "${XDG_RUNTIME_DIR:-}" ]; then
+    IPC_FILE="$XDG_RUNTIME_DIR/mugen-shell-ipc"
+else
+    # Shared /tmp: a fixed name is another user's to claim, so keep it in a
+    # directory only this user can enter. Must match ModeManager.ipcFile.
+    IPC_DIR="/tmp/mugen-shell-${USER:-shell}"
+    mkdir -p -m 700 "$IPC_DIR"
+    IPC_FILE="$IPC_DIR/ipc"
+fi
 
 if [ $# -eq 0 ]; then
     cat << EOF

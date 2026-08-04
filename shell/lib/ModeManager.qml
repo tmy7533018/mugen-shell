@@ -92,12 +92,16 @@ QtObject {
     function listModes() {
     }
     
+    // A fixed name under shared /tmp lets any local user pre-create the file
+    // and feed modes in, or point it at something the shell then truncates, so
+    // the fallback is per-user. scripts/mugen-shell-ipc.sh creates it 0700.
     property string ipcFile: {
-        let runtimeDir = Quickshell.env("XDG_RUNTIME_DIR")
-        if (!runtimeDir || runtimeDir === "") {
-            runtimeDir = "/tmp"
+        const runtimeDir = Quickshell.env("XDG_RUNTIME_DIR")
+        if (runtimeDir && runtimeDir !== "") {
+            return runtimeDir + "/mugen-shell-ipc"
         }
-        return runtimeDir + "/mugen-shell-ipc"
+        const user = Quickshell.env("USER") || "shell"
+        return "/tmp/mugen-shell-" + user + "/ipc"
     }
     // scripts/mugen-shell-ipc.sh appends a line here; that is how keybinds and
     // anything outside the shell reach this manager.
