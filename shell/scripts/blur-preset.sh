@@ -21,9 +21,23 @@ get_current() {
     [[ -f "$STATE" ]] && cat "$STATE" || echo ""
 }
 
+# Redirecting straight at the destination empties it before the generator runs,
+# so an unknown preset would leave Hyprland with no blur config at all.
+write_atomic() {
+    local dest="$1"
+    shift
+    local tmp
+    tmp=$(mktemp "$dest.XXXXXX")
+    if "$@" > "$tmp"; then
+        mv "$tmp" "$dest"
+    else
+        rm -f "$tmp"
+        return 1
+    fi
+}
+
 write_blur_conf() {
-    local name="$1"
-    python3 -c '
+    write_atomic "$BLUR_CONF" python3 -c '
 import json, sys
 name = sys.argv[2]
 with open(sys.argv[1]) as f:
@@ -37,13 +51,12 @@ for p in presets:
         sys.exit(0)
 sys.stderr.write(f"preset not found: {name}\n")
 sys.exit(1)
-' "$PRESETS" "$name" > "$BLUR_CONF"
+' "$PRESETS" "$1"
 }
 
 # Lua-config counterpart of blur.conf; dofile'd by hyprland.lua.
 write_blur_lua() {
-    local name="$1"
-    python3 -c '
+    write_atomic "$BLUR_LUA" python3 -c '
 import json, sys
 name = sys.argv[2]
 with open(sys.argv[1]) as f:
@@ -59,7 +72,7 @@ for p in presets:
         sys.exit(0)
 sys.stderr.write(f"preset not found: {name}\n")
 sys.exit(1)
-' "$PRESETS" "$name" > "$BLUR_LUA"
+' "$PRESETS" "$1"
 }
 
 apply_live() {
