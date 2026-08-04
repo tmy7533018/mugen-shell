@@ -22,14 +22,9 @@ def find_hyprland_socket():
                 if os.path.exists(sock_path):
                     return sock_path
 
-    tmp_hypr = '/tmp/hypr'
-    if os.path.exists(tmp_hypr):
-        instances = os.listdir(tmp_hypr)
-        if instances:
-            sock_path = os.path.join(tmp_hypr, instances[0], '.socket2.sock')
-            if os.path.exists(sock_path):
-                return sock_path
-
+    # No /tmp/hypr fallback: Hyprland has used $XDG_RUNTIME_DIR since 0.40, and
+    # a world-writable directory is somewhere anyone can plant a socket for us
+    # to take events from.
     return None
 
 def main():
