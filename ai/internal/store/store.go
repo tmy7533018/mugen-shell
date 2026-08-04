@@ -52,7 +52,8 @@ type Store struct {
 }
 
 func Open(path string) (*Store, error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, fmt.Errorf("mkdir state: %w", err)
 	}
 	db, err := sql.Open("sqlite", path+"?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)")
@@ -65,7 +66,26 @@ func Open(path string) (*Store, error) {
 		db.Close()
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
+	s.restrict(dir)
 	return s, nil
+}
+
+// Every conversation ever held is in here, so it gets what config.toml gets.
+// The directory is tightened too: MkdirAll leaves an existing one alone, and
+// journal_mode(WAL) parks the same data in two sidecar files.
+func (s *Store) restrict(dir string) {
+	tighten(dir, 0o700)
+	for _, p := range []string{s.path, s.path + "-wal", s.path + "-shm"} {
+		tighten(p, 0o600)
+	}
+}
+
+func tighten(path string, mode os.FileMode) {
+	info, err := os.Stat(path)
+	if err != nil || info.Mode().Perm()&0o077 == 0 {
+		return
+	}
+	_ = os.Chmod(path, mode)
 }
 
 func (s *Store) Close() error { return s.db.Close() }
