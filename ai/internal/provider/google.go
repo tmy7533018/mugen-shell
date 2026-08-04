@@ -138,12 +138,15 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 		return err
 	}
 
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?alt=sse&key=%s", model, g.apiKey)
+	// The key goes in a header, not the query: net/http quotes the full URL
+	// into *url.Error, and that string is handed to the client as an SSE error.
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?alt=sse", model)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-goog-api-key", g.apiKey)
 
 	resp, err := g.http.Do(req)
 	if err != nil {
