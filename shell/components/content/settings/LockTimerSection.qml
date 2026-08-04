@@ -89,17 +89,14 @@ Rectangle {
                 preventStealing: true
 
                 onPressed: (mouse) => {
-                    lockSlider.value = lockSlider.valueAt(mouse.x)
+                    if (section.settingsManager) section.settingsManager.lockTimerMinutes = lockSlider.valueAt(mouse.x)
                     section.bump()
                 }
                 onPositionChanged: (mouse) => {
-                    if (pressed) lockSlider.value = lockSlider.valueAt(mouse.x)
+                    if (pressed && section.settingsManager) section.settingsManager.lockTimerMinutes = lockSlider.valueAt(mouse.x)
                 }
                 onReleased: {
-                    if (section.settingsManager) {
-                        section.settingsManager.lockTimerMinutes = Math.round(lockSlider.value)
-                        section.settingsManager.saveSettings()
-                    }
+                    if (section.settingsManager) section.settingsManager.saveSettings()
                     section.bump()
                 }
             }

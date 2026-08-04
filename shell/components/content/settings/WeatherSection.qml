@@ -49,22 +49,12 @@ Rectangle {
             }
 
             Common.Switch {
-                id: weatherSwitch
                 checked: section.settingsManager ? section.settingsManager.weatherEnabled : true
                 theme: section.theme
 
-                Connections {
-                    target: section.settingsManager
-                    function onWeatherEnabledChanged() {
-                        if (section.settingsManager) {
-                            weatherSwitch.checked = section.settingsManager.weatherEnabled
-                        }
-                    }
-                }
-
-                onToggled: {
+                onToggled: value => {
                     if (section.settingsManager) {
-                        section.settingsManager.weatherEnabled = checked
+                        section.settingsManager.weatherEnabled = value
                         section.settingsManager.saveSettings()
                         section.bump()
                     }
@@ -154,22 +144,12 @@ Rectangle {
             }
 
             Common.Switch {
-                id: unitSwitch
                 checked: section.settingsManager ? section.settingsManager.weatherUnit === "fahrenheit" : false
                 theme: section.theme
 
-                Connections {
-                    target: section.settingsManager
-                    function onWeatherUnitChanged() {
-                        if (section.settingsManager) {
-                            unitSwitch.checked = section.settingsManager.weatherUnit === "fahrenheit"
-                        }
-                    }
-                }
-
-                onToggled: {
+                onToggled: value => {
                     if (section.settingsManager) {
-                        section.settingsManager.weatherUnit = checked ? "fahrenheit" : "celsius"
+                        section.settingsManager.weatherUnit = value ? "fahrenheit" : "celsius"
                         section.settingsManager.saveSettings()
                         section.bump()
                     }

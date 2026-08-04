@@ -35,28 +35,13 @@ Rectangle {
         }
 
         Common.Switch {
-            id: themeSwitch
             checked: section.theme ? section.theme.themeMode === "dark" : true
             theme: section.theme
 
-            Connections {
-                target: section.theme
-                function onThemeModeChanged() {
-                    if (section.theme) {
-                        themeSwitch.checked = section.theme.themeMode === "dark"
-                    }
-                }
-            }
-
-            onToggled: {
-                if (section.theme) {
-                    if (checked && section.theme.themeMode !== "dark") {
-                        section.theme.toggleThemeMode()
-                        section.bump()
-                    } else if (!checked && section.theme.themeMode !== "light") {
-                        section.theme.toggleThemeMode()
-                        section.bump()
-                    }
+            onToggled: value => {
+                if (section.theme && (section.theme.themeMode === "dark") !== value) {
+                    section.theme.toggleThemeMode()
+                    section.bump()
                 }
             }
         }

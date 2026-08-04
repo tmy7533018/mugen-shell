@@ -36,22 +36,12 @@ Rectangle {
         }
 
         Common.Switch {
-            id: gradientSwitch
             checked: section.settingsManager ? section.settingsManager.barGradientEnabled : true
             theme: section.theme
 
-            Connections {
-                target: section.settingsManager
-                function onBarGradientEnabledChanged() {
-                    if (section.settingsManager) {
-                        gradientSwitch.checked = section.settingsManager.barGradientEnabled
-                    }
-                }
-            }
-
-            onToggled: {
+            onToggled: value => {
                 if (section.settingsManager) {
-                    section.settingsManager.barGradientEnabled = checked
+                    section.settingsManager.barGradientEnabled = value
                     section.settingsManager.saveSettings()
                     section.bump()
                 }

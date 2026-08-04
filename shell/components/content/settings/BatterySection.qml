@@ -36,22 +36,12 @@ Rectangle {
         }
 
         Common.Switch {
-            id: batterySwitch
             checked: section.settingsManager ? section.settingsManager.batteryIndicatorEnabled : false
             theme: section.theme
 
-            Connections {
-                target: section.settingsManager
-                function onBatteryIndicatorEnabledChanged() {
-                    if (section.settingsManager) {
-                        batterySwitch.checked = section.settingsManager.batteryIndicatorEnabled
-                    }
-                }
-            }
-
-            onToggled: {
+            onToggled: value => {
                 if (section.settingsManager) {
-                    section.settingsManager.batteryIndicatorEnabled = checked
+                    section.settingsManager.batteryIndicatorEnabled = value
                     section.settingsManager.saveSettings()
                     section.bump()
                 }

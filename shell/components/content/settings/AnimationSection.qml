@@ -194,22 +194,12 @@ Rectangle {
             }
 
             Common.Switch {
-                id: reduceMotionSwitch
                 checked: section.settingsManager ? section.settingsManager.reduceMotion : false
                 theme: section.theme
 
-                Connections {
-                    target: section.settingsManager
-                    function onReduceMotionChanged() {
-                        if (section.settingsManager) {
-                            reduceMotionSwitch.checked = section.settingsManager.reduceMotion
-                        }
-                    }
-                }
-
-                onToggled: {
+                onToggled: value => {
                     if (section.settingsManager) {
-                        section.settingsManager.reduceMotion = checked
+                        section.settingsManager.reduceMotion = value
                         section.settingsManager.saveSettings()
                         section.bump()
                     }

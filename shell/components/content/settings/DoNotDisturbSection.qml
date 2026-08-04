@@ -36,22 +36,12 @@ Rectangle {
         }
 
         Common.Switch {
-            id: dndSwitch
             checked: section.settingsManager ? !section.settingsManager.notificationsEnabled : false
             theme: section.theme
 
-            Connections {
-                target: section.settingsManager
-                function onNotificationsEnabledChanged() {
-                    if (section.settingsManager) {
-                        dndSwitch.checked = !section.settingsManager.notificationsEnabled
-                    }
-                }
-            }
-
-            onToggled: {
+            onToggled: value => {
                 if (section.settingsManager) {
-                    section.settingsManager.notificationsEnabled = !checked
+                    section.settingsManager.notificationsEnabled = !value
                     section.settingsManager.saveSettings()
                     section.bump()
                 }

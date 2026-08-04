@@ -8,7 +8,7 @@ Rectangle {
     property bool checked: false
     property var theme
     
-    signal toggled()
+    signal toggled(bool value)
     
     width: 52
     height: 30
@@ -69,10 +69,7 @@ Rectangle {
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: {
-            root.checked = !root.checked
-            root.toggled()
-        }
+        onClicked: root.toggled(!root.checked)
     }
 }
 

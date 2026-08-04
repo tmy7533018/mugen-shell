@@ -89,17 +89,14 @@ Rectangle {
                 preventStealing: true
 
                 onPressed: (mouse) => {
-                    timerSlider.value = timerSlider.valueAt(mouse.x)
+                    if (section.settingsManager) section.settingsManager.autoCloseTimerInterval = timerSlider.valueAt(mouse.x) * 1000
                     section.bump()
                 }
                 onPositionChanged: (mouse) => {
-                    if (pressed) timerSlider.value = timerSlider.valueAt(mouse.x)
+                    if (pressed && section.settingsManager) section.settingsManager.autoCloseTimerInterval = timerSlider.valueAt(mouse.x) * 1000
                 }
                 onReleased: {
-                    if (section.settingsManager) {
-                        section.settingsManager.autoCloseTimerInterval = Math.round(timerSlider.value) * 1000
-                        section.settingsManager.saveSettings()
-                    }
+                    if (section.settingsManager) section.settingsManager.saveSettings()
                     section.bump()
                 }
             }

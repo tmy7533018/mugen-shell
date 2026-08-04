@@ -326,9 +326,9 @@ Rectangle {
                 Layout.alignment: Qt.AlignVCenter
                 theme: section.theme
                 checked: section.settingsManager ? section.settingsManager.voiceEnabled : true
-                onToggled: {
+                onToggled: value => {
                     if (!section.settingsManager) return
-                    section.settingsManager.voiceEnabled = checked
+                    section.settingsManager.voiceEnabled = value
                     section.save()
                 }
             }
@@ -347,9 +347,9 @@ Rectangle {
                 Layout.alignment: Qt.AlignVCenter
                 theme: section.theme
                 checked: section.settingsManager ? section.settingsManager.voiceFollowUp : true
-                onToggled: {
+                onToggled: value => {
                     if (!section.settingsManager) return
-                    section.settingsManager.voiceFollowUp = checked
+                    section.settingsManager.voiceFollowUp = value
                     section.save()
                 }
             }
@@ -368,9 +368,9 @@ Rectangle {
                 Layout.alignment: Qt.AlignVCenter
                 theme: section.theme
                 checked: section.settingsManager ? section.settingsManager.voiceBargeIn : false
-                onToggled: {
+                onToggled: value => {
                     if (!section.settingsManager) return
-                    section.settingsManager.voiceBargeIn = checked
+                    section.settingsManager.voiceBargeIn = value
                     section.save()
                 }
             }

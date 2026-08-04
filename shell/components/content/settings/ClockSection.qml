@@ -40,22 +40,12 @@ Rectangle {
             }
 
             Common.Switch {
-                id: hourSwitch
                 checked: section.settingsManager ? section.settingsManager.clockShow24Hour : true
                 theme: section.theme
 
-                Connections {
-                    target: section.settingsManager
-                    function onClockShow24HourChanged() {
-                        if (section.settingsManager) {
-                            hourSwitch.checked = section.settingsManager.clockShow24Hour
-                        }
-                    }
-                }
-
-                onToggled: {
+                onToggled: value => {
                     if (section.settingsManager) {
-                        section.settingsManager.clockShow24Hour = checked
+                        section.settingsManager.clockShow24Hour = value
                         section.settingsManager.saveSettings()
                         section.bump()
                     }
@@ -78,22 +68,12 @@ Rectangle {
             }
 
             Common.Switch {
-                id: secondsSwitch
                 checked: section.settingsManager ? section.settingsManager.clockShowSeconds : false
                 theme: section.theme
 
-                Connections {
-                    target: section.settingsManager
-                    function onClockShowSecondsChanged() {
-                        if (section.settingsManager) {
-                            secondsSwitch.checked = section.settingsManager.clockShowSeconds
-                        }
-                    }
-                }
-
-                onToggled: {
+                onToggled: value => {
                     if (section.settingsManager) {
-                        section.settingsManager.clockShowSeconds = checked
+                        section.settingsManager.clockShowSeconds = value
                         section.settingsManager.saveSettings()
                         section.bump()
                     }
