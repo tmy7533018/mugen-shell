@@ -71,10 +71,7 @@ Rectangle {
         for (let i = 0; i < servers.length; i++) {
             let s = servers[i]
             if (s.name === name) {
-                let copy = {
-                    name: s.name, command: s.command, args: s.args,
-                    env: s.env, url: s.url, disabled: s.disabled, trusted: s.trusted
-                }
+                let copy = Object.assign({}, s)
                 copy[key] = value
                 next.push(copy)
             } else {
@@ -226,10 +223,17 @@ Rectangle {
             try {
                 let cfg = (JSON.parse(getCurrentProcess.buf).config) || {}
                 if (!cfg.mcp) cfg.mcp = {}
+                // This section models seven fields; config.toml may carry more
+                // per server. Overlaying onto the config just fetched keeps
+                // whatever it does not know about.
+                let existing = cfg.mcp.servers || {}
                 let m = {}
                 for (let i = 0; i < section.servers.length; i++) {
                     let s = section.servers[i]
-                    m[s.name] = { command: s.command, args: s.args, env: s.env, url: s.url || "", disabled: s.disabled, trusted: s.trusted }
+                    m[s.name] = Object.assign({}, existing[s.name] || {}, {
+                        command: s.command, args: s.args, env: s.env,
+                        url: s.url || "", disabled: s.disabled, trusted: s.trusted
+                    })
                 }
                 cfg.mcp.servers = m
                 saveProcess.payload = JSON.stringify(cfg)
