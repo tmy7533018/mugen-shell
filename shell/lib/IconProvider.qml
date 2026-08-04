@@ -4,7 +4,6 @@ import Quickshell
 QtObject {
     id: iconProvider
 
-    property bool useImeIcons: false
     property bool useVolumeIcons: true
     property bool useMusicIcons: true
     property bool usePowerIcons: true
@@ -109,20 +108,6 @@ QtObject {
             } else {
                 return { type: "text", value: "🔊" }
             }
-        }
-    }
-
-    function getImeIcon(imeState) {
-        if (useImeIcons) {
-            if (imeState.includes("あ") || imeState.includes("mozc") || imeState.includes("Mozc")) {
-                return { type: "svg", value: imeMozcSvg }
-            } else if (imeState.includes("JP") || imeState.includes("jp")) {
-                return { type: "svg", value: imeJpSvg }
-            } else {
-                return { type: "svg", value: imeUsSvg }
-            }
-        } else {
-            return { type: "text", value: imeState }
         }
     }
 
