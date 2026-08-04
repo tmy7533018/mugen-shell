@@ -83,7 +83,7 @@ Item {
             Quickshell.shellDir + "/scripts/hyprland_ipc_monitor.py"
         ]
 
-        running: workspacesRoot.visible
+        running: workspacesRoot.visible && !restartTimer.running
 
         stdout: SplitParser {
             onRead: data => {
@@ -98,8 +98,10 @@ Item {
             }
         }
 
+        // The monitor is meant to outlive the bar, so any exit is a reason to
+        // come back, including a clean one.
         onExited: {
-            if (workspacesRoot.visible && exitCode !== 0) {
+            if (workspacesRoot.visible) {
                 restartTimer.restart()
             }
         }
@@ -108,11 +110,6 @@ Item {
     property Timer restartTimer: Timer {
         interval: 2000
         repeat: false
-        onTriggered: {
-            if (workspacesRoot.visible) {
-                hyprlandIpcMonitor.running = true
-            }
-        }
     }
 
     property Timer workspaceDebounceTimer: Timer {

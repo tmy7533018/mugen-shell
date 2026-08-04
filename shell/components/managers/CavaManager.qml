@@ -10,7 +10,7 @@ QtObject {
     property bool isActive: false
     property var barLevels: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     property Process cavaProcess: Process {
-        running: cavaManager.isActive
+        running: cavaManager.isActive && !restartTimer.running
         command: ["bash", Quickshell.shellDir + "/scripts/cava.sh"]
         
         stdout: SplitParser {
@@ -63,11 +63,6 @@ QtObject {
         interval: 5000
         running: false
         repeat: false
-        onTriggered: {
-            if (cavaManager.isActive && !cavaProcess.running) {
-                cavaProcess.running = true
-            }
-        }
     }
     
     function start() {
