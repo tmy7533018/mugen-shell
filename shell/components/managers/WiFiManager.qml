@@ -31,21 +31,25 @@ QtObject {
         isConnecting = true
         connectionError = ""
 
-        let escapedSsid = ssid.replace(/'/g, "'\\''")
-        let escapedPassword = password.replace(/'/g, "'\\''")
-
         connectToNetworkProcess.ssid = ssid
         connectToNetworkProcess.password = password
 
+        // /proc/<pid>/cmdline is world-readable and /proc/<pid>/environ is not,
+        // so the key travels in the environment. The SSID rides in as $1 rather
+        // than being quoted into the script.
         if (password.length > 0) {
+            connectToNetworkProcess.environment = ({ "MUGEN_WIFI_PSK": password })
             connectToNetworkProcess.command = [
                 "bash", "-c",
-                "LANG=C nmcli dev wifi connect '" + escapedSsid + "' password '" + escapedPassword + "'"
+                "LANG=C nmcli dev wifi connect \"$1\" password \"$MUGEN_WIFI_PSK\"",
+                "bash", ssid
             ]
         } else {
+            connectToNetworkProcess.environment = ({})
             connectToNetworkProcess.command = [
                 "bash", "-c",
-                "LANG=C nmcli dev wifi connect '" + escapedSsid + "'"
+                "LANG=C nmcli dev wifi connect \"$1\"",
+                "bash", ssid
             ]
         }
 
