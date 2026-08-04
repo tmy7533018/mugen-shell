@@ -28,11 +28,16 @@ func (a *Auditor) Log(tool string, args map[string]any, result string, callErr e
 	if err := os.MkdirAll(filepath.Dir(a.path), 0o755); err != nil {
 		return
 	}
-	f, err := os.OpenFile(a.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	// Every tool call's arguments land here, so the log is as sensitive as
+	// config.toml and gets the same treatment, existing files included.
+	f, err := os.OpenFile(a.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		return
 	}
 	defer f.Close()
+	if info, statErr := f.Stat(); statErr == nil && info.Mode().Perm()&0o077 != 0 {
+		_ = f.Chmod(0o600)
+	}
 
 	entry := map[string]any{
 		"t":      time.Now().UTC().Format(time.RFC3339Nano),
