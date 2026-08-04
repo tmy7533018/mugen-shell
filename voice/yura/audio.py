@@ -178,6 +178,12 @@ class Capture:
                     else:
                         frames.append(frame)
                     if time.time() - started > MAX_UTTERANCE_S:
+                        # Same check the release path makes: without it a long
+                        # silent hold reaches whisper and comes back as a
+                        # hallucinated sentence.
+                        if not heard_speech:
+                            log("listen", "ptt hold capped, no speech")
+                            return None
                         break
                     continue
                 if time.time() - hold_started >= PTT_TAP_S:
