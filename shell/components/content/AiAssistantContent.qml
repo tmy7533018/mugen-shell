@@ -591,6 +591,7 @@ FocusScope {
                         }
 
                         Text {
+                            textFormat: Text.PlainText
                             text: confirmStrip.serverName !== ""
                                 ? (confirmStrip.serverName + " → " + confirmStrip.toolName)
                                 : confirmStrip.toolName
@@ -603,6 +604,7 @@ FocusScope {
                         Text {
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
+                            textFormat: Text.PlainText
                             text: confirmStrip.argSummary
                             color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.70)
                             font.pixelSize: modeManager.scale(11)

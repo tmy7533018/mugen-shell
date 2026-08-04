@@ -189,6 +189,7 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
+                textFormat: Text.PlainText
                 text: modelData.title
                 color: (theme ? theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.90))
                 font.pixelSize: 14
@@ -210,6 +211,7 @@ Rectangle {
         }
         
         Text {
+            textFormat: Text.PlainText
             text: modelData.message
             color: Qt.rgba(0.80, 0.80, 0.85, 0.75)
             font.pixelSize: 12

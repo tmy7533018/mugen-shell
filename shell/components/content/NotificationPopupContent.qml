@@ -220,6 +220,7 @@ Item {
 
                     Text {
                         Layout.fillWidth: true
+                        textFormat: Text.PlainText
                         text: root.currentNotification ? root.currentNotification.title : ""
                         color: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
                         font.pixelSize: modeManager.scale(13)
@@ -231,6 +232,7 @@ Item {
 
                     Text {
                         Layout.fillWidth: true
+                        textFormat: Text.PlainText
                         text: root.currentNotification ? root.currentNotification.message : ""
                         color: theme ? theme.textSecondary : Qt.rgba(0.82, 0.82, 0.87, 0.78)
                         font.pixelSize: modeManager.scale(11)

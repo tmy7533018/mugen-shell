@@ -120,6 +120,7 @@ Rectangle {
 
                 Text {
                     Layout.fillWidth: true
+                    textFormat: Text.PlainText
                     text: root.modelData && root.modelData.ssid ? root.modelData.ssid : ""
                     color: (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
                     font.pixelSize: 14

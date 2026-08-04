@@ -194,6 +194,7 @@ FocusScope {
 
                         Text {
                             Layout.fillWidth: true
+                            textFormat: Text.PlainText
                             text: modelData.title && modelData.title.length > 0 ? modelData.title : "New chat"
                             color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
                             font.pixelSize: modeManager.scale(12)

@@ -1502,6 +1502,7 @@ FocusScope {
                     Text {
                         id: serverTag
                         anchors.centerIn: parent
+                        textFormat: Text.PlainText
                         text: confirmCard.serverName
                         color: root.theme ? root.theme.textSecondary : Qt.rgba(0.82, 0.80, 0.90, 0.9)
                         font.pixelSize: modeManager.scale(10)
@@ -1512,6 +1513,7 @@ FocusScope {
 
             Text {
                 Layout.fillWidth: true
+                textFormat: Text.PlainText
                 text: "Yura wants to run " + confirmCard.toolName
                 color: root.theme ? root.theme.textSecondary : Qt.rgba(0.80, 0.80, 0.88, 0.88)
                 font.pixelSize: modeManager.scale(12)
@@ -1549,6 +1551,7 @@ FocusScope {
                                 spacing: 1
 
                                 Text {
+                                    textFormat: Text.PlainText
                                     text: argRow.modelData
                                     color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.75)
                                     font.pixelSize: modeManager.scale(10)

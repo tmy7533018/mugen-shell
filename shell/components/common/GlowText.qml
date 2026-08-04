@@ -11,6 +11,10 @@ Text {
     property bool enableGlow: true
     property bool _glowReady: false
     
+    // Track titles and the like reach this component straight from MPRIS, and
+    // Text's default would read them as markup.
+    textFormat: Text.PlainText
+
     color: Qt.rgba(0.91, 0.91, 0.94, 0.85)
     font.pixelSize: 20
     font.weight: Font.Light

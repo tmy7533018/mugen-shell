@@ -82,6 +82,7 @@ Rectangle {
             spacing: 2
 
             Text {
+                textFormat: Text.PlainText
                 text: deviceItem.modelData.name
                 color: (deviceItem.theme ? deviceItem.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
                 font.pixelSize: 14
