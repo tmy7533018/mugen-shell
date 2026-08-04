@@ -140,11 +140,18 @@ def speak(text: str, on_sentence=None, should_stop=None, voice=None) -> None:
                 break
 
 
+# sounddevice's module-level play/stop share a single output stream, so a
+# reply and a /speak request would cut each other off mid-sentence. Every
+# audible reply passes through speak_guarded, so serialising here is enough.
+_playback = threading.Lock()
+
+
 def speak_guarded(text: str, on_sentence=None, should_stop=None, voice=None) -> None:
-    # Every audible reply must raise yuraSpeaking (the bar holds auto-close
-    # on it), including the error apology.
-    set_speaking(True)
-    try:
-        speak(text, on_sentence, should_stop=should_stop, voice=voice)
-    finally:
-        set_speaking(False)
+    with _playback:
+        # Every audible reply must raise yuraSpeaking (the bar holds auto-close
+        # on it), including the error apology.
+        set_speaking(True)
+        try:
+            speak(text, on_sentence, should_stop=should_stop, voice=voice)
+        finally:
+            set_speaking(False)
