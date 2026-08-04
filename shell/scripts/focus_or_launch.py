@@ -79,11 +79,13 @@ def main():
             focused = focus_window(client['address'])
             break
 
-        if (search_term in cls) or (cls in search_term):
+        # An empty class is a substring of everything, so it would swallow the
+        # match and leave the requested app unlaunched.
+        if cls and ((search_term in cls) or (cls in search_term)):
             focused = focus_window(client['address'])
             break
 
-        if (search_term in initial_cls) or (initial_cls in search_term):
+        if initial_cls and ((search_term in initial_cls) or (initial_cls in search_term)):
             focused = focus_window(client['address'])
             break
 
