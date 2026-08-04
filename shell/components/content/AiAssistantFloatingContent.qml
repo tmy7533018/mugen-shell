@@ -374,7 +374,6 @@ FocusScope {
     Process {
         id: eventsSubscriber
         running: true
-        property string buf: ""
         command: ["curl", "-sS", "-N", root._baseUrl + "/events"]
 
         function handleLine(line) {
@@ -394,22 +393,13 @@ FocusScope {
             }
         }
 
+        // SplitParser already hands back one line per read, with the newline
+        // removed — re-splitting on it never matches.
         stdout: SplitParser {
-            onRead: data => {
-                eventsSubscriber.buf += data
-                let idx
-                while ((idx = eventsSubscriber.buf.indexOf("\n")) !== -1) {
-                    let line = eventsSubscriber.buf.substring(0, idx)
-                    eventsSubscriber.buf = eventsSubscriber.buf.substring(idx + 1)
-                    eventsSubscriber.handleLine(line)
-                }
-            }
+            onRead: data => eventsSubscriber.handleLine(data)
         }
 
-        onExited: {
-            eventsSubscriber.buf = ""
-            eventsReconnectTimer.restart()
-        }
+        onExited: eventsReconnectTimer.restart()
     }
 
     Timer {
