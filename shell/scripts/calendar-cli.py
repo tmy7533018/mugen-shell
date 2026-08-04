@@ -22,6 +22,7 @@ from datetime import datetime
 DATA_HOME = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
 DB_PATH = os.path.join(DATA_HOME, "mugen-shell", "calendar.db")
 LEGACY_JSON = os.path.join(DATA_HOME, "mugen-shell", "events.json")
+LEGACY_MIGRATED = 1
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS events (
@@ -73,10 +74,20 @@ def event_to_dict(row: sqlite3.Row) -> dict:
     }
 
 
+def mark_legacy_migrated(conn: sqlite3.Connection) -> None:
+    conn.execute(f"PRAGMA user_version = {LEGACY_MIGRATED}")
+    conn.commit()
+
+
 def maybe_migrate_legacy(conn: sqlite3.Connection) -> None:
-    if not os.path.exists(LEGACY_JSON):
+    # An empty table is not proof the import never ran: deleting every event
+    # would otherwise let the legacy file repopulate it on the next command.
+    if conn.execute("PRAGMA user_version").fetchone()[0] >= LEGACY_MIGRATED:
         return
-    if conn.execute("SELECT COUNT(*) FROM events").fetchone()[0] > 0:
+    if not os.path.exists(LEGACY_JSON) or conn.execute(
+        "SELECT COUNT(*) FROM events"
+    ).fetchone()[0] > 0:
+        mark_legacy_migrated(conn)
         return
     try:
         with open(LEGACY_JSON, "r", encoding="utf-8") as f:
@@ -94,6 +105,7 @@ def maybe_migrate_legacy(conn: sqlite3.Connection) -> None:
         except sqlite3.Error:
             continue
     conn.commit()
+    mark_legacy_migrated(conn)
 
 
 def cmd_init(_args) -> None:
