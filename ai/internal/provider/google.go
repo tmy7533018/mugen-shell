@@ -223,7 +223,10 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 			}
 		}
 	}
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return truncatedStream("google")
 }
 
 func parseGoogleError(body []byte, status int) string {

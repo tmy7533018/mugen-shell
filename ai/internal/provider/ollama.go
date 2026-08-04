@@ -217,6 +217,7 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 	defer stall.Stop()
 
 	var toolCalls []ToolCall
+	finished := false
 	for scanner.Scan() {
 		stall.Reset(o.stallTimeout)
 		line := scanner.Bytes()
@@ -253,6 +254,7 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 			return err
 		}
 		if raw.Done {
+			finished = true
 			break
 		}
 	}
@@ -263,6 +265,9 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 			return fmt.Errorf("ollama stopped sending output for %s", o.stallTimeout)
 		}
 		return err
+	}
+	if !finished {
+		return truncatedStream("ollama")
 	}
 	return nil
 }

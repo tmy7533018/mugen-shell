@@ -306,7 +306,10 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 			return fn(finalChunk())
 		}
 	}
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return truncatedStream("anthropic")
 }
 
 func parseAnthropicError(body []byte, status int) string {

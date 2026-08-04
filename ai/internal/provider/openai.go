@@ -223,7 +223,10 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opt
 			}
 		}
 	}
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return truncatedStream("openai")
 }
 
 func openAIMessages(messages []Message) ([]map[string]any, error) {
