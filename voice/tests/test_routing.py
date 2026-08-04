@@ -66,13 +66,13 @@ class PersonalityFetch(unittest.TestCase):
         class _Resp:
             def json(self_inner):
                 return payload
-        saved = lang.requests.get
-        lang.requests.get = lambda *a, **kw: _Resp()
+        saved = lang.ai.get
+        lang.ai.get = lambda *a, **kw: _Resp()
         try:
             lang._cache = (0.0, "")
             return lang._personality_lang()
         finally:
-            lang.requests.get = saved
+            lang.ai.get = saved
 
     def test_reads_the_nested_config(self):
         self.assertEqual(

@@ -151,7 +151,7 @@ Rectangle {
         id: modelsProcess
         running: false
         property string buf: ""
-        command: ["curl", "-fsS", "--max-time", "2", aiBackend.baseUrl + "/models"]
+        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "2", aiBackend.baseUrl + "/models"]
 
         stdout: SplitParser { onRead: data => { modelsProcess.buf += data } }
         onRunningChanged: { if (running) buf = "" }

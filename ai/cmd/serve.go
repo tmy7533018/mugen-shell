@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -15,8 +14,6 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/server"
 )
 
-const defaultPort = 11435
-
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the mugen-ai HTTP server for mugen-shell integration",
@@ -24,20 +21,14 @@ var serveCmd = &cobra.Command{
 }
 
 var (
-	servePort   int
+	serveSocket string
 	serveModel  string
 	serveSystem string
 )
 
 func init() {
 	rootCmd.AddCommand(serveCmd)
-	def := defaultPort
-	if v, ok := os.LookupEnv("MUGEN_AI_PORT"); ok {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			def = n
-		}
-	}
-	serveCmd.Flags().IntVarP(&servePort, "port", "p", def, "port to listen on")
+	serveCmd.Flags().StringVar(&serveSocket, "socket", SocketPath(), "unix socket to listen on")
 	serveCmd.Flags().StringVarP(&serveModel, "model", "m", "", "model to use on startup (overrides config)")
 	serveCmd.Flags().StringVar(&serveSystem, "system", "", "System prompt (overrides config)")
 }
@@ -58,13 +49,18 @@ func runServe(_ *cobra.Command, _ []string) error {
 		fmt.Fprintf(os.Stdout, "mcp expose: serving %d tools at /mcp\n", len(expose.Exposed()))
 	}
 
-	addr := fmt.Sprintf("127.0.0.1:%d", servePort)
-	httpSrv := &http.Server{Addr: addr, Handler: srv.Routes()}
+	ln, err := listenSocket(serveSocket)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(serveSocket)
+
+	httpSrv := &http.Server{Handler: srv.Routes()}
 
 	done := make(chan error, 1)
-	go func() { done <- httpSrv.ListenAndServe() }()
+	go func() { done <- httpSrv.Serve(ln) }()
 
-	fmt.Fprintf(os.Stdout, "mugen-ai listening on %s (model: %s)\n", addr, rt.Model)
+	fmt.Fprintf(os.Stdout, "mugen-ai listening on %s (model: %s)\n", serveSocket, rt.Model)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

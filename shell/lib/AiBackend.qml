@@ -1,19 +1,25 @@
 import QtQuick
 import Quickshell
 
-// MUGEN_AI_HOST / MUGEN_AI_PORT are honoured so the systemd unit's
-// EnvironmentFile keeps the backend's --port and this client in sync.
+// The backend listens on a unix socket rather than a loopback port: its API is
+// unauthenticated, and 127.0.0.1 is reachable by every local user.
+// MUGEN_AI_SOCKET overrides the path, which the daemon derives the same way.
 QtObject {
     id: aiBackend
 
-    readonly property string host: {
-        const v = Quickshell.env("MUGEN_AI_HOST")
-        return (v && v.length > 0) ? v : "127.0.0.1"
+    readonly property string socketPath: {
+        const explicit = Quickshell.env("MUGEN_AI_SOCKET")
+        if (explicit && explicit.length > 0) {
+            return explicit
+        }
+        const runtimeDir = Quickshell.env("XDG_RUNTIME_DIR")
+        return runtimeDir && runtimeDir.length > 0
+            ? runtimeDir + "/mugen-ai/mugen-ai.sock"
+            : ""
     }
-    readonly property int port: {
-        const v = Quickshell.env("MUGEN_AI_PORT")
-        const n = parseInt(v, 10)
-        return (isFinite(n) && n > 0) ? n : 11435
-    }
-    readonly property string baseUrl: "http://" + host + ":" + port
+
+    // The host is inert once curl is dialling a socket, but a URL still needs
+    // one. Callers splice transportArgs into their argv ahead of the URL.
+    readonly property string baseUrl: "http://localhost"
+    readonly property var transportArgs: ["--unix-socket", socketPath]
 }

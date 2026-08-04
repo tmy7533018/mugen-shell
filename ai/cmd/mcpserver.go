@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -30,24 +29,19 @@ Requires 'mugen-ai serve' to be running with [mcp_expose] enabled = true.`,
 	RunE: runMCPServer,
 }
 
-var mcpServerPort int
+var mcpServerSocket string
 
 func init() {
 	rootCmd.AddCommand(mcpServerCmd)
-	def := defaultPort
-	if v, ok := os.LookupEnv("MUGEN_AI_PORT"); ok {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			def = n
-		}
-	}
-	mcpServerCmd.Flags().IntVarP(&mcpServerPort, "port", "p", def, "daemon port to bridge to")
+	mcpServerCmd.Flags().StringVar(&mcpServerSocket, "socket", SocketPath(), "daemon socket to bridge to")
 }
 
 func runMCPServer(_ *cobra.Command, _ []string) error {
-	endpoint := fmt.Sprintf("http://127.0.0.1:%d/mcp", mcpServerPort)
-	// A tools/call can sit behind a slow qs IPC round-trip, and MCP clients
-	// apply their own deadlines on top.
-	client := &http.Client{Timeout: 120 * time.Second}
+	// The host is inert — the dialer goes straight to the socket — but a URL
+	// still needs one. A tools/call can sit behind a slow qs IPC round-trip,
+	// and MCP clients apply their own deadlines on top.
+	endpoint := "http://localhost/mcp"
+	client := socketClient(mcpServerSocket, 120*time.Second)
 
 	in := bufio.NewReaderSize(os.Stdin, 1<<20)
 	for {

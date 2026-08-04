@@ -12,6 +12,7 @@ import time
 
 import requests
 
+from .aiclient import session as ai
 from .const import AI_URL
 
 _cache: tuple[float, str] = (0.0, "")
@@ -24,7 +25,7 @@ def _personality_lang() -> str:
     if now - _cache[0] > 60:
         lang = ""
         try:
-            r = requests.get(f"{AI_URL}/config", timeout=3)
+            r = ai.get(f"{AI_URL}/config", timeout=3)
             body = r.json()
             # The endpoint nests the file under "config" alongside its path and
             # key-presence flags; reading the top level silently yielded "".

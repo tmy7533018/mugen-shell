@@ -283,7 +283,7 @@ How reliably Yura can *do* things (not just chat) depends on the model's tool-ca
 
 ### Listen address
 
-The server listens on `127.0.0.1:11435`. To move it, set `MUGEN_AI_PORT` (and optionally `MUGEN_AI_HOST`) in `~/.config/mugen-ai/.env` and restart the service — the shell reads the same variables, so the two never disagree.
+The server listens on a unix socket at `$XDG_RUNTIME_DIR/mugen-ai/mugen-ai.sock`, not a TCP port, so no other user on the machine can reach it. To move it, set `MUGEN_AI_SOCKET` in `~/.config/mugen-ai/.env` and restart the service — the shell and the voice daemon read the same variable, so the three never disagree.
 
 Conversations live in SQLite at `~/.local/state/mugen-ai/history.db`. For terminal use: `mugen-ai chat`.
 

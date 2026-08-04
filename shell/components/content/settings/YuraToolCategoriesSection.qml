@@ -82,7 +82,7 @@ Rectangle {
         id: loadProcess
         running: false
         property string buf: ""
-        command: ["curl", "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
+        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
         stdout: SplitParser { onRead: data => loadProcess.buf += data }
         onRunningChanged: { if (running) buf = "" }
         onExited: (exitCode) => {
@@ -111,7 +111,7 @@ Rectangle {
         id: getCurrentProcess
         running: false
         property string buf: ""
-        command: ["curl", "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
+        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
         stdout: SplitParser { onRead: data => getCurrentProcess.buf += data }
         onRunningChanged: { if (running) buf = "" }
         onExited: (exitCode) => {
@@ -144,7 +144,7 @@ Rectangle {
         property string buf: ""
         property string payload: ""
         stdinEnabled: true
-        command: ["curl", "-fsS", "--max-time", "5",
+        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "5",
                   "-X", "PUT", aiBackend.baseUrl + "/config",
                   "-H", "Content-Type: application/json",
                   "--data-binary", "@-"]
@@ -170,7 +170,7 @@ Rectangle {
     Process {
         id: restartProcess
         running: false
-        command: ["curl", "-fsS", "--max-time", "3",
+        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3",
                   "-X", "POST", aiBackend.baseUrl + "/config/restart"]
         onExited: (exitCode) => {
             section.saving = false

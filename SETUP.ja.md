@@ -283,7 +283,7 @@ systemctl --user restart mugen-ai.service
 
 ### リスナーアドレス
 
-サーバは `127.0.0.1:11435` で listen します。変えたいときは `~/.config/mugen-ai/.env` に `MUGEN_AI_PORT` (お好みで `MUGEN_AI_HOST`) を書いてサービスを再起動してください。シェル側も同じ変数を読むので、両者がずれることはありません。
+サーバは TCP ポートではなく `$XDG_RUNTIME_DIR/mugen-ai/mugen-ai.sock` の unix ソケットで listen します。同じマシンの他ユーザーからは到達できません。場所を変えたいときは `~/.config/mugen-ai/.env` に `MUGEN_AI_SOCKET` を書いてサービスを再起動してください。シェルと音声デーモンも同じ変数を読むので、三者がずれることはありません。
 
 会話とメッセージは SQLite (`~/.local/state/mugen-ai/history.db`) に保存されます。ターミナル用途は `mugen-ai chat`。
 

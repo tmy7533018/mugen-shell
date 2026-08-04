@@ -2,7 +2,12 @@
 
 import os
 
-AI_URL = f"http://127.0.0.1:{os.environ.get('MUGEN_AI_PORT', '11435')}"
+# mugen-ai listens on a unix socket; the host in AI_URL is inert but requests
+# still needs one to route through the adapter in aiclient.
+AI_SOCKET = os.environ.get("MUGEN_AI_SOCKET") or os.path.join(
+    os.environ.get("XDG_RUNTIME_DIR", "/run/user/%d" % os.getuid()),
+    "mugen-ai", "mugen-ai.sock")
+AI_URL = "http://localhost"
 STT_LANG = os.environ.get("YURA_VOICE_LANG", "ja")
 
 _CONFIG_HOME = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")

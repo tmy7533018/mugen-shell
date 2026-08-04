@@ -4,6 +4,7 @@ import time
 
 import requests
 
+from .aiclient import session as ai
 from .const import AI_URL
 from .lang import configured_lang
 from .log import log
@@ -75,7 +76,7 @@ class Chat:
         # empty falls back to the backend default, like the bar row does.
         if model:
             payload["model"] = model
-        with requests.post(f"{AI_URL}/chat", json=payload, stream=True,
+        with ai.post(f"{AI_URL}/chat", json=payload, stream=True,
                            timeout=(5, 300)) as r:
             r.raise_for_status()
             # The SSE content-type carries no charset, so requests would
@@ -92,7 +93,7 @@ class Chat:
                     self.model = model or ev.get("model", "")
                     # Selection alone is not broadcast, so an open panel would
                     # keep showing whatever conversation it had before.
-                    requests.post(
+                    ai.post(
                         f"{AI_URL}/conversations/{self.conversation_id}/select",
                         timeout=3)
                     yura_ipc("show_conversation", str(self.conversation_id))
@@ -101,7 +102,7 @@ class Chat:
                 if "tool_confirm" in ev:
                     # Voice can't render an approval card; decline and let the
                     # model explain, the user can redo it from the panel.
-                    requests.post(f"{AI_URL}/chat/confirm", json={
+                    ai.post(f"{AI_URL}/chat/confirm", json={
                         "confirm_id": ev["tool_confirm"]["confirm_id"],
                         "approved": False}, timeout=5)
                 if ev.get("error"):

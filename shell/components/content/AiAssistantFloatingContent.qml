@@ -44,7 +44,8 @@ FocusScope {
     readonly property real orbExternalSize: orb.width
     readonly property bool orbExternalEmptyState: orb.isInEmptyState
 
-    readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://127.0.0.1:11435"
+    readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://localhost"
+    readonly property var _transportArgs: aiBackend ? aiBackend.transportArgs : []
     // Read-aloud is yurad's TTS pipeline, so it follows the same switch the mic
     // button does.
     readonly property bool canReadAloud: Theme.YuraCtl.available
@@ -374,7 +375,7 @@ FocusScope {
     Process {
         id: eventsSubscriber
         running: true
-        command: ["curl", "-sS", "-N", root._baseUrl + "/events"]
+        command: ["curl", ...root._transportArgs, "-sS", "-N", root._baseUrl + "/events"]
 
         function handleLine(line) {
             if (!line.startsWith("data:")) return
@@ -1680,7 +1681,7 @@ FocusScope {
         id: confirmProcess
         property string payload: ""
         running: false
-        command: ["curl", "-sS", "--max-time", "5", "-X", "POST",
+        command: ["curl", ...root._transportArgs, "-sS", "--max-time", "5", "-X", "POST",
                   root._baseUrl + "/chat/confirm",
                   "-H", "Content-Type: application/json",
                   "-d", payload]
@@ -1690,7 +1691,7 @@ FocusScope {
         id: chatProcess
         property string payload: ""
         running: false
-        command: ["curl", "-sS", "-N", "-X", "POST",
+        command: ["curl", ...root._transportArgs, "-sS", "-N", "-X", "POST",
                   root._baseUrl + "/chat",
                   "-H", "Content-Type: application/json",
                   "-d", payload]
@@ -1753,7 +1754,7 @@ FocusScope {
         id: listConvProcess
         running: false
         property string buf: ""
-        command: ["curl", "-sS", "--max-time", "2", root._baseUrl + "/conversations"]
+        command: ["curl", ...root._transportArgs, "-sS", "--max-time", "2", root._baseUrl + "/conversations"]
 
         stdout: SplitParser { onRead: data => { listConvProcess.buf += data } }
         onRunningChanged: { if (running) buf = "" }
@@ -1774,7 +1775,7 @@ FocusScope {
         property string queuedText: ""
         property var queuedFiles: []
         // -f: without it a 404 exits 0 and reads as a successful rewind.
-        command: ["curl", "-sS", "-f", "-X", "DELETE", "--max-time", "3",
+        command: ["curl", ...root._transportArgs, "-sS", "-f", "-X", "DELETE", "--max-time", "3",
             root._baseUrl + "/conversations/" + root.currentConvId
                 + "/messages/" + truncateProcess.messageId]
 
@@ -1805,7 +1806,7 @@ FocusScope {
         id: loadCurrentProcess
         running: false
         property string buf: ""
-        command: ["curl", "-sS", "--max-time", "2", root._baseUrl + "/conversations/current"]
+        command: ["curl", ...root._transportArgs, "-sS", "--max-time", "2", root._baseUrl + "/conversations/current"]
 
         stdout: SplitParser { onRead: data => { loadCurrentProcess.buf += data } }
         onRunningChanged: { if (running) buf = "" }
@@ -1856,7 +1857,7 @@ FocusScope {
         running: false
         property string payload: ""
         property string buf: ""
-        command: ["curl", "-sS", "--max-time", "2", "-X", "POST",
+        command: ["curl", ...root._transportArgs, "-sS", "--max-time", "2", "-X", "POST",
                   root._baseUrl + "/conversations/" + payload + "/select"]
 
         stdout: SplitParser { onRead: data => { selectConvProcess.buf += data } }
@@ -1873,7 +1874,7 @@ FocusScope {
         running: false
         property string payload: ""
         property string buf: ""
-        command: ["curl", "-sS", "--max-time", "2", "-X", "DELETE",
+        command: ["curl", ...root._transportArgs, "-sS", "--max-time", "2", "-X", "DELETE",
                   root._baseUrl + "/conversations/" + payload]
 
         stdout: SplitParser { onRead: data => { deleteConvProcess.buf += data } }
@@ -1930,7 +1931,7 @@ FocusScope {
         id: healthProcess
         running: false
         property string buf: ""
-        command: ["curl", "-sSf", "--max-time", "2", root._baseUrl + "/health"]
+        command: ["curl", ...root._transportArgs, "-sSf", "--max-time", "2", root._baseUrl + "/health"]
 
         stdout: SplitParser {
             onRead: data => { healthProcess.buf += data }
@@ -1958,7 +1959,7 @@ FocusScope {
         id: modelsProcess
         running: false
         property string buf: ""
-        command: ["curl", "-sS", "--max-time", "2", root._baseUrl + "/models"]
+        command: ["curl", ...root._transportArgs, "-sS", "--max-time", "2", root._baseUrl + "/models"]
 
         stdout: SplitParser {
             onRead: data => { modelsProcess.buf += data }
@@ -1980,7 +1981,7 @@ FocusScope {
         id: switchModelProcess
         running: false
         property string payload: ""
-        command: ["curl", "-sS", "-X", "PUT",
+        command: ["curl", ...root._transportArgs, "-sS", "-X", "PUT",
                   root._baseUrl + "/model",
                   "-H", "Content-Type: application/json",
                   "-d", payload]

@@ -27,7 +27,8 @@ FocusScope {
     // schedule, which would kill these capture visuals mid-listen.
     Managers.MicCavaManager { id: listenCava }
 
-    readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://127.0.0.1:11435"
+    readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://localhost"
+    readonly property var _transportArgs: aiBackend ? aiBackend.transportArgs : []
 
     readonly property var requiredBarSize: ({
         "height": modeManager.scale(60),
@@ -679,7 +680,7 @@ FocusScope {
         id: confirmProcess
         property string payload: ""
         running: false
-        command: ["curl", "-sS", "--max-time", "5", "-X", "POST",
+        command: ["curl", ...root._transportArgs, "-sS", "--max-time", "5", "-X", "POST",
                   root._baseUrl + "/chat/confirm",
                   "-H", "Content-Type: application/json",
                   "-d", payload]
@@ -689,7 +690,7 @@ FocusScope {
         id: chatProcess
         property string payload: ""
         running: false
-        command: ["curl", "-sS", "-N", "-X", "POST",
+        command: ["curl", ...root._transportArgs, "-sS", "-N", "-X", "POST",
                   root._baseUrl + "/chat",
                   "-H", "Content-Type: application/json",
                   "-d", payload]
@@ -749,7 +750,7 @@ FocusScope {
         id: healthProcess
         running: false
         property string buf: ""
-        command: ["curl", "-sSf", "--max-time", "2", root._baseUrl + "/health"]
+        command: ["curl", ...root._transportArgs, "-sSf", "--max-time", "2", root._baseUrl + "/health"]
 
         stdout: SplitParser { onRead: data => { healthProcess.buf += data } }
         onRunningChanged: { if (running) buf = "" }

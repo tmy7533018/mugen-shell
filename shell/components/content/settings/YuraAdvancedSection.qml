@@ -49,7 +49,7 @@ Rectangle {
         id: configProc
         running: false
         property string buf: ""
-        command: ["curl", "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
+        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
         stdout: SplitParser { onRead: data => configProc.buf += data }
         onRunningChanged: { if (running) buf = "" }
         onExited: (exitCode) => {
@@ -79,7 +79,7 @@ Rectangle {
         id: auditGetProc
         running: false
         property string buf: ""
-        command: ["curl", "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
+        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
         stdout: SplitParser { onRead: data => auditGetProc.buf += data }
         onRunningChanged: { if (running) buf = "" }
         onExited: (exitCode) => {
@@ -107,7 +107,7 @@ Rectangle {
         property string buf: ""
         property string payload: ""
         stdinEnabled: true
-        command: ["curl", "-fsS", "--max-time", "5",
+        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "5",
                   "-X", "PUT", aiBackend.baseUrl + "/config",
                   "-H", "Content-Type: application/json",
                   "--data-binary", "@-"]
@@ -134,7 +134,7 @@ Rectangle {
     Process {
         id: auditRestartProc
         running: false
-        command: ["curl", "-fsS", "--max-time", "3",
+        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3",
                   "-X", "POST", aiBackend.baseUrl + "/config/restart"]
         onExited: (exitCode) => {
             section.auditBusy = false
