@@ -180,10 +180,17 @@ Rectangle {
         running: false
         property string buf: ""
         property string payload: ""
+        stdinEnabled: true
         command: ["curl", "-fsS", "--max-time", "5",
                   "-X", "PUT", aiBackend.baseUrl + "/config",
                   "-H", "Content-Type: application/json",
-                  "-d", payload]
+                  "--data-binary", "@-"]
+        // The config carries API keys and MCP secrets, and argv is world-
+        // readable through /proc; the body goes over stdin instead.
+        onStarted: {
+            saveProcess.write(saveProcess.payload)
+            saveProcess.stdinEnabled = false
+        }
         stdout: SplitParser { onRead: data => saveProcess.buf += data }
         onRunningChanged: { if (running) buf = "" }
         onExited: (exitCode) => {
