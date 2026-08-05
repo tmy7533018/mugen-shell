@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 	"testing"
 
 	"github.com/tmy7533018/mugen-ai/internal/apps"
@@ -440,4 +441,81 @@ func TestCallConcurrent(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
+}
+
+func TestCallConfirmsAsyncChange(t *testing.T) {
+	r, _, _ := newTestRegistry(t, nil, nil)
+	const want = "/wallpapers/a.png"
+	var confirms int
+	r.run = func(_ context.Context, _ string, args []string) (string, error) {
+		if len(args) > 0 && args[0] == "list" {
+			return "", nil
+		}
+		if args[len(args)-1] == "current" {
+			confirms++
+			// The script runs detached, so the first read still shows the old one.
+			if confirms < 2 {
+				return "/wallpapers/b.png", nil
+			}
+			return want, nil
+		}
+		return want, nil
+	}
+	out, err := r.Call(context.Background(), "wallpaper_set", map[string]any{"path": want})
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+	if out != want {
+		t.Fatalf("output = %q, want %q", out, want)
+	}
+	if confirms < 2 {
+		t.Fatalf("confirmed after %d read(s), want a re-read until it matched", confirms)
+	}
+}
+
+func TestCallReportsUnconfirmedChange(t *testing.T) {
+	r, _, _ := newTestRegistry(t, nil, nil)
+	r.run = func(_ context.Context, _ string, args []string) (string, error) {
+		if len(args) > 0 && args[0] == "list" {
+			return "", nil
+		}
+		if args[len(args)-1] == "current" {
+			// change-wallpaper.sh exited 1; nothing changed.
+			return "/wallpapers/b.png", nil
+		}
+		return "/wallpapers/a.png", nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	_, err := r.Call(ctx, "wallpaper_set", map[string]any{"path": "/wallpapers/a.png"})
+	if err == nil {
+		t.Fatal("expected an error when the wallpaper never changed")
+	}
+	if !strings.Contains(err.Error(), "did not take effect") {
+		t.Fatalf("error = %v, want it to say the change did not take effect", err)
+	}
+}
+
+func TestCallSkipsConfirmOnRejection(t *testing.T) {
+	r, _, _ := newTestRegistry(t, nil, nil)
+	var confirms int
+	r.run = func(_ context.Context, _ string, args []string) (string, error) {
+		if len(args) > 0 && args[0] == "list" {
+			return "", nil
+		}
+		if args[len(args)-1] == "current" {
+			confirms++
+		}
+		return "error: unknown wallpaper path; use one returned by wallpaper list", nil
+	}
+	out, err := r.Call(context.Background(), "wallpaper_set", map[string]any{"path": "/etc/passwd"})
+	if err != nil {
+		t.Fatalf("Call: %v", err)
+	}
+	if !strings.HasPrefix(out, "error:") {
+		t.Fatalf("output = %q, want the handler's rejection passed through", out)
+	}
+	if confirms != 0 {
+		t.Fatalf("confirmed %d time(s); a rejected call has nothing to confirm", confirms)
+	}
 }

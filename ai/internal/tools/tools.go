@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/tmy7533018/mugen-ai/internal/apps"
 	"github.com/tmy7533018/mugen-ai/internal/mcp"
@@ -38,6 +39,12 @@ type Tool struct {
 	// readonly tools run under an RLock so concurrent reads don't block each
 	// other; anything that mutates shell state takes the exclusive lock.
 	readonly bool
+
+	// Some IPC calls only start work that runs for seconds and is fired
+	// detached, so returning is not the same as the change landing. confirmFn
+	// re-reads the same target until it reports what the call returned; without
+	// it the model is told every such call succeeded.
+	confirmFn string
 
 	// kind selects the dispatch path. Empty is a built-in tool, routed by
 	// cmdTemplate (cmd) or `qs ipc call` (ipc); "mcp" routes to an external
@@ -104,6 +111,32 @@ func (r *Registry) shellIPC(ctx context.Context, pid int, target, fn string) (st
 	}
 	out, err := r.run(ctx, "qs", args)
 	return out, err == nil && out != ""
+}
+
+const (
+	confirmTimeout  = 10 * time.Second
+	confirmInterval = 400 * time.Millisecond
+)
+
+func (r *Registry) confirm(ctx context.Context, t *Tool, want string) (last string, matched bool) {
+	pid := r.resolveQsPID(ctx)
+	deadline := time.Now().Add(confirmTimeout)
+	for {
+		if got, ok := r.shellIPC(ctx, pid, t.target, t.confirmFn); ok {
+			if got == want {
+				return got, true
+			}
+			last = got
+		}
+		if time.Now().After(deadline) {
+			return last, false
+		}
+		select {
+		case <-ctx.Done():
+			return last, false
+		case <-time.After(confirmInterval):
+		}
+	}
 }
 
 // `qs list --all` is used because, unlike `qs ipc`, it works with no display.
@@ -385,8 +418,13 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 
 	res, err := r.run(ctx, cmdName, cmdArgs)
 	var callErr error
-	if err != nil {
+	switch {
+	case err != nil:
 		callErr = fmt.Errorf("%s failed: %w (output: %s)", name, err, res)
+	case t.confirmFn != "" && !strings.HasPrefix(res, "error:"):
+		if got, ok := r.confirm(ctx, t, res); !ok {
+			callErr = fmt.Errorf("%s did not take effect: %s reports %q. Tell the user it failed; do not claim it worked", name, t.target, got)
+		}
 	}
 	r.auditor.Log(name, args, res, callErr)
 	return sanitizeForLLM(res), callErr
@@ -651,9 +689,10 @@ func builtin() []Tool {
 				},
 				"required": []string{"path"},
 			},
-			target:   "wallpaper",
-			function: "set",
-			argOrder: []string{"path"},
+			target:    "wallpaper",
+			function:  "set",
+			argOrder:  []string{"path"},
+			confirmFn: "current",
 		},
 		{
 			Name:        "wallpaper_random",
@@ -661,6 +700,7 @@ func builtin() []Tool {
 			Parameters:  emptyParams(),
 			target:      "wallpaper",
 			function:    "random",
+			confirmFn:   "current",
 		},
 		{
 			Name:        "wallpaper_current",
