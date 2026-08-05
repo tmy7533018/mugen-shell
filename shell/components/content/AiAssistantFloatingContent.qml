@@ -378,8 +378,9 @@ FocusScope {
         command: ["curl", ...root._transportArgs, "-sS", "-N", root._baseUrl + "/events"]
 
         function handleLine(line) {
-            if (!line.startsWith("data:")) return
-            let data = line.substring(5).trim()
+            let text = line.trim()
+            if (!text.startsWith("data:")) return
+            let data = text.substring(5).trim()
             if (!data) return
             let evt
             try { evt = JSON.parse(data) } catch (e) { return }
@@ -394,8 +395,9 @@ FocusScope {
             }
         }
 
-        // SplitParser already hands back one line per read, with the newline
-        // removed — re-splitting on it never matches.
+        // SSE frames end with a blank line, and SplitParser carries that second
+        // newline over to the front of the next read ("\ndata: {...}"), so the
+        // prefix check only matches after a trim.
         stdout: SplitParser {
             onRead: data => eventsSubscriber.handleLine(data)
         }
