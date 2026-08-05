@@ -77,10 +77,13 @@ screenshot-format=png screenshot-high-bit-depth=no screenshot-png-compression=1"
 
 # Unlinking the lock while a run still holds fd 9 lets the next one lock a
 # fresh inode at the same path and proceed alongside it. An abandoned lock
-# needs no age check: the kernel drops the flock when the holder dies.
+# needs no age check: the kernel drops the flock when the holder dies — which
+# is why awww-daemon and mpvpaper are spawned with 9>&-: a daemon that inherits
+# the fd holds the flock for its whole life and refuses every later run.
 exec 9>"$LOCK"
 if ! flock -n 9; then
   echo "Already running" >&2
+  notify_failure "Another wallpaper change is still running"
   exit 1
 fi
 cleanup() {
@@ -123,7 +126,7 @@ swww_ready() {
 }
 
 start_swww() {
-  setsid nohup awww-daemon --format xrgb --no-cache >/dev/null 2>&1 &
+  setsid nohup awww-daemon --format xrgb --no-cache >/dev/null 2>&1 9>&- &
 }
 
 ensure_swww() {
@@ -322,7 +325,7 @@ elif is_video "$WALLPAPER_ABS"; then
 
   echo "Starting mpvpaper..."
   debug_log "Starting mpvpaper with: $WALLPAPER_ABS"
-  setsid nohup mpvpaper -o "$MPV_OPTS" '*' "$WALLPAPER_ABS" >"$THUMB_DIR/mpvpaper.log" 2>&1 &
+  setsid nohup mpvpaper -o "$MPV_OPTS" '*' "$WALLPAPER_ABS" >"$THUMB_DIR/mpvpaper.log" 2>&1 9>&- &
 
   for i in {1..20}; do
     if pgrep mpvpaper >/dev/null 2>&1; then
