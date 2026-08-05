@@ -1,27 +1,27 @@
-<p align="right"><b>English</b> | <a href="README.ja.md">日本語</a></p>
+<p align="right"><a href="README.en.md">English</a> | <b>日本語</b></p>
 
 <h1 align="center">
   <img src="shell/assets/branding/mugen-shell_logo.png" width="200" alt="mugen-shell logo" /><br/>
   mugen-shell
 </h1>
 
-<p align="center"><i>A 夢幻 desktop, built on Quickshell + Hyprland.</i></p>
+<p align="center"><i>Quickshell + Hyprland で組んだ、夢幻デスクトップ。</i></p>
 
 https://github.com/user-attachments/assets/375659b6-8b1d-4d08-8621-7451d6791e71
 
-Personal dotfiles for a Hyprland + Quickshell desktop, packaged so they can be installed via Nix flake or `make install`. Colors follow the wallpaper through Matugen, and a built-in assistant can drive the shell by chat or by voice.
+Hyprland + Quickshell デスクトップ向けの個人 dotfiles を、Nix flake または `make install` で入れられる形にまとめたものです。色は Matugen が壁紙から起こし、アシスタントがチャットと音声でシェルを動かします。
 
-Try it without installing anything — the demo VM autologins into Hyprland, with `mugen` / `mugen` as the credentials:
+インストールせずに試すならデモ VM が使えます。Hyprland に自動ログインします (資格情報は `mugen` / `mugen`):
 
 ```sh
 cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm
 ```
 
-Install paths, dependencies, keybindings, and configuration all live in [SETUP.md](SETUP.md); `Super + /` also brings up the shortcut reference in a running shell.
+インストール先、依存、キーバインド、それに Yura まわりの設定項目はすべて [SETUP.md](SETUP.md) にまとめました。シェルを起動したあとなら `Super + /` でも一覧が出ます。
 
 ---
 
-## Environment
+## 環境
 
 | | |
 |---|---|
@@ -38,29 +38,29 @@ Install paths, dependencies, keybindings, and configuration all live in [SETUP.m
 
 ## Yura
 
-Yura is the desktop assistant. It appears as an input row in the bar (`Super + Y`) and as a chat panel anchored to a screen corner (`Super + Shift + Y`), both sharing one conversation history. The backend is **mugen-ai**, a Go server in [`ai/`](ai/) that talks to local models through [Ollama](https://ollama.com), to Anthropic Claude, to Google Gemini, or to any OpenAI-compatible API. Files can ride along with a message: images go to models that can see, and anything that decodes as text is folded into the prompt, so a model without vision still reads what you attached.
+Yura はデスクトップのアシスタントです。バーの入力 (`Super + Y`) と画面コーナーのチャットパネル (`Super + Shift + Y`) の 2 か所に出てきて、会話履歴は共有します。バックエンドは [`ai/`](ai/) 配下の Go サーバ **mugen-ai** で、[Ollama](https://ollama.com) 経由のローカルモデル、Anthropic Claude、Google Gemini、OpenAI 互換 API に対応しています。メッセージにはファイルを添えられます。画像は目のあるモデルへ渡り、テキストとして読めるものはプロンプトに畳み込むので、視覚のないモデルでも中身は届きます。
 
-Yura also runs the desktop. "Set volume to 30" or "set a 25 minute timer" reaches the same panels you would click. Tool calls can be switched off per category, launching apps goes through an allowlist, and power actions were never handed over. External [MCP](https://modelcontextprotocol.io) servers join the same set, with their writes held for approval.
+Yura はデスクトップの操作も可能です。「音量 30 にして」「25 分タイマー」と言えば、自分でクリックするのと同じパネルに届きます。ツール呼び出しはカテゴリ単位で塞げますし、アプリの起動は許可リスト制です。電源まわりは最初から渡していません。外部の [MCP](https://modelcontextprotocol.io) サーバも同じ枠に入り、書き込み系は実行前に確認します。
 
-Voice input is optional. Hold `Super + Z`, talk, and the reply comes back spoken; the voice that ships is Japanese and reads whatever language it is given, until you hand a language its own voice in Settings. Everything is configured under **Settings → AI / Yura**, and [SETUP.md](SETUP.md#configuring-mugen-ai) covers the rest.
-
----
-
-## Features
-
-- A Material You palette regenerated from whatever wallpaper is up, still or video
-- Panels for the everyday things — calendar, timer, music, clipboard, notifications, app launcher, screenshots, and more
-- The usual system controls: audio, backlight, WiFi, Bluetooth, IME, battery, and the system tray
-- A standalone Settings window, so none of it needs a config file to change
+音声入力は任意です。`Super + Z` を押しながら話すと、返事は声で返ってきます。既定の声は日本語で、どの言語もそのまま読み上げます。言語ごとに別の声を割り当てたいときは Settings で選べます。設定は **Settings → AI / Yura** に集約してあり、残りは [SETUP.md](SETUP.md#mugen-ai-の設定) にまとめました。
 
 ---
 
-## Credits
+## 機能
 
-mugen-shell stands on [Hyprland](https://hyprland.org/), [Quickshell](https://quickshell.outfoxxed.me/), and many other projects — the full list is in [SETUP.md → Credits](SETUP.md#credits).
+- 壁紙から Material You のパレットを起こし直します。静止画でも動画でも同じように扱います
+- 日常のためのパネルが揃っています — カレンダー、タイマー、音楽、クリップボード、通知、アプリランチャー、スクリーンショットなど
+- ひととおりのシステム操作ができます — オーディオ、バックライト、WiFi、Bluetooth、IME、バッテリー、システムトレイ
+- Settings ウィンドウが独立しているので、設定ファイルを開かずにカスタマイズできます
 
 ---
 
-## License
+## クレジット
+
+mugen-shell は [Hyprland](https://hyprland.org/) と [Quickshell](https://quickshell.outfoxxed.me/) をはじめ、多くのプロジェクトの上に成り立っています。全リストは [SETUP.md → クレジット](SETUP.md#クレジット) にあります。
+
+---
+
+## ライセンス
 
 MIT License
