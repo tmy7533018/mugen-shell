@@ -409,7 +409,7 @@ Media, microphone and brightness keys work as they do anywhere else. Every bindi
 
 - [Hyprland](https://hyprland.org/) — Wayland compositor
 - [Quickshell](https://quickshell.outfoxxed.me/) — Shell framework
-- [Matugen](https://github.com/InioX/matugen) — Material You color generation
+- [Matugen](https://github.com/InioX/matugen) — Wallpaper-based color generation
 - [Cava](https://github.com/karlstav/cava) — Audio visualizer
 - [Kitty](https://sw.kovidgoyal.net/kitty/) — Terminal emulator
 - [playerctl](https://github.com/altdesktop/playerctl) — Media player control

@@ -409,7 +409,7 @@ context.modules = [
 
 - [Hyprland](https://hyprland.org/) — Wayland コンポジタ
 - [Quickshell](https://quickshell.outfoxxed.me/) — シェルフレームワーク
-- [Matugen](https://github.com/InioX/matugen) — Material You カラー生成
+- [Matugen](https://github.com/InioX/matugen) — 壁紙からのカラー生成
 - [Cava](https://github.com/karlstav/cava) — 音声ビジュアライザ
 - [Kitty](https://sw.kovidgoyal.net/kitty/) — ターミナルエミュレータ
 - [playerctl](https://github.com/altdesktop/playerctl) — メディアプレイヤー制御
