@@ -41,18 +41,31 @@ PanelWindow {
     readonly property bool fullscreenActive: hyprMonitor && hyprMonitor.activeWorkspace
         ? hyprMonitor.activeWorkspace.hasFullscreen
         : false
-    readonly property bool barHidden: fullscreenActive && modeManager.isMode("normal")
+    readonly property bool fullscreenHidden: fullscreenActive && modeManager.isMode("normal")
+
+    property bool lockHidden: false
+    property real lockOpacity: 1.0
+    property int lockClientPid: 0
+
+    readonly property bool barHidden: fullscreenHidden || lockHidden
 
     implicitHeight: modeManager.currentBarSize.height
-    exclusiveZone: barHidden ? 0 : modeManager.normalBarSize.height
-    visible: !barHidden
+    // Not lock-aware: dropping the zone reflows tiled windows, and
+    // misc:session_lock_xray makes that reflow visible through the lock face.
+    exclusiveZone: fullscreenHidden ? 0 : modeManager.normalBarSize.height
+    // The lock path fades to zero instead of unmapping: an unmapped layer has
+    // no exclusive zone either, whatever the property above says.
+    visible: !fullscreenHidden
     // Release keyboard focus in normal mode so launched apps can receive it.
     focusable: !modeManager.isMode("normal")
     color: "transparent"
 
     HyprlandFocusGrab {
         windows: [barWindow]
+        // A module open at lock time would leave a grab pulling focus toward
+        // an unmapped bar.
         active: !modeManager.isMode("normal") && modeManager.openedViaIpc
+            && !barWindow.lockHidden
     }
 
     Item {
@@ -313,6 +326,124 @@ PanelWindow {
         function voice_reply(text: string): void {
             if (aiAssistantLoader.item) aiAssistantLoader.item.showVoiceReply(text)
         }
+    }
+
+    function showAfterLock() {
+        if (!lockHidden) return
+        lockFadeOut.stop()
+        lockClientPid = 0
+        lockHidden = false
+        lockFadeIn.start()
+    }
+
+    // On contentItem, so surface.opacity and its Behavior stay untouched.
+    Binding {
+        target: barWindow.contentItem
+        property: "opacity"
+        value: barWindow.lockOpacity
+    }
+
+    NumberAnimation {
+        id: lockFadeOut
+        target: barWindow
+        property: "lockOpacity"
+        to: 0
+        duration: settingsManager.animationDurationMultiplier === 0
+            ? 0 : Theme.Motion.micro * settingsManager.animationDurationMultiplier
+        easing.type: Easing.OutCubic
+        onFinished: modeManager.closeAllModes()
+    }
+
+    NumberAnimation {
+        id: lockFadeIn
+        target: barWindow
+        property: "lockOpacity"
+        to: 1
+        duration: settingsManager.animationDurationMultiplier === 0
+            ? 0 : Theme.Motion.standard * settingsManager.animationDurationMultiplier
+        easing.type: Easing.OutCubic
+    }
+
+    IpcHandler {
+        target: "bar"
+
+        function rect(): string {
+            if (barWindow.barHidden || !barWindow.screen)
+                return "v2 none"
+
+            const w = Math.round(surface.width)
+            const h = Math.round(surface.height)
+            if (w <= 0 || h <= 0) return "v2 none"
+
+            // Rectangle silently clamps radius to half the shorter side, so the
+            // raw setting would let the lock's radius climb as the card grows.
+            const effective = Math.min(settingsManager.barRadius, Math.min(w, h) / 2)
+
+            const n = modeManager.normalBarSize
+            const nw = Math.round(barWindow.width - n.leftMargin - n.rightMargin)
+            const nh = Math.round(n.height - n.topMargin - n.bottomMargin)
+            const nEffective = Math.min(settingsManager.barRadius,
+                                        Math.min(nw, nh) / 2)
+
+            // Only exclusive top layer, so window-local == monitor-local.
+            return ["v2", barWindow.screen.name,
+                    Math.round(surface.x), Math.round(surface.y), w, h,
+                    Math.round(effective), surface.opacity.toFixed(2),
+                    settingsManager.barGradientEnabled ? 1 : 0,
+                    theme.themeMode === "light" ? "light" : "dark",
+                    settingsManager.reduceMotion ? 1 : 0,
+                    settingsManager.animationDurationMultiplier.toFixed(2),
+                    Math.round(n.leftMargin), Math.round(n.topMargin),
+                    nw, nh, Math.round(nEffective)].join(" ")
+        }
+
+        function hide(pid: int): string {
+            barWindow.lockClientPid = pid
+            if (!barWindow.lockHidden) {
+                barWindow.lockHidden = true
+                lockFadeIn.stop()
+                lockFadeOut.start()
+            }
+            return "ok"
+        }
+
+        // Not `show`: IpcHandler resolves that against QObject and answers the
+        // call with its handler listing instead.
+        function restore(): string {
+            barWindow.showAfterLock()
+            return "ok"
+        }
+    }
+
+    Timer {
+        id: lockAliveCheck
+        interval: 60000
+        repeat: true
+        running: barWindow.lockHidden && barWindow.lockClientPid > 0
+        onTriggered: lockProbe.running = true
+    }
+
+    Process {
+        id: lockProbe
+        running: false
+        // `ps -p` on a resolved pid avoids the pgrep -f self-match. The verdict
+        // is on stdout because qmllint rejects any onExited handler.
+        command: ["sh", "-c",
+                  "ps -p \"$1\" -o args= 2>/dev/null | grep -q lock-shell.qml"
+                  + " && echo alive || echo dead",
+                  "sh", String(barWindow.lockClientPid)]
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (this.text.trim() !== "alive") barWindow.showAfterLock()
+            }
+        }
+    }
+
+    Timer {
+        interval: 15 * 60 * 1000
+        running: barWindow.lockHidden && barWindow.lockClientPid <= 0
+        onTriggered: barWindow.showAfterLock()
     }
 
     // If yura-shell dies mid-stream its clearing IPC never arrives, so the
