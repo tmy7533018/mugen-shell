@@ -59,6 +59,12 @@ in
   config = lib.mkIf cfg.enable (lib.mkMerge [
     {
       environment.systemPackages = [ cfg.package ];
+
+      # The lock screen's own PAM stack. ext-session-lock keeps the session
+      # locked even if the client dies, so a missing stack does not fail open
+      # — it strands the session with no way to authenticate. Deliberately not
+      # `login`, whose auth line carries nullok.
+      security.pam.services.mugen-lock = { };
     }
 
     (lib.mkIf (cfg.fcitx5Addons != []) {
