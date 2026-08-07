@@ -53,6 +53,10 @@ Row {
         Item {
             width: root.barWidth
             height: root.maxBarHeight
+
+            // updateAppearance() assigns targetY, which severs its binding, so
+            // a container that is sized after construction never re-centres.
+            onHeightChanged: bar.updateAppearance()
             
             Rectangle {
                 id: bar
