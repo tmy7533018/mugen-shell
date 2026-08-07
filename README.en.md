@@ -63,7 +63,7 @@ Every configuration option is documented in [SETUP.en.md](SETUP.en.md).
 
 ## Credits
 
-mugen-shell stands on [Hyprland](https://hyprland.org/), [Quickshell](https://quickshell.outfoxxed.me/), and many other projects — the full list is in [SETUP.en.md → Credits](SETUP.en.md#credits).
+mugen-shell stands on [Hyprland](https://hypr.land/), [Quickshell](https://quickshell.outfoxxed.me/), and many other projects — the full list is in [SETUP.en.md → Credits](SETUP.en.md#credits).
 
 ---
 

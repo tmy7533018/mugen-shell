@@ -63,7 +63,7 @@ cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./resul
 
 ## クレジット
 
-mugen-shell は [Hyprland](https://hyprland.org/) と [Quickshell](https://quickshell.outfoxxed.me/) をはじめ、多くのプロジェクトの上に成り立っています。全リストは [SETUP.md → クレジット](SETUP.md#クレジット) にあります。
+mugen-shell は [Hyprland](https://hypr.land/) と [Quickshell](https://quickshell.outfoxxed.me/) をはじめ、多くのプロジェクトの上に成り立っています。全リストは [SETUP.md → クレジット](SETUP.md#クレジット) にあります。
 
 ---
 

@@ -407,7 +407,7 @@ Media, microphone and brightness keys work as they do anywhere else. Every bindi
 
 ## Credits
 
-- [Hyprland](https://hyprland.org/) — Wayland compositor
+- [Hyprland](https://hypr.land/) — Wayland compositor
 - [Quickshell](https://quickshell.outfoxxed.me/) — Shell framework
 - [Matugen](https://github.com/InioX/matugen) — Wallpaper-based color generation
 - [Cava](https://github.com/karlstav/cava) — Audio visualizer
