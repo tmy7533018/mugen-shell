@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell.Io
+import "../../lib" as Theme
 
 QtObject {
     id: weatherManager
@@ -46,6 +47,69 @@ QtObject {
         if (!enabled) return
         if (locationResolved) fetchForecast()
         else resolveLocation()
+    }
+
+    readonly property string cacheFile: Theme.Paths.cacheDir + "/weather.json"
+
+    readonly property int cacheMaxAgeMs: 2 * 60 * 60 * 1000
+
+    function saveCache() {
+        let json = JSON.stringify({
+            "savedAt": Date.now(),
+            "unit": unit,
+            "locationName": locationName,
+            "temperature": temperature,
+            "feelsLike": feelsLike,
+            "humidity": humidity,
+            "wind": wind,
+            "weatherCode": weatherCode,
+            "isDay": isDay,
+            "hourly": hourly,
+            "daily": daily
+        })
+        saveCacheProcess.command = ["bash", "-c",
+            "mkdir -p \"" + Theme.Paths.cacheDir + "\""
+            + " && tmp=\"" + cacheFile + ".$$.tmp\""
+            + " && cat > \"$tmp\" <<'JSON_EOF' && mv \"$tmp\" \"" + cacheFile + "\"\n"
+            + json + "\nJSON_EOF"]
+        saveCacheProcess.running = true
+    }
+
+    function applyCache(text) {
+        try {
+            let c = JSON.parse(text)
+            // A cached forecast in the other unit reads as a plausible wrong
+            // temperature rather than as missing data.
+            if (c.unit !== unit) return
+            if (!c.savedAt || Date.now() - c.savedAt > cacheMaxAgeMs) return
+            temperature = c.temperature
+            feelsLike = c.feelsLike
+            humidity = c.humidity
+            wind = c.wind
+            weatherCode = c.weatherCode
+            isDay = c.isDay
+            if (c.locationName) locationName = c.locationName
+            if (c.hourly) hourly = c.hourly
+            if (c.daily) daily = c.daily
+            ready = true
+        } catch (e) {}
+    }
+
+    property Process saveCacheProcess: Process {
+        command: []
+        running: false
+    }
+
+    property Process loadCacheProcess: Process {
+        command: ["cat", weatherManager.cacheFile]
+        running: false
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                // A live forecast landing first must win over the cached one.
+                if (!weatherManager.ready) weatherManager.applyCache(this.text)
+            }
+        }
     }
 
     // A change landing while the matching curl is still in flight is queued
@@ -246,6 +310,7 @@ QtObject {
                     weatherManager.ready = true
                     weatherManager.errorText = ""
                     weatherManager.cancelRetry()
+                    weatherManager.saveCache()
                 } catch (e) {
                     if (!weatherManager.ready) weatherManager.errorText = "weather unavailable"
                     weatherManager.scheduleRetry()
@@ -266,6 +331,7 @@ QtObject {
     }
 
     Component.onCompleted: {
+        if (enabled) loadCacheProcess.running = true
         Qt.callLater(() => {
             if (enabled) resolveLocation()
         })
