@@ -10,6 +10,25 @@
 -- so a dispatch fired at shell startup picks the hl.dsp.* syntax right away.
 hl.env("HYPR_CONFIG_LUA", "1")
 
+-- Compositor settings the lock screen depends on. Split out from autostart
+-- because these change how the session behaves while locked.
+hl.config({
+    misc = {
+        -- Without xray Hyprland primes the output black under the lock, so the
+        -- face has nothing to fade against and the bar cannot morph into it.
+        -- ⚠️ It also means anything the lock surface leaves translucent shows
+        -- the desktop. Turn it off if you make the face see-through.
+        session_lock_xray          = true,
+        -- All-or-nothing and held for as long as the surface exists, so it
+        -- cannot be animated. The lock raises it itself while it is up.
+        session_lock_blur          = false,
+        -- Without this a lock client that died cannot be replaced and the only
+        -- way back is a TTY: the second client is killed with
+        -- "wl_display error: invalid object".
+        allow_session_lock_restore = true,
+    },
+})
+
 hl.on("hyprland.start", function()
     -- Hand the compositor's address to systemd, then pull up the session
     -- target: graphical-session.target refuses a manual start, so user
