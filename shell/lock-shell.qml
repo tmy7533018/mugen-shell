@@ -14,8 +14,7 @@ import "./components/managers" as Managers
 ShellRoot {
     id: root
 
-    // ext-session-lock holds the lock even if this process dies, so locking
-    // before PAM answers would strand the session on a broken stack.
+    // ext-session-lock holds the lock even if this process dies.
     readonly property var pamServices: {
         const override = Quickshell.env("MUGEN_LOCK_PAM_SERVICE")
         return override && override !== ""
@@ -40,8 +39,6 @@ ShellRoot {
     }
 
     property string password: ""
-    property string statusMessage: ""
-    property bool statusIsError: false
 
     signal keystroke
     signal authFailed
@@ -66,8 +63,7 @@ ShellRoot {
     property real barExitH: 0
     property real barExitRadius: 0
 
-    // A fullscreen window hides the bar, so locking with no morph source is
-    // routine rather than exceptional: the face still has to land somewhere.
+    // A fullscreen window hides the bar, so a missing morph source is routine.
     function largestScreenName() {
         let best = ""
         let bestArea = -1
@@ -90,6 +86,13 @@ ShellRoot {
     }
 
     readonly property real surfaceOpacity: tuningKnob("MUGEN_LOCK_OPACITY", 0.92)
+
+    // Pre-scale, in the same margin units the bar itself uses.
+    readonly property int faceMarginBase: {
+        const override = parseInt(Quickshell.env("MUGEN_LOCK_MARGIN"), 10)
+        return isFinite(override) && override >= 0 && override <= 200
+            ? override : settingsManager.barMarginV
+    }
     readonly property real dimStrength: tuningKnob("MUGEN_LOCK_DIM", 0.30)
 
     property bool rectHandled: false
@@ -102,6 +105,9 @@ ShellRoot {
     property bool entryMorph: false
     property string entryScreen: ""
 
+    // Held so the unlock reads on the orb before the geometry moves.
+    readonly property int unlockGrace: morphDuration === 0 ? 0 : 260
+
     readonly property int morphDuration:
         settingsManager.reduceMotion || settingsManager.animationDurationMultiplier === 0
             ? 0
@@ -110,6 +116,25 @@ ShellRoot {
     property string timeText: ""
     property date today: new Date()
 
+    property var calendarEvents: []
+    property string calendarDay: ""
+
+    // The lock can outlast midnight, so the grid reloads off the clock tick.
+    function reloadCalendar() {
+        const key = Qt.formatDate(today, "yyyy-MM-dd")
+        if (key === calendarDay) return
+        calendarDay = key
+
+        const year = today.getFullYear()
+        const month = today.getMonth()
+        calendarProcess.command = [
+            "python3", Quickshell.shellDir + "/scripts/calendar-cli.py", "list-range",
+            "--start", Qt.formatDate(new Date(year, month - 1, 1), "yyyy-MM-dd"),
+            "--end", Qt.formatDate(new Date(year, month + 2, 0), "yyyy-MM-dd")
+        ]
+        calendarProcess.running = true
+    }
+
     readonly property string weatherHighLow: {
         const day = weatherManager.daily && weatherManager.daily.length > 0
             ? weatherManager.daily[0] : null
@@ -117,8 +142,7 @@ ShellRoot {
         return "H" + Math.round(day.tempMax) + "°  L" + Math.round(day.tempMin) + "°"
     }
 
-    // Each entry is an index in the power tile model, not a systemd verb: the
-    // surface has no business knowing how the session ends.
+    // An index in the power tile model, not a systemd verb.
     readonly property var powerCommands: [
         ["systemctl", "poweroff"],
         ["systemctl", "suspend"],
@@ -147,6 +171,7 @@ ShellRoot {
         timeText = (settingsManager.clockShowSeconds
             ? hh + ":" + mm + ":" + ss : hh + ":" + mm) + suffix
         today = now
+        reloadCalendar()
     }
 
     function scheduleClockTick() {
@@ -174,8 +199,6 @@ ShellRoot {
     function submit() {
         if (unlocking || authenticating || !armed || password === "") return
         authenticating = true
-        statusIsError = false
-        statusMessage = "Checking"
         pam.respond(password)
         password = ""
     }
@@ -194,8 +217,7 @@ ShellRoot {
         if (lockEngaged) {
             pamService = 0
             pamRetryTimer.restart()
-            statusIsError = true
-            statusMessage = "Authentication is unavailable"
+            console.warn("lock: no usable PAM service, retrying")
             return
         }
         refusedToLock = true
@@ -207,8 +229,7 @@ ShellRoot {
             "notify-send", "-u", "critical", "mugen-shell",
             "Lock screen has no usable PAM service; the session was not locked."
         ])
-        // Qt.exit() is a no-op here and the process would keep running long
-        // enough for the arm deadline to lock a session nothing can unlock.
+        // Qt.exit() is a no-op here; the arm deadline would then lock for good.
         Qt.quit()
     }
 
@@ -271,20 +292,14 @@ ShellRoot {
                                  "bar", "restore"])
     }
 
-    // The bar's blur comes from a layerrule on the `quickshell` namespace, which
-    // cannot match a session lock surface. misc:session_lock_blur is the only
-    // blur left and it switches the whole output at once, so it goes up before
-    // the surface exists: the one step then lands on the frame the session
-    // locks, where windows vanish anyway. Raising it mid-animation reads as a
-    // pop. It does nothing while unlocked.
+    // Raised before the surface exists: the step lands where windows vanish.
     function setLockBlur(on) {
         Quickshell.execDetached(["hyprctl", "eval",
             "hl.config({ misc = { session_lock_blur = "
                 + (on ? "true" : "false") + " } })"])
     }
 
-    // mugen-lock.sh softened the global blur radius before this process existed
-    // and handed back the values to put back.
+    // mugen-lock.sh softened the global radius and handed back the values.
     function restoreDesktopBlur() {
         const parts = String(Quickshell.env("MUGEN_LOCK_BLUR_RESTORE"))
             .trim().split(/\s+/)
@@ -303,12 +318,16 @@ ShellRoot {
         entryStarted = true
     }
 
-    function beginUnlock() {
-        unlocking = true
-        statusIsError = false
-        statusMessage = "Welcome back"
+    function releaseBlur() {
         setLockBlur(false)
         restoreDesktopBlur()
+    }
+
+    function beginUnlock() {
+        unlocking = true
+        // Dropped with the fold, or the step shows with nothing to carry it.
+        if (unlockGrace > 0) blurReleaseTimer.start()
+        else releaseBlur()
         barRestoreTimer.start()
         unlockTimer.start()
     }
@@ -317,9 +336,7 @@ ShellRoot {
     Theme.Typography { id: typography }
     Theme.Colors { id: colors }
 
-    // Colors resolves the mode through a `cat` subprocess. A short-lived process
-    // paints before that lands, so the face would open in the default dark
-    // palette and then animate to light in front of the user.
+    // Colors resolves the mode via a subprocess; the face would open dark.
     FileView {
         id: themeModeSeed
         path: colors.themeModeFile
@@ -333,8 +350,14 @@ ShellRoot {
     }
 
     Timer {
+        id: blurReleaseTimer
+        interval: root.unlockGrace
+        onTriggered: root.releaseBlur()
+    }
+
+    Timer {
         id: unlockTimer
-        interval: root.morphDuration + 40
+        interval: root.unlockGrace + root.morphDuration + 40
         onTriggered: {
             root.lockEngaged = false
             quitTimer.start()
@@ -357,6 +380,21 @@ ShellRoot {
         onTriggered: {
             if (barRectProcess.running) barRectProcess.signal(15)
             root.applyBarRect("")
+        }
+    }
+
+    Process {
+        id: calendarProcess
+
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const parsed = JSON.parse(this.text || "{}")
+                    root.calendarEvents = Array.isArray(parsed.events) ? parsed.events : []
+                } catch (e) {
+                    root.calendarEvents = []
+                }
+            }
         }
     }
 
@@ -385,9 +423,9 @@ ShellRoot {
 
     Timer {
         id: barRestoreTimer
-        // Not earlier: the face is still taller than the bar until OutExpo has
-        // all but landed, and a bar visible under a larger face reads as two.
-        interval: Math.max(0, root.morphDuration - root.barFadeInMs)
+        // Not earlier: a bar under a still-larger face reads as two.
+        interval: root.unlockGrace
+            + Math.max(0, root.morphDuration - root.barFadeInMs)
         onTriggered: root.sendBarRestore()
     }
 
@@ -399,7 +437,12 @@ ShellRoot {
     }
 
     Managers.MusicPlayerManager { id: musicPlayerManager }
-    Managers.CavaManager { id: cava }
+    Managers.CavaManager {
+        id: cava
+
+        // It spawns nothing until asked; the visualiser sits at its floor.
+        Component.onCompleted: isActive = true
+    }
     Theme.IconProvider { id: icons }
 
     PamContext {
@@ -409,12 +452,6 @@ ShellRoot {
             if (!responseRequired) return
             root.armed = true
             root.lockWanted = true
-        }
-
-        onPamMessage: {
-            if (responseRequired || message === "") return
-            root.statusMessage = message
-            root.statusIsError = messageIsError
         }
 
         onCompleted: result => {
@@ -427,9 +464,6 @@ ShellRoot {
             }
 
             root.armed = false
-            root.statusIsError = true
-            if (root.statusMessage === "" || root.statusMessage === "Checking")
-                root.statusMessage = "Authentication failed"
             root.authFailed()
             root.startPam()
         }
@@ -440,8 +474,7 @@ ShellRoot {
                 root.nextPamService()
                 return
             }
-            root.statusIsError = true
-            root.statusMessage = PamError.toString(error)
+            console.warn("lock: PAM error - " + PamError.toString(error))
             root.startPam()
         }
     }
@@ -524,21 +557,24 @@ ShellRoot {
                 exitHeight: root.barExitH
                 exitRadius: root.barExitRadius
 
-                marginBase: settingsManager.barMarginV
+                marginBase: root.faceMarginBase
                 radiusBase: settingsManager.barRadius
                 faceOpacity: root.surfaceOpacity
                 dimStrength: root.dimStrength
 
                 timeText: root.timeText
                 today: root.today
+                calendarWeekStart: settingsManager.calendarWeekStart
+                calendarEvents: root.calendarEvents
 
                 passwordLength: root.password.length
-                pamMessage: root.statusMessage
-                pamIsError: root.statusIsError
+                authenticating: root.authenticating
                 unlocking: root.unlocking
+                unlockGrace: root.unlockGrace
                 reduceMotion: settingsManager.reduceMotion
 
                 iconsBase: Quickshell.shellDir + "/assets/icons"
+                texturesBase: Quickshell.shellDir + "/assets/textures"
                 cavaManager: cava
 
                 weatherPalette: weatherManager.ready
@@ -566,6 +602,7 @@ ShellRoot {
                 mediaArtUrl: musicPlayerManager.artUrl
                 mediaPosition: musicPlayerManager.position
                 mediaDuration: musicPlayerManager.duration
+                mediaAccent: musicPlayerManager.accentColor
 
                 onPreviousRequested: musicPlayerManager.previous()
                 onPlayPauseRequested: musicPlayerManager.playPause()

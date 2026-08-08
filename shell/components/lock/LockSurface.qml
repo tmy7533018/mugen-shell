@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Qt5Compat.GraphicalEffects
 import "../ui" as UI
 import "../common" as Common
 import "../content" as Content
@@ -40,7 +41,11 @@ Item {
     property string timeText: ""
     property date today: new Date()
 
+    property int calendarWeekStart: 0
+    property var calendarEvents: []
+
     property string iconsBase: ""
+    property string texturesBase: ""
     property var cavaManager
 
     property var weatherPalette: null
@@ -58,6 +63,7 @@ Item {
     property string mediaArtUrl: ""
     property real mediaPosition: 0
     property real mediaDuration: 0
+    property color mediaAccent: "#a68cd9"
 
     signal previousRequested
     signal playPauseRequested
@@ -65,9 +71,9 @@ Item {
     signal powerActionRequested(int action)
 
     property int passwordLength: 0
-    property string pamMessage: ""
-    property bool pamIsError: false
+    property bool authenticating: false
     property bool unlocking: false
+    property int unlockGrace: 0
     property bool reduceMotion: false
 
     readonly property bool morphing:
@@ -110,27 +116,36 @@ Item {
     readonly property real cx: liveX + (liveW - faceW) / 2
     readonly property real cy: liveY + (liveH - faceH) / 2
 
-    // Pinned while leaving: the face collapses far faster than the content can
-    // fade, so following it would fling the clock off the top of the screen.
+    // Pinned while leaving: the face collapses faster than the content fades.
     readonly property real contentX: exiting ? faceX : cx
     readonly property real contentY: exiting ? faceY : cy
 
-    readonly property real headP: Math.min(1, contentFade / 0.6)
-    readonly property real footP: Math.max(0, (contentFade - 0.35) / 0.65)
+    // Staggered starts, shared finish, so the sweep costs no extra time.
+    readonly property real revealStagger: 0.26
 
-    // A 4x4 grid of cells. Columns are uneven: the first holds the clock stack
-    // and the last is a narrow strip of power buttons.
-    readonly property var colFrac: [0.327, 0.268, 0.270, 0.127]
+    function columnReveal(col) {
+        const start = col * revealStagger
+        const span = 1 - revealStagger * (colUnits.length - 1)
+        return Math.max(0, Math.min(1, (contentFade - start) / span))
+    }
+
+    // One square unit per row; the power column is exactly that square.
+    readonly property var colUnits: [2, 2, 2, 1]
     readonly property int rowCount: 4
 
-    readonly property real gridPadX: faceW * 0.05
-    readonly property real gridPadY: faceH * 0.085
+    readonly property real gridPadY: faceH * 0.172
     readonly property real gutterX: faceW * 0.007
     readonly property real gutterY: faceH * 0.012
 
-    readonly property real gridW: faceW - gridPadX * 2 - gutterX * (colFrac.length - 1)
     readonly property real gridH: faceH - gridPadY * 2 - gutterY * (rowCount - 1)
     readonly property real cellH: gridH / rowCount
+
+    readonly property real gridW: {
+        let units = 0
+        for (const u of colUnits) units += u
+        return cellH * units + gutterX * (colUnits.length - 1)
+    }
+    readonly property real gridPadX: (faceW - gridW) / 2
 
     readonly property real boxRadius: Math.round(faceH * 0.022)
 
@@ -141,14 +156,14 @@ Item {
 
     function colLeft(c) {
         let x = gridPadX
-        for (let i = 0; i < c; i++) x += colFrac[i] * gridW + gutterX
+        for (let i = 0; i < c; i++) x += colUnits[i] * cellH + gutterX
         return x
     }
 
     function colSpan(c, span) {
-        let w = 0
-        for (let i = c; i < c + span; i++) w += colFrac[i] * gridW
-        return w + gutterX * (span - 1)
+        let units = 0
+        for (let i = c; i < c + span; i++) units += colUnits[i]
+        return units * cellH + gutterX * (span - 1)
     }
 
     function rowTop(r) {
@@ -162,11 +177,18 @@ Item {
 
     readonly property color clockColor:
         themeRef ? themeRef.textPrimary : "#f2f3ff"
-    readonly property color pamColor:
+    readonly property color subtleColor:
         themeRef ? themeRef.textSecondary : Qt.rgba(235 / 255, 238 / 255, 1, 0.55)
-    readonly property color pamErrorColor: "#ff9db0"
+    readonly property color errorColor: "#ff9db0"
+    // The wallpaper's colour, the same one the volume module blooms with.
     readonly property color orbBase:
-        themeRef ? themeRef.glowTertiary : "#7b6cf6"
+        themeRef ? themeRef.glowPrimary : "#a68cd9"
+    readonly property color accentColor:
+        themeRef ? themeRef.accent : "#a68cd9"
+    readonly property color glowSecondaryColor:
+        themeRef ? themeRef.glowSecondary : "#a68cd9"
+    readonly property color glowTertiaryColor:
+        themeRef ? themeRef.glowTertiary : "#a68cd9"
 
     property int clockWeight: 200
     property real clockOpacity: 0.7
@@ -178,9 +200,26 @@ Item {
     readonly property real orbCY: contentY + rowTop(0) + orbBoxH * 0.5
     readonly property int chargeLength: Math.min(passwordLength, 14)
 
+    // Outside the glow, which grows with charge and wobble to about 1.07x.
+    readonly property real moteInner:
+        orbSize * 0.53 * orbSlot.chargeScale * 1.16 + orbSize * 0.06
+    readonly property real moteOuter: Math.min(orbBoxW, orbBoxH) * 0.47
+
+    property int moteCursor: 0
+
+    // Pooled: replacing the model restarts every mote in flight.
+    function spawnMote() {
+        const mote = moteField.itemAt(moteCursor)
+        if (mote) mote.launch()
+        moteCursor = (moteCursor + 1) % moteField.count
+    }
+
     function bumpOrb() {
         if (reduceMotion) return
         wobbleAnim.restart()
+        spawnMote()
+        glowOrb.bump()
+        hourSand.bump()
     }
 
     function shakeOrb() {
@@ -203,18 +242,30 @@ Item {
         else scaleEntry.start()
     }
 
-    onUnlockingChanged: {
-        if (!unlocking) return
-        morphEntry.stop()
-        scaleEntry.stop()
+    function startExit() {
         if (morphing) {
-            // Flag before the animation: the geometry bindings read it, and
-            // mpH is still 1 here so nothing jumps.
+            // Flag before the animation: mpH is still 1, so nothing jumps.
             exiting = true
             morphExit.start()
         } else {
             scaleExit.start()
         }
+    }
+
+    // Held so the unlock reads on the orb before the geometry moves.
+    onUnlockingChanged: {
+        if (!unlocking) return
+        morphEntry.stop()
+        scaleEntry.stop()
+        successBloom.start()
+        if (unlockGrace > 0) exitDelay.restart()
+        else startExit()
+    }
+
+    Timer {
+        id: exitDelay
+        interval: root.unlockGrace
+        onTriggered: root.startExit()
     }
 
     Component {
@@ -238,7 +289,7 @@ Item {
                         color: root.weatherPalette ? root.weatherPalette.bg3 : "transparent"
                     }
                 }
-                opacity: root.weatherPalette ? 0.85 : 0
+                opacity: root.weatherPalette ? 0.65 : 0
 
                 Behavior on opacity {
                     NumberAnimation { duration: 400; easing.type: Easing.InOutCubic }
@@ -249,14 +300,13 @@ Item {
                 anchors.fill: parent
                 wtype: root.weatherParticleType
                 windKmh: root.weatherWind
-                tint: root.weatherPalette ? root.weatherPalette.accent : root.orbBase
+                tint: root.weatherPalette ? root.weatherPalette.accent : root.accentColor
                 active: !root.reduceMotion
             }
         }
     }
 
-    // session_lock_xray keeps painting the desktop wherever this surface is
-    // translucent, so a screen without the face has to be covered outright.
+    // session_lock_xray paints the desktop through anything translucent.
     Rectangle {
         anchors.fill: parent
         color: Qt.rgba(0.02, 0.02, 0.06, 1)
@@ -281,9 +331,7 @@ Item {
 
             // Never `radius`: MugenSurface binds it to baseRadius.
             baseRadius: root.liveRadius
-            // The face lands on the bar's rectangle but carries none of its
-            // modules, so unlocking has to cross-fade into the restored bar:
-            // destroying the lock surface reveals them in a single frame.
+            // The face carries none of the bar's modules, so unlocking cross-fades.
             opacity: (root.startOpacity
                 + (root.faceOpacity - root.startOpacity) * root.mpH) * root.exitFade
 
@@ -292,9 +340,7 @@ Item {
             reduceMotion: root.reduceMotion
         }
 
-        // The content belongs to the panel, so the collapsing edge has to wipe
-        // it: elements leave the face at different times (the orb 120ms before
-        // the clock) and no single fade duration can cover both.
+        // Elements leave the face at different times; one fade cannot cover both.
         Item {
             id: faceClip
             x: root.liveX
@@ -304,8 +350,7 @@ Item {
             clip: true
             opacity: root.contentFade
 
-            // Children stay in surface coordinates; this cancels the clip's own
-            // offset so the layout never has to know about it.
+            // Cancels the clip's offset so children stay in surface coordinates.
             Item {
                 x: -faceClip.x
                 y: -faceClip.y
@@ -318,7 +363,7 @@ Item {
                     width: root.colSpan(0, 1)
                     height: root.rowSpan(1)
                     cornerRadius: root.boxRadius
-                    opacity: root.headP
+                    opacity: root.columnReveal(0)
 
                     Text {
                         anchors.centerIn: parent
@@ -331,8 +376,8 @@ Item {
                         minimumPixelSize: Math.round(root.cellH * 0.2)
                         font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
                         font.weight: root.clockWeight
-                        font.pixelSize: Math.round(root.cellH * 0.62)
-                        font.letterSpacing: root.cellH * 0.62 * 0.02
+                        font.pixelSize: Math.round(root.cellH * 0.5)
+                        font.letterSpacing: root.cellH * 0.5 * 0.02
                         font.hintingPreference: root.typo
                             ? root.typo.hintLarge : Font.PreferNoHinting
                     }
@@ -344,17 +389,17 @@ Item {
                     width: root.colSpan(0, 1)
                     height: root.rowSpan(1)
                     cornerRadius: root.boxRadius
-                    opacity: root.headP
+                    opacity: root.columnReveal(0)
 
-                    LockCalendarStrip {
+                    LockCalendarMonth {
                         anchors.fill: parent
-                        anchors.margins: root.cellH * 0.18
                         typo: root.typo
                         tint: root.clockColor
-                        faintTint: root.pamColor
-                        todayTint: root.orbBase
-                        unit: Math.round(root.cellH * 0.17)
+                        faintTint: root.subtleColor
+                        accent: root.accentColor
                         today: root.today
+                        weekStart: root.calendarWeekStart
+                        events: root.calendarEvents
                     }
                 }
 
@@ -364,7 +409,7 @@ Item {
                     width: root.colSpan(0, 1)
                     height: root.rowSpan(2)
                     cornerRadius: root.boxRadius
-                    opacity: root.footP
+                    opacity: root.columnReveal(0)
                     background: weatherBackdrop
 
                     LockWeatherBox {
@@ -372,7 +417,7 @@ Item {
                         anchors.margins: root.cellH * 0.2
                         typo: root.typo
                         tint: root.clockColor
-                        faintTint: root.pamColor
+                        faintTint: root.subtleColor
                         unit: Math.round(root.cellH * 0.2)
                         iconSource: root.weatherIconSource
                         temperature: root.weatherText
@@ -388,25 +433,85 @@ Item {
                     width: root.colSpan(1, 1)
                     height: root.rowSpan(2)
                     cornerRadius: root.boxRadius
-                    opacity: root.headP
+                    opacity: root.columnReveal(1)
 
-                    Text {
+                    Item {
+                        id: lockIcon
+
                         anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: root.cellH * 0.18
-                        width: parent.width * 0.8
-                        text: root.pamMessage
-                        color: root.pamIsError ? root.pamErrorColor : root.pamColor
-                        horizontalAlignment: Text.AlignHCenter
-                        wrapMode: Text.Wrap
-                        maximumLineCount: 2
-                        elide: Text.ElideRight
-                        font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
-                        font.pixelSize: Math.round(root.cellH * 0.11)
-                        font.letterSpacing: root.cellH * 0.11 * 0.18
+                        anchors.top: parent.top
+                        anchors.topMargin: root.cellH * 0.17
+                        width: root.cellH * 0.13
+                        height: width
 
-                        Behavior on color {
-                            ColorAnimation { duration: 300 }
+                        property real glyphOpacity: root.unlocking ? 0.85 : 0.4
+
+                        Behavior on glyphOpacity {
+                            NumberAnimation { duration: 200 }
+                        }
+
+                        // Under the body, so the feet hide when closed and show as it swings.
+                        Item {
+                            width: parent.width
+                            height: parent.height
+
+                            // Lifted first, or the free foot sweeps through the body.
+                            y: root.unlocking ? -height * 0.15 : 0
+
+                            Behavior on y {
+                                NumberAnimation {
+                                    duration: 260; easing.type: Easing.OutCubic
+                                }
+                            }
+
+                            transform: Rotation {
+                                // Swung about the standing foot, as a shackle clears its body.
+                                origin.x: lockIcon.width * (9 / 24)
+                                origin.y: lockIcon.height * (8 / 24)
+                                // Upright: a tilted axis lands the half turn skewed, not mirrored.
+                                axis: Qt.vector3d(0, 1, 0)
+                                angle: root.unlocking ? 180 : 0
+
+                                Behavior on angle {
+                                    NumberAnimation {
+                                        duration: 380; easing.type: Easing.OutCubic
+                                    }
+                                }
+                            }
+
+                            Image {
+                                id: shackleGlyph
+                                anchors.fill: parent
+                                source: root.iconsBase + "/lock-shackle.svg"
+                                sourceSize.width: width
+                                sourceSize.height: height
+                                mipmap: true
+                                visible: false
+                            }
+
+                            ColorOverlay {
+                                anchors.fill: parent
+                                source: shackleGlyph
+                                color: root.clockColor
+                                opacity: lockIcon.glyphOpacity
+                            }
+                        }
+
+                        Image {
+                            id: bodyGlyph
+                            anchors.fill: parent
+                            source: root.iconsBase + "/lock-body.svg"
+                            sourceSize.width: width
+                            sourceSize.height: height
+                            mipmap: true
+                            visible: false
+                        }
+
+                        ColorOverlay {
+                            anchors.fill: parent
+                            source: bodyGlyph
+                            color: root.clockColor
+                            opacity: lockIcon.glyphOpacity
                         }
                     }
                 }
@@ -417,7 +522,19 @@ Item {
                     width: root.colSpan(2, 1)
                     height: root.rowSpan(1)
                     cornerRadius: root.boxRadius
-                    opacity: root.footP
+                    opacity: root.columnReveal(2)
+
+                    LockMoonPhase {
+                        anchors.fill: parent
+                        typo: root.typo
+                        textureSource: root.texturesBase === ""
+                            ? "" : root.texturesBase + "/moon-nearside.png"
+                        tint: root.clockColor
+                        faintTint: root.subtleColor
+                        accent: root.accentColor
+                        today: root.today
+                        running: !root.reduceMotion
+                    }
                 }
 
                 LockBox {
@@ -426,7 +543,19 @@ Item {
                     width: root.colSpan(2, 1)
                     height: root.rowSpan(1)
                     cornerRadius: root.boxRadius
-                    opacity: root.footP
+                    opacity: root.columnReveal(2)
+
+                    LockGlowOrb {
+                        id: glowOrb
+                        anchors.fill: parent
+                        typo: root.typo
+                        tint: root.clockColor
+                        faintTint: root.subtleColor
+                        accent: root.accentColor
+                        glow: root.orbBase
+                        today: root.today
+                        running: !root.reduceMotion
+                    }
                 }
 
                 LockMediaBlock {
@@ -435,12 +564,13 @@ Item {
                     width: root.colSpan(1, 2)
                     height: root.rowSpan(1)
                     cornerRadius: root.boxRadius
-                    opacity: root.footP
+                    opacity: root.columnReveal(1)
 
                     typo: root.typo
                     tint: root.clockColor
-                    faintTint: root.pamColor
+                    faintTint: root.subtleColor
                     iconsBase: root.iconsBase
+                    accent: root.mediaAccent
                     isPlaying: root.mediaIsPlaying
                     title: root.mediaTitle
                     artist: root.mediaArtist
@@ -459,7 +589,7 @@ Item {
                     width: root.colSpan(1, 1)
                     height: root.rowSpan(1)
                     cornerRadius: root.boxRadius
-                    opacity: root.footP
+                    opacity: root.columnReveal(1)
 
                     Common.BarVisualizer {
                         anchors.centerIn: parent
@@ -472,8 +602,15 @@ Item {
                         barSpacing: root.levelsBarWidth * 0.75
                         minBarHeight: Math.round(root.cellH * 0.08)
                         maxBarHeight: Math.round(root.cellH * 0.5)
-                        barColor: root.clockColor
-                        baseColor: root.clockColor
+                        barColor: root.mediaAccent
+                        baseColor: root.accentColor
+
+                        Behavior on barColor {
+                            ColorAnimation {
+                                duration: 600
+                                easing.type: Easing.InOutCubic
+                            }
+                        }
                     }
                 }
 
@@ -483,7 +620,20 @@ Item {
                     width: root.colSpan(2, 1)
                     height: root.rowSpan(1)
                     cornerRadius: root.boxRadius
-                    opacity: root.footP
+                    opacity: root.columnReveal(2)
+
+                    LockHourSand {
+                        id: hourSand
+                        anchors.fill: parent
+                        typo: root.typo
+                        tint: root.clockColor
+                        faintTint: root.subtleColor
+                        accent: root.accentColor
+                        glow: root.orbBase
+                        glowSecondary: root.glowSecondaryColor
+                        glowTertiary: root.glowTertiaryColor
+                        running: !root.reduceMotion
+                    }
                 }
 
                 Repeater {
@@ -503,7 +653,7 @@ Item {
                         width: root.colSpan(3, 1)
                         height: root.rowSpan(1)
                         cornerRadius: root.boxRadius
-                        opacity: root.footP
+                        opacity: root.columnReveal(3)
 
                         LockPowerButton {
                             anchors.fill: parent
@@ -517,28 +667,77 @@ Item {
                     }
                 }
 
+                // Outside the orb's item, which is already translated: it would double.
+                Repeater {
+                    id: moteField
+                    model: 14
+
+                    Rectangle {
+                        id: mote
+                        required property int index
+
+                        property real progress: 1
+                        property real angle: 0
+                        property real travel: 0
+
+                        function launch() {
+                            angle = Math.random() * Math.PI * 2
+                            // Clamped: a long password leaves only a sliver to start in.
+                            const inner = Math.min(root.moteInner,
+                                                   root.moteOuter * 0.96)
+                            travel = inner + (root.moteOuter - inner) * Math.random()
+                            flight.restart()
+                        }
+
+                        NumberAnimation {
+                            id: flight
+                            target: mote
+                            property: "progress"
+                            from: 0
+                            to: 1
+                            duration: 620
+                            // Accelerating inwards, so it reads as pulled rather than drifting.
+                            easing.type: Easing.InCubic
+                        }
+
+                        width: Math.max(2, root.orbSize * 0.024)
+                        height: width
+                        radius: width / 2
+                        color: root.orbBase
+                        visible: progress < 1
+                        opacity: Math.min(1, (1 - progress) * 2.4) * 0.4
+                        scale: 0.45 + (1 - progress) * 0.6
+                        x: root.orbCX - width / 2
+                            + Math.cos(angle) * travel * (1 - progress)
+                        y: root.orbCY - height / 2
+                            + Math.sin(angle) * travel * (1 - progress)
+                    }
+                }
+
                 Item {
                     x: root.orbCX - root.orbSize / 2
                     y: root.orbCY - root.orbSize / 2
                     width: root.orbSize
                     height: root.orbSize
 
-                    // One property per animated factor, multiplied in: no
-                    // animation may write to scale or opacity and sever the
-                    // others' binding.
+                // One property per factor: writing scale directly severs the others.
                     Item {
                         id: orbSlot
-                        anchors.fill: parent
+
+                        // Sized, not anchored: `anchors.fill` owns x and silently wins.
+                        width: parent.width
+                        height: parent.height
 
                         property real chargeScale: 1 + root.chargeLength * 0.022
                         property real chargeOpacity: 0.78 + root.chargeLength * 0.016
                         property real wobble: 1.0
                         property real failOffset: 0
                         property real murk: 0
+                        property real bloom: 0
                         readonly property real entryScale: 0.9 + 0.1 * root.contentFade
 
                         x: failOffset
-                        scale: chargeScale * wobble * entryScale
+                        scale: chargeScale * wobble * entryScale * (1 + bloom * 0.22)
                         opacity: chargeOpacity
 
                         Behavior on chargeScale {
@@ -548,19 +747,21 @@ Item {
                             NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
                         }
 
+                        // The only report on the attempt, so every state must read on its own.
                         Ai.AmbientOrb {
                             anchors.fill: parent
                             orbColor: Qt.tint(root.orbBase,
-                                              Qt.rgba(orbSlot.murk * 0.6,
-                                                      orbSlot.murk * 0.6,
-                                                      orbSlot.murk * 0.6,
-                                                      orbSlot.murk))
+                                              Qt.rgba(root.errorColor.r,
+                                                      root.errorColor.g,
+                                                      root.errorColor.b,
+                                                      orbSlot.murk * 0.8))
                             active: !root.unlocking
                             breathEnabled: !root.reduceMotion && !root.unlocking
-                            idleBreathPeak: 1.05
-                            idleBreathDuration: 3500
+                            idleBreathPeak: root.authenticating ? 1.13 : 1.05
+                            idleBreathDuration: root.authenticating ? 850 : 3500
                             showHalo: true
-                            haloScale: 1.2
+                            haloScale: root.authenticating ? 1.34 : 1.2
+                            haloOpacity: 0.5
                         }
                     }
                 }
@@ -585,10 +786,10 @@ Item {
             easing.type: Easing.OutCubic
         }
         SequentialAnimation {
-            PauseAnimation { duration: Math.round(root.morphDuration * 0.72) }
+            PauseAnimation { duration: Math.round(root.morphDuration * 0.42) }
             NumberAnimation {
                 target: root; property: "contentFade"; to: 1
-                duration: Math.round(root.morphDuration * 0.4)
+                duration: Math.round(root.morphDuration * 0.8)
                 easing.type: Easing.OutCubic
             }
         }
@@ -613,10 +814,10 @@ Item {
             easing.type: Easing.OutCubic
         }
         SequentialAnimation {
-            PauseAnimation { duration: Math.round(root.morphDuration * 0.15) }
+            PauseAnimation { duration: Math.round(root.morphDuration * 0.1) }
             NumberAnimation {
                 target: root; property: "contentFade"; to: 1
-                duration: Math.round(root.morphDuration * 0.4)
+                duration: Math.round(root.morphDuration * 0.8)
                 easing.type: Easing.OutCubic
             }
         }
@@ -645,13 +846,36 @@ Item {
         }
     }
 
+    // Fast and short, or it reads as drift rather than refusal.
     SequentialAnimation {
         id: failShake
-        NumberAnimation { target: orbSlot; property: "failOffset"; to: -0.037 * root.orbSize; duration: 165 }
-        NumberAnimation { target: orbSlot; property: "failOffset"; to: 0.032 * root.orbSize; duration: 165 }
-        NumberAnimation { target: orbSlot; property: "failOffset"; to: -0.026 * root.orbSize; duration: 165 }
-        NumberAnimation { target: orbSlot; property: "failOffset"; to: 0.021 * root.orbSize; duration: 165 }
-        NumberAnimation { target: orbSlot; property: "failOffset"; to: 0; duration: 440 }
+        NumberAnimation { target: orbSlot; property: "failOffset"; to: -0.072 * root.orbSize; duration: 65 }
+        NumberAnimation { target: orbSlot; property: "failOffset"; to: 0.064 * root.orbSize; duration: 75 }
+        NumberAnimation { target: orbSlot; property: "failOffset"; to: -0.05 * root.orbSize; duration: 75 }
+        NumberAnimation { target: orbSlot; property: "failOffset"; to: 0.035 * root.orbSize; duration: 75 }
+        NumberAnimation { target: orbSlot; property: "failOffset"; to: -0.019 * root.orbSize; duration: 75 }
+        NumberAnimation {
+            target: orbSlot; property: "failOffset"; to: 0
+            duration: 130; easing.type: Easing.OutCubic
+        }
+    }
+
+    SequentialAnimation {
+        id: successBloom
+
+        // Pulled in first, or the opening reads as swelling, not release.
+        NumberAnimation {
+            target: orbSlot; property: "bloom"; to: -0.4
+            duration: 90; easing.type: Easing.OutCubic
+        }
+        NumberAnimation {
+            target: orbSlot; property: "bloom"; to: 1
+            duration: 220; easing.type: Easing.OutBack
+        }
+        NumberAnimation {
+            target: orbSlot; property: "bloom"; to: 0
+            duration: 520; easing.type: Easing.OutCubic
+        }
     }
 
     SequentialAnimation {
@@ -684,8 +908,7 @@ Item {
             easing.type: Easing.OutCubic
         }
         SequentialAnimation {
-            // OutExpo has all but landed by here, so the face is already sitting
-            // on the bar's rectangle while it dissolves into it.
+            // OutExpo has all but landed here, so the face is already on the bar.
             PauseAnimation { duration: Math.round(root.morphDuration * 0.75) }
             NumberAnimation {
                 target: root; property: "exitFade"; to: 0

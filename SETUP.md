@@ -420,3 +420,4 @@ context.modules = [
 - [VOICEVOX](https://voicevox.hiroshiba.jp/) — TTS エンジン
 - [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine) — VOICEVOX 互換の Style-Bert-VITS2 系 TTS。モデルは [AivisHub](https://hub.aivis-project.com/) から
 - [Piper](https://github.com/rhasspy/piper) — 日本語以外の声向け TTS
+- [LRO WAC の月面モザイク](https://commons.wikimedia.org/wiki/File:Moon_nearside_LRO.jpg) — ロック画面の月。NASA/GSFC/Arizona State University、パブリックドメイン（明るさを調整して 320px に縮小したものを収録）

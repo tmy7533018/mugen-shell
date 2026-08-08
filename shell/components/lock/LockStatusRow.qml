@@ -9,8 +9,7 @@ Row {
     property string iconsBase: ""
     property real unit: 13
 
-    // Layouts that split the corners need the same row twice, showing one half
-    // each, rather than a second component that drifts from this one.
+    // Split corners need the same row twice, each showing one half.
     property bool showWeather: true
     property bool showSystem: true
 
