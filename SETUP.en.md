@@ -128,7 +128,7 @@ Point at the user-level flake (the repo root); the Wayland and compositor stack 
 Install the system stack with pacman before the first switch:
 
 ```bash
-yay -S hyprland quickshell hypridle hyprlock zsh kitty starship libnotify \
+yay -S hyprland quickshell hypridle zsh kitty starship libnotify \
        pipewire pipewire-pulse pavucontrol cava playerctl \
        networkmanager network-manager-applet bluez bluez-utils \
        fcitx5 fcitx5-mozc fcitx5-im fcitx5-configtool \
@@ -162,10 +162,10 @@ Switching config languages needs a relog; `hyprctl reload` is not enough.
 
 Two Arch-specific items the NixOS module handles automatically:
 
-- **`hyprlock` PAM file.** Arch does not ship one by default, so `hyprlock` refuses to unlock the screen. Drop the upstream sample into `/etc/pam.d/hyprlock`:
+- **Lock screen PAM file.** Without it the lock screen cannot authenticate, and
+  `ext-session-lock` holds the session locked. Create one:
   ```bash
-  sudo curl -fsSL https://raw.githubusercontent.com/hyprwm/hyprlock/main/pam/hyprlock \
-    -o /etc/pam.d/hyprlock
+  printf '#%%PAM-1.0\nauth include system-auth\n' | sudo tee /etc/pam.d/mugen-lock
   ```
 - **fcitx5 env vars.** The shipped `system/hypr/configs/ime.conf` exports `XMODIFIERS` for Hyprland sessions; add it to `/etc/environment` for anything started outside the compositor. Do **not** set `GTK_IM_MODULE` / `QT_IM_MODULE` / `SDL_IM_MODULE` — they force a broken legacy input path.
 

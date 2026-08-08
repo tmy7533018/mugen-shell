@@ -24,10 +24,9 @@ in
       default = true;
       description = ''
         Install mugen-shell's runtime dependencies (Quickshell, hypridle,
-        hyprlock, mpvpaper, awww, matugen, playerctl, ...) into
-        environment.systemPackages, enable programs.hyprland and
-        programs.hyprlock so the Wayland session and PAM lock screen are
-        wired up, and turn on the supporting services (pipewire,
+        mpvpaper, awww, matugen, playerctl, ...) into
+        environment.systemPackages, enable programs.hyprland so the
+        Wayland session is wired up, and turn on the supporting services (pipewire,
         bluetooth, NetworkManager) the shell expects to be running.
 
         Set to <literal>false</literal> if you already manage Hyprland and
@@ -82,7 +81,6 @@ in
 
     (lib.mkIf cfg.includeSystemDeps {
       programs.hyprland.enable = true;
-      programs.hyprlock.enable = true;
 
       # Thunar (what Super+N opens) needs the module, not the bare package: the
       # package has no xfconf D-Bus service, so every preference it writes is
@@ -133,7 +131,6 @@ in
       environment.systemPackages = with pkgs; [
         quickshell
         hypridle
-        # hyprlock comes from programs.hyprlock.enable above (sets up PAM).
         mpvpaper
         awww
         matugen

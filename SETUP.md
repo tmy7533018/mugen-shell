@@ -128,7 +128,7 @@ programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
 最初の switch を走らせる前に、システムスタックを pacman で入れておきます:
 
 ```bash
-yay -S hyprland quickshell hypridle hyprlock zsh kitty starship libnotify \
+yay -S hyprland quickshell hypridle zsh kitty starship libnotify \
        pipewire pipewire-pulse pavucontrol cava playerctl \
        networkmanager network-manager-applet bluez bluez-utils \
        fcitx5 fcitx5-mozc fcitx5-im fcitx5-configtool \
@@ -162,10 +162,10 @@ config 言語の切り替えには relog が必要で、`hyprctl reload` では�
 
 NixOS モジュールが自動でやってくれる、Arch 固有のハマりどころが 2 つあります:
 
-- **`hyprlock` の PAM ファイル。** Arch はデフォルトで同梱していないので、`hyprlock` が画面ロック解除を拒否します。upstream のサンプルを `/etc/pam.d/hyprlock` に置いてください:
+- **ロック画面の PAM ファイル。** これが無いとロック画面は認証できず、`ext-session-lock`
+  はセッションをロックしたまま保持します。作成してください:
   ```bash
-  sudo curl -fsSL https://raw.githubusercontent.com/hyprwm/hyprlock/main/pam/hyprlock \
-    -o /etc/pam.d/hyprlock
+  printf '#%%PAM-1.0\nauth include system-auth\n' | sudo tee /etc/pam.d/mugen-lock
   ```
 - **fcitx5 の環境変数。** 同梱の `system/hypr/configs/ime.conf` が Hyprland セッション向けに `XMODIFIERS` をエクスポートします。コンポジタ外から起動するもの向けには `/etc/environment` にも書いておきます。`GTK_IM_MODULE` / `QT_IM_MODULE` / `SDL_IM_MODULE` は**設定しないでください** — 壊れた旧経路に引き戻されます。
 

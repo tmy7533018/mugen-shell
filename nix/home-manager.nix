@@ -76,7 +76,7 @@ in
       default = true;
       description = ''
         Whether to install mugen-shell's runtime dependencies (Hyprland,
-        Quickshell, hypridle, hyprlock, mpvpaper, awww, matugen,
+        Quickshell, hypridle, mpvpaper, awww, matugen,
         playerctl, ...) via Nix.
 
         Set to <literal>false</literal> if those packages are already
@@ -146,7 +146,6 @@ in
         [
           quickshell
           hypridle
-          hyprlock
           mpvpaper
           awww
           matugen
