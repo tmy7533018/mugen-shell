@@ -19,8 +19,8 @@ with open(cfg) as f:
 
 def replace(match):
     block = match.group(0)
-    # The lockscreen listener triggers `hyprlock` directly (without `before_sleep`).
-    if re.search(r"on-timeout\s*=\s*hyprlock\b", block):
+    # The lockscreen listener runs the lock directly (without `before_sleep`).
+    if re.search(r"on-timeout\s*=\s*\S*mugen-lock\.sh\b", block):
         block = re.sub(r"timeout\s*=\s*\d+", f"timeout = {seconds}", block, count=1)
     return block
 

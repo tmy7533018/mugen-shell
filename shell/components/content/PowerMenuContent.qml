@@ -222,7 +222,7 @@ FocusScope {
                 color: Qt.rgba(0.45, 0.65, 0.90, 1.0)
                 onClicked: {
                     root.resetAutoCloseTimer()
-                    Theme.Hypr.exec("hyprlock")
+                    Theme.Hypr.exec("~/.config/quickshell/mugen-shell/scripts/mugen-lock.sh")
                     modeManager.closeAllModes()
                 }
             }
