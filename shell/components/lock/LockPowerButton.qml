@@ -20,10 +20,11 @@ Item {
         height: width
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: hover.hovered ? -root.unit * 0.5 : 0
 
-        Behavior on anchors.verticalCenterOffset {
-            NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+        scale: hover.hovered ? 1.22 : 1
+
+        Behavior on scale {
+            NumberAnimation { duration: 380; easing.type: Easing.InOutCubic }
         }
 
         Image {
@@ -40,6 +41,10 @@ Item {
             source: icon
             color: root.tint
             opacity: hover.hovered ? 1 : 0.75
+
+            Behavior on opacity {
+                NumberAnimation { duration: 380; easing.type: Easing.InOutCubic }
+            }
         }
     }
 
@@ -55,7 +60,7 @@ Item {
         font.letterSpacing: root.unit * 0.09
 
         Behavior on opacity {
-            NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: 300; easing.type: Easing.InOutCubic }
         }
     }
 
