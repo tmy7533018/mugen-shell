@@ -296,6 +296,7 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
+                            enabled: !root.wifiManager.isTogglingPower
                             onClicked: {
                                 wifiManager.togglePower()
                                 modeManager.bump()

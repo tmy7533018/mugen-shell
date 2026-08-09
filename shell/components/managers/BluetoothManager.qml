@@ -18,6 +18,8 @@ QtObject {
         return pairedDevices.some(device => device.connected)
     }
 
+    readonly property bool isTogglingPower: bluetoothToggleProcess.running
+
     function togglePower() {
         bluetoothToggleProcess.running = true
     }
@@ -83,12 +85,28 @@ QtObject {
         let escapedAddress = deviceAddress.replace(/'/g, "'\\''")
         devicePairProcess.deviceAddress = deviceAddress
         devicePairProcess.deviceName = deviceName
-        devicePairProcess.command = ["bash", "-c", "bluetoothctl pair '" + escapedAddress + "'"]
+        // A device wanting passkey confirmation leaves bluetoothctl on stdin, and nothing else clears isPairing.
+        devicePairProcess.command = ["bash", "-c", "timeout 60 bluetoothctl pair '" + escapedAddress + "'"]
         devicePairProcess.running = true
     }
 
     function refreshStatus() {
         bluetoothStatusProcess.running = true
+    }
+
+    property bool rssiPending: false
+
+    // bluetoothctl reports it as "RSSI: 0xffffffc3 (-61)", older builds as "RSSI: -61".
+    function applyRssi(address, line) {
+        const m = line.match(/RSSI:\s*(?:0x[0-9a-fA-F]+\s*\()?\s*(-?\d+)/)
+        if (!m) return
+        const value = parseInt(m[1], 10)
+        for (const dev of availableDevices) {
+            if (dev.address !== address || dev.rssi === value) continue
+            dev.rssi = value
+            rssiPending = true
+            return
+        }
     }
 
     function fetchDeviceName(deviceAddress) {
@@ -180,7 +198,7 @@ QtObject {
             "--system",
             "type='signal',sender='org.bluez'"
         ]
-        running: true
+        running: !bluetoothManager.monitorRestartTimer.running
 
         stdout: SplitParser {
             onRead: data => {
@@ -188,10 +206,15 @@ QtObject {
             }
         }
 
-        stderr: SplitParser {
-            onRead: data => {
-            }
+        // The stream ends when the process does, so this is where a dead monitor shows up.
+        stderr: StdioCollector {
+            onStreamFinished: bluetoothManager.monitorRestartTimer.restart()
         }
+    }
+
+    // A bus hiccup would otherwise leave the Bluetooth state frozen until the panel is reopened.
+    property Timer monitorRestartTimer: Timer {
+        interval: 2000
     }
 
     property Timer bluetoothDebounceTimer: Timer {
@@ -251,6 +274,9 @@ QtObject {
                 bluetoothManager.pairedDevices = pairedDevicesProcess.devices.slice()
             }
 
+            // The nearby list's paired flag is only correct once this list has landed.
+            bluetoothManager.refreshAvailableDevices()
+
             pairedDevicesProcess.devices = []
             pairedDevicesProcess.allOutput = ""
         }
@@ -304,7 +330,8 @@ QtObject {
                     bluetoothScanProcess.devices.push({
                         "name": deviceName || address,
                         "address": address,
-                        "paired": isPaired
+                        "paired": isPaired,
+                        "rssi": 0
                     })
 
                     bluetoothManager.availableDevices = bluetoothScanProcess.devices.slice()
@@ -315,10 +342,12 @@ QtObject {
                         })
                     }
                 }
+                bluetoothManager.applyRssi(address, trimmed)
                 return true
             }
             return false
         }
+
 
         stdout: SplitParser {
             onRead: data => {
@@ -346,6 +375,18 @@ QtObject {
         }
     }
 
+    // Signal updates land per device per second, and each republish rebuilds the list.
+    property Timer rssiPublishTimer: Timer {
+        interval: 700
+        repeat: true
+        running: bluetoothManager.isScanning
+        onTriggered: {
+            if (!bluetoothManager.rssiPending) return
+            bluetoothManager.rssiPending = false
+            bluetoothManager.availableDevices = bluetoothManager.availableDevices.slice()
+        }
+    }
+
     property Process bluetoothScanOffProcess: Process {
         command: ["bash", "-c", "bluetoothctl scan off 2>&1"]
         running: false
@@ -366,6 +407,8 @@ QtObject {
         }
 
         onExited: (code, status) => {
+            // Both the timeout and the scan process's own exit ask for scan off; the later run has an empty list.
+            if (!bluetoothManager.isScanning) return
             bluetoothManager.isScanning = false
             bluetoothManager.availableDevices = bluetoothScanProcess.devices.slice()
             if (bluetoothManager.availableDevices.length > 0) {
@@ -460,14 +503,12 @@ QtObject {
             if (code === 0) {
                 bluetoothManager.pairingError = ""
                 bluetoothManager.refreshPairedDevices()
-                bluetoothManager.refreshAvailableDevices()
             } else {
                 let errorMsg = (devicePairProcess.errorData + devicePairProcess.outputData).toLowerCase()
 
                 if (errorMsg.includes("already exists") || errorMsg.includes("already paired")) {
                     bluetoothManager.pairingError = ""
                     bluetoothManager.refreshPairedDevices()
-                    bluetoothManager.refreshAvailableDevices()
                 } else if (errorMsg.includes("not available") || errorMsg.includes("not found")) {
                     bluetoothManager.pairingError = "Device not available"
                 } else if (errorMsg.includes("failed") || errorMsg.includes("error")) {
@@ -496,8 +537,8 @@ QtObject {
                 }
             }
         }
-        // Reassign to trigger QML change notification
-        availableDevices = availableDevices
+        // A same-reference reassignment emits nothing, so the list has to be a new array.
+        availableDevices = availableDevices.slice()
     }
 
     property Process deviceNameProcess: Process {

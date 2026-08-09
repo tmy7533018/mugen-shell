@@ -370,9 +370,14 @@ QtObject {
         setDefaultSourceProcess.running = true
     }
 
+    // `pactl subscribe` dies with the PipeWire daemon, and nothing else refreshes the audio state.
+    property Timer monitorRestartTimer: Timer {
+        interval: 2000
+    }
+
     property Process pulseEventMonitor: Process {
         command: ["pactl", "subscribe"]
-        running: true
+        running: !audioManager.monitorRestartTimer.running
 
         stdout: SplitParser {
             onRead: data => {
@@ -386,9 +391,9 @@ QtObject {
             }
         }
 
-        stderr: SplitParser {
-            onRead: data => {
-            }
+        // The stream ends when the process does, so this is where a dead monitor shows up.
+        stderr: StdioCollector {
+            onStreamFinished: audioManager.monitorRestartTimer.restart()
         }
     }
 

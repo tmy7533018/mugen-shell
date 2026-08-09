@@ -14,6 +14,8 @@ QtObject {
     property string connectionError: ""
     property bool isRefreshing: false
 
+    readonly property bool isTogglingPower: wifiToggleProcess.running
+
     function togglePower() {
         wifiToggleProcess.running = true
     }
@@ -254,7 +256,7 @@ QtObject {
             "--system",
             "type='signal',sender='org.freedesktop.NetworkManager'"
         ]
-        running: true
+        running: !wifiManager.monitorRestartTimer.running
 
         stdout: SplitParser {
             onRead: data => {
@@ -262,10 +264,15 @@ QtObject {
             }
         }
 
-        stderr: SplitParser {
-            onRead: data => {
-            }
+        // The stream ends when the process does, so this is where a dead monitor shows up.
+        stderr: StdioCollector {
+            onStreamFinished: wifiManager.monitorRestartTimer.restart()
         }
+    }
+
+    // A bus hiccup would otherwise leave the Wi-Fi state frozen until the panel is reopened.
+    property Timer monitorRestartTimer: Timer {
+        interval: 2000
     }
 
     property Timer wifiDebounceTimer: Timer {

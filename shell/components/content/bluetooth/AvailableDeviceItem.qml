@@ -75,7 +75,12 @@ Rectangle {
             }
 
             Text {
-                text: deviceItem.modelData.paired ? "Saved" : "New device"
+                // Unnamed devices are all MAC, so the signal is the only way to tell them apart.
+                text: {
+                    const base = deviceItem.modelData.paired ? "Saved" : "New device"
+                    const rssi = deviceItem.modelData.rssi
+                    return rssi < 0 ? base + " · " + rssi + " dBm" : base
+                }
                 color: deviceItem.modelData.paired
                     ? (deviceItem.theme ? deviceItem.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70))
                     : (deviceItem.theme ? deviceItem.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))

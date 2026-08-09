@@ -313,6 +313,7 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
+                            enabled: !root.bluetoothManager.isTogglingPower
                             onClicked: {
                                 bluetoothManager.togglePower()
                                 modeManager.bump()
