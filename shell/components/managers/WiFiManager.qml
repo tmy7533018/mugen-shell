@@ -33,12 +33,17 @@ QtObject {
         isConnecting = true
         connectionError = ""
 
-        // /proc/<pid>/cmdline is world-readable and environ is not, so the key travels in the environment.
+        // /proc/<pid>/cmdline is world-readable and environ is not, so the key travels in the
+        // environment and only ever reaches nmcli via passwd-file, never as one of its own args.
         if (password.length > 0) {
             connectToNetworkProcess.environment = ({ "MUGEN_WIFI_PSK": password })
             connectToNetworkProcess.command = [
                 "bash", "-c",
-                "LANG=C nmcli dev wifi connect \"$1\" password \"$MUGEN_WIFI_PSK\"",
+                "export LANG=C; set -e; tmp=$(mktemp); trap 'rm -f \"$tmp\"' EXIT; " +
+                "printf '802-11-wireless-security.psk:%s\\n' \"$MUGEN_WIFI_PSK\" > \"$tmp\"; " +
+                "nmcli connection delete \"$1\" >/dev/null 2>&1 || true; " +
+                "nmcli connection add type wifi con-name \"$1\" ssid \"$1\" -- wifi-sec.key-mgmt wpa-psk >/dev/null; " +
+                "nmcli connection up \"$1\" passwd-file \"$tmp\"",
                 "bash", ssid
             ]
         } else {
