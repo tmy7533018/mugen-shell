@@ -7,16 +7,14 @@ import (
 	"time"
 )
 
-// Bounds each model-listing probe so a hung backend can't stall resolution for
-// a chat routed to a different provider.
+// Bounds each model-listing probe so a hung backend can't stall a chat routed elsewhere.
 const providerProbeTimeout = 5 * time.Second
 
 type Registry struct {
 	mu        sync.RWMutex
 	providers []Provider
 	model     string
-	// Saves an HTTP round-trip per backend on every turn. A model's owning
-	// provider doesn't change at runtime, so entries never need invalidation.
+	// A model's owning provider doesn't change at runtime, so entries never need invalidation.
 	routeCache map[string]Provider
 }
 

@@ -38,8 +38,7 @@ class ConfiguredLang(_LangFixture):
         self.assertEqual(lang.configured_lang(), "en")
 
     def test_auto_is_not_a_language(self):
-        # "auto" truncated to "au" is what used to hand a Japanese speaker an
-        # English voice.
+        # "auto" truncated to "au" is what used to hand a Japanese speaker an English voice.
         self.configure("auto", {})
         self.assertIsNone(lang.configured_lang())
 
@@ -115,8 +114,7 @@ class ConfiguredVoice(_LangFixture):
         self.assertEqual(router.configured_voice(), self.EN)
 
     def test_no_language_signal_takes_the_default(self):
-        # The whole point of returning None from configured_lang: with nothing
-        # chosen we must not reach into the map and pick for the user.
+        # The point of returning None: with nothing chosen we must not pick for the user.
         self.configure("", {"tts": self.EN, "ttsByLang": {"ja": self.JA}})
         self.assertEqual(router.configured_voice(), self.EN)
 

@@ -28,8 +28,7 @@ Row {
         return root.minBarHeight + (root.maxBarHeight - root.minBarHeight) * multiplier
     }
     
-    // Levels are used as-is: cava's autosens already owns the gain range, so a
-    // second QML-side normalization only fights it.
+    // Levels are used as-is: cava's autosens already owns the gain range.
     function getBarLevel(index) {
         if (!cavaManager || !cavaManager.barLevels) {
             return 0
@@ -54,8 +53,7 @@ Row {
             width: root.barWidth
             height: root.maxBarHeight
 
-            // updateAppearance() assigns targetY, which severs its binding, so
-            // a container that is sized after construction never re-centres.
+            // updateAppearance() assigns targetY and severs its binding, so a late-sized container never re-centres.
             onHeightChanged: bar.updateAppearance()
             
             Rectangle {

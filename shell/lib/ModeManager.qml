@@ -57,9 +57,7 @@ QtObject {
     }
     
     function switchMode(newMode, viaIpc) {
-        // openedViaIpc must be set before currentMode: currentModeChanged
-        // listeners read it synchronously to decide whether to grab focus,
-        // and a stale value breaks keybind-open ESC handling.
+        // openedViaIpc before currentMode: listeners read it synchronously to decide focus.
         if (newMode === currentMode) {
             openedViaIpc = false
             currentMode = "normal"
@@ -92,9 +90,7 @@ QtObject {
     function listModes() {
     }
     
-    // A fixed name under shared /tmp lets any local user pre-create the file
-    // and feed modes in, or point it at something the shell then truncates, so
-    // the fallback is per-user. scripts/mugen-shell-ipc.sh creates it 0700.
+    // Per-user: a fixed name under shared /tmp lets any local user pre-create the file and feed modes in.
     property string ipcFile: {
         const runtimeDir = Quickshell.env("XDG_RUNTIME_DIR")
         if (runtimeDir && runtimeDir !== "") {
@@ -103,8 +99,7 @@ QtObject {
         const user = Quickshell.env("USER") || "shell"
         return "/tmp/mugen-shell-" + user + "/ipc"
     }
-    // scripts/mugen-shell-ipc.sh appends a line here; that is how keybinds and
-    // anything outside the shell reach this manager.
+    // scripts/mugen-shell-ipc.sh appends here; that is how keybinds reach this manager.
     property FileView ipcWatcher: FileView {
         path: manager.ipcFile
         watchChanges: true
@@ -112,13 +107,11 @@ QtObject {
 
         onFileChanged: ipcWatcher.reload()
 
-        // reload() is asynchronous: text() called right after it still returns
-        // the previous contents, so the read has to happen here.
+        // reload() is asynchronous: text() right after it still returns the previous contents.
         onLoaded: {
             const queued = String(ipcWatcher.text()).trim()
             if (queued === "") return
-            // Cleared before dispatching so the resulting write, which comes
-            // back through onFileChanged, finds nothing left to replay.
+            // Cleared before dispatching so the resulting write finds nothing left to replay.
             ipcWatcher.setText("")
             for (const line of queued.split("\n")) {
                 const command = line.trim()
@@ -166,8 +159,7 @@ QtObject {
             switchMode(modeName, true)
         }
 
-        // Non-toggling, unlike safeSwitch, so repeated volume-key presses
-        // don't close the panel.
+        // Non-toggling, unlike safeSwitch, so repeated volume-key presses don't close the panel.
         function safeOpen(modeName) {
             if (!modeName || modeName.length === 0) return
             if (modeName === "normal") {

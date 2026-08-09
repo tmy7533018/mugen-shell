@@ -38,10 +38,7 @@ from .tts import join_spoken, prewarm_tts, speak_guarded
 class Daemon:
     def __init__(self):
         self.running = True
-        # Raised by the control socket, consumed by the idle loop between
-        # turns: trigger starts a turn, trigger_fresh does the same into a new
-        # conversation, cancel drops capture (or stops speech at a sentence
-        # break).
+        # Raised by the control socket, consumed by the idle loop between turns.
         self.trigger = threading.Event()
         self.trigger_fresh = threading.Event()
         self.cancel = threading.Event()
@@ -88,35 +85,28 @@ class Daemon:
     def _handle_turn(self, surface_up: bool = False) -> None:
         prewarm_tts()
         self.cancel.clear()
-        # A cancel lands between the barge monitor firing and the loop reading
-        # its audio, so a summons must not inherit the last turn's leftovers.
+        # A cancel can land between the monitor firing and the loop reading, so drop the leftovers.
         self._barge_seed = None
-        # A summons outranks a message being read aloud, and the mic would
-        # otherwise capture it.
+        # A summons outranks a message being read aloud, and the mic would otherwise capture it.
         self.read_aloud.stop()
-        # After a spoken reply, keep listening without a new trigger. Silence,
-        # cancel, or an empty turn drops back to idle.
+        # After a spoken reply, keep listening; silence, cancel or an empty turn drops back to idle.
         first = True
         while self.running and not self.cancel.is_set():
             spoke = self._one_turn(open_surface=first and not surface_up,
                                    follow_up=not first)
-            # Talking over Yura is itself a request to keep going, whatever
-            # the follow-up setting says, and the audio is already in hand.
-            # A cancel still wins: the loop condition is checked first.
+            # Talking over Yura is itself a request to keep going, whatever the follow-up setting says.
             if self._barge_seed and not self.cancel.is_set():
                 first = False
                 continue
             if not spoke or not voice_settings().get("followUp", True):
                 break
             first = False
-            # TTS ran for a while; stale mic backlog (echo residue, room
-            # noise) must not become the follow-up utterance.
+            # TTS ran for a while, so stale mic backlog must not become the follow-up utterance.
             self.capture.drain()
 
     def _one_turn(self, open_surface: bool, follow_up: bool) -> bool:
         """One capture -> STT -> chat -> TTS round; True keeps the floor open."""
-        # A barge-in already has the user's words; a cue here would land on top
-        # of them and the surface is open from the turn being interrupted.
+        # A barge-in already has the user's words, and the surface is open from the interrupted turn.
         seed = self._barge_seed
         self._barge_seed = None
         if seed:
@@ -128,19 +118,16 @@ class Daemon:
         set_listening(True)
         try:
             if open_surface:
-                # wakeOpens is the pre-retirement name, still in any
-                # settings.json the shell has not rewritten yet.
+                # wakeOpens is the pre-retirement name, still in any settings.json not yet rewritten.
                 opens = voice_settings().get(
                     "turnOpens", voice_settings().get("wakeOpens", "panel"))
                 if opens == "panel":
                     open_panel()
                 elif opens == "bar":
                     shell_ipc("panel", "open", "ai")
-            # Rotation must run before steering, or the panel would flash
-            # the stale conversation this turn is about to abandon.
+            # Rotation must run before steering, or the panel flashes the conversation being abandoned.
             self.chat.maybe_rotate()
-            # Land the panel on the conversation before the transcript
-            # arrives; the first turn does it in Chat._ask.
+            # Land the panel on the conversation before the transcript; the first turn does it in _ask.
             if self.chat.conversation_id:
                 yura_ipc("show_conversation", str(self.chat.conversation_id))
             log("listen", "capturing..." + (" (barge-in)" if seed
@@ -158,15 +145,13 @@ class Daemon:
 
         log("stt", f"{sum(f.size for f in frames) / SR:.1f}s of audio")
         wav = frames_to_wav(frames)
-        # Thinking spans STT too: a whisper respawn can outlast the bar's
-        # auto-close interval, which would otherwise fire in this gap.
+        # Thinking spans STT too: a whisper respawn can outlast the bar's auto-close interval.
         set_thinking(True)
         try:
             try:
                 text = transcribe(wav)
             except requests.RequestException:
-                # whisper-server died or wedged mid-request (mid-body death is
-                # ChunkedEncodingError, not ConnectionError); bring it back.
+                # whisper-server died or wedged (mid-body death is ChunkedEncodingError); bring it back.
                 log("whisper", "gone, respawning")
                 proc = ensure_whisper_server()
                 if proc:
@@ -177,8 +162,7 @@ class Daemon:
                 cue("soundEnd", 440)
                 return False
             log("stt", text)
-            # Mirror into the Spotlight pill whenever it's on screen, however
-            # the turn started.
+            # Mirror into the Spotlight pill whenever it's on screen, however the turn started.
             mirror_bar = shell_ipc_read("panel", "current") == "ai"
             if mirror_bar:
                 shell_ipc("yura", "voice_input", text)
@@ -194,9 +178,7 @@ class Daemon:
             spoken.append(s)
             shell_ipc("yura", "voice_reply", join_spoken(spoken))
 
-        # The mic keeps running through playback so the user can cut in; the
-        # monitor consumes those frames, which also keeps the echo residue out
-        # of whatever capture comes next.
+        # The mic runs through playback so the user can cut in; the monitor also eats the echo residue.
         monitor = (BargeMonitor(self.capture, self._barge_vad)
                    if barge_enabled() else NullMonitor())
         monitor.start()
@@ -278,8 +260,7 @@ def main() -> None:
 
     def stop(*_):
         daemon.running = False
-        # os._exit skips run()'s finally, so the ~1.5 GB whisper-server would
-        # outlive a Ctrl-C. systemd reaps it by cgroup; a terminal does not.
+        # os._exit skips run()'s finally, so the ~1.5 GB whisper-server would outlive a Ctrl-C.
         daemon.stop_whisper()
         os._exit(0)
 

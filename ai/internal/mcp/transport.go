@@ -1,6 +1,5 @@
-// Package mcp is a minimal Model Context Protocol client. It speaks
-// JSON-RPC 2.0 over stdio or Streamable HTTP so mugen-ai can merge external
-// servers' tools into the LLM's tool set alongside the built-in shell tools.
+// Package mcp is a minimal Model Context Protocol client, speaking JSON-RPC 2.0 over
+// stdio or Streamable HTTP to merge external servers' tools into the LLM's tool set.
 package mcp
 
 import (
@@ -16,14 +15,12 @@ import (
 type transport interface {
 	// send writes one message; the implementation adds its own framing.
 	send(data []byte) error
-	// recv blocks until the next message arrives, returning io.EOF once the
-	// server has exited.
+	// recv blocks until the next message, returning io.EOF once the server has exited.
 	recv() ([]byte, error)
 	close() error
 }
 
-// Runs an MCP server as a child process. Its stderr is forwarded to
-// mugen-ai's with a per-server prefix so a misbehaving one stays debuggable.
+// Runs an MCP server as a child; its stderr is prefixed and forwarded so it stays debuggable.
 type stdioTransport struct {
 	cmd    *exec.Cmd
 	stdin  io.WriteCloser
@@ -65,8 +62,7 @@ func (t *stdioTransport) send(data []byte) error {
 }
 
 func (t *stdioTransport) recv() ([]byte, error) {
-	// ReadBytes has no size cap (unlike bufio.Scanner's token limit) so a
-	// large tool result can't truncate mid-message.
+	// ReadBytes has no size cap, unlike Scanner, so a large tool result can't truncate.
 	line, err := t.stdout.ReadBytes('\n')
 	if err != nil && len(line) == 0 {
 		return nil, err
@@ -76,16 +72,14 @@ func (t *stdioTransport) recv() ([]byte, error) {
 
 func (t *stdioTransport) close() error {
 	_ = t.stdin.Close()
-	// Closing stdin only asks the server to exit; Kill makes sure it does,
-	// and Wait reaps the process plus the stderr-copying goroutine.
+	// Closing stdin only asks; Kill makes sure, and Wait reaps the stderr goroutine too.
 	if t.cmd.Process != nil {
 		_ = t.cmd.Process.Kill()
 	}
 	return t.cmd.Wait()
 }
 
-// Tags every complete line before forwarding to os.Stderr, so several
-// servers' diagnostics stay readable when interleaved.
+// Tags every complete line so several servers' diagnostics stay readable when interleaved.
 type prefixWriter struct {
 	prefix string
 	buf    []byte

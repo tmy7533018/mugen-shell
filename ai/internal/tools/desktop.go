@@ -12,11 +12,8 @@ import (
 	"time"
 )
 
-// DesktopContext snapshots live desktop state as a compact block for a
-// transient system message. Fields whose tool category is disabled are omitted:
-// a category the user switched off must be invisible as data too, not just as
-// actions. Anything that errors or times out is silently dropped, because a
-// missing line beats a stalled chat turn.
+// DesktopContext snapshots live desktop state for a transient system message. A disabled
+// category is omitted entirely, and anything that errors or times out is dropped.
 func (r *Registry) DesktopContext(ctx context.Context) string {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()

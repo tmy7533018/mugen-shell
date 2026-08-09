@@ -10,8 +10,7 @@ import (
 	"time"
 )
 
-// Streams `chunks` ndjson lines spaced by `gap`, then optionally goes silent
-// with the socket still open — the wedge that no other timeout catches.
+// Streams chunks, then optionally goes silent with the socket open — the wedge nothing else catches.
 func stubOllama(t *testing.T, chunks int, gap time.Duration, thenStall time.Duration) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -1,9 +1,8 @@
 import QtQuick
 import "../../lib" as Theme
 
-// Never assign `value` from in here: callers bind it to their source of truth
-// and an imperative write would sever that binding for good. Report the
-// candidate through moved(newValue) and let their write flow back in.
+// Never assign `value` from in here: callers bind it and an imperative write severs that
+// binding for good. Report the candidate through moved(newValue) instead.
 Item {
     id: root
 
@@ -20,8 +19,7 @@ Item {
     implicitWidth: 180
     implicitHeight: 24
 
-    // Pointer slop around the 6px track. The MouseArea origin sits left of the
-    // track by this much, so presses subtract it back out.
+    // The MouseArea origin sits left of the track by this much, so presses subtract it back out.
     readonly property int _grab: 8
 
     readonly property real _ratio: (to > from) ? Math.max(0, Math.min(1, (value - from) / (to - from))) : 0
@@ -63,8 +61,7 @@ Item {
             cursorShape: Qt.PointingHandCursor
             preventStealing: true
 
-            // The decimal re-round drops float noise that would otherwise land
-            // values like 0.7000000000000001 in settings.json.
+            // The decimal re-round keeps values like 0.7000000000000001 out of settings.json.
             function quantize(mx) {
                 const r = Math.max(0, Math.min(1, mx / track.width))
                 const steps = Math.round((r * (root.to - root.from)) / root.stepSize)

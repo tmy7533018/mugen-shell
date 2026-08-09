@@ -20,9 +20,7 @@ QtObject {
     // Drives the bar's looping completion sound and timer panel auto-open.
     property bool alerting: false
 
-    // Reactive clock for remainingSec. The tick Timer advances it, but every
-    // function that changes the countdown must refresh it first: tick only
-    // runs while the timer does, so until it fires this holds a stale reading.
+    // tick only runs while the timer does, so every function changing the countdown must refresh this first.
     property real now: Date.now()
 
     readonly property int remainingSec: {
@@ -93,8 +91,7 @@ QtObject {
             "alerting": alerting
         }
         let json = JSON.stringify(payload, null, 2)
-        // Same atomic tmp + rename as SettingsManager: a FileView watcher on
-        // this path can otherwise read the file mid-truncate.
+        // Same atomic tmp + rename as SettingsManager: a FileView watcher can read mid-truncate.
         saveProcess.command =
             JsonStore.atomicWriteArgv(stateDir, stateFile, json)
         saveProcess.running = true

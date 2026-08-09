@@ -20,17 +20,11 @@ from .const import CHUNK, SR
 from .log import log
 from .settings import voice_float, voice_settings
 
-# Above the capture threshold (0.35): a false trigger here costs the user the
-# rest of a sentence, while a missed one just means they say it again.
+# Above the capture threshold: a false trigger costs a sentence, a missed one just repeats it.
 BARGE_VAD_THRESHOLD = float(os.environ.get("YURA_BARGE_VAD", "0.5"))
-# Speech has to hold for this long. A cough, a keyboard clack or a door is
-# loud but brief, and every one of them used to be a plausible stop signal.
-# The echo canceller also breaks down on loud passages, and that residual
-# measured 0.24 s at its longest — under 0.3 s it read as someone talking.
+# A cough or a keyboard clack is loud but brief; the echo canceller's residual measured 0.24 s at its longest.
 BARGE_HOLD_S = float(os.environ.get("YURA_BARGE_HOLD", "0.6"))
-# Audio kept from before the trigger, so the first syllables survive the
-# handover to capture. Has to stay ahead of the hold, or the words that
-# triggered it are already out of the buffer.
+# Has to stay ahead of the hold, or the words that triggered it are already out of the buffer.
 BARGE_PREROLL_S = 1.1
 
 
@@ -92,8 +86,7 @@ class BargeMonitor:
                 self.frames = preroll[:]
                 self.triggered = True
                 log("barge", f"interrupted after {speech_run:.2f}s of speech")
-                # False triggers are only arguable with the audio in hand, and
-                # a bad one is invisible otherwise — the reply just stops.
+                # A false trigger is only arguable with the audio in hand; otherwise the reply just stops.
                 dump_audio(self.frames, "barge")
                 return
 

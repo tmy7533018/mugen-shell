@@ -11,9 +11,7 @@ import (
 	"time"
 )
 
-// An in-process MCP server for tests. handler returning ok=false models a
-// notification (no reply). out is buffered because the client writes and its
-// readLoop reads on separate goroutines.
+// In-process MCP server for tests. out is buffered — the writer and readLoop are separate goroutines.
 type scriptedTransport struct {
 	handler func(req rpcMessage) (rpcMessage, bool)
 	out     chan []byte

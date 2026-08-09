@@ -17,8 +17,7 @@ QtObject {
     readonly property string timerSoundsDir: dataDir + "/timer-sounds"
 
     readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || ""
-    // Empty when the runtime dir is missing, which callers read as "the voice
-    // daemon cannot be reached" rather than posting to a bogus path.
+    // Empty when the runtime dir is missing, which callers read as "the daemon can't be reached".
     readonly property string yuraCtlSocket:
         runtimeDir === "" ? "" : runtimeDir + "/mugen-shell/yura-ctl.sock"
 }

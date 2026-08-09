@@ -113,9 +113,7 @@ QtObject {
 
     function reportArtFailure(url) {
         if (url === "" || url !== artUrl) return
-        // A cache file that fails may be corrupt or evicted, so the derived
-        // thumbnail is still worth one attempt. Refusing only once we are
-        // already showing that derivation is what stops the loop.
+        // Refusing only once we are already showing the derivation is what stops the loop.
         if (url === _artCachedUrl && _artIsFallback) return
         let derived = extractYoutubeThumbnail(_artTrackKey)
         if (derived === "" || derived === url) return

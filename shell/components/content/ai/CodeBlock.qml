@@ -13,8 +13,7 @@ Item {
     property string lang: ""
     property string code: ""
 
-    // Parent runs one shared wl-copy Process; a per-block one would stack
-    // idle instances in chats with many code blocks.
+    // Parent runs one shared wl-copy Process; a per-block one would stack idle instances.
     signal copyRequested(string text)
 
     implicitHeight: container.implicitHeight

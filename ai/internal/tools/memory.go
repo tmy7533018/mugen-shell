@@ -8,9 +8,7 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/store"
 )
 
-// Every entry is re-injected into the system prompt each turn, so an unbounded
-// list would let a chatty model (or a prompt-injected save loop) bloat every
-// future conversation.
+// Every entry is re-injected each turn, so an unbounded list would bloat every future conversation.
 const maxMemories = 100
 
 const maxMemoryLen = 500
@@ -115,9 +113,7 @@ func (r *Registry) AttachMemory(st *store.Store) {
 	)
 }
 
-// MemoryBlock formats every saved memory for injection into the system prompt.
-// A disabled memory category yields "": a category the user switched off must
-// be invisible as data, not just as actions.
+// MemoryBlock formats saved memories for the system prompt; a disabled memory category yields "".
 func (r *Registry) MemoryBlock() string {
 	if r.memStore == nil || r.disabledCats["memory"] {
 		return ""

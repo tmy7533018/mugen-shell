@@ -3,8 +3,7 @@ import os
 
 from .const import CONFIG_DIR
 
-# Live knobs (voice.enabled, voice.turnOpens) come from the shell's
-# settings.json so the Settings GUI controls the daemon without a restart.
+# Live knobs come from the shell's settings.json so the GUI controls the daemon without a restart.
 SETTINGS_FILE = os.path.join(CONFIG_DIR, "settings.json")
 
 _settings_cache: tuple[float, dict] = (0.0, {})

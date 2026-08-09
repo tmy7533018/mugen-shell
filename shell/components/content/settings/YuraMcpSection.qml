@@ -223,9 +223,7 @@ Rectangle {
             try {
                 let cfg = (JSON.parse(getCurrentProcess.buf).config) || {}
                 if (!cfg.mcp) cfg.mcp = {}
-                // This section models seven fields; config.toml may carry more
-                // per server. Overlaying onto the config just fetched keeps
-                // whatever it does not know about.
+                // Overlaid onto the config just fetched, so per-server fields this section doesn't model survive.
                 let existing = cfg.mcp.servers || {}
                 let m = {}
                 for (let i = 0; i < section.servers.length; i++) {
@@ -255,8 +253,7 @@ Rectangle {
                   "-X", "PUT", aiBackend.baseUrl + "/config",
                   "-H", "Content-Type: application/json",
                   "--data-binary", "@-"]
-        // The config carries API keys and MCP secrets, and argv is world-
-        // readable through /proc; the body goes over stdin instead.
+        // argv is world-readable through /proc and the config carries secrets, so the body goes over stdin.
         onStarted: {
             saveProcess.write(saveProcess.payload)
             saveProcess.stdinEnabled = false

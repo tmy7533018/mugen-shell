@@ -31,8 +31,7 @@ QtObject {
         else cancelRetry()
     }
 
-    // A changed override forces a fresh location resolve; clearing it falls
-    // back to IP geolocation.
+    // A changed override forces a fresh resolve; clearing it falls back to IP geolocation.
     onLocationOverrideChanged: {
         locationResolved = false
         cancelRetry()
@@ -80,8 +79,7 @@ QtObject {
     function applyCache(text) {
         try {
             let c = JSON.parse(text)
-            // A cached forecast in the other unit reads as a plausible wrong
-            // temperature rather than as missing data.
+            // A cached forecast in the other unit reads as a plausible wrong temperature.
             if (c.unit !== unit) return
             if (!c.savedAt || Date.now() - c.savedAt > cacheMaxAgeMs) return
             temperature = c.temperature
@@ -124,16 +122,11 @@ QtObject {
         }
     }
 
-    // A change landing while the matching curl is still in flight is queued
-    // and replayed from onStreamFinished, so it can't be silently dropped
-    // until the next 15-minute poll.
+    // A change landing mid-curl is queued and replayed from onStreamFinished, not dropped.
     property bool pendingResolve: false
     property bool pendingRefetch: false
 
-    // The shell starts well before the network does — wifi association can
-    // land 15 seconds after the first fetch has already failed — and the bar
-    // hides the indicator until a forecast arrives. Without this the wait
-    // would be the full poll interval.
+    // The shell starts before the network, so without a backoff the wait is the full poll interval.
     property int retryDelay: 0
     readonly property int retryDelayBase: 5000
     readonly property int retryDelayMax: 2 * 60 * 1000
@@ -194,8 +187,7 @@ QtObject {
         running: false
         command: ["bash", "-c", "curl -s --max-time 8 https://ipwho.is/"]
 
-        // Compact JSON has no newlines, so StdioCollector (whole stream) is
-        // required — a SplitParser would drop the unterminated final segment.
+        // Compact JSON has no newlines, so a SplitParser would drop the unterminated final segment.
         stdout: StdioCollector {
             onStreamFinished: {
                 let ok = false
@@ -213,8 +205,7 @@ QtObject {
                 if (ok) {
                     weatherManager.cancelRetry()
                 } else {
-                    // Every way this fails is transient: no network yet, or
-                    // ipwho.is answering with success:false under rate limit.
+                    // Every way this fails is transient: no network yet, or ipwho.is rate-limiting.
                     weatherManager.errorText = "location unavailable"
                     weatherManager.scheduleRetry()
                 }
@@ -231,8 +222,7 @@ QtObject {
     property Process geocodeProcess: Process {
         running: false
         property string place: ""
-        // Place is passed as an argv element ($1), never interpolated into the
-        // script, so a name with shell metacharacters can't inject.
+        // Place is passed as an argv element ($1), so a name with shell metacharacters can't inject.
         command: ["bash", "-c",
             "curl -s -G --max-time 8 https://geocoding-api.open-meteo.com/v1/search"
             + " --data-urlencode \"name=$1\" -d count=1 -d language=en -d format=json",
@@ -259,10 +249,7 @@ QtObject {
                     weatherManager.cancelRetry()
                 } else {
                     weatherManager.errorText = "place not found"
-                    // A well-formed reply with no match is a real answer: the
-                    // place is misspelled, and retrying would only hammer the
-                    // geocoder. Unparseable output means the request never
-                    // landed, which is worth another go.
+                    // A parsed reply with no match is a real answer (misspelled); unparseable means it never landed.
                     if (answered) weatherManager.cancelRetry()
                     else weatherManager.scheduleRetry()
                 }

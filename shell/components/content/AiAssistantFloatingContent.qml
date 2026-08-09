@@ -27,12 +27,10 @@ FocusScope {
         else speakingIndex = -1
     }
 
-    // Private instance — the volume panel stops the shared one on its own
-    // schedule, killing our capture visuals mid-listen.
+    // Private instance — the volume panel stops the shared one on its own schedule.
     Managers.MicCavaManager { id: listenCava }
 
-    // Lets a host count keyboard-only use as activity; the auto-collapse
-    // timer only sees taps and pointer motion and closes mid-compose.
+    // Lets a host count keyboard-only use as activity; the timer only sees taps and pointer motion.
     signal userActivity()
 
     property real orbEmptyScale: 0.28
@@ -46,8 +44,7 @@ FocusScope {
 
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://localhost"
     readonly property var _transportArgs: aiBackend ? aiBackend.transportArgs : []
-    // Read-aloud is yurad's TTS pipeline, so it follows the same switch the mic
-    // button does.
+    // Read-aloud is yurad's TTS pipeline, so it follows the same switch the mic button does.
     readonly property bool canReadAloud: Theme.YuraCtl.available
         && (!settingsManager || settingsManager.voiceEnabled)
 
@@ -60,13 +57,11 @@ FocusScope {
     property bool userScrolled: false
     property int speakingIndex: -1
     property string currentModel: ""
-    // Tracked separately from currentModel so opening an old chat can show
-    // its bound model without clobbering the next-new-chat preference.
+    // Tracked separately so an old chat can show its bound model without clobbering the default.
     property string defaultModel: ""
     property var availableModels: []
     property bool modelDropdownOpen: false
-    // The server persists this to conversations.thinking, so reopening an
-    // old chat restores whichever state it was last sent with.
+    // The server persists this, so reopening an old chat restores the state it was last sent with.
     property bool currentThinking: false
 
     property var conversations: []
@@ -83,8 +78,7 @@ FocusScope {
         "Summarize my unread notifications"
     ]
 
-    // While this is set the backend is blocked waiting on approval of a
-    // destructive MCP tool. Shape: { confirm_id, name, arguments }.
+    // While set, the backend is blocked on approval. Shape: { confirm_id, name, arguments }.
     property var pendingConfirm: null
 
     readonly property bool rewinding: truncateProcess.running
@@ -113,8 +107,7 @@ FocusScope {
         root.pendingAttachments = next
     }
 
-    // Reveal state lives here, not in the delegate: each chunk reassigns
-    // `messages` and rebuilds the delegates.
+    // Reveal state lives here, not in the delegate: each chunk reassigns messages and rebuilds them.
     readonly property string typingSpeed: settingsManager ? settingsManager.yuraTypingSpeed : "instant"
     readonly property int revealStep: typingSpeed === "slow" ? 2 : typingSpeed === "normal" ? 6 : 16
     property int streamRevealed: 0
@@ -260,9 +253,7 @@ FocusScope {
         root.sendMessage(text, files)
     }
 
-    // Retry and edit are the same server-side move: drop this message and
-    // everything after it, then send again. Only messages the server has
-    // persisted carry an id, which is why both actions gate on one.
+    // Retry and edit are one server-side move: drop this message and everything after, then resend.
     property int pendingRewindId: 0
     property int editingIndex: -1
 
@@ -315,8 +306,7 @@ FocusScope {
 
     Timer {
         id: speakGuard
-        // Nothing ever started playing, so drop the stop button rather than
-        // strand it on a message that stayed silent.
+        // Nothing ever started playing, so drop the stop button rather than strand it.
         interval: 20000
         onTriggered: root.speakingIndex = -1
     }
@@ -333,18 +323,15 @@ FocusScope {
     function newChat() {
         if (streaming) stopStreaming()
         if (truncateProcess.running) truncateProcess.abandoned = true
-        // speakingIndex is a row number, so it would mark an unrelated message
-        // once the list is replaced.
+        // speakingIndex is a row number, so it would mark an unrelated message after a replace.
         if (speakingIndex >= 0) stopReadAloud()
         messages = []
         currentConvId = 0
         userScrolled = false
-        // Coming back from an old conversation leaves currentModel stuck on
-        // that conversation's bound model.
+        // Coming back from an old conversation leaves currentModel stuck on its bound model.
         if (defaultModel !== "") currentModel = defaultModel
         currentThinking = false
-        // No backend call: the conversation is auto-created on the first user
-        // message, so abandoning a blank chat leaves no empty row in the store.
+        // No backend call: the conversation is auto-created on the first message, leaving no empty row.
     }
 
     function selectConversation(convId) {
@@ -404,9 +391,7 @@ FocusScope {
             }
         }
 
-        // SSE frames end with a blank line, and SplitParser carries that second
-        // newline over to the front of the next read ("\ndata: {...}"), so the
-        // prefix check only matches after a trim.
+        // SplitParser carries the frame's second newline to the front of the next read, so trim first.
         stdout: SplitParser {
             onRead: data => eventsSubscriber.handleLine(data)
         }
@@ -421,8 +406,7 @@ FocusScope {
         onTriggered: eventsSubscriber.running = true
     }
 
-    // An unclosed ``` mid-stream still yields a code block, so partial code
-    // shows up while it streams.
+    // An unclosed ``` mid-stream still yields a code block, so partial code shows while it streams.
     function parseBlocks(content) {
         if (!content) return []
         let blocks = []
@@ -630,8 +614,7 @@ FocusScope {
             currentModel: root.currentModel
             availableModels: root.availableModels
             isOpen: root.modelDropdownOpen
-            // An active chat is bound to its model; only the next new
-            // conversation's default is editable.
+            // An active chat is bound to its model; only the next conversation's default is editable.
             editable: root.currentConvId === 0
 
             onToggled: {
@@ -905,8 +888,7 @@ FocusScope {
                             readonly property real hPad: modeManager.scale(12)
                             readonly property real vPad: modeManager.scale(8)
                             readonly property real trailingLeading: (userText.lineHeight - 1) * userMetrics.lineSpacing
-                            // Editing takes the full allowance so the text has
-                            // somewhere to grow rather than reflowing per keystroke.
+                            // Editing takes the full allowance so the text grows instead of reflowing.
                             width: delegateRoot.isEditing
                                 ? parent.width * 0.85
                                 : Math.min(userText.implicitWidth + hPad * 2, parent.width * 0.85)
@@ -1053,8 +1035,7 @@ FocusScope {
                                 && delegateRoot.hasServerId
                             canEdit: !delegateRoot.isAssistant && !root.busy
                                 && delegateRoot.hasServerId && !delegateRoot.isEditing
-                            // Stays put while it reads, so the stop button
-                            // doesn't vanish when the pointer moves away.
+                            // Stays put while it reads, so the stop button survives the pointer leaving.
                             opacity: (msgHover.hovered || msgActions.speaking) ? 1.0 : 0.0
                             visible: opacity > 0
                             Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
@@ -1194,12 +1175,10 @@ FocusScope {
             id: inputFlick
             anchors.left: attachIcon.right
             anchors.leftMargin: modeManager.scale(8)
-            // Invisible items keep their geometry, so the mic slot has to be
-            // anchored around when voice input is off.
+            // Invisible items keep their geometry, so the mic slot is anchored around when voice is off.
             anchors.right: micIcon.visible ? listenViz.left : sendIcon.left
             anchors.rightMargin: modeManager.scale(12)
-            // Grows symmetrically around the row, so a single line sits where
-            // it did before Shift+Enter existed.
+            // Grows symmetrically, so a single line sits where it did before Shift+Enter existed.
             anchors.verticalCenter: parent.verticalCenter
             anchors.verticalCenterOffset: attachStrip.height / 2
             height: Math.min(inputField.implicitHeight, modeManager.scale(110))
@@ -1339,8 +1318,7 @@ FocusScope {
             width: modeManager.scale(34)
             height: modeManager.scale(34)
             visible: !root.settingsManager || root.settingsManager.voiceEnabled
-            // HoverHandler, not MouseArea: containsMouse misses leave events
-            // on Wayland when the click reflows the UI, leaving this lit.
+            // HoverHandler, not MouseArea: containsMouse misses Wayland leave events when a click reflows.
             opacity: (root.voiceActive || micHover.hovered) ? 1.0 : 0.5
 
             Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
@@ -1748,8 +1726,7 @@ FocusScope {
 
         onExited: (exitCode) => {
             root.streaming = false
-            // A timeout or error can end the stream with a card still up, for
-            // a prompt the backend has already abandoned.
+            // A timeout or error can end the stream with a card still up for an abandoned prompt.
             root.pendingConfirm = null
             // A stop is a SIGTERM, so curl's non-zero exit says nothing about the connection.
             if (exitCode !== 0 && !root.stopRequested) {
@@ -1757,8 +1734,7 @@ FocusScope {
             }
             root.stopRequested = false
             root.refreshConversations()
-            // Message ids only exist server-side, and retry/edit address them,
-            // so the turn that just landed has to be read back to be actionable.
+            // Message ids only exist server-side, so the turn that just landed must be read back.
             root.loadCurrentConversation()
         }
     }
@@ -1812,8 +1788,7 @@ FocusScope {
                 root.pendingAttachments = files
                 return
             }
-            // Drop the rewound tail locally too, so the resend does not append
-            // under messages the server has already forgotten.
+            // Drop the rewound tail locally too, so the resend can't append under forgotten messages.
             let kept = []
             for (const m of root.messages) {
                 if (m.id && m.id >= truncateProcess.messageId) break
@@ -1841,9 +1816,7 @@ FocusScope {
                 if (!sameConv) root.revealActive = false
                 root.currentConvId = obj.id || 0
                 let msgs = obj.messages || []
-                // Persisted history keeps only role/content, so a reload would
-                // wipe the in-memory tool-call chips. Carry them over by
-                // matching assistant messages in order.
+                // Persisted history keeps only role/content, so carry tool-call chips over by order.
                 let prevTools = []
                 if (sameConv) {
                     for (let i = 0; i < root.messages.length; i++) {
@@ -2017,8 +1990,7 @@ FocusScope {
                   "-H", "Content-Type: application/json",
                   "-d", payload]
 
-        // PUT /model only sets the default for the next new conversation;
-        // the current view keeps its own model.
+        // PUT /model only sets the default for the next new conversation; this view keeps its own.
     }
 
     Component.onCompleted: {

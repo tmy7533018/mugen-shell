@@ -33,9 +33,7 @@ with open(cfg, "w") as f:
 PY
 
 if command -v systemctl >/dev/null 2>&1; then
-    # Only restart if hypridle is currently active. Otherwise the user has
-    # idle inhibitor on (service intentionally stopped) and we'd flip it
-    # back on as a side effect of a timer change.
+    # Inactive means the user has an idle inhibitor on, and restarting would flip it back.
     if systemctl --user is-active --quiet hypridle.service; then
         systemctl --user restart hypridle.service >/dev/null 2>&1 || true
     fi

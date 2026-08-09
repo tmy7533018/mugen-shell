@@ -71,8 +71,7 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 			continue
 		}
 		if m.Role == "tool" {
-			// Anthropic has no tool role: results ride on a user-role message
-			// whose tool_result block references the prior tool_use id.
+			// Anthropic has no tool role: results ride on a user message referencing the tool_use id.
 			msgs = append(msgs, map[string]any{
 				"role": "user",
 				"content": []map[string]any{{
@@ -140,8 +139,7 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 
 	maxTokens := a.maxTokens
 	if opts.Thinking && maxTokens < a.thinkingBudget+2048 {
-		// budget_tokens must be < max_tokens, and the model still needs room
-		// to answer after spending the reasoning budget.
+		// budget_tokens must be < max_tokens, with room left to answer after the reasoning spend.
 		maxTokens = a.thinkingBudget + 2048
 	}
 	payload := map[string]any{
@@ -151,9 +149,7 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		"stream":     true,
 	}
 	if len(systemBlocks) > 0 {
-		// The breakpoint goes on the first block (persona + memories, stable
-		// across turns); the per-turn desktop snapshot sits after it so its
-		// churn can't invalidate the cached prefix.
+		// Persona + memories are stable, so the per-turn snapshot must sit after the breakpoint.
 		systemBlocks[0]["cache_control"] = map[string]any{"type": "ephemeral"}
 		payload["system"] = systemBlocks
 	}
@@ -164,8 +160,7 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		}
 	}
 	if len(toolsPayload) > 0 {
-		// cache_control on the last tool covers the entire preceding tools
-		// block, dropping input-token cost on cache hits to ~10%.
+		// cache_control on the last tool covers the whole preceding block: ~10% input cost on hits.
 		toolsPayload[len(toolsPayload)-1]["cache_control"] = map[string]any{"type": "ephemeral"}
 		payload["tools"] = toolsPayload
 	}
@@ -191,8 +186,7 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		// Not all Claude tiers support extended thinking, so a rejection is
-		// re-issued without it rather than failing the conversation.
+		// Not all Claude tiers support extended thinking, so a rejection is re-issued without it.
 		if resp.StatusCode == http.StatusBadRequest && opts.Thinking &&
 			strings.Contains(strings.ToLower(string(b)), "thinking") {
 			retry := opts
@@ -205,8 +199,7 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 
-	// tool_use blocks stream their args as input_json_delta, so they must be
-	// accumulated per content_block index until content_block_stop.
+	// tool_use args stream as input_json_delta, so accumulate per index until content_block_stop.
 	type pendingTool struct {
 		ID      string
 		Name    string

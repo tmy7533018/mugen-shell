@@ -70,9 +70,7 @@ func Open(path string) (*Store, error) {
 	return s, nil
 }
 
-// Every conversation ever held is in here, so it gets what config.toml gets.
-// The directory is tightened too: MkdirAll leaves an existing one alone, and
-// journal_mode(WAL) parks the same data in two sidecar files.
+// WAL parks the same data in two sidecar files, so they get config.toml's permissions too.
 func (s *Store) restrict(dir string) {
 	tighten(dir, 0o700)
 	for _, p := range []string{s.path, s.path + "-wal", s.path + "-shm"} {
@@ -288,10 +286,8 @@ func (s *Store) ConversationCount() (int, error) {
 	return n, err
 }
 
-// DeleteAllConversations removes every conversation; messages cascade, then a
-// VACUUM returns the freed pages to the filesystem. A VACUUM under WAL keeps
-// that space until the last connection closes, hence the drop to rollback mode
-// and back.
+// DeleteAllConversations removes every conversation; messages cascade, then a VACUUM
+// returns the pages. Under WAL that needs the drop to rollback mode and back.
 func (s *Store) DeleteAllConversations() error {
 	if _, err := s.db.Exec(`DELETE FROM conversations`); err != nil {
 		return err
@@ -322,9 +318,7 @@ func (s *Store) PruneConversationsOlderThan(cutoff int64) (int, error) {
 // Path is the database file's path.
 func (s *Store) Path() string { return s.path }
 
-// SizeBytes is the on-disk size of the database file. The -wal and -shm
-// sidecars are excluded so the figure doesn't jump around as the WAL grows and
-// checkpoints.
+// SizeBytes excludes the -wal and -shm sidecars so the figure doesn't jump as the WAL grows.
 func (s *Store) SizeBytes() int64 {
 	info, err := os.Stat(s.path)
 	if err != nil {
@@ -412,9 +406,8 @@ func (s *Store) RemoveLastMessage(convID int64) error {
 // ErrMessageNotInConversation also covers an unknown msgID.
 var ErrMessageNotInConversation = errors.New("message does not belong to this conversation")
 
-// TruncateFrom drops msgID and everything after it. Message ids come from a
-// single AUTOINCREMENT sequence, so ordering by id matches the chronological
-// order ListMessages returns. Returns how many messages were removed.
+// TruncateFrom drops msgID and everything after it, returning how many were removed.
+// Ids come from one AUTOINCREMENT sequence, so id order matches ListMessages' order.
 func (s *Store) TruncateFrom(convID, msgID int64) (int64, error) {
 	tx, err := s.db.Begin()
 	if err != nil {

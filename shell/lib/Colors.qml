@@ -38,9 +38,7 @@ QtObject {
         readThemeModeProcess.running = true
     }
 
-    // Read synchronously so the first frame already has the wallpaper's colours;
-    // arriving late on startup would drag every colour through the 3s Behavior
-    // from the literals.
+    // Read synchronously, or every colour drags through the 3s Behavior from the literals.
     property FileView colorsSeed: FileView {
         path: palette.colorsJsonFile
         blockLoading: true
@@ -49,8 +47,7 @@ QtObject {
 
         onFileChanged: colorsSeed.reload()
 
-        // reload() is asynchronous: text() called right after it still returns
-        // the previous contents, so the parse has to happen here.
+        // reload() is asynchronous: text() right after it still returns the previous contents.
         onLoaded: palette.applyColors(colorsSeed.text())
     }
 
@@ -307,8 +304,7 @@ QtObject {
     readonly property color darkSurfaceInsetCard: Qt.rgba(0, 0, 0, 0.65)
     readonly property color darkSurfaceInsetCardHover: Qt.rgba(0, 0, 0, 0.75)
 
-    // Light mode is clear glass, not a white theme: low-opacity white-tinted
-    // surfaces the wallpaper bleeds through, with text staying white.
+    // Light mode is clear glass, not a white theme: the wallpaper bleeds through and text stays white.
     readonly property color lightSurfaceBorder: Qt.rgba(1.0, 1.0, 1.0, 0.35)
     readonly property color lightSurfaceGlass: Qt.rgba(1.0, 1.0, 1.0, 0.15)
     readonly property color lightTextPrimary: Qt.rgba(0.92, 0.92, 0.96, 0.90)
@@ -323,8 +319,7 @@ QtObject {
     property color surfaceBorder: themeMode === "light" ? lightSurfaceBorder : darkSurfaceBorder
     property color surfaceGlass: themeMode === "light" ? lightSurfaceGlass : darkSurfaceGlass
     property color textPrimary: themeMode === "light" ? lightTextPrimary : darkTextPrimary
-    // Text renders darker than icons at the same color; bar text uses this to
-    // sit level with neighbouring glyphs.
+    // Text renders darker than icons at the same colour, so bar text uses this to sit level.
     property color textPrimaryBright: Qt.rgba(
         Math.min(1.0, textPrimary.r * 1.05),
         Math.min(1.0, textPrimary.g * 1.05),

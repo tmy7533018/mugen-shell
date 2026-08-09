@@ -8,11 +8,7 @@ import threading
 from .log import log
 from .tts import prewarm_tts, speak_guarded
 
-# The shell drives the daemon over this socket: read-aloud, starting and
-# cancelling a turn. A socket rather than signals or a
-# second process — signals carry no arguments and give no answer, and on the
-# Nix path yurad.py lives in the store behind a wrapped interpreter, so it
-# can't be re-invoked as a one-shot.
+# A socket, not signals: signals carry no arguments, and on the Nix path yurad.py can't be re-invoked.
 CTL_SOCKET = os.path.join(
     os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}",
     "mugen-shell", "yura-ctl.sock")
@@ -43,9 +39,7 @@ class ReadAloud:
                          daemon=True).start()
 
     def _run(self, text: str, gen: int, voice: str | None) -> None:
-        # The lock keeps a preempted utterance from overlapping its successor:
-        # the in-flight one cuts out on the generation bump, and whoever wakes
-        # up holding a stale generation gives up its turn.
+        # Whoever wakes holding a stale generation gives up its turn, so a preempted utterance can't overlap.
         with self._play:
             if gen != self._gen:
                 return
@@ -61,8 +55,7 @@ class _CtlServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True
 
     def server_bind(self) -> None:
-        # HTTPServer's own bind unpacks server_address as (host, port), which
-        # a filesystem path isn't.
+        # HTTPServer's own bind unpacks server_address as (host, port), which a path isn't.
         socketserver.TCPServer.server_bind(self)
         self.server_name = "localhost"
         self.server_port = 0
@@ -127,8 +120,7 @@ class _CtlHandler(http.server.BaseHTTPRequestHandler):
             if not text:
                 self._reply(400, {"error": "empty text"})
                 return
-            # Absent means "whatever the language routing picks"; the Settings
-            # picker passes one to audition a voice before saving it.
+            # Absent means "whatever the language routing picks"; Settings passes one to audition.
             daemon.read_aloud.speak(text, str(body.get("voice") or "") or None)
         elif self.path == "/stop":
             daemon.read_aloud.stop()
@@ -149,8 +141,7 @@ class _CtlHandler(http.server.BaseHTTPRequestHandler):
 def serve_control_socket(daemon) -> None:
     try:
         os.makedirs(os.path.dirname(CTL_SOCKET), exist_ok=True)
-        # SIGTERM leaves through os._exit, so the last run's socket is still
-        # on disk and bind would fail on it.
+        # SIGTERM leaves through os._exit, so the last run's socket is still on disk.
         if os.path.exists(CTL_SOCKET):
             os.remove(CTL_SOCKET)
         server = _CtlServer(CTL_SOCKET, _CtlHandler)

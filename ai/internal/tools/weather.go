@@ -17,8 +17,7 @@ type weatherAPI struct {
 	geocodeBase  string
 	forecastBase string
 	defaultPlace string
-	// Where the bar says the user is, asked only when nothing else names a
-	// place. Substituted in tests.
+	// Where the bar says the user is, asked only when nothing else names a place.
 	locate func(context.Context) string
 
 	mu       sync.Mutex
@@ -32,10 +31,8 @@ type geoPlace struct {
 	Longitude float64 `json:"longitude"`
 }
 
-// AttachWeather registers the weather_get tool. A place the model omits falls
-// back to config [weather] place, then to wherever the bar has resolved the
-// user to be — the tool documents omitting as supported, so it has to work
-// without anything configured.
+// AttachWeather registers weather_get. An omitted place falls back to config [weather]
+// place, then to the bar's resolved location — omitting is documented as supported.
 func (r *Registry) AttachWeather(defaultPlace string) {
 	api := &weatherAPI{
 		http:         &http.Client{Timeout: 8 * time.Second},
@@ -63,9 +60,7 @@ func (r *Registry) AttachWeather(defaultPlace string) {
 	})
 }
 
-// The bar resolves this by IP (or the user's override) and the desktop-state
-// line already reports it, so asking the shell keeps the two from disagreeing
-// and needs no second configuration.
+// Asking the shell keeps this from disagreeing with the desktop-state line, and needs no second config.
 func (r *Registry) shellLocation(ctx context.Context) string {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()

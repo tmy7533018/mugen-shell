@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Toggle the mugen-shell keyboard shortcuts reference window.
-# If a shortcuts instance is already running, kill it; otherwise start one.
+# Toggle the keyboard shortcuts reference window; a running instance is killed.
 
 set -u
 

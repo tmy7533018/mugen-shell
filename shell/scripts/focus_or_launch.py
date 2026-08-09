@@ -6,11 +6,7 @@ import subprocess
 import os
 
 
-# A Lua Hyprland config evaluates `hyprctl dispatch` args as Lua, so the legacy
-# "focuswindow address:0x…" string is rejected and the hl.dsp.* form is
-# required. HYPR_CONFIG_LUA is exported by the Lua config itself; the systeminfo
-# probe covers a session that never exported it. Mirrors idle-timer.sh and
-# shell/lib/Hypr.qml.
+# A Lua Hyprland config rejects the legacy dispatch string, so probe and use hl.dsp.*.
 def is_lua_config():
     if os.environ.get("HYPR_CONFIG_LUA") == "1":
         return True
@@ -48,8 +44,7 @@ def focus_window(address):
     except Exception as e:
         print(f"Error focusing window: {e}", file=sys.stderr)
         return False
-    # hyprctl exits 0 even when Hyprland rejects the dispatch, so the reply body
-    # is the only signal that the window actually got focused.
+    # hyprctl exits 0 even when the dispatch is rejected, so the reply body is the only signal.
     reply = (result.stdout or '').strip()
     if reply != 'ok':
         print(f"Focus rejected for {address}: {reply or result.stderr.strip()}",
@@ -79,8 +74,7 @@ def main():
             focused = focus_window(client['address'])
             break
 
-        # An empty class is a substring of everything, so it would swallow the
-        # match and leave the requested app unlaunched.
+        # An empty class is a substring of everything, so it would swallow the match.
         if cls and ((search_term in cls) or (cls in search_term)):
             focused = focus_window(client['address'])
             break

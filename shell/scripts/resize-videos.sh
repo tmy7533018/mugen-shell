@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
-# Convert videos to 1920x1080 / 60fps with center crop (no black bars) for wallpaper use.
-#
-# Usage:
-#   ./resize-videos.sh file1.mp4 file2.mp4
-#   ./resize-videos.sh ~/Videos/*.mp4
-#   ./resize-videos.sh ~/Videos/   # process directory recursively
-#
-# Output: <original_name>_wall.mp4 in the same directory
+# Convert videos to 1920x1080 / 60fps with center crop for wallpaper use.
+# Usage: ./resize-videos.sh <file.mp4|dir>...  → <name>_wall.mp4 beside each input.
 
 set -euo pipefail
 

@@ -28,8 +28,7 @@ Row {
         onTriggered: root.justCopied = false
     }
 
-    // Every id it needs comes in as a property: an inline component can't see
-    // the enclosing file's ids.
+    // Every id it needs comes in as a property: an inline component can't see the file's ids.
     component ActionButton: Rectangle {
         id: btn
 

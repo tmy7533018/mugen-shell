@@ -10,12 +10,7 @@ if [[ ! -f "$CFG" ]]; then
     exit 1
 fi
 
-# A Lua Hyprland config evaluates `hyprctl dispatch` args as Lua, so the legacy
-# `dpms off` string is rejected and the hl.dsp.* form is required.
-# HYPR_CONFIG_LUA is exported by the Lua config itself (see the hypr Lua
-# migration) and read synchronously so it's always available here, but a
-# session that never exported it (e.g. this script invoked outside that
-# config) needs a live fallback — mirrors shell/lib/Hypr.qml's own probe.
+# A Lua Hyprland config rejects the legacy dispatch string, so probe and use hl.dsp.*.
 IS_LUA=0
 if [[ "${HYPR_CONFIG_LUA:-}" == "1" ]]; then
     IS_LUA=1
@@ -43,10 +38,7 @@ case "$KIND" in
         ;;
 esac
 
-# A block is "ours" only if one of its lines is an EXACT match (after
-# trimming) of a command this script itself would write, in either config
-# form — a loose substring check would also claim unrelated hand-written
-# listeners that merely mention e.g. "dpms" or "suspend" in passing.
+# Exact match, not substring: a loose check would claim hand-written listeners that merely mention "dpms".
 case "$KIND" in
     suspend)
         KNOWN_LINES=("on-timeout = systemctl suspend")
@@ -64,9 +56,7 @@ KNOWN_LINES_JSON=$(printf '%s\n' "${KNOWN_LINES[@]}")
 
 SECONDS_VAL=$((MINUTES * 60))
 
-# 0 minutes = disabled: the listener block is removed entirely rather than given
-# an unreachable timeout, so hypridle.conf stays a truthful description of what's
-# active.
+# 0 minutes removes the block entirely, so hypridle.conf stays a truthful description of what's active.
 python3 - "$CFG" "$SECONDS_VAL" "$TIMEOUT_CMD" "$RESUME_CMD" "$KNOWN_LINES_JSON" <<'PY'
 import re, sys
 
@@ -76,8 +66,7 @@ known_lines = set(sys.argv[5].splitlines())
 with open(cfg) as f:
     lines = f.readlines()
 
-# Delimit listener blocks by brace depth, not a regex: the Lua dpms command
-# contains its own `{ ... }`, so a `[^}]*` match would stop at the wrong `}`.
+# Brace depth, not a regex: the Lua dpms command contains its own `{ ... }`.
 def find_blocks(lns):
     blocks, i, n = [], 0, len(lns)
     while i < n:
@@ -128,9 +117,7 @@ with open(cfg, "w") as f:
 PY
 
 if command -v systemctl >/dev/null 2>&1; then
-    # Only restart if hypridle is currently active. Otherwise the user has idle
-    # inhibitor on (service intentionally stopped) and we'd flip it back on as a
-    # side effect of a timer change.
+    # Inactive means the user has an idle inhibitor on, and restarting would flip it back.
     if systemctl --user is-active --quiet hypridle.service; then
         systemctl --user restart hypridle.service >/dev/null 2>&1 || true
     fi

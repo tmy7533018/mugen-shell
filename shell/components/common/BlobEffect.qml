@@ -1,8 +1,7 @@
 import QtQuick
 
-// One ShaderEffect quad per layer; the edge is evaluated analytically in
-// assets/shaders/blob.frag. pointCount is accepted but ignored — the GLSL
-// edge is resolution-independent — so callers that still set it keep working.
+// One ShaderEffect quad per layer; the edge is evaluated in assets/shaders/blob.frag.
+// pointCount is accepted but ignored, so callers that still set it keep working.
 Item {
     id: root
 
@@ -15,8 +14,7 @@ Item {
     property bool running: true
     property real edgeAlpha: 0.0
 
-    // Shared clock in seconds; per-layer speed scales inside the shader.
-    // Gated on visibility so hidden blobs stop churning uniforms.
+    // Shared clock in seconds, gated on visibility so hidden blobs stop churning uniforms.
     property real time: 0
     NumberAnimation on time {
         running: root.running && root.visible

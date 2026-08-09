@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 # Usage: sync-wallpaper-thumbs.sh <thumb-dir> [video...]
-#
-# Prints one line per video: "ok<TAB><path>" when the existing thumbnail is
-# still usable, "new<TAB><path>" when it was just regenerated. WallpaperManager
-# needs the distinction because Qt only reloads an image whose URL changed.
+# Prints "ok<TAB><path>" or "new<TAB><path>" — Qt only reloads an image whose URL changed.
 set -uo pipefail
 
 THUMB_DIR="${1:-}"
@@ -39,8 +36,7 @@ for src; do
   # Without this a file ffmpeg cannot decode would be retried on every poll.
   [[ -f "$fail" && ! "$src" -nt "$fail" ]] && continue
 
-  # Seeking to 2s yields no frame at all on clips shorter than that (gifs,
-  # stingers), so fall back to the first frame.
+  # Seeking to 2s yields no frame on clips shorter than that, so fall back to the first frame.
   if ffmpeg -y -v error -ss 2 -i "$src" -vf "$SCALE" -frames:v 1 "$out" >/dev/null 2>&1 && [[ -s "$out" ]]; then
     rm -f "$fail"
     printf 'new\t%s\n' "$src"

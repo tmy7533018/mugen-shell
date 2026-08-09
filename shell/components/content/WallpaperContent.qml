@@ -50,8 +50,7 @@ FocusScope {
         }
     }
 
-    // A Binding here would leave pickerOpen stuck on, because the Loader that
-    // owns this content tears the binding down without restoring it.
+    // A Binding here sticks pickerOpen on: the owning Loader tears it down without restoring.
     Component.onDestruction: wallpaperManager.pickerOpen = false
 
     function resetAutoCloseTimer() {
@@ -97,8 +96,7 @@ FocusScope {
         running: false
     }
 
-    // Whatever the user last landed on. Kept as a path, not an index, so the
-    // selection survives a file appearing or disappearing mid-browse.
+    // Kept as a path, not an index, so the selection survives a file appearing or disappearing.
     property string anchorPath: ""
 
     function moveTo(index) {
@@ -436,8 +434,7 @@ FocusScope {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 root.moveTo(index)
-                                // setWallpaper() closes all modes and tears down this delegate,
-                                // so bump first or resetAutoCloseTimer() runs in a dead context.
+                                // setWallpaper() tears down this delegate, so bump before it runs.
                                 root.resetAutoCloseTimer()
                                 if (cellRoot.isAddCell) {
                                     root.openWallpaperFolder()

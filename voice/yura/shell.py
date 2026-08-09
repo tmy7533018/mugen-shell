@@ -46,9 +46,7 @@ def yura_ipc(*args: str) -> None:
     _ipc_async(["qs", "-p", YURA_SHELL_QML, "ipc", "call", "yura", *args])
 
 
-# Both surfaces are told over fire-and-forget IPC, so neither can be asked what
-# it currently shows. Recording the same flags here gives GET /state something
-# authoritative to answer with when a surface loses track.
+# IPC is fire-and-forget, so neither surface can be asked what it shows — GET /state answers from here.
 _state = {"thinking": False, "listening": False, "speaking": False}
 _state_lock = threading.Lock()
 

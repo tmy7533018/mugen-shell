@@ -1,9 +1,5 @@
-// Package toolfilter narrows the tool list sent to the LLM to the categories
-// relevant to the current user message, because local models mis-pick tool
-// calls more as the catalog grows. Selection cascades over keyword match,
-// embedding similarity, recently-used and always-included categories; a turn
-// without a confident signal falls back to the full list, so filtering can only
-// trim, never remove a capability outright.
+// Package toolfilter narrows the tool list sent to the LLM to the categories relevant to
+// the message. Without a confident signal the full list is sent, so it can only trim.
 package toolfilter
 
 import (
@@ -32,16 +28,13 @@ type Config struct {
 // Below this, trimming isn't worth the extra moving parts.
 const minToolsToFilter = 12
 
-// Bounds the per-turn embedding call so a cold model load can't stall the
-// chat; the turn degrades to keyword-only instead.
+// Bounds the per-turn embedding call; the turn degrades to keyword-only instead of stalling.
 const utteranceEmbedBudget = 800 * time.Millisecond
 
 // Spaces re-attempts after a failure so we don't hammer a dead backend.
 const warmRetryCooldown = 5 * time.Minute
 
-// Without this, a backend that accepts the connection but never replies would
-// leave warming=true forever, wedging the embedding layer in keyword-only mode.
-// Generous because a cold embed model can take several seconds to load.
+// A backend that accepts but never replies would wedge warming=true; a cold model takes seconds.
 const warmBudget = 30 * time.Second
 
 type Filter struct {
@@ -56,22 +49,19 @@ type Filter struct {
 }
 
 func New(cfg Config, embed EmbedFunc) *Filter {
-	// Negative is the "unset" sentinel; an explicit 0 TopK is honoured (it
-	// means "add no embedding categories, keyword/sticky/always only").
+	// Negative is the "unset" sentinel; an explicit 0 means "add no embedding categories".
 	if cfg.TopK < 0 {
 		cfg.TopK = 4
 	}
-	// A 0 MinScore would treat every positive cosine as a hit, defeating the
-	// threshold.
+	// A 0 MinScore would treat every positive cosine as a hit, defeating the threshold.
 	if cfg.MinScore <= 0 {
 		cfg.MinScore = 0.4
 	}
 	return &Filter{cfg: cfg, embed: embed}
 }
 
-// Warm builds and embeds one profile text per tool category so Select can score
-// utterances against them. Safe to call concurrently; a failure is remembered
-// and retried lazily by Select.
+// Warm builds and embeds one profile text per tool category so Select can score against
+// them. Safe to call concurrently; a failure is remembered and retried lazily by Select.
 func (f *Filter) Warm(ctx context.Context, all []tools.Tool) {
 	if f == nil || f.embed == nil {
 		return
@@ -115,9 +105,7 @@ func (f *Filter) Warm(ctx context.Context, all []tools.Tool) {
 	}
 }
 
-// Select returns the tools to present for this utterance plus a reason string
-// for the stderr log. sticky is the set of categories the conversation used
-// recently.
+// Select returns the tools for this utterance plus a log reason; sticky is the recently-used categories.
 func (f *Filter) Select(ctx context.Context, utterance string, sticky []string, all []tools.Tool) ([]tools.Tool, string) {
 	if f == nil || len(all) <= minToolsToFilter {
 		return all, "small toolset"
@@ -131,9 +119,7 @@ func (f *Filter) Select(ctx context.Context, utterance string, sticky []string, 
 	kw := keywordHits(utterance, cats)
 	emb, embOK := f.embedHits(ctx, utterance, cats, all)
 
-	// Only a keyword or embedding hit is evidence about THIS turn; sticky and
-	// always merely ride along. Trimming to those alone would silently strip a
-	// capability the user just asked for.
+	// Only keyword or embedding hits are evidence about THIS turn; sticky and always ride along.
 	if len(kw) == 0 && len(emb) == 0 {
 		return all, "no signal"
 	}
@@ -155,8 +141,7 @@ func (f *Filter) Select(ctx context.Context, utterance string, sticky []string, 
 			selected[c] = true
 		}
 	}
-	// Keyword-only mode can't assess a category with no keyword dictionary —
-	// every MCP server. Trimming those would make the user's MCP tools vanish.
+	// Keyword-only mode can't assess a dictionary-less category; trimming would hide MCP tools.
 	if !embOK {
 		for c := range cats {
 			if !categoryHasKeywords(c) {
@@ -179,9 +164,7 @@ func (f *Filter) Select(ctx context.Context, utterance string, sticky []string, 
 	return out, reason
 }
 
-// ok=false means the embedding layer produced no verdict at all (disabled, not
-// warmed, or the call failed) — distinct from "ran and found nothing related",
-// which is an empty slice with ok=true.
+// ok=false means no verdict at all — distinct from "ran and found nothing", an empty slice with ok=true.
 func (f *Filter) embedHits(ctx context.Context, utterance string, cats map[string]bool, all []tools.Tool) ([]string, bool) {
 	if f.embed == nil {
 		return nil, false
@@ -232,8 +215,7 @@ func (f *Filter) embedHits(ctx context.Context, utterance string, cats map[strin
 	return out, true
 }
 
-// Folding in every tool's name and description gives the vector the category's
-// whole vocabulary, including MCP servers we have no keywords for.
+// Folding in every tool's name and description gives the vector the category's vocabulary.
 func categoryProfiles(all []tools.Tool) map[string]string {
 	var b = map[string]*strings.Builder{}
 	for _, t := range all {

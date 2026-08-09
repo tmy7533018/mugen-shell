@@ -1,8 +1,5 @@
-// Package mcpserver publishes mugen-ai's own tools as a Model Context
-// Protocol server. It implements only the subset a tools-only server needs —
-// initialize / ping / tools/list / tools/call — over stateless Streamable
-// HTTP: one JSON-RPC message per POST, no sessions, no server-initiated
-// streams.
+// Package mcpserver publishes mugen-ai's own tools as an MCP server, implementing only
+// initialize / ping / tools/list / tools/call over stateless Streamable HTTP.
 package mcpserver
 
 import (
@@ -16,8 +13,7 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
 
-// Only a fallback: the shapes served here are identical across recent
-// revisions, so the client's requested revision is echoed back instead.
+// Only a fallback: the shapes are identical across revisions, so the client's is echoed back.
 const protocolVersion = "2025-06-18"
 
 const maxMessageBytes = 1 << 20 // tool args are small, this is headroom
@@ -88,14 +84,11 @@ func (h *Handler) HandleMessage(ctx context.Context, raw []byte) []byte {
 	if err := json.Unmarshal(trimmed, &msg); err != nil {
 		return marshalResponse(rpcResponse{JSONRPC: "2.0", ID: nullID(), Error: &rpcError{codeParse, "parse error: " + err.Error()}})
 	}
-	// A message without a method is a response to a server request, and this
-	// server never sends any.
+	// A message without a method is a response to a server request, and this server sends none.
 	if msg.Method == "" {
 		return nil
 	}
-	// Only notifications/* are legal without an id; anything else — notably a
-	// tools/call missing its id — must not run its side effects fire-and-
-	// forget. This gates execution, not just the reply.
+	// Gates execution, not just the reply: a tools/call missing its id must not fire-and-forget.
 	if len(msg.ID) == 0 || string(msg.ID) == "null" {
 		if strings.HasPrefix(msg.Method, "notifications/") {
 			h.dispatch(ctx, msg)
@@ -127,8 +120,7 @@ func (h *Handler) dispatch(ctx context.Context, msg rpcMessage) (any, *rpcError)
 }
 
 func (h *Handler) initialize(params json.RawMessage) map[string]any {
-	// The subset served here is shape-identical across revisions, so
-	// refusing the client's requested one buys nothing.
+	// Shape-identical across revisions, so refusing the client's requested one buys nothing.
 	version := protocolVersion
 	var p struct {
 		ProtocolVersion string `json:"protocolVersion"`
@@ -169,8 +161,7 @@ func (h *Handler) callTool(ctx context.Context, params json.RawMessage) (any, *r
 	if err := json.Unmarshal(params, &p); err != nil || p.Name == "" {
 		return nil, &rpcError{codeInvalidParams, "tools/call needs a tool name"}
 	}
-	// The gate that matters: only the exposed subset is callable, no matter
-	// what else the registry knows about.
+	// The gate that matters: only the exposed subset is callable, whatever the registry knows.
 	found := false
 	for _, t := range h.Exposed() {
 		if t.Name == p.Name {

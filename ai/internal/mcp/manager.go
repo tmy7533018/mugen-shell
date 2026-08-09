@@ -9,13 +9,11 @@ import (
 	"time"
 )
 
-// Bounds initialize + tools/list per server, so one that never replies can't
-// hang mugen-ai's startup indefinitely.
+// Bounds initialize + tools/list so a server that never replies can't hang startup.
 const handshakeTimeout = 15 * time.Second
 
-// ServerConfig duplicates a subset of the config-file shape so the mcp
-// package stays free of an internal/config import. URL selects the
-// Streamable HTTP transport; Command spawns a stdio server.
+// ServerConfig duplicates a subset of the config-file shape so this package stays free
+// of an internal/config import. URL selects Streamable HTTP; Command spawns stdio.
 type ServerConfig struct {
 	Command  string
 	Args     []string
@@ -34,9 +32,8 @@ type ServerStatus struct {
 	Disabled  bool   `json:"disabled"`
 }
 
-// Manager owns the connected MCP clients for the process lifetime. A crashed
-// server is re-dialed lazily on next use; mu guards the clients map against
-// those concurrent swaps.
+// Manager owns the connected MCP clients for the process lifetime. A crashed server is
+// re-dialed lazily on next use; mu guards the clients map against those swaps.
 type Manager struct {
 	mu       sync.Mutex
 	clients  map[string]*Client
@@ -44,9 +41,8 @@ type Manager struct {
 	statuses []ServerStatus
 }
 
-// Connect never fails outright: a server that can't spawn or handshake is
-// recorded with its error and skipped, so one broken entry can't stop
-// mugen-ai from starting. Name order keeps startup logs deterministic.
+// Connect never fails outright: a server that can't spawn or handshake is recorded with
+// its error and skipped, so one broken entry can't stop mugen-ai from starting.
 func Connect(ctx context.Context, servers map[string]ServerConfig) *Manager {
 	m := &Manager{clients: map[string]*Client{}, configs: servers}
 
@@ -137,8 +133,7 @@ func (m *Manager) Call(ctx context.Context, server, tool string, args map[string
 	return fresh.CallTool(ctx, tool, args)
 }
 
-// configs is immutable after Connect, so it is read lock-free; the lock only
-// guards the map swap and resolves a concurrent re-dial.
+// configs is immutable after Connect; the lock only guards the map swap and a concurrent re-dial.
 func (m *Manager) redial(ctx context.Context, server string) (*Client, error) {
 	sc, ok := m.configs[server]
 	if !ok {
@@ -163,9 +158,8 @@ func (m *Manager) redial(ctx context.Context, server string) (*Client, error) {
 	return client, nil
 }
 
-// Statuses returns every configured server in name order. Connected state is
-// read live so a crash or recovery since startup is reflected; the startup
-// baseline is kept for servers that never had a live client.
+// Statuses returns every configured server in name order. Connected state is read live;
+// the startup baseline covers servers that never had a live client.
 func (m *Manager) Statuses() []ServerStatus {
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -80,8 +80,7 @@ def mark_legacy_migrated(conn: sqlite3.Connection) -> None:
 
 
 def maybe_migrate_legacy(conn: sqlite3.Connection) -> None:
-    # An empty table is not proof the import never ran: deleting every event
-    # would otherwise let the legacy file repopulate it on the next command.
+    # An empty table is not proof the import never ran: deleting every event would let it repopulate.
     if conn.execute("PRAGMA user_version").fetchone()[0] >= LEGACY_MIGRATED:
         return
     if not os.path.exists(LEGACY_JSON) or conn.execute(

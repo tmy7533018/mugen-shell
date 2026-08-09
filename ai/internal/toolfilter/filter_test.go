@@ -38,8 +38,7 @@ func catsOf(ts []tools.Tool) []string {
 	return out
 }
 
-// Returns unit basis vectors: Warm gets one axis per profile in the
-// sorted-category order it uses, and utterances embed to target.
+// Unit basis vectors: one axis per profile in Warm's sorted-category order.
 type basisEmbed struct {
 	axes   map[string]int
 	dim    int
@@ -52,8 +51,7 @@ func newBasisEmbed(sortedCats []string) *basisEmbed {
 	for i, c := range sortedCats {
 		axes[c] = i
 	}
-	// One padding axis represents "unrelated to every category" so a target
-	// can be built whose cosine against each category equals its weight.
+	// A padding axis represents "unrelated to everything", so a target's cosine equals its weight.
 	return &basisEmbed{axes: axes, dim: len(sortedCats) + 1}
 }
 
@@ -94,8 +92,7 @@ func (b *basisEmbed) pointAt(t *testing.T, weights map[string]float64) {
 	if sumSq > 1 {
 		t.Fatalf("weights exceed unit length: %v", weights)
 	}
-	// Rest of the mass on the padding axis keeps the vector unit-length, so
-	// normalization is a no-op and each weight IS the cosine score.
+	// The padding axis keeps the vector unit-length, so each weight IS the cosine score.
 	v[b.dim-1] = float32(math.Sqrt(1 - sumSq))
 	b.target = v
 }
@@ -185,8 +182,7 @@ func TestSelectEmbeddingTrims(t *testing.T) {
 	f := New(Config{TopK: 4, MinScore: 0.4}, be.fn)
 	f.Warm(context.Background(), all)
 
-	// No keywords exist for these fake categories, so only the embedding layer
-	// can pick gamma.
+	// No keywords exist for these fake categories, so only the embedding layer can pick gamma.
 	be.pointAt(t, map[string]float64{"gamma": 1})
 	sel, reason := f.Select(context.Background(), "whatever", nil, all)
 	got := names(sel)
@@ -243,8 +239,7 @@ func TestSelectEmbedFailureDegradesToKeywords(t *testing.T) {
 func TestSelectAllCategoriesSelectedReturnsAll(t *testing.T) {
 	f := New(Config{AlwaysInclude: []string{"audio", "music"}}, nil)
 	all := testTools("audio", "music")
-	// Under min size anyway, but exercise the covers-all branch with a
-	// bigger always-include list.
+	// Under min size anyway, but exercises the covers-all branch with a bigger list.
 	f2 := New(Config{AlwaysInclude: []string{"a", "b", "c", "d", "e", "f", "g"}}, nil)
 	all2 := testTools("a", "b", "c", "d", "e", "f", "g")
 	sel, _ := f2.Select(context.Background(), "音量", nil, all2)
@@ -271,8 +266,7 @@ func TestWarmFailureThenSelectStillWorks(t *testing.T) {
 }
 
 func TestContainsWordUTF8Boundary(t *testing.T) {
-	// The boundary byte before "open" is リ's trailing UTF-8 byte (0xAA); a
-	// byte-wise check mis-reads it as a letter and drops the match.
+	// The byte before "open" is リ's trailing UTF-8 byte (0xAA), which a byte-wise check misreads.
 	if !containsWord("アプリopen", "open") {
 		t.Error(`containsWord("アプリopen","open") should be true`)
 	}
@@ -288,8 +282,7 @@ func TestContainsWordUTF8Boundary(t *testing.T) {
 }
 
 func TestSelectKeywordOnlyKeepsBlindCategories(t *testing.T) {
-	// "github" stands in for an MCP server: no keyword dictionary entry, so a
-	// keyword hit for audio must not drop it.
+	// "github" stands in for an MCP server: no dictionary entry, so an audio hit must not drop it.
 	f := New(Config{}, nil)
 	all := testTools("audio", "music", "theme", "wallpaper", "timer", "calendar", "github")
 	sel, reason := f.Select(context.Background(), "音量上げて", nil, all)

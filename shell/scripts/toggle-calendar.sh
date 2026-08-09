@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Toggle the mugen-shell floating calendar window.
-# Spawns a separate quickshell process so the main bar stays responsive.
+# Toggle the floating calendar; a separate quickshell process keeps the bar responsive.
 
 set -u
 

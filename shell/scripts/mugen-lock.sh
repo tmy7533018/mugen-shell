@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Blocks until the compositor reports the session locked: hypridle's
-# before_sleep_cmd suspends as soon as this returns.
+# Blocks until the compositor reports the session locked — before_sleep_cmd suspends once this returns.
 set -uo pipefail
 
 RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/mugen-shell"

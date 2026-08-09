@@ -10,8 +10,7 @@ Rectangle {
 
     readonly property bool moduleCovered: moduleBackgroundLoader.opacity >= 1
 
-    // Must not read the effective `visible` here: under the Yura panel's mask it
-    // is opacity-driven, which forms a binding loop.
+    // Must not read the effective visible here: under Yura's mask it is opacity-driven, forming a loop.
     readonly property bool gradientsAnimating: gradientEnabled && !reduceMotion && !moduleCovered
 
     readonly property color darkBase: Qt.rgba(20/255, 22/255, 26/255, 0.82)
@@ -117,8 +116,7 @@ Rectangle {
         return distance > 0.2 ? 0.0 : scaled * (1.0 - distance * 5.0);
     }
 
-    // Overshoots [0,1] on purpose: stops must keep sliding past the edge so
-    // calculateStopOpacity can fade them out, which clamping to [0,1] prevents.
+    // Overshoots [0,1] on purpose: stops must slide past the edge for calculateStopOpacity to fade them.
     function clampPosition(position) {
         return Math.max(-0.1, Math.min(1.1, position));
     }
@@ -165,9 +163,7 @@ Rectangle {
         id: moduleBackgroundLoader
         anchors.fill: parent
         anchors.margins: 1
-        // Binding sourceComponent straight to moduleBackground destroys the
-        // item the instant it goes null, so the fade-out has nothing left to
-        // animate. The last component is held until the fade finishes.
+        // Binding sourceComponent straight to moduleBackground destroys the item before the fade can run.
         property Component shown: null
         sourceComponent: shown
         opacity: surface.moduleBackground ? 1 : 0

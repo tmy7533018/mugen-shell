@@ -9,8 +9,7 @@ QtObject {
     property bool detected: false
     property bool hasSyncedOnce: false
 
-    // Never fires for the initial startup sync, so the brightness panel's
-    // auto-close timer only arms on real user changes.
+    // Never fires for the startup sync, so the panel's auto-close timer only arms on real changes.
     signal userChanged()
 
     function refresh() {

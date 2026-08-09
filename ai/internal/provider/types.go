@@ -13,9 +13,7 @@ type Message struct {
 
 	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
 
-	// Anthropic rejects a tool result whose assistant turn dropped the
-	// thinking block that produced the call, so the signed block has to be
-	// handed back verbatim.
+	// Anthropic rejects a tool result if the signed thinking block that produced the call is missing.
 	Thinking          string `json:"thinking,omitempty"`
 	ThinkingSignature string `json:"thinking_signature,omitempty"`
 
@@ -61,9 +59,7 @@ type ChatChunk struct {
 	ThinkingSignature string
 }
 
-// A stream that stops before its terminal event has produced a partial reply
-// and, possibly, half of a tool call. Reporting that as success would persist
-// the fragment as a finished answer and silently drop the call.
+// Reporting a cut-off stream as success would persist the fragment as a finished answer.
 func truncatedStream(name string) error {
 	return fmt.Errorf("%s: the stream ended before the reply was complete", name)
 }

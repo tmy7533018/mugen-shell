@@ -1,5 +1,4 @@
-// A separate process so its rendering can't compete with the main
-// mugen-shell render thread.
+// A separate process so its rendering can't compete with the main mugen-shell render thread.
 
 //@ pragma UseQApplication
 

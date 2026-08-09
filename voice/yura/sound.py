@@ -9,8 +9,7 @@ import sounddevice as sd
 from .const import DATA_DIR
 from .settings import voice_settings
 
-# Shared with the shell's notification sounds; the Settings voice pickers
-# list files from here.
+# Shared with the shell's notification sounds; the Settings voice pickers list files from here.
 SOUNDS_DIR = os.path.join(DATA_DIR, "sounds")
 
 
@@ -44,9 +43,7 @@ def cue(kind: str, freq: float, dur: float = 0.12) -> None:
             except Exception:
                 beep(freq, dur)
                 return
-            # paplay spawns fine but exits fast and non-zero when it can't
-            # decode the file (e.g. mp3 on a libsndfile without it), so fall
-            # back to the beep only on that quick failure.
+            # paplay exits fast and non-zero when it can't decode, so fall back to the beep only on that.
             def _guard() -> None:
                 t0 = time.monotonic()
                 rc = proc.wait()

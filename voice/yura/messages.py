@@ -1,7 +1,6 @@
 from .lang import configured_lang
 
-# Canned lines yurad speaks itself. Keyed by personality.language; anything
-# else falls back to English.
+# Canned lines yurad speaks itself, keyed by personality.language; anything else is English.
 MESSAGES = {
     "ja": {
         "error": "ごめんね、エラーで返事できなかった。",

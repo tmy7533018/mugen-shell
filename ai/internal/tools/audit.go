@@ -28,8 +28,7 @@ func (a *Auditor) Log(tool string, args map[string]any, result string, callErr e
 	if err := os.MkdirAll(filepath.Dir(a.path), 0o755); err != nil {
 		return
 	}
-	// Every tool call's arguments land here, so the log is as sensitive as
-	// config.toml and gets the same treatment, existing files included.
+	// Every call's arguments land here, so the log is as sensitive as config.toml.
 	f, err := os.OpenFile(a.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		return

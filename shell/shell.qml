@@ -12,8 +12,7 @@ ShellRoot {
 
     Windows.Bar {
         id: barWindow
-        // screen is resolved inside Bar.qml (settings.display.monitor), not
-        // here — it needs SettingsManager, which lives inside the bar window.
+        // screen is resolved in Bar.qml: it needs SettingsManager, which lives inside the bar window.
     }
 
     GlobalShortcut {

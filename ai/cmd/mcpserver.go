@@ -14,9 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// A thin proxy rather than a standalone server, so there stays exactly one
-// tool registry, one SQLite handle and one audit log: the daemon is the only
-// place shell state is touched from.
+// A thin proxy so there stays exactly one tool registry, SQLite handle and audit log.
 var mcpServerCmd = &cobra.Command{
 	Use:   "mcp-server",
 	Short: "Expose mugen-shell tools to stdio MCP clients via the running daemon",
@@ -37,9 +35,7 @@ func init() {
 }
 
 func runMCPServer(_ *cobra.Command, _ []string) error {
-	// The host is inert — the dialer goes straight to the socket — but a URL
-	// still needs one. A tools/call can sit behind a slow qs IPC round-trip,
-	// and MCP clients apply their own deadlines on top.
+	// The host is inert (the dialer goes to the socket); the timeout covers a slow qs IPC round-trip.
 	endpoint := "http://localhost/mcp"
 	client := socketClient(mcpServerSocket, 120*time.Second)
 
@@ -60,8 +56,7 @@ func runMCPServer(_ *cobra.Command, _ []string) error {
 	}
 }
 
-// Returns nil when nothing is due back to the client. Failures are returned
-// as JSON-RPC errors so the client shows a reason instead of hanging.
+// Failures come back as JSON-RPC errors so the client shows a reason instead of hanging.
 func bridgeForward(client *http.Client, endpoint string, msg []byte) []byte {
 	var probe struct {
 		ID     json.RawMessage `json:"id"`

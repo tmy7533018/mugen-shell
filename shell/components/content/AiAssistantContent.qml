@@ -24,8 +24,7 @@ FocusScope {
     readonly property bool voiceActive: voiceListening || voiceSpeaking
     onVoiceListeningChanged: voiceListening ? listenCava.start() : listenCava.stop()
 
-    // Private instance: the volume panel stops the shared one on its own
-    // schedule, which would kill these capture visuals mid-listen.
+    // Private instance: the volume panel stops the shared one on its own schedule.
     Managers.MicCavaManager { id: listenCava }
 
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://localhost"
@@ -40,8 +39,7 @@ FocusScope {
     })
 
     property bool streaming: false
-    // Bar.qml blocks its auto-close timer on this, so closing never eats
-    // unsent text. Parked responses deliberately don't count.
+    // Bar.qml blocks its auto-close timer on this, so closing never eats unsent text.
     readonly property bool hasDraft: inputField.text.trim().length > 0 && !displayingResponse
     property bool aiAvailable: false
     property bool hasModel: false
@@ -49,13 +47,11 @@ FocusScope {
     property string currentModel: ""
     property int currentConvId: 0
 
-    // A finished reply is parked in the input field read-only so arrow keys
-    // scroll it; the first printable keypress flips back to typing mode.
+    // A finished reply parks read-only so arrow keys scroll it; a printable key resumes typing.
     property string responseDisplay: ""
     property bool displayingResponse: false
 
-    // Set from a tool_confirm SSE event while the backend blocks on approval
-    // of a destructive MCP tool. Shape: { confirm_id, name, arguments }.
+    // Set from a tool_confirm SSE event. Shape: { confirm_id, name, arguments }.
     property var pendingConfirm: null
 
     readonly property string idlePlaceholder: {
@@ -250,8 +246,6 @@ FocusScope {
                     enabled: !root.isStandalone
                     onClicked: {
                         // Must read coords before closeAllModes shrinks the bar.
-                        // The bar window sits at the screen origin and the yura
-                        // window ignores exclusion zones, so coords map 1:1.
                         const p = orbSlot.mapToItem(null, 0, 0)
                         modeManager.closeAllModes()
                         Theme.Hypr.exec("qs -p " + Quickshell.shellDir + "/yura-shell.qml ipc call yura toggleFrom "
@@ -277,8 +271,7 @@ FocusScope {
                 TextInput {
                     id: inputField
                     anchors.left: parent.left
-                    // Invisible items keep their geometry, so skip the mic
-                    // slot when voice input is switched off.
+                    // Invisible items keep their geometry, so skip the mic slot when voice is off.
                     anchors.right: micIcon.visible ? listenViz.left : sendIcon.left
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.leftMargin: modeManager.scale(20)
@@ -308,8 +301,7 @@ FocusScope {
                         }
 
                         if (root.displayingResponse) {
-                            // Scrolling a parked reply is reading, not idleness;
-                            // keeps auto-close from firing mid-read.
+                            // Scrolling a parked reply is reading, so auto-close must not fire.
                             modeManager.bump()
                             let pos = inputField.cursorPosition
                             let len = inputField.text.length
@@ -420,8 +412,7 @@ FocusScope {
                     }
                 }
 
-                // An animating slot, so the input text yields the space
-                // smoothly instead of being painted over.
+                // An animating slot, so the input text yields the space instead of being painted over.
                 Item {
                     id: listenViz
                     anchors.right: micIcon.left
@@ -576,8 +567,7 @@ FocusScope {
                         return parts.join("   ·   ")
                     }
 
-                    // Eats stray clicks so they can't fall through to the
-                    // disabled input or the stop button beneath the strip.
+                    // Eats stray clicks so they can't fall through to the input or stop button beneath.
                     MouseArea { anchors.fill: parent }
 
                     RowLayout {
@@ -717,8 +707,7 @@ FocusScope {
                         root.pendingConfirm = obj.tool_confirm
                         return
                     }
-                    // Dropped on purpose: the reply text already narrates the
-                    // action, and this bar is one line. The float shows chips.
+                    // Dropped on purpose: this bar is one line and the reply already narrates the action.
                     if (obj.tool_calls || obj.tool_result) {
                         return
                     }
@@ -731,8 +720,7 @@ FocusScope {
 
         onExited: (exitCode) => {
             root.streaming = false
-            // A timed-out stream can leave the strip up on a prompt the
-            // backend has already abandoned.
+            // A timed-out stream can leave the strip up on a prompt the backend already abandoned.
             root.pendingConfirm = null
             if (exitCode !== 0 && root.responseDisplay.length === 0) {
                 root.responseDisplay = "[connection failed]"

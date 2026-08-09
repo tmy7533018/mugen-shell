@@ -52,8 +52,7 @@ class SplitSentences(unittest.TestCase):
         self.assertEqual(split_sentences("3.14 は円周率。"), ["3.14 は円周率。"])
 
     def test_short_fragment_glues_to_previous(self):
-        # Under 8 chars is treated as a fragment so TTS doesn't gasp; the glue
-        # is bare concatenation, which is why "A. B." comes back as "A.B.".
+        # Under 8 chars is a fragment so TTS doesn't gasp; the glue is bare concatenation.
         self.assertEqual(split_sentences("A. B. Longer sentence follows here."),
                          ["A.B.", "Longer sentence follows here."])
 
@@ -82,8 +81,7 @@ class JoinSpoken(unittest.TestCase):
 class VoiceFloat(unittest.TestCase):
     def setUp(self):
         self._saved = (settings._settings_cache, settings.SETTINGS_FILE)
-        # Point at a path that cannot be stat'd: the loader then keeps whatever
-        # is in the cache instead of reading the developer's real settings.
+        # A path that cannot be stat'd keeps the cache instead of reading real settings.
         settings.SETTINGS_FILE = "/nonexistent/mugen-shell/settings.json"
 
     def tearDown(self):

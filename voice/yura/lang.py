@@ -27,8 +27,7 @@ def _personality_lang() -> str:
         try:
             r = ai.get(f"{AI_URL}/config", timeout=3)
             body = r.json()
-            # The endpoint nests the file under "config" alongside its path and
-            # key-presence flags; reading the top level silently yielded "".
+            # The endpoint nests the file under "config"; reading the top level silently yielded "".
             cfg = body.get("config") or body
             lang = str(cfg.get("personality", {}).get("language") or "")
         except requests.RequestException:
@@ -44,8 +43,7 @@ def configured_lang() -> str | None:
     must fall back to their default instead of inventing a language.
     """
     lang = _personality_lang().strip().lower()
-    # "auto" is a recognition mode, not a language. Truncating it to "au" is
-    # what used to hand Japanese speakers an English voice.
+    # "auto" is a recognition mode, not a language; truncating it to "au" broke Japanese.
     if lang in ("", "auto"):
         return None
     return lang[:2]

@@ -29,9 +29,7 @@ Rectangle {
     property bool exposeEnabled: false
     property bool readonlyOn: true
     property var exposedSet: ({})
-    // Bumped on every mutation of exposedSet; the `let _ = dirtyTick` reads
-    // below exist to make bindings depend on it, since mutating a JS map in
-    // place doesn't notify QML.
+    // Mutating a JS map in place doesn't notify QML, so bindings read dirtyTick to depend on it.
     property int dirtyTick: 0
 
     readonly property var categories: [
@@ -166,8 +164,7 @@ Rectangle {
                   "-X", "PUT", aiBackend.baseUrl + "/config",
                   "-H", "Content-Type: application/json",
                   "--data-binary", "@-"]
-        // The config carries API keys and MCP secrets, and argv is world-
-        // readable through /proc; the body goes over stdin instead.
+        // argv is world-readable through /proc and the config carries secrets, so the body goes over stdin.
         onStarted: {
             saveProcess.write(saveProcess.payload)
             saveProcess.stdinEnabled = false

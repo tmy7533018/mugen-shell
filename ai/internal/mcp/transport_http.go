@@ -16,10 +16,7 @@ import (
 	"time"
 )
 
-// Speaks Streamable HTTP: whatever a POST returns — a JSON body or an SSE
-// stream — is fed into recv()'s queue. A single worker does the POSTing so
-// the initialize → initialized → tools/list handshake can't reorder on the
-// wire the way one-goroutine-per-message would.
+// Streamable HTTP; a single POSTing worker keeps initialize → initialized → tools/list ordered.
 type httpTransport struct {
 	name   string
 	url    string
@@ -48,8 +45,7 @@ func newHTTPTransport(name, rawURL string) (*httpTransport, error) {
 		url:    rawURL,
 		ctx:    ctx,
 		cancel: cancel,
-		// Bounds a single hung POST; close() cancels ctx to abort an
-		// in-flight request (e.g. an open SSE read) immediately.
+		// Bounds a single hung POST; close() cancels ctx to abort an in-flight SSE read.
 		client:   &http.Client{Timeout: 5 * time.Minute},
 		outbound: make(chan []byte, 32),
 		queue:    make(chan []byte, 32),
@@ -118,8 +114,7 @@ func (t *httpTransport) post(data []byte) {
 	case resp.StatusCode == http.StatusAccepted:
 		return // notification/response accepted, nothing comes back
 	case resp.StatusCode >= 400:
-		// Without dropping the stale id, a restarted server that rejects it
-		// stays wedged behind a dead session forever.
+		// Without dropping the stale id, a restarted server stays wedged behind a dead session.
 		if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusUnauthorized {
 			t.mu.Lock()
 			t.session = ""
@@ -144,9 +139,7 @@ func (t *httpTransport) post(data []byte) {
 	}
 }
 
-// A scanner error (e.g. a data line over the buffer cap) is surfaced as a
-// JSON-RPC error rather than delivering a truncated fragment that would fail
-// to parse downstream.
+// A scanner error surfaces as a JSON-RPC error rather than a truncated fragment.
 func (t *httpTransport) pumpSSE(r io.Reader, id json.RawMessage, hasID bool) {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 64*1024), 32<<20)
@@ -185,8 +178,7 @@ func (t *httpTransport) deliver(msg []byte) {
 	}
 }
 
-// Without a synthesized error response, a failed POST would leave the caller
-// hanging until its context expires. Id-less messages can only be logged.
+// Without a synthesized error, a failed POST leaves the caller hanging until its context expires.
 func (t *httpTransport) deliverError(id json.RawMessage, hasID bool, text string) {
 	if !hasID {
 		fmt.Fprintf(os.Stderr, "mcp[%s]: %s\n", t.name, text)

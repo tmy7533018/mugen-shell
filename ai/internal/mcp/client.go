@@ -10,12 +10,10 @@ import (
 	"sync"
 )
 
-// The wire shapes this client relies on are unchanged across recent
-// revisions, so a server replying with an older version is still usable.
+// The wire shapes used here are unchanged across recent revisions, so an older reply works.
 const protocolVersion = "2025-06-18"
 
-// A frame with a Method is a request or notification (the latter has no ID);
-// one without is a response.
+// A frame with a Method is a request or notification; one without is a response.
 type rpcMessage struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      *int64          `json:"id,omitempty"`
@@ -63,9 +61,7 @@ func newClient(name string, tr transport) *Client {
 	return c
 }
 
-// Server-initiated requests and notifications are ignored: this client
-// advertises no capabilities, so a compliant server won't send one that
-// needs a reply.
+// Server-initiated requests are ignored: this client advertises no capabilities.
 func (c *Client) readLoop() {
 	for {
 		data, err := c.tr.recv()
@@ -239,16 +235,14 @@ func (c *Client) ListTools(ctx context.Context) ([]ToolDef, error) {
 // Tools returns the catalog cached by the last ListTools call.
 func (c *Client) Tools() []ToolDef { return c.tools }
 
-// Only consulted when a server omits the readOnlyHint / destructiveHint
-// annotations, which most do.
+// Only consulted when a server omits the readOnlyHint / destructiveHint annotations.
 var readOnlyVerbs = map[string]bool{
 	"get": true, "list": true, "read": true, "search": true, "find": true,
 	"fetch": true, "query": true, "describe": true, "show": true, "view": true,
 	"count": true, "check": true, "lookup": true, "browse": true, "scan": true,
 }
 
-// With no hints, only a clearly read-shaped name counts as safe, so an
-// ambiguous name still errs toward asking the user for confirmation.
+// With no hints an ambiguous name still errs toward asking the user for confirmation.
 func resolveDestructive(name string, readOnly bool, destructiveHint *bool) bool {
 	if readOnly {
 		return false
@@ -272,9 +266,8 @@ func firstWord(name string) string {
 	return name
 }
 
-// CallTool invokes a tool and flattens its content blocks into a string.
-// A tool-level failure (isError) comes back as an "error:"-prefixed result
-// rather than a Go error, matching how the built-in tools report failures.
+// CallTool invokes a tool and flattens its content blocks into a string. A tool-level
+// failure (isError) returns an "error:"-prefixed result, matching the built-in tools.
 func (c *Client) CallTool(ctx context.Context, name string, args map[string]any) (string, error) {
 	if args == nil {
 		args = map[string]any{}

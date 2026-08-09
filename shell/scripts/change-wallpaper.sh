@@ -20,8 +20,7 @@ debug_log "WAYLAND_DISPLAY: ${WAYLAND_DISPLAY:-not set}"
 debug_log "XDG_RUNTIME_DIR: ${XDG_RUNTIME_DIR:-not set}"
 debug_log "PATH: $PATH"
 
-# The shell fires this detached and never sees the exit code, so a rejected
-# wallpaper has to announce itself.
+# The shell fires this detached and never sees the exit code, so a rejection must announce itself.
 notify_failure() {
   command -v notify-send >/dev/null 2>&1 && notify-send -a mugen-shell "Wallpaper" "$1" >/dev/null 2>&1 || true
 }
@@ -53,21 +52,17 @@ TRANS_OPTS=(
   --transition-bezier 0.25,0.1,0.25,1.0
 )
 
-# Hyprland draws a closing layer's fade-out on top of the stack regardless of
-# its real depth, so a torn-down layer keeps bleeding through for this long.
+# Hyprland draws a closing layer's fade-out on top of the stack, so it bleeds through for this long.
 LAYER_FADE_SEC=0.5
 
-# awww paces even a zero-duration set by --transition-fps, so 1 fps stalls the
-# commit past a second and the video would be torn down over a stale still.
+# awww paces even a zero-duration set by --transition-fps, so 1 fps would stall the commit.
 STILL_SET_FPS=60
 STILL_COMMIT_SEC=0.35
 
-# A mapped layer stays off screen until it commits its first frame, so spawning
-# mpvpaper this early hides its start-up behind the transition.
+# A mapped layer stays off screen until its first frame, so this hides mpvpaper's start-up.
 MPV_WARMUP_SEC=0.4
 
-# vaapi surfaces cannot be read back, which fails every mpv screenshot and
-# forces the slow ffmpeg path; auto-copy lands the frames in system memory.
+# vaapi surfaces can't be read back, failing every mpv screenshot; auto-copy lands frames in memory.
 MPV_OPTS="no-config no-audio loop cache=yes profile=low-latency \
 vo=gpu-next gpu-context=wayland \
 hwdec=auto-copy \
@@ -75,11 +70,7 @@ keep-open=yes \
 input-ipc-server=${MPV_SOCKET} \
 screenshot-format=png screenshot-high-bit-depth=no screenshot-png-compression=1"
 
-# Unlinking the lock while a run still holds fd 9 lets the next one lock a
-# fresh inode at the same path and proceed alongside it. An abandoned lock
-# needs no age check: the kernel drops the flock when the holder dies — which
-# is why awww-daemon and mpvpaper are spawned with 9>&-: a daemon that inherits
-# the fd holds the flock for its whole life and refuses every later run.
+# awww-daemon and mpvpaper are spawned with 9>&-: an inherited fd holds the flock for their whole life.
 exec 9>"$LOCK"
 if ! flock -n 9; then
   echo "Already running" >&2
@@ -94,9 +85,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Nix wraps mpvpaper/awww-daemon in scripts, so comm becomes ".mpvpaper-wrapped"
-# (truncated to 15 chars) and exact-name pgrep/pkill -x silently miss them.
-# Substring matching covers both the plain and wrapped layouts.
+# Nix wraps these in scripts, so comm becomes ".mpvpaper-wrapped" and pgrep -x misses them.
 
 is_image() {
   case "${1,,}" in
@@ -234,8 +223,7 @@ grab_current_video_frame_via_ipc() {
   printf '%s' "$out"
 }
 
-# Tear the video layer down while awww underneath already holds the very same
-# frame, so the closing-layer flash has nothing different to show.
+# Tear the video layer down while awww already holds the same frame, so the flash shows nothing new.
 if pgrep mpvpaper >/dev/null 2>&1; then
   echo "Capturing current video frame for smooth transition..."
 

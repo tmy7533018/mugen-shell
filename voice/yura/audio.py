@@ -145,9 +145,7 @@ class Capture:
         silence_run = 0.0
         started = time.time()
         frame_s = CHUNK / SR
-        # The confirmation beep rides the first frames of capture and a pure
-        # tone can cross the VAD threshold, so hold onset detection until it
-        # has passed (frames still preroll).
+        # The confirmation beep is a pure tone that can cross the VAD threshold, so hold onset until it passes.
         beep_guard = int(0.25 / frame_s)
         seen = 0
         hold_started = started if (held is not None and held()) else None
@@ -178,9 +176,7 @@ class Capture:
                     else:
                         frames.append(frame)
                     if time.time() - started > MAX_UTTERANCE_S:
-                        # Same check the release path makes: without it a long
-                        # silent hold reaches whisper and comes back as a
-                        # hallucinated sentence.
+                        # Without this a long silent hold reaches whisper and comes back hallucinated.
                         if not heard_speech:
                             log("listen", "ptt hold capped, no speech")
                             return None

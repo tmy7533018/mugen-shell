@@ -16,8 +16,7 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
 
-// Streams the given chunks, then either fails or completes. Named "ollama" so
-// the local-provider branches behave as they do in practice.
+// Named "ollama" so the local-provider branches behave as they do in practice.
 type scriptedProvider struct {
 	chunks    []string
 	toolCalls []provider.ToolCall
@@ -149,8 +148,7 @@ func TestChatMarksAToolOnlyTurnThatFailed(t *testing.T) {
 		failWith:  nil,
 	}
 	s, st := newChatServer(t, p)
-	// The tool call comes back every iteration, so the loop runs out of turns
-	// without ever producing text.
+	// The tool call comes back every iteration, so the loop runs out of turns without text.
 	rec := postChat(t, s, `{"message":"hi","conversation_id":0}`)
 	if !strings.Contains(rec.Body.String(), "max tool iterations exceeded") {
 		t.Fatalf("expected the iteration cap to end the turn:\n%s", rec.Body.String())

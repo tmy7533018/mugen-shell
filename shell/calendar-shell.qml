@@ -1,7 +1,5 @@
 // Standalone Quickshell entry for the floating calendar window.
-//
-// Run with:
-//   quickshell -p $HOME/.config/quickshell/mugen-shell/calendar-shell.qml -d
+// Run: quickshell -p $HOME/.config/quickshell/mugen-shell/calendar-shell.qml -d
 
 //@ pragma UseQApplication
 

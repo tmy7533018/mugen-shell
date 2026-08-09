@@ -2,8 +2,7 @@ pragma Singleton
 import QtQuick
 
 QtObject {
-    // Every shell process re-reads these files on change, and a reader hitting a
-    // truncate-in-progress would clobber it with defaults.
+    // Every shell process re-reads these on change, and one hitting a truncate would clobber it.
     function atomicWriteArgv(dir, file, json) {
         return ["bash", "-c",
                 // $$ in the scratch name keeps two concurrent savers apart.

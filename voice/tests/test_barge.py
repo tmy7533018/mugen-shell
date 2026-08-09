@@ -54,8 +54,7 @@ def frame(value: int = 1) -> np.ndarray:
 def run_monitor(script, frames, wait=2.0):
     cap = _FakeCapture()
     m = barge.BargeMonitor(cap, _FakeVAD(script))
-    # A trigger archives its audio; without this the suite writes wavs into
-    # the real data dir, where they read as false barge-ins later.
+    # Without this the suite writes wavs into the real data dir, where they read as false barge-ins.
     saved_dump, barge.dump_audio = barge.dump_audio, lambda *a, **k: None
     m.start()
     for i in range(frames):
@@ -85,8 +84,7 @@ class Triggering(unittest.TestCase):
         self.assertTrue(seed)
 
     def test_a_brief_spike_does_not(self):
-        # A cough is loud but short; it used to be indistinguishable from
-        # someone starting to talk.
+        # A cough is loud but short; it used to be indistinguishable from someone starting to talk.
         need = int(barge.BARGE_HOLD_S / FRAME_S)
         script = [0.9] * max(need - 2, 1) + [0.0] * 10
         m, seed = run_monitor(script, len(script))
@@ -110,8 +108,7 @@ class Triggering(unittest.TestCase):
         need = int(barge.BARGE_HOLD_S / FRAME_S) + 2
         m, seed = run_monitor([0.9] * need, need)
         self.assertTrue(m.triggered)
-        # Capped by the preroll window, and never empty — the words the user
-        # cut in with are what the next capture is built from.
+        # Capped by the preroll window, and never empty — the cut-in words build the next capture.
         self.assertGreater(len(seed), 0)
         self.assertLessEqual(len(seed), int(barge.BARGE_PREROLL_S / FRAME_S))
 
@@ -148,8 +145,7 @@ class Handover(unittest.TestCase):
             cap.queue.put(frame(0))
         out = cap.utterance(timeout=5.0, seed=seed)
         self.assertIsNotNone(out)
-        # Onset is not re-detected: the seed frames lead, and trailing silence
-        # ends the turn as usual.
+        # Onset is not re-detected: the seed frames lead and trailing silence ends the turn.
         self.assertTrue(np.array_equal(out[0], seed[0]))
         self.assertTrue(np.array_equal(out[1], seed[1]))
         self.assertGreater(len(out), len(seed))
@@ -159,8 +155,7 @@ class Handover(unittest.TestCase):
         cancel = threading.Event()
         cap = Capture(lambda: True, cancel)
         cap.vad = _FakeVAD([0.0] * 400)
-        # Fed at roughly frame rate so the wall-clock timeout is what ends it,
-        # the way a silent room does.
+        # Fed at roughly frame rate so the wall-clock timeout ends it, the way a silent room does.
         stop = threading.Event()
 
         def feed():

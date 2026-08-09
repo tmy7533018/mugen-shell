@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: cava.sh [mode]
-#   mode = "speaker" (default) — monitor the default sink output
-#   mode = "mic"               — monitor the default source (microphone) input
+# Usage: cava.sh [speaker|mic] — monitor the default sink (default) or the default source.
 MODE="${1:-speaker}"
 
 COLOR_CONFIG="${HOME}/.config/cava/colors.conf"

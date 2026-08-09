@@ -73,8 +73,7 @@ Rectangle {
         section.bump()
     }
 
-    // Re-fetch before save, or the toggle clobbers edits made elsewhere since
-    // this panel loaded.
+    // Re-fetch before save, or the toggle clobbers edits made elsewhere since this panel loaded.
     Process {
         id: auditGetProc
         running: false
@@ -111,8 +110,7 @@ Rectangle {
                   "-X", "PUT", aiBackend.baseUrl + "/config",
                   "-H", "Content-Type: application/json",
                   "--data-binary", "@-"]
-        // The config carries API keys and MCP secrets, and argv is world-
-        // readable through /proc; the body goes over stdin instead.
+        // argv is world-readable through /proc and the config carries secrets, so the body goes over stdin.
         onStarted: {
             auditSaveProc.write(auditSaveProc.payload)
             auditSaveProc.stdinEnabled = false

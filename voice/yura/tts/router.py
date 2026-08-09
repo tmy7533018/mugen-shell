@@ -17,8 +17,7 @@ from .base import Engine, split_voice
 from .local import LocalEngine, available, find_model
 from .voicevox_api import BASE_URLS, VoicevoxEngine
 
-# Fallback voice when settings.json names none, as "<engine>:<voice>" or
-# just "<engine>:" to take that engine's first style.
+# Fallback voice as "<engine>:<voice>", or "<engine>:" to take that engine's first style.
 TTS_DEFAULT = os.environ.get("YURA_TTS", "")
 TTS_SPEED = float(os.environ.get("YURA_VOICE_SPEED", "1.0"))
 
@@ -53,9 +52,7 @@ def _build(value: str) -> Engine:
         return VoicevoxEngine(engine, voice)
     if engine in ("local", "piper") and voice and find_model(voice):
         return LocalEngine(voice)
-    # Either nothing usable was named or the named model isn't installed. Both
-    # degrade to an installed voice rather than going silent: a typo in
-    # settings.json must not cost the user the whole reply.
+    # A typo in settings.json must not cost the whole reply, so degrade to an installed voice.
     names = available()
     if names:
         if value:
@@ -80,8 +77,7 @@ def synthesize(sentence: str, voice: str | None = None) -> bytes:
 
 
 def _pretty(name: str) -> str:
-    # The zoo names every Piper voice "vits-piper-<locale>-<voice>-<quality>";
-    # the prefix is noise in a picker.
+    # The zoo names every Piper voice "vits-piper-<locale>-<voice>-<quality>"; the prefix is noise.
     for junk in ("vits-piper-", "vits-"):
         if name.startswith(junk):
             return name[len(junk):]

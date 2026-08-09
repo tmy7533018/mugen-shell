@@ -33,9 +33,7 @@ QtObject {
         isConnecting = true
         connectionError = ""
 
-        // /proc/<pid>/cmdline is world-readable and /proc/<pid>/environ is not,
-        // so the key travels in the environment. The SSID rides in as $1 rather
-        // than being quoted into the script.
+        // /proc/<pid>/cmdline is world-readable and environ is not, so the key travels in the environment.
         if (password.length > 0) {
             connectToNetworkProcess.environment = ({ "MUGEN_WIFI_PSK": password })
             connectToNetworkProcess.command = [
@@ -55,8 +53,7 @@ QtObject {
         connectToNetworkProcess.running = true
     }
 
-    // nmcli -t escapes literal ':' as '\:' (and '\' as '\\'), so a plain
-    // split(":") would over-split any SSID containing a colon.
+    // nmcli -t escapes a literal ':' as '\:', so a plain split(":") would over-split an SSID.
     function splitNmcli(line) {
         let fields = []
         let cur = ""

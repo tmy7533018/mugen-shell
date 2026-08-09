@@ -20,12 +20,8 @@ type Config struct {
 	Logging     Logging     `toml:"logging" json:"logging"`
 }
 
-// MCPExpose publishes mugen-ai's own tools as an MCP server, over HTTP at
-// POST /mcp on the loopback-only API port and over stdio via the
-// `mugen-ai mcp-server` bridge. Tools sourced from external MCP servers are
-// never re-exported. Enabled means read-only unless Categories names groups
-// to make writable — a deliberate decision per category, since external
-// clients skip Yura's confirmation flow.
+// MCPExpose publishes mugen-ai's own tools as an MCP server, never re-exporting external
+// ones. Read-only unless Categories opts a group in — clients skip Yura's confirmation.
 type MCPExpose struct {
 	Enabled  bool `toml:"enabled" json:"enabled"`
 	Readonly bool `toml:"readonly" json:"readonly"`
@@ -34,9 +30,7 @@ type MCPExpose struct {
 	Categories []string `toml:"categories" json:"categories"`
 }
 
-// Logging controls diagnostic output. Audit gates the JSONL tool-call log
-// (audit.log); turning it off means tool calls — including their arguments —
-// leave no trace on disk.
+// Logging.Audit gates the JSONL tool-call log; off leaves no trace of calls or arguments on disk.
 type Logging struct {
 	Audit bool `toml:"audit" json:"audit"`
 }
@@ -47,38 +41,29 @@ type Weather struct {
 	Place string `toml:"place" json:"place"`
 }
 
-// Context controls extra, non-conversation information injected into chat
-// turns. DesktopState adds a transient system message with a live desktop
-// snapshot, never persisted to history. DesktopStateRemote extends that to
-// cloud providers; off keeps window titles and media names on the machine.
+// Context injects a live desktop snapshot into chat turns, never persisted to history.
+// DesktopStateRemote off keeps window titles and media names off cloud providers.
 type Context struct {
 	DesktopState       bool `toml:"desktop_state" json:"desktop_state"`
 	DesktopStateRemote bool `toml:"desktop_state_remote" json:"desktop_state_remote"`
 }
 
-// History controls retention of stored conversations. RetainDays > 0 prunes,
-// at startup, conversations whose last activity is older than that many days;
-// 0 keeps everything.
+// History prunes conversations idle longer than RetainDays at startup; 0 keeps everything.
 type History struct {
 	RetainDays int `toml:"retain_days" json:"retain_days"`
-	// MaxContextTokens caps the estimated token footprint of the history
-	// sent per turn (oldest messages drop first), leaving context-window
-	// room for tools, system prompt, and the response. 0 disables the cap
-	// (the 100-message limit still applies).
+	// MaxContextTokens caps the history's estimated tokens per turn (oldest drop first),
+	// leaving room for tools, system prompt and the reply. 0 disables the cap.
 	MaxContextTokens int `toml:"max_context_tokens" json:"max_context_tokens"`
 }
 
-// MCP configures external Model Context Protocol servers whose tools are
-// merged into the registry. Tools are exposed under a "<name>__<tool>"
+// MCP merges external MCP servers' tools into the registry under a "<name>__<tool>"
 // prefix, so the server name doubles as a tool category.
 type MCP struct {
 	Servers map[string]MCPServer `toml:"servers" json:"servers"`
 }
 
-// MCPServer is one MCP server entry. Command spawns a stdio server, URL
-// connects to a remote Streamable HTTP one; when both are set, URL wins.
-// Trusted skips the per-call approval prompt for this server's destructive
-// tools — opt-in, since it removes the only gate on irreversible writes.
+// MCPServer is one server entry; URL (Streamable HTTP) wins over Command (stdio).
+// Trusted skips the approval prompt — the only gate on irreversible writes.
 type MCPServer struct {
 	Command  string            `toml:"command" json:"command"`
 	Args     []string          `toml:"args" json:"args"`
@@ -90,23 +75,17 @@ type MCPServer struct {
 
 type Tools struct {
 	AppLaunch AppLaunchTool `toml:"app_launch" json:"app_launch"`
-	// DisabledCategories hides whole tool groups (audio / music / panel /
-	// brightness / theme / wallpaper / notification / timer / calendar /
-	// app) from the LLM. Empty = every category enabled.
+	// DisabledCategories hides whole tool groups from the LLM. Empty = every category enabled.
 	DisabledCategories []string      `toml:"disabled_categories" json:"disabled_categories"`
 	ContextFilter      ContextFilter `toml:"context_filter" json:"context_filter"`
 }
 
-// ContextFilter narrows the tool list sent per chat turn to the categories
-// relevant to the user's message, because local models pick the wrong tool
-// more often as the tool count grows. When neither the keyword nor the
-// embedding layer is confident the full list is sent, so filtering can only
-// trim, never brick a request.
+// ContextFilter narrows the per-turn tool list, because local models pick the wrong tool
+// more often as the count grows. An unconfident layer sends the full list, so it can't brick.
 type ContextFilter struct {
 	Enabled bool `toml:"enabled" json:"enabled"`
-	// ApplyToRemote extends filtering to cloud providers. Off by default:
-	// a per-turn tool list defeats their prompt caching (the tool block is
-	// a cache prefix), and large hosted models handle the full list fine.
+	// ApplyToRemote extends filtering to cloud providers. Off by default: a per-turn
+	// tool list defeats their prompt caching, and hosted models handle the full list.
 	ApplyToRemote bool `toml:"apply_to_remote" json:"apply_to_remote"`
 	// EmbedModel is the Ollama embedding model for the similarity layer.
 	// Missing model or empty string degrades to keyword-only matching.
@@ -115,17 +94,13 @@ type ContextFilter struct {
 	// is the cosine floor below which a category is not considered related.
 	TopK     int     `toml:"top_k" json:"top_k"`
 	MinScore float64 `toml:"min_score" json:"min_score"`
-	// AlwaysInclude categories ride along on every filtered turn. panel is
-	// referenced by tool error messages (panel_open recovery path) and
-	// memory powers spontaneous memory_save, so dropping either breaks
-	// flows that don't correlate with the user's wording.
+	// AlwaysInclude rides along on every filtered turn: panel is named by tool error
+	// messages and memory powers spontaneous saves, neither tied to the user's wording.
 	AlwaysInclude []string `toml:"always_include" json:"always_include"`
 }
 
-// AppLaunchTool gates the app_launch tool. Default is strict: an empty
-// AllowedCommands means no apps can be launched at all, so a prompt-
-// injected request can't ask Yura to run rm or curl. The user picks
-// which installed apps to allow via Settings → AI / Yura → Allowed apps.
+// AppLaunchTool gates app_launch. Empty AllowedCommands launches nothing, so a
+// prompt-injected request can't run rm or curl; the user allows apps from Settings.
 type AppLaunchTool struct {
 	AllowedCommands []string `toml:"allowed_commands" json:"allowed_commands"`
 }
@@ -134,17 +109,14 @@ type Shell struct {
 	// QsConfig is the quickshell `-c` name used to target mugen-shell from
 	// `qs ipc call`. Defaults to "mugen-shell".
 	QsConfig string `toml:"qs_config" json:"qs_config"`
-	// ScriptsDir is where calendar-cli.py / toggle-*.sh live. mugen-ai
-	// shells out to these for tools that can't fit through the IPC layer
-	// (Calendar DB queries etc.). Defaults to
-	// "$XDG_CONFIG_HOME/quickshell/mugen-shell/scripts".
+	// ScriptsDir holds calendar-cli.py / toggle-*.sh, for tools that can't fit through IPC.
+	// Defaults to "$XDG_CONFIG_HOME/quickshell/mugen-shell/scripts".
 	ScriptsDir string `toml:"scripts_dir" json:"scripts_dir"`
 }
 
 type Personality struct {
-	// Name / Tone / Language drive the auto-assembled persona header that is
-	// prepended to SystemPrompt. SystemPrompt is the user's free-form append.
-	// All four are optional — empty fields skip their line in the header.
+	// Name / Tone / Language build the persona header prepended to SystemPrompt, the
+	// user's free-form append. All are optional — an empty field skips its line.
 	Name         string `toml:"name" json:"name"`
 	Tone         string `toml:"tone" json:"tone"`
 	Language     string `toml:"language" json:"language"`
@@ -158,10 +130,8 @@ type Provider struct {
 	Anthropic Anthropic `toml:"anthropic" json:"anthropic"`
 }
 
-// Anthropic lists the Claude models to expose. Empty → defaults to
-// claude-haiku-4-5 (cheap, fast, tool-capable). MaxTokens caps each reply
-// (0 → 2048); ThinkingBudget is the extended-thinking token budget when the
-// conversation has thinking on (0 → 1024).
+// Anthropic lists the Claude models to expose (empty → claude-haiku-4-5). MaxTokens
+// caps each reply (0 → 2048); ThinkingBudget is the extended-thinking budget (0 → 1024).
 type Anthropic struct {
 	Models         []string `toml:"models" json:"models"`
 	MaxTokens      int      `toml:"max_tokens" json:"max_tokens"`
@@ -170,10 +140,8 @@ type Anthropic struct {
 
 type Ollama struct {
 	Host string `toml:"host" json:"host"`
-	// NumCtx is the context window requested on every chat call. Ollama's
-	// own default (4k) is smaller than the tools + system prompt + history
-	// footprint and overflow is truncated silently, so mugen-ai always asks
-	// for an explicit window. Ollama clamps it to the model's maximum.
+	// NumCtx is requested on every chat call: Ollama's own 4k default is smaller than
+	// tools + prompt + history and overflow truncates silently. Clamped to the model max.
 	NumCtx int `toml:"num_ctx" json:"num_ctx"`
 	// KeepAlive keeps the model loaded between chats ("30m", "1h", "-1" for
 	// forever). Empty falls back to Ollama's default (5m unload).
@@ -230,8 +198,7 @@ func Load() (Config, error) {
 		}
 		return cfg, nil
 	}
-	// config.toml can carry MCP server secrets in [mcp.servers.*.env];
-	// tighten an existing file that a looser umask left group/world-readable.
+	// config.toml can carry MCP secrets in [mcp.servers.*.env]; tighten a loose umask.
 	if err == nil && info.Mode().Perm()&0o077 != 0 {
 		_ = os.Chmod(path, 0o600)
 	}
@@ -254,9 +221,8 @@ func filePath() string {
 // Path returns the canonical config file path.
 func Path() string { return filePath() }
 
-// Save writes cfg atomically so a crash mid-write can't corrupt the file.
-// BurntSushi's encoder drops user comments — callers should warn that
-// hand-written comments are lost.
+// Save writes cfg atomically so a crash mid-write can't corrupt the file. BurntSushi's
+// encoder drops user comments — callers should warn that hand-written ones are lost.
 func Save(cfg Config) error {
 	path := filePath()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

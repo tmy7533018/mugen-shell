@@ -9,9 +9,7 @@ import (
 	"testing"
 )
 
-// Streams content and then hangs up cleanly, without ever sending the terminal
-// event. Reported as success, the caller would store the fragment as a
-// finished answer.
+// Streams content then hangs up cleanly, never sending the terminal event.
 func stubTruncated(t *testing.T, body string) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

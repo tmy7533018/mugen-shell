@@ -22,9 +22,7 @@ Rectangle {
     readonly property var turnOpenOptions: ["panel", "bar", "none"]
     readonly property var speedOptions: [0.9, 1.0, 1.1, 1.2]
 
-    // Values carry an engine prefix ("aivis:<id>" | "local:<model-dir>") to
-    // match what voice.tts expects. The daemon assembles the list: it already
-    // knows which engines answer and which models are installed.
+    // Values carry an engine prefix ("aivis:<id>" | "local:<model-dir>") to match voice.tts.
     property var voices: []
     property bool voiceExpanded: false
 
@@ -32,11 +30,9 @@ Rectangle {
         ? section.voices
         : [{ label: "Same as Default", value: "" }, ...section.voices]
 
-    // "" edits voice.tts (used whenever no override matches); a language code
-    // edits voice.ttsByLang[code].
+    // "" edits voice.tts (used when no override matches); a language code edits voice.ttsByLang[code].
     readonly property var langOptions: ["", "ja", "en"]
-    // Bound, never assigned: settings arrive asynchronously, so a value read
-    // once at creation would be the default rather than what was saved.
+    // Bound, never assigned: settings arrive asynchronously, so a read at creation gets the default.
     readonly property string editingLang: settingsManager ? settingsManager.voiceEditingLang : ""
 
     function langLabel(code) {
@@ -55,8 +51,7 @@ Rectangle {
         if (lang === "") {
             settingsManager.voiceTts = value
         } else {
-            // Reassign rather than mutate: a var property doesn't notify on an
-            // in-place key write, so the picker would keep the old label.
+            // Reassign rather than mutate: a var property doesn't notify on an in-place key write.
             let map = Object.assign({}, settingsManager.voiceTtsByLang || ({}))
             map[lang] = value
             settingsManager.voiceTtsByLang = map
@@ -81,8 +76,7 @@ Rectangle {
         return value
     }
 
-    // Stored cue values: "" = built-in beep, "none" = silent, anything else
-    // is a filename inside soundsDir.
+    // Cue values: "" = built-in beep, "none" = silent, anything else a filename inside soundsDir.
     readonly property string soundsDir: Theme.Paths.soundsDir
     property var cueFiles: []
     readonly property var cueOptions: [
@@ -115,9 +109,7 @@ Rectangle {
         }
     }
 
-    // Auditioned through the daemon so the preview uses the very engine and
-    // loudness normalization a real reply would. The old path rebuilt each
-    // engine's HTTP call in a shell line, which needed its own escaping rules.
+    // Auditioned through the daemon so the preview uses the engine and loudness a real reply would.
     function preview(value) {
         Theme.YuraCtl.post("/speak", {
             text: value.startsWith("local:")
@@ -194,8 +186,7 @@ Rectangle {
         property string title: ""
         property string desc: ""
         property string settingKey: ""
-        // Bound by each instance: section.cueOptions resolves as undefined
-        // from inside an inline component.
+        // Bound by each instance: section.cueOptions resolves as undefined inside an inline component.
         property var options: []
         property bool expanded: false
         Layout.fillWidth: true

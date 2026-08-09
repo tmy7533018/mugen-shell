@@ -17,8 +17,7 @@ QtObject {
     }
     readonly property var boundScreen: screenByName(settingsManager ? settingsManager.displayMonitor : "")
 
-    // Overwritten at runtime by YuraChatPanel.qml once the window is sized;
-    // these are only the initial defaults before that happens.
+    // Overwritten by YuraChatPanel.qml once the window is sized; these are only the initial defaults.
     property int screenWidth: boundScreen ? boundScreen.width : 1920
     property int screenHeight: boundScreen ? boundScreen.height : 1080
 
@@ -88,8 +87,7 @@ QtObject {
     }
     function close()  { expanded = false }
 
-    // Fly coords are set before expanded so onExpandedChanged handlers can
-    // tell a flight open from a plain one.
+    // Fly coords are set before expanded so onExpandedChanged can tell a flight open from a plain one.
     function toggleFrom(x, y, size) {
         if (expanded) { close(); return }
         flyFromX = x

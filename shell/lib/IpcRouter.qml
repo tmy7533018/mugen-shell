@@ -4,9 +4,8 @@ import Quickshell.Io
 import Quickshell.Wayland
 import "." as Lib
 
-// Entry point for the MCP layer in mugen-ai: each target maps 1:1 to a tool
-// group exposed to the LLM. Handlers must stay thin and defer to the
-// underlying manager rather than reimplement its logic.
+// Entry point for mugen-ai's MCP layer: each target maps 1:1 to a tool group.
+// Handlers stay thin and defer to the underlying manager rather than reimplement it.
 Item {
     id: ipcRouter
 
@@ -27,9 +26,7 @@ Item {
         target: "audio"
 
         function set_volume(vol: int): int {
-            // Returns the request, not a re-read: pavucontrol updates the
-            // property asynchronously, so a post-set read races and surfaces
-            // the previous level.
+            // Returns the request, not a re-read: pavucontrol updates asynchronously and a read would race.
             ipcRouter.audioManager.setVolume(vol)
             return vol
         }
@@ -106,8 +103,7 @@ Item {
         }
     }
 
-    // These run as separate quickshell processes, so switchMode would only
-    // empty the bar; their toggle scripts are what make a window appear.
+    // These are separate quickshell processes, so their toggle scripts are what make a window appear.
     readonly property var _detachedScripts: ({
         "settings": "toggle-settings.sh",
         "calendar": "toggle-calendar.sh",
@@ -124,16 +120,12 @@ Item {
                 Lib.Hypr.exec(Quickshell.shellDir + "/scripts/" + script)
                 return
             }
-            // Idempotent open: this verb is only ever called programmatically
-            // (voice wake, MCP panel_open), so re-opening an already-active mode
-            // must keep it open, not toggle it shut. Keybinds/buttons keep using
-            // switchMode directly when they want toggle behaviour.
+            // Idempotent open: only called programmatically, so re-opening an active mode must not toggle it shut.
             if (!ipcRouter.modeManager.isMode(name)) ipcRouter.modeManager.switchMode(name, true)
         }
 
         function close(): void {
-            // Only affects the bar's inline modes; detached panels close via
-            // their own toggle.
+            // Only affects the bar's inline modes; detached panels close via their own toggle.
             ipcRouter.modeManager.closeAllModes()
         }
 
@@ -204,10 +196,7 @@ Item {
         target: "wallpaper"
 
         function set(path: string): string {
-            // Models invent paths, so anything outside the wallpaper dir is
-            // rejected. Membership in the enumerated list is deliberately NOT
-            // required: the list is polled, so a file added seconds ago would
-            // be rejected spuriously.
+            // Membership in the polled list is deliberately not required — a file added seconds ago would be rejected.
             const known = ipcRouter.wallpaperManager.wallpapers || []
             if (known.indexOf(path) === -1) {
                 const dir = ipcRouter.wallpaperManager.wallpaperDir + "/"
@@ -227,8 +216,7 @@ Item {
             const known = ipcRouter.wallpaperManager.wallpapers || []
             if (known.length === 0)
                 return "error: no wallpapers found"
-            // Skip the current one so "random" always visibly changes, unless
-            // it has since been deleted and any pick is already a change.
+            // Skip the current one so "random" always visibly changes, unless it was deleted.
             const current = ipcRouter.wallpaperManager.currentWallpaperExists
                 ? ipcRouter.wallpaperManager.currentWallpaperPath : ""
             let pick = known[Math.floor(Math.random() * known.length)]
@@ -308,18 +296,14 @@ Item {
         target: "notification"
 
         function toggle_dnd(): bool {
-            // Inverted polarity: DnD on = notificationsEnabled false. Goes
-            // through settingsManager (not notificationManager directly) so
-            // notificationManager's binding to settingsManager.notificationsEnabled
-            // never gets severed by a direct assignment.
+            // Through settingsManager, not notificationManager: a direct assignment would sever its binding.
             ipcRouter.settingsManager.notificationsEnabled = !ipcRouter.settingsManager.notificationsEnabled
             ipcRouter.settingsManager.saveSettings()
             return !ipcRouter.settingsManager.notificationsEnabled
         }
 
         function set_dnd(enabled: bool): bool {
-            // Idempotent, unlike toggle_dnd, so "turn DnD on" can't flip an
-            // already-on state back off.
+            // Idempotent, unlike toggle_dnd, so "turn DnD on" can't flip an already-on state off.
             ipcRouter.settingsManager.notificationsEnabled = !enabled
             ipcRouter.settingsManager.saveSettings()
             return enabled

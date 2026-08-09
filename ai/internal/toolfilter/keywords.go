@@ -7,10 +7,7 @@ import (
 	"unicode/utf8"
 )
 
-// Deliberately conservative: a hit only ever adds a category and anything
-// ambiguous is left to the embedding layer, so precision matters more than
-// recall. MCP categories have no entries — their vocabulary is unknown at
-// compile time — and rely on embeddings alone.
+// Conservative: a hit only ever adds a category. MCP categories rely on embeddings alone.
 var categoryKeywords = map[string][]string{
 	"audio": {
 		"音量", "ボリューム", "ミュート", "消音", "うるさい", "静かに", "マイク",
@@ -62,9 +59,7 @@ var categoryKeywords = map[string][]string{
 	},
 }
 
-// ASCII keywords match on word boundaries so "mic" can't fire inside
-// "dynamic"; Japanese keywords have no boundaries to lean on and match as
-// plain substrings.
+// ASCII matches on word boundaries so "mic" can't fire inside "dynamic"; Japanese matches as substrings.
 func keywordHits(utterance string, cats map[string]bool) []string {
 	low := strings.ToLower(utterance)
 	var out []string
@@ -99,9 +94,7 @@ func isASCII(s string) bool {
 	return true
 }
 
-// A non-ASCII neighbour counts as a boundary: it can't be part of the same
-// English token. Neighbours are decoded as full runes, since a byte-wise check
-// mistakes a multibyte char's trailing byte for a letter.
+// Decoded as full runes: a byte-wise check mistakes a multibyte char's trailing byte for a letter.
 func containsWord(s, w string) bool {
 	for from := 0; ; {
 		i := strings.Index(s[from:], w)
@@ -131,8 +124,7 @@ func isASCIIWord(r rune) bool {
 	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
 }
 
-// A category with no dictionary entry can only be scored by embeddings, so
-// keyword-only mode must never trim it away.
+// A category with no dictionary entry can only be scored by embeddings, so never trim it.
 func categoryHasKeywords(cat string) bool {
 	_, ok := categoryKeywords[cat]
 	return ok

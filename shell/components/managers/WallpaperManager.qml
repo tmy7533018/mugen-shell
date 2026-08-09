@@ -19,25 +19,20 @@ QtObject {
 
     property bool isInitialized: false
 
-    // Raised by the picker so files dropped into the folder while it is open
-    // show up without a reopen.
+    // Raised by the picker so files dropped in while it is open show up without a reopen.
     property bool pickerOpen: false
 
     readonly property bool currentWallpaperExists:
         currentWallpaperPath.length > 0 && (wallpapers || []).indexOf(currentWallpaperPath) !== -1
 
-    // Video path -> generation counter. Absent means no usable thumbnail yet;
-    // the counter goes into the image URL so Qt reloads a regenerated file.
+    // Video path -> generation counter, which rides in the URL so Qt reloads a regenerated file.
     property var thumbTokens: ({})
 
     property Process mkdirProcess: Process {
         running: false
         command: []
 
-        // Chained rather than fired alongside the mkdir so a first run, where
-        // the wallpaper folder does not exist yet, still enumerates it. Runs
-        // eagerly so IPC consumers don't see an empty list before the picker
-        // is opened for the first time.
+        // Chained after the mkdir so a first run enumerates the folder it just created.
         onExited: () => {
             wallpaperManager.loadWallpapers()
         }
@@ -54,12 +49,7 @@ QtObject {
     }
 
     function setWallpaper(path) {
-        // Detached, not a tracked Process: change-wallpaper.sh runs for
-        // seconds (matugen, swww transition, mpvpaper startup) and a
-        // hot-reload mid-run would otherwise SIGTERM it along with every
-        // other QML object. currentWallpaperWatcher below picks up the
-        // result once the script writes it, instead of an onExited handler.
-        // A path that vanished meanwhile is reported by the script itself.
+        // Detached: the script runs for seconds and a hot-reload would SIGTERM a tracked Process.
         Quickshell.execDetached([
             "bash",
             Quickshell.shellDir + "/scripts/change-wallpaper.sh",
@@ -77,8 +67,7 @@ QtObject {
         return thumbDir + "/" + videoPath.split('/').pop() + ".png"
     }
 
-    // Empty until a video's thumbnail exists, so the delegate can hold a
-    // placeholder instead of a broken image.
+    // Empty until a video's thumbnail exists, so the delegate can hold a placeholder.
     function thumbnailSource(path) {
         if (!isVideoFile(path))
             return "file://" + path
@@ -172,9 +161,7 @@ QtObject {
     }
 
     property Process wallpaperProcess: Process {
-        // The sentinel stands in for find's exit status, which onStreamFinished
-        // cannot see: a listing cut short by a missing folder or a truncated
-        // read must never be mistaken for "the user deleted everything".
+        // The sentinel stands in for find's exit status, which onStreamFinished cannot see.
         command: [
             "bash", "-c",
             "set -o pipefail; find -L \"$1\" -maxdepth 2 -type f \\( " +
@@ -198,16 +185,14 @@ QtObject {
                 if (changed)
                     wallpaperManager.wallpapers = found
 
-                // A file replaced in place leaves the listing identical, so
-                // thumbnails are rechecked anyway while anyone can see them.
+                // A file replaced in place leaves the listing identical, so recheck while it is visible.
                 if (changed || wallpaperManager.pickerOpen)
                     wallpaperManager.syncThumbnails()
             }
         }
     }
 
-    // No directory watch is available, so the folder is polled: tightly while
-    // the picker is on screen, lazily otherwise to keep IPC answers current.
+    // No directory watch available, so poll: tightly with the picker open, lazily otherwise.
     property Timer refreshTimer: Timer {
         interval: wallpaperManager.pickerOpen ? 2000 : 30000
         running: true

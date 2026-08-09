@@ -152,9 +152,7 @@ Item {
             anchors.fill: parent
             clip: true
 
-            // Absorbs clicks on the panel body so they can't fall through to
-            // the outer close-on-click area; the content is otherwise all
-            // non-interactive items that never accept mouse events.
+            // Absorbs body clicks so they can't fall through to the outer close-on-click area.
             MouseArea {
                 anchors.fill: parent
                 hoverEnabled: true

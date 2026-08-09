@@ -127,8 +127,7 @@ class TakeTrigger(unittest.TestCase):
         self.assertTrue(d._take_trigger())
 
     def test_ptt_continues_the_conversation_the_shell_is_showing(self):
-        # The shell passes the verdict: it is the side that knows whether a
-        # Yura surface is up, and asking it back would delay the mic opening.
+        # The shell passes the verdict: asking it back would delay the mic opening.
         d = bare_daemon()
         d.chat = types.SimpleNamespace(reset=lambda: setattr(d, "_reset", True))
         d._reset = False

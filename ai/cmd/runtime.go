@@ -19,8 +19,7 @@ import (
 	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
 
-// Centralising the tool-calling conventions here lets each individual tool's
-// description stay short.
+// Centralising the tool-calling conventions here keeps each tool's description short.
 const toolingSystemPrompt = `You can control the mugen-shell desktop through function-calling tools.
 
 How to handle tool results:
@@ -75,17 +74,13 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		persona = assemblePersona(cfg.Personality)
 	}
 
-	// Filtering disabled categories out of List() saves tokens, but then the
-	// model never realises they exist and silently pivots to another tool
-	// instead of telling the user the category is off.
+	// Naming them costs tokens but stops the model silently pivoting instead of saying the category is off.
 	tooling := toolingSystemPrompt
 	if len(cfg.Tools.DisabledCategories) > 0 {
 		tooling += "\n\nCurrently disabled tool categories: " + strings.Join(cfg.Tools.DisabledCategories, ", ") +
 			". If the user asks for something in one of these categories, tell them the category is off and point them at Settings → AI / Yura → Tool categories before doing anything else (no silent pivot to another tool)."
 	}
-	// Without this note a filtered turn makes the model under-report what it
-	// can do ("I have no wallpaper tools") instead of realising the visible
-	// list is per-turn.
+	// Without this a filtered turn makes the model under-report what it can do.
 	if cfg.Tools.ContextFilter.Enabled {
 		if caps := enabledCapabilities(cfg); caps != "" {
 			tooling += "\n\nTool visibility: for efficiency you may be shown only the tools relevant to the current message. Your full capabilities cover: " + caps +
@@ -115,8 +110,7 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 		return nil, fmt.Errorf("open history store: %w", err)
 	}
 
-	// Must prune before the history layer loads, so a pruned-away current
-	// pointer self-heals.
+	// Must prune before the history layer loads, so a pruned-away current pointer self-heals.
 	if cfg.History.RetainDays > 0 {
 		cutoff := time.Now().AddDate(0, 0, -cfg.History.RetainDays).Unix()
 		if n, err := st.PruneConversationsOlderThan(cutoff); err != nil {
@@ -148,14 +142,11 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 	toolReg.AttachMemory(st)
 	toolReg.AttachWeather(cfg.Weather.Place)
 
-	// Connect never fails outright — a broken server is logged and skipped —
-	// so the returned Manager is always safe to attach and to Close later.
+	// Connect never fails outright, so the returned Manager is always safe to attach and Close.
 	mcpMgr := mcp.Connect(context.Background(), mcpServerConfigs(cfg.MCP))
 	toolReg.AttachMCP(mcpMgr, trustedMCPServers(cfg.MCP))
 
-	// Category vectors warm lazily on the first turn that actually needs them,
-	// so cloud-only users never spawn a doomed embed call against a
-	// non-running Ollama.
+	// Warmed lazily so cloud-only users never spawn a doomed embed call against a stopped Ollama.
 	var filter *toolfilter.Filter
 	if fc := cfg.Tools.ContextFilter; fc.Enabled {
 		var embed toolfilter.EmbedFunc
@@ -195,8 +186,7 @@ func trustedMCPServers(c config.MCP) map[string]bool {
 	return trusted
 }
 
-// Adapts to the mcp package's own ServerConfig so that package needn't import
-// internal/config.
+// Adapts to the mcp package's own ServerConfig so it needn't import internal/config.
 func mcpServerConfigs(c config.MCP) map[string]mcp.ServerConfig {
 	if len(c.Servers) == 0 {
 		return nil
@@ -214,8 +204,7 @@ func mcpServerConfigs(c config.MCP) map[string]mcp.ServerConfig {
 	return out
 }
 
-// Resolving ${VAR} against mugen-ai's own environment lets a secret stay in
-// the environment instead of being stored in plaintext in config.toml.
+// Resolving ${VAR} against our own environment keeps a secret out of config.toml.
 func expandEnv(in map[string]string) map[string]string {
 	if len(in) == 0 {
 		return in
@@ -239,8 +228,7 @@ func resolveScriptsDir(configured string) string {
 	return filepath.Join(xdg, "quickshell", "mugen-shell", "scripts")
 }
 
-// Returns the Ollama provider separately because the tool context filter
-// needs its Embed method, which is not part of the Provider interface.
+// Ollama is returned separately because the tool filter needs its Embed, absent from Provider.
 func buildRegistry(cfg config.Config, model string) (*provider.Registry, *provider.Ollama) {
 	ollama := provider.NewOllama(cfg.Provider.Ollama.Host, cfg.Provider.Ollama.NumCtx, cfg.Provider.Ollama.KeepAlive)
 	providers := []provider.Provider{ollama}
@@ -291,17 +279,14 @@ func assemblePersona(p config.Personality) string {
 	} else {
 		lines = append(lines, fmt.Sprintf("You are %s, a desktop assistant for mugen-shell.", name))
 	}
-	// Pin gender-neutral pronouns so models don't default to "俺/僕" in
-	// Japanese under a casual tone. Only for Yura: a custom name means the
-	// user has redefined the persona.
+	// Only for Yura: a custom name means the user has redefined the persona.
 	if name == "Yura" {
 		lines = append(lines, "You appear as a luminous orb of light and have no gender. Your first-person pronoun is わたし in Japanese (never 俺, 僕, or あたし) and I in English. This identity rule overrides any casual tone.")
 	}
 	if p.Language != "" {
 		lines = append(lines, fmt.Sprintf("Respond in %s.", p.Language))
 	} else {
-		// Stated explicitly because small local models drift to
-		// English/Chinese without an anchor.
+		// Stated explicitly because small local models drift to English/Chinese without an anchor.
 		lines = append(lines, "Respond in the language the user writes in.")
 	}
 	header := strings.Join(lines, "\n")
@@ -326,8 +311,7 @@ var builtinCapabilities = []struct{ cat, phrase string }{
 	{"weather", "weather"},
 }
 
-// An MCP server's name is its tool category. Returns "" when everything is
-// disabled.
+// An MCP server's name is its tool category. Returns "" when everything is disabled.
 func enabledCapabilities(cfg config.Config) string {
 	disabled := map[string]bool{}
 	for _, c := range cfg.Tools.DisabledCategories {

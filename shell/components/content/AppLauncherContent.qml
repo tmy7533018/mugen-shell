@@ -94,8 +94,7 @@ FocusScope {
         }
         let df = app.desktopFile || ""
         if (df === "") return
-        // terminal route on purpose: the user sees what gets removed (deps
-        // included) and confirms in the package manager itself
+        // terminal route on purpose: the user sees what gets removed and confirms in the package manager
         let holdTail = "; echo; printf 'Press Enter to close...'; read _"
         let terminal = (settingsManager && settingsManager.launcherTerminal) ? settingsManager.launcherTerminal : "kitty"
         let termPrefix = Theme.Hypr.terminalArgvPrefix(terminal)
@@ -106,9 +105,7 @@ FocusScope {
                 "flatpak uninstall \"$1\"" + holdTail, "sh", appId
             ]))
         } else {
-            // user-local .desktop copies often point at packaged binaries, so
-            // fall back to the Exec target's owner. Interpreters are excluded
-            // so an "env FOO=1 app" line can never resolve to coreutils.
+            // user-local .desktop copies often point at packaged binaries, so use the Exec target's owner.
             let execFirst = (app.exec || "").split(" ")[0]
             let execBase = execFirst.split("/").pop()
             if (execFirst[0] !== "/" || ["env", "sh", "bash", "zsh", "python", "python3"].indexOf(execBase) !== -1) {
@@ -148,8 +145,7 @@ FocusScope {
         } else if (!isLoading) {
             isLoading = true
         }
-        // always re-run so installs/removals show up without a shell restart;
-        // the model is only swapped when the JSON actually changed
+        // always re-run so installs/removals show up; the model is swapped only when the JSON changed
         if (!appsProcess.running) {
             appsProcess.running = true
         }

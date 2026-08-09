@@ -127,8 +127,7 @@ Rectangle {
         }
     }
 
-    // The retention prune only runs at mugen-ai startup, so applying
-    // retain_days means bouncing the service.
+    // The retention prune only runs at mugen-ai startup, so applying retain_days needs a restart.
     Process {
         id: getCurrentProcess
         running: false
@@ -165,8 +164,7 @@ Rectangle {
                   "-X", "PUT", aiBackend.baseUrl + "/config",
                   "-H", "Content-Type: application/json",
                   "--data-binary", "@-"]
-        // The config carries API keys and MCP secrets, and argv is world-
-        // readable through /proc; the body goes over stdin instead.
+        // argv is world-readable through /proc and the config carries secrets, so the body goes over stdin.
         onStarted: {
             saveProcess.write(saveProcess.payload)
             saveProcess.stdinEnabled = false

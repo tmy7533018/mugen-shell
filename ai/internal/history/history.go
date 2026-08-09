@@ -33,8 +33,7 @@ func New(s *store.Store, systemPrompt string, maxTokens int) (*History, error) {
 	return h, nil
 }
 
-// Deliberately overshoots: English runs ~4 bytes/token and Japanese ~3, so
-// guessing 3 keeps the result inside the model's real window either way.
+// Deliberately overshoots: English is ~4 bytes/token and Japanese ~3, so 3 stays inside.
 func estimateTokens(s string) int {
 	return len(s)/3 + 1
 }
@@ -213,9 +212,7 @@ func (h *History) RemoveLast() {
 	_ = h.store.RemoveLastMessage(h.convID)
 }
 
-// AddAssistantTo targets a conversation explicitly so a long streaming turn
-// lands where it started even if another request switched the current
-// pointer meanwhile.
+// AddAssistantTo targets a conversation explicitly so a long streaming turn lands where it started.
 func (h *History) AddAssistantTo(convID int64, content string) error {
 	if convID == 0 {
 		return nil
@@ -248,9 +245,8 @@ func (h *History) RemoveLastFrom(convID int64) {
 	}
 }
 
-// TruncateFrom drops msgID and everything after it, which is how retry and
-// edit rewind a conversation before resending. Reloads the in-memory copy so
-// the next turn is built from the shortened history rather than the stale one.
+// TruncateFrom drops msgID and everything after it — how retry and edit rewind before
+// resending. Reloads the in-memory copy so the next turn uses the shortened history.
 func (h *History) TruncateFrom(convID, msgID int64) (int64, error) {
 	if convID == 0 || msgID == 0 {
 		return 0, nil
@@ -354,8 +350,7 @@ func (h *History) truncateLocked() {
 		for i := range h.messages {
 			total += messageTokens(h.messages[i])
 		}
-		// Keep at least the trailing exchange so a single oversized message
-		// can't empty the conversation.
+		// Keep the trailing exchange so a single oversized message can't empty the conversation.
 		drop := 0
 		for total > h.maxTokens && drop < len(h.messages)-2 {
 			total -= messageTokens(h.messages[drop])

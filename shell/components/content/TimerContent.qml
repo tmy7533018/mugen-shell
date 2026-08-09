@@ -267,8 +267,7 @@ Item {
             }
 
 
-                // Size must match the running progress ring so the dial you set
-                // visually becomes the ring that counts down.
+                // Size must match the running progress ring so the dial you set becomes that ring.
                 Item {
                     id: dial
                     Layout.preferredWidth: modeManager.scale(116)
@@ -413,8 +412,7 @@ Item {
                     }
                 }
 
-                // Displays the key handler's buffer rather than taking input
-                // itself; focus stays on the mode's FocusScope.
+                // Displays the key handler's buffer rather than taking input; focus stays on the FocusScope.
                 Rectangle {
                     Layout.alignment: Qt.AlignHCenter
                     Layout.preferredWidth: modeManager.scale(152)
@@ -737,8 +735,7 @@ Item {
                 Layout.preferredHeight: modeManager.scale(116)
                 Layout.alignment: Qt.AlignHCenter
 
-                // The leading and trailing pauses must sum to the same total
-                // per ripple, or the two drift apart over time.
+                // The leading and trailing pauses must sum to the same total, or the two ripples drift.
                 Repeater {
                     model: 2
 

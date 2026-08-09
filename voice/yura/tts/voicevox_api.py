@@ -21,8 +21,7 @@ _default_sid_cache: dict[str, int] = {}
 
 
 def style_id(voice: str) -> int | None:
-    # Hand-edited settings must degrade to the default voice, not crash
-    # the turn sentence by sentence.
+    # Hand-edited settings must degrade to the default voice, not crash the turn sentence by sentence.
     try:
         return int(voice)
     except ValueError:

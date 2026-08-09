@@ -128,8 +128,7 @@ Item {
         }
     }
 
-    // Outline drawn as a Rectangle rather than the SVG icon so it shares Qt's
-    // anti-aliasing pipeline with the water mask and stays sub-pixel aligned.
+    // A Rectangle, not the SVG icon, so it shares Qt's anti-aliasing with the water mask.
     Rectangle {
         id: batteryOutline
         visible: powerMenuRoot.batteryActive

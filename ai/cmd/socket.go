@@ -11,11 +11,8 @@ import (
 	"time"
 )
 
-// SocketPath is where the daemon listens and every client dials. A unix socket
-// rather than a loopback port: the API is unauthenticated, and on a shared
-// machine any other local user can reach 127.0.0.1.
-// Every client derives the same path, so there is no fallback: a guessed one
-// would have the shell and the daemon quietly using different sockets.
+// SocketPath is where the daemon listens and every client dials — a unix socket, not a
+// loopback port, since the API is unauthenticated. No fallback: a guess would split the two.
 func SocketPath() string {
 	if v := os.Getenv("MUGEN_AI_SOCKET"); v != "" {
 		return v
@@ -26,8 +23,7 @@ func SocketPath() string {
 	return ""
 }
 
-// listenSocket binds SocketPath with 0600 in place from the start — chmod after
-// bind leaves a window where the socket is reachable at the umask's mode.
+// 0600 at bind time: chmod after bind leaves a window open at the umask's mode.
 func listenSocket(path string) (net.Listener, error) {
 	if path == "" {
 		return nil, fmt.Errorf("no socket path: set XDG_RUNTIME_DIR or MUGEN_AI_SOCKET")
@@ -48,8 +44,7 @@ func listenSocket(path string) (net.Listener, error) {
 	return ln, nil
 }
 
-// A leftover socket file from a killed daemon has to go, but one that still
-// answers belongs to a live instance and must not be stolen.
+// A leftover socket must go, but one that still answers belongs to a live instance.
 func clearStaleSocket(path string) error {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
@@ -65,8 +60,7 @@ func clearStaleSocket(path string) error {
 	return os.Remove(path)
 }
 
-// socketClient talks HTTP over the daemon's socket. The host in the URL is
-// ignored by the dialer but still has to be present, hence "localhost".
+// The host in the URL is ignored by the dialer but still has to be present, hence "localhost".
 func socketClient(path string, timeout time.Duration) *http.Client {
 	return &http.Client{
 		Timeout: timeout,

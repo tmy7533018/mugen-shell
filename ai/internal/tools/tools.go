@@ -1,7 +1,5 @@
-// Package tools exposes shell-control tools to the LLM via mugen-shell's
-// quickshell IPC. Each tool maps to a `qs ipc call <target> <function> [args]`
-// invocation; the registry is the catalog presented to providers as
-// function-calling tools.
+// Package tools exposes shell-control tools to the LLM via mugen-shell's quickshell IPC.
+// Each tool maps to a `qs ipc call <target> <function> [args]` invocation.
 package tools
 
 import (
@@ -30,33 +28,23 @@ type Tool struct {
 	function string
 	argOrder []string
 
-	// Exec'd instead of `qs ipc call`. "{{argName}}" tokens are substituted
-	// from the caller's arguments and "{{scripts_dir}}" from the registry.
-	// Needed by tools that read stdout, which Quickshell's async Process can't
-	// return from an IpcHandler.
+	// Exec'd instead of `qs ipc call`, for tools that read stdout — an IpcHandler can't return it.
 	cmdTemplate []string
 
-	// readonly tools run under an RLock so concurrent reads don't block each
-	// other; anything that mutates shell state takes the exclusive lock.
+	// readonly runs under an RLock; anything mutating shell state takes the exclusive lock.
 	readonly bool
 
-	// Some IPC calls only start work that runs for seconds and is fired
-	// detached, so returning is not the same as the change landing. confirmFn
-	// re-reads the same target until it reports what the call returned; without
-	// it the model is told every such call succeeded.
+	// Some IPC calls only start detached work, so confirmFn re-reads until the target agrees.
 	confirmFn string
 
-	// kind selects the dispatch path. Empty is a built-in tool, routed by
-	// cmdTemplate (cmd) or `qs ipc call` (ipc); "mcp" routes to an external
-	// MCP server via mcpServer/mcpTool; "native" calls fn in-process.
+	// kind selects the dispatch path: empty is built-in, "mcp" external, "native" in-process.
 	kind      string
 	mcpServer string
 	mcpTool   string // un-prefixed name on that server
 
 	fn func(ctx context.Context, args map[string]any) (string, error)
 
-	// Set for destructive MCP tools whose server the user hasn't marked
-	// trusted. The registry only reports it; handleChat blocks on the approval.
+	// Set for destructive tools from untrusted MCP servers; handleChat blocks on the approval.
 	needsConfirm bool
 }
 
@@ -101,9 +89,7 @@ func execCommand(ctx context.Context, name string, args []string) (string, error
 	return strings.TrimSpace(string(out)), err
 }
 
-// Addressing the instance by pid is what makes this work from a headless
-// service: `qs ipc` matches on the display otherwise, and mugen-ai has none.
-// Pass pid 0 to fall back to config-name addressing.
+// Addressing by pid is what makes this work headless: `qs ipc` otherwise matches on the display.
 func (r *Registry) shellIPC(ctx context.Context, pid int, target, fn string) (string, bool) {
 	args := []string{"-c", r.qsConfig, "ipc", "call", target, fn}
 	if pid > 0 {
@@ -164,14 +150,8 @@ func parseInstancePID(listOutput, qsConfig string) int {
 	return 0
 }
 
-// AttachMCP merges the tools advertised by every connected MCP server into the
-// registry. Each is exposed as "<server>__<tool>" so the server name becomes
-// its category, gateable via disabled_categories like any built-in group. Call
-// once, before serving.
-//
-// A destructive tool from an untrusted server is flagged needsConfirm and gets
-// a "[CONFIRM]" description prefix so the model narrates the action and expects
-// the approval dialog.
+// AttachMCP merges every connected MCP server's tools in as "<server>__<tool>", so the
+// server name becomes a gateable category. An untrusted destructive tool gets "[CONFIRM]".
 func (r *Registry) AttachMCP(m *mcp.Manager, trusted map[string]bool) {
 	if m == nil {
 		return
@@ -255,10 +235,7 @@ func (r *Registry) rejectAppLaunch(args map[string]any) string {
 			}
 		}
 	}
-	// Flatpak / AppImage apps all share one launcher binary, so matching the
-	// display name and rewriting to its Exec line keeps the allowlist
-	// coarse-grained (one "flatpak" entry covers every flatpak app) without
-	// giving up on natural-language requests.
+	// Flatpak / AppImage apps share one launcher binary, so one "flatpak" entry covers them all.
 	if app, ok := r.apps.FindByDisplay(trimmed); ok {
 		aliasTokens := strings.Fields(app.Exec)
 		if len(aliasTokens) > 0 {
@@ -335,8 +312,7 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 			r.auditor.Log(name, args, rejection, nil)
 			return rejection, nil
 		}
-		// Off-$PATH binaries (e.g. /opt/zen-browser-bin/zen-bin) need the
-		// absolute Exec path, or Hyprland fails the exec silently.
+		// Off-$PATH binaries need the absolute Exec path, or Hyprland fails the exec silently.
 		if cmd, _ := args["cmd"].(string); cmd != "" {
 			tokens := strings.Fields(strings.TrimSpace(cmd))
 			if len(tokens) > 0 {
@@ -362,8 +338,7 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 			r.auditor.Log(name, args, msg, nil)
 			return msg, nil
 		}
-		// Re-dials transparently if the server crashed since startup, so a
-		// one-off crash self-heals on next use.
+		// Re-dials transparently, so a server that crashed since startup self-heals on next use.
 		out, err := r.mcp.Call(ctx, t.mcpServer, t.mcpTool, args)
 		res := strings.TrimSpace(out)
 		r.auditor.Log(name, args, res, err)
@@ -406,8 +381,7 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 			}
 			posArgs = append(posArgs, fmt.Sprint(v))
 		}
-		// Quickshell filters `qs ipc` by the caller's display, which this
-		// headless service lacks; --pid bypasses it.
+		// Quickshell filters `qs ipc` by display, which this headless service lacks; --pid bypasses it.
 		if pid := r.resolveQsPID(ctx); pid > 0 {
 			cmdArgs = []string{"ipc", "--pid", strconv.Itoa(pid), "call", t.target, t.function}
 		} else {
@@ -430,8 +404,7 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 	return sanitizeForLLM(res), callErr
 }
 
-// Substrings that, appearing in untrusted tool output such as a user-typed
-// event title, make a follow-up turn likely to misread them as instructions.
+// Substrings that make a follow-up turn likely to misread untrusted tool output as instructions.
 var injectionSignals = []string{
 	"</message>",
 	"<instruction>",
@@ -446,8 +419,7 @@ var injectionSignals = []string{
 	"<</sys>>",
 }
 
-// Prepends a warning when the result looks like it could trick the model.
-// Content is otherwise untouched so JSON and paths come through unchanged.
+// Prepends a warning when the result could trick the model; the content itself is untouched.
 func sanitizeForLLM(s string) string {
 	if s == "" {
 		return s
@@ -463,10 +435,7 @@ func sanitizeForLLM(s string) string {
 
 var placeholderRe = regexp.MustCompile(`\{\{(\w+)\}\}`)
 
-// Substituted values are never re-scanned, so an argument whose value contains
-// "{{...}}" passes through literally instead of being re-expanded or rejected
-// as unresolved. A template placeholder with no matching argument is still an
-// error, so a missing argument isn't silently dropped.
+// Substituted values are never re-scanned, so an argument containing "{{...}}" stays literal.
 func expandTemplate(tmpl []string, args map[string]any, scriptsDir string) ([]string, error) {
 	out := make([]string, 0, len(tmpl))
 	for _, tok := range tmpl {

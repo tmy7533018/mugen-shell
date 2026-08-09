@@ -154,9 +154,7 @@ Item {
                     Layout.preferredHeight: modeManager.scale(28)
                     Layout.alignment: Qt.AlignVCenter
 
-                    // Quickshell already resolves notify-send's -i hint into
-                    // an `image://icon/<name>` URL on `image`; these paths are
-                    // only for senders that set desktopEntry / appName instead.
+                    // Quickshell already resolves -i onto `image`; these paths are for desktopEntry / appName senders.
                     property var iconPaths: {
                         if (!root.currentNotification) return []
                         let n = root.currentNotification
@@ -238,8 +236,7 @@ Item {
                         font.pixelSize: modeManager.scale(11)
                         font.family: "M PLUS 2"
                         elide: Text.ElideRight
-                        // A second wrapped line spills past the 70px pill's
-                        // rounded bottom edge.
+                        // A second wrapped line spills past the 70px pill's rounded bottom edge.
                         maximumLineCount: 1
                         visible: text.length > 0
                     }

@@ -6,8 +6,7 @@ QtObject {
 
     property string iconTheme: ""
 
-    // From XDG_DATA_DIRS rather than a hardcoded /usr/share, so lookup works
-    // on NixOS as well as FHS distros.
+    // From XDG_DATA_DIRS, not a hardcoded /usr/share, so lookup works on NixOS as well as FHS.
     readonly property var dataDirs: {
         let dirs = []
         const home = Quickshell.env("HOME") || ""

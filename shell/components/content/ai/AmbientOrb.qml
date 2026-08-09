@@ -9,8 +9,7 @@ Item {
     property color orbColor: Qt.rgba(0.65, 0.55, 0.85, 0.9)
     property bool streaming: false
     property bool speaking: false
-    // Multiple of the ring's base size. Height-constrained hosts (the bar)
-    // must lower it or rings spill outside the visible strip.
+    // Multiple of the ring's base size; height-constrained hosts must lower it or rings spill out.
     property real rippleMaxScale: 2.0
     property bool active: true
     property bool breathEnabled: true

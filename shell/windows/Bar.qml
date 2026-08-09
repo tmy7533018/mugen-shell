@@ -15,9 +15,7 @@ import "../lib" as Theme
 PanelWindow {
     id: barWindow
 
-    // SettingsManager lives inside this window (below), so the monitor
-    // choice can only be resolved here, not from the shell root — the
-    // binding re-evaluates once settings finish their first async load.
+    // SettingsManager lives inside this window, so the monitor choice can only resolve here.
     function screenByName(name) {
         if (!name || name === "") return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
         for (let i = 0; i < Quickshell.screens.length; i++) {
@@ -31,8 +29,7 @@ PanelWindow {
     anchors.left: true
     anchors.right: true
 
-    // Overlay so panels ride above fullscreen apps; with no panel open the bar
-    // hides entirely so the fullscreen app keeps every pixel.
+    // Overlay so panels ride above fullscreen apps; with none open the bar hides entirely.
     WlrLayershell.layer: WlrLayer.Overlay
 
     readonly property var hyprMonitor: barWindow.screen
@@ -50,11 +47,9 @@ PanelWindow {
     readonly property bool barHidden: fullscreenHidden || lockHidden
 
     implicitHeight: modeManager.currentBarSize.height
-    // Not lock-aware: dropping the zone reflows tiled windows, and
-    // misc:session_lock_xray makes that reflow visible through the lock face.
+    // Not lock-aware: dropping the zone reflows tiled windows, which session_lock_xray makes visible.
     exclusiveZone: fullscreenHidden ? 0 : modeManager.normalBarSize.height
-    // The lock path fades to zero instead of unmapping: an unmapped layer has
-    // no exclusive zone either, whatever the property above says.
+    // The lock path fades to zero instead of unmapping: an unmapped layer has no exclusive zone.
     visible: !fullscreenHidden
     // Release keyboard focus in normal mode so launched apps can receive it.
     focusable: !modeManager.isMode("normal")
@@ -62,8 +57,7 @@ PanelWindow {
 
     HyprlandFocusGrab {
         windows: [barWindow]
-        // A module open at lock time would leave a grab pulling focus toward
-        // an unmapped bar.
+        // A module open at lock time would leave a grab pulling focus toward an unmapped bar.
         active: !modeManager.isMode("normal") && modeManager.openedViaIpc
             && !barWindow.lockHidden
     }
@@ -85,8 +79,7 @@ PanelWindow {
                 return
             }
 
-            // Per-panel Keys handlers never fire: escKeyHandler owns active
-            // focus while a panel is open.
+            // Per-panel Keys handlers never fire: escKeyHandler owns focus while a panel is open.
             if (modeManager.isMode("music") && musicPlayerManager) {
                 if (event.key === Qt.Key_Space) {
                     musicPlayerManager.playPause()
@@ -127,8 +120,7 @@ PanelWindow {
         target: modeManager
         function onCurrentModeChanged() {
             if (!modeManager.isMode("normal") && modeManager.openedViaIpc) {
-                // PanelWindow has no requestActivate(); focusable + FocusGrab
-                // give the surface keyboard focus, then push it inward.
+                // PanelWindow has no requestActivate(); focusable + FocusGrab give focus, then push inward.
                 Qt.callLater(() => {
                     escKeyHandler.forceActiveFocus()
                 })
@@ -138,8 +130,7 @@ PanelWindow {
 
     property alias notificationManager: notificationManager
 
-    // AI only counts down toward auto-close while the conversation is quiet:
-    // no streamed reply, no unsent draft, no voice turn still in flight.
+    // AI only counts down while quiet: no streamed reply, no unsent draft, no voice turn in flight.
     readonly property bool aiQuiet: !yuraListening && !yuraSpeaking && !yuraFloatThinking
         && (!aiAssistantLoader.item
             || (!aiAssistantLoader.item.streaming && !aiAssistantLoader.item.hasDraft))
@@ -208,8 +199,7 @@ PanelWindow {
         id: timerManager
 
         onCompleted: {
-            // Don't yank focus from another open panel. viaIpc activates
-            // HyprlandFocusGrab so the bar actually gets keyboard focus.
+            // Don't yank focus from another open panel; viaIpc activates the grab so the bar gets it.
             if (modeManager.isMode("normal")) {
                 modeManager.switchMode("timer", true)
             }
@@ -281,9 +271,7 @@ PanelWindow {
         weatherManager: weatherManager
     }
 
-    // Float Yura runs as a separate quickshell process and mirrors its state
-    // here over IPC; yurad (voice daemon) reports capture and playback the
-    // same way, so auto-close waits for a spoken read-out.
+    // Float Yura and yurad both mirror their state here over IPC, so auto-close waits for a spoken read-out.
     property bool yuraFloatThinking: false
     property bool yuraListening: false
     property bool yuraSpeaking: false
@@ -318,8 +306,7 @@ PanelWindow {
             const r = leftSection.aiOrbScreenRect()
             return Math.round(r.x) + " " + Math.round(r.y) + " " + Math.round(r.size)
         }
-        // Voice turns run in the daemon, not the bar's own chat process, so
-        // the transcript and reply have to be mirrored into the pill.
+        // Voice turns run in the daemon, not the bar's chat process, so they must be mirrored in.
         function voice_input(text: string): void {
             if (aiAssistantLoader.item) aiAssistantLoader.item.showVoiceInput(text)
         }
@@ -375,8 +362,7 @@ PanelWindow {
             const h = Math.round(surface.height)
             if (w <= 0 || h <= 0) return JSON.stringify({ hidden: true })
 
-            // Rectangle silently clamps radius to half the shorter side, so the
-            // raw setting would let the lock's radius climb as the card grows.
+            // Rectangle clamps radius to half the shorter side, so the raw setting would climb with the card.
             const effective = Math.min(settingsManager.barRadius, Math.min(w, h) / 2)
 
             const n = modeManager.normalBarSize
@@ -408,8 +394,7 @@ PanelWindow {
             return "ok"
         }
 
-        // Not `show`: IpcHandler resolves that against QObject and answers the
-        // call with its handler listing instead.
+        // Not `show`: IpcHandler resolves that against QObject and answers with its handler listing.
         function restore(): string {
             barWindow.showAfterLock()
             return "ok"
@@ -445,8 +430,7 @@ PanelWindow {
         onTriggered: barWindow.showAfterLock()
     }
 
-    // If yura-shell dies mid-stream its clearing IPC never arrives, so the
-    // icon would glow forever.
+    // If yura-shell dies mid-stream its clearing IPC never arrives, so the icon would glow forever.
     Timer {
         id: yuraThinkingFailsafe
         interval: 15 * 60 * 1000
@@ -623,8 +607,7 @@ PanelWindow {
         property bool isFirstShow: true
 
         opacity: 0
-        // Never bind visible here — it breaks the binding and leaves the bar
-        // permanently empty. Drive display through opacity instead.
+        // Never bind visible here — it severs the binding and leaves the bar permanently empty.
         enabled: modeManager.isMode("normal")
 
         Component.onCompleted: {
@@ -803,8 +786,7 @@ PanelWindow {
         property var settingsManagerRef: settingsManager
         property var aiBackendRef: aiBackend
 
-        // AI stays resident after first open so chat / streaming state survive
-        // close-reopen. Other modules unload to keep idle memory flat.
+        // AI stays resident after first open so chat state survives close-reopen; others unload.
         property bool everLoaded: false
         active: modeManagerRef.isMode("ai") || everLoaded
         onLoaded: everLoaded = true

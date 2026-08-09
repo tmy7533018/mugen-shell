@@ -4,16 +4,12 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 
-// Every Hyprland dispatch in the shell must route through here. Under a Lua
-// config Hyprland evaluates the dispatch argument as Lua, so the legacy string
-// form ("exec ...", "workspace N") is rejected and hl.dsp.* is required.
+// Every Hyprland dispatch must route through here: under a Lua config Hyprland evaluates
+// the argument as Lua, so the legacy string form is rejected and hl.dsp.* is required.
 Item {
     id: root
 
-    // Read synchronously from the env var so startup dispatches, which fire
-    // before the async probe returns, still pick the right syntax. The probe
-    // is a backstop for a Lua config that omits the var, so it only ever
-    // upgrades to true.
+    // Read synchronously so startup dispatches, which fire before the probe returns, pick the right syntax.
     property bool isLua: Quickshell.env("HYPR_CONFIG_LUA") === "1"
 
     function esc(s) {
@@ -25,8 +21,7 @@ Item {
         else Hyprland.dispatch("exec " + cmd)
     }
 
-    // For call sites that keep a Process because they need onExited or
-    // Hyprland-detached spawning.
+    // For call sites that keep a Process because they need onExited or detached spawning.
     function execArgv(cmd) {
         if (root.isLua) return ["hyprctl", "dispatch", "hl.dsp.exec_cmd(\"" + root.esc(cmd) + "\")"]
         return ["hyprctl", "dispatch", "exec", cmd]
@@ -54,8 +49,7 @@ Item {
         }
     }
 
-    // Probed once at startup like isLua above: starts false, may flip true
-    // once the check returns, and is read synchronously everywhere else.
+    // Probed once at startup like isLua: starts false and only ever upgrades to true.
     property bool hasXdgTerminalExec: false
 
     Process {
@@ -65,9 +59,7 @@ Item {
         onExited: (code) => { if (code === 0) root.hasXdgTerminalExec = true }
     }
 
-    // Fallback per-terminal exec flag, used only when xdg-terminal-exec isn't
-    // available. Unlisted terminals default to "-e", the most common form;
-    // add an entry here for one that needs something else.
+    // Only used when xdg-terminal-exec is missing; unlisted terminals default to "-e".
     readonly property var _terminalExecFlags: ({
         "kitty": "",
         "foot": "",
@@ -83,10 +75,7 @@ Item {
         return root._terminalExecFlags.hasOwnProperty(bin) ? root._terminalExecFlags[bin] : "-e"
     }
 
-    // Runs `cmd` inside the user's terminal, for a launcher entry whose
-    // .desktop file sets Terminal=true. Prefers xdg-terminal-exec (correct for
-    // any terminal, no flag table needed) and falls back to the configured
-    // launcherTerminal otherwise.
+    // Runs cmd in the user's terminal for a Terminal=true .desktop entry; prefers xdg-terminal-exec.
     function execInTerminal(terminalCmd, cmd) {
         let quoted = "'" + String(cmd).replace(/'/g, "'\\''") + "'"
         if (root.hasXdgTerminalExec) {
@@ -98,9 +87,7 @@ Item {
         root.exec(flag.length > 0 ? (bin + " " + flag + " sh -c " + quoted) : (bin + " sh -c " + quoted))
     }
 
-    // Argv prefix ["term", "-e"] (or just ["term"]) for callers building their
-    // own Quickshell.execDetached argv — e.g. a script that relies on
-    // positional args ($1, $2...) rather than a single quoted string.
+    // Argv prefix for callers building their own execDetached argv with positional args.
     function terminalArgvPrefix(terminalCmd) {
         let bin = String(terminalCmd || "kitty").trim().split(/\s+/)[0]
         let flag = root._terminalFlag(terminalCmd)

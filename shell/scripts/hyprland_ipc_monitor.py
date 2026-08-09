@@ -22,9 +22,7 @@ def find_hyprland_socket():
                 if os.path.exists(sock_path):
                     return sock_path
 
-    # No /tmp/hypr fallback: Hyprland has used $XDG_RUNTIME_DIR since 0.40, and
-    # a world-writable directory is somewhere anyone can plant a socket for us
-    # to take events from.
+    # No /tmp/hypr fallback: a world-writable directory is somewhere anyone can plant a socket.
     return None
 
 def main():
@@ -51,8 +49,7 @@ def main():
                 if not data:
                     break
 
-                # Keep the partial tail for the next recv so an event straddling
-                # a 4096-byte boundary isn't split into two broken halves.
+                # Keep the partial tail so an event straddling a 4096-byte boundary isn't split.
                 buf += data
                 while '\n' in buf:
                     line, buf = buf.split('\n', 1)

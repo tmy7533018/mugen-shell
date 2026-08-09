@@ -16,8 +16,7 @@ import wave
 from ..const import DATA_DIR
 from ..log import log
 
-# Colon-separated, first match wins, so a voice dropped in the writable dir
-# shadows a packaged one of the same name.
+# Colon-separated, first match wins, so a voice in the writable dir shadows a packaged one.
 MODEL_PATH = os.environ.get(
     "YURA_TTS_MODELS", os.path.join(DATA_DIR, "tts"))
 
@@ -27,8 +26,7 @@ def search_dirs() -> list[str]:
 
 
 def is_model_dir(path: str) -> bool:
-    # An .onnx is the one file every family here has. Without this check a
-    # stray directory beside the models can be picked as the fallback voice.
+    # An .onnx is the one file every family here has; without it a stray directory could be picked.
     return bool(glob.glob(os.path.join(path, "*.onnx")))
 
 
@@ -100,8 +98,7 @@ _cache_lock = threading.Lock()
 
 
 def _load(path: str):
-    # Loading costs seconds and hundreds of MB, and the synthesis producer
-    # thread would otherwise pay it again on every sentence.
+    # Loading costs seconds and hundreds of MB, which the producer would pay on every sentence.
     with _cache_lock:
         if path not in _cache:
             import sherpa_onnx

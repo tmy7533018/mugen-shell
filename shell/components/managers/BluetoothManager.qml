@@ -283,8 +283,7 @@ QtObject {
     }
 
     property Process bluetoothScanProcess: Process {
-        // One process, not a bash pipeline: stopping this Process only signals
-        // its direct child, so a nested bluetoothctl would keep discovery on.
+        // One process, not a pipeline: stopping this only signals its direct child.
         command: ["stdbuf", "-oL", "-eL", "bluetoothctl", "--timeout", "10", "scan", "on"]
         running: false
 

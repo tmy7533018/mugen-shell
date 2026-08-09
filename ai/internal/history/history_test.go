@@ -180,8 +180,7 @@ func TestTruncateFromDropsTailAndReloads(t *testing.T) {
 		t.Fatalf("unexpected remainder: %+v", left)
 	}
 
-	// The in-memory copy feeds the next turn, so a stale one would resend
-	// messages the caller just deleted.
+	// The in-memory copy feeds the next turn, so a stale one would resend deleted messages.
 	inMem := h.Messages()
 	var contents []string
 	for _, m := range inMem {

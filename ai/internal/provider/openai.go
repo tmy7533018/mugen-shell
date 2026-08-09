@@ -92,8 +92,7 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opt
 		payload["tools"] = tw
 	}
 	if opts.Thinking {
-		// Non-reasoning models ignore this on the official API, but strict
-		// compat servers 400 on it — see the retry below.
+		// The official API ignores this on non-reasoning models, but strict compat servers 400.
 		payload["reasoning_effort"] = "medium"
 	}
 
@@ -133,8 +132,7 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opt
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 
-	// Tool calls arrive as deltas keyed by `index` and are only complete once
-	// finish_reason fires.
+	// Tool calls arrive as deltas keyed by index and are only complete once finish_reason fires.
 	type pending struct {
 		ID   string
 		Name string

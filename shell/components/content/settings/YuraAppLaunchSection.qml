@@ -26,9 +26,7 @@ Rectangle {
     property string statusText: ""
 
     property var allowedSet: ({})
-    // Bumped on every mutation of allowedSet; the `let _ = dirtyTick` reads
-    // below exist to make bindings depend on it, since mutating a JS map in
-    // place doesn't notify QML.
+    // Mutating a JS map in place doesn't notify QML, so bindings read dirtyTick to depend on it.
     property int dirtyTick: 0
     property var installedApps: []
     property string filterText: ""
@@ -93,8 +91,7 @@ Rectangle {
         section.dirtyTick++
     }
 
-    // Scoped to the filtered rows so "All on" can't silently allow every
-    // installed app when the user meant a subset.
+    // Scoped to the filtered rows so "All on" can't silently allow every installed app.
     function bulkAllow(on) {
         let next = Object.assign({}, section.allowedSet)
         let rows = section.filteredRows
@@ -212,8 +209,7 @@ Rectangle {
                   "-X", "PUT", aiBackend.baseUrl + "/config",
                   "-H", "Content-Type: application/json",
                   "--data-binary", "@-"]
-        // The config carries API keys and MCP secrets, and argv is world-
-        // readable through /proc; the body goes over stdin instead.
+        // argv is world-readable through /proc and the config carries secrets, so the body goes over stdin.
         onStarted: {
             saveProcess.write(saveProcess.payload)
             saveProcess.stdinEnabled = false

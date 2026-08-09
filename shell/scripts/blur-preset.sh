@@ -21,8 +21,7 @@ get_current() {
     [[ -f "$STATE" ]] && cat "$STATE" || echo ""
 }
 
-# Redirecting straight at the destination empties it before the generator runs,
-# so an unknown preset would leave Hyprland with no blur config at all.
+# Redirecting straight at the destination empties it first, so an unknown preset would leave none.
 write_atomic() {
     local dest="$1"
     shift
@@ -77,17 +76,14 @@ sys.exit(1)
 
 apply_live() {
     local name="$1"
-    # Persist for survival across Hyprland reloads (matugen / wallpaper change
-    # triggers autoreload that would otherwise drop the runtime keyword values).
+    # Persisted so a matugen / wallpaper autoreload doesn't drop the runtime keyword values.
     write_blur_conf "$name"
     write_blur_lua "$name"
     if [[ "$(hyprctl systeminfo 2>/dev/null | grep -oP 'configProvider:\s*\K\w+')" == "lua" ]]; then
-        # `hyprctl keyword` is rejected under a Lua config; a reload re-runs the
-        # config, which dofiles blur.lua and applies the new values.
+        # `hyprctl keyword` is rejected under a Lua config; a reload re-runs it and dofiles blur.lua.
         hyprctl reload >/dev/null 2>&1 || true
     else
-        # Apply immediately via IPC for instant feedback. The autoreload that
-        # follows the file write applies the same values, so it's a visual no-op.
+        # Immediate feedback via IPC; the autoreload that follows applies the same values.
         while IFS=$'\t' read -r key val; do
             hyprctl keyword "$key" "$val" >/dev/null 2>&1 || true
         done < <(python3 -c '

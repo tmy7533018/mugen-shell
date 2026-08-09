@@ -129,8 +129,7 @@ func load(path string) (*provider.Image, *Document, error) {
 	return nil, nil, fmt.Errorf("attachment %q is neither a supported image nor a text file (%s)", path, mediaType)
 }
 
-// DetectContentType calls anything without a known signature octet-stream, so
-// source and config files have to be judged on their bytes instead.
+// DetectContentType calls anything unsigned octet-stream, so judge these on their bytes.
 func asDocument(name string, data []byte) (Document, bool) {
 	head := data
 	if len(head) > MaxTextBytes {

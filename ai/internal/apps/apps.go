@@ -1,6 +1,5 @@
-// Package apps reads XDG desktop entries so a basename ("zen-bin") resolves
-// to its absolute Exec path. Without this, app_launch reports success for
-// binaries that aren't on $PATH while nothing actually opens.
+// Package apps reads XDG desktop entries so a basename ("zen-bin") resolves to its
+// absolute Exec path — without it app_launch reports success while nothing opens.
 package apps
 
 import (
@@ -55,9 +54,8 @@ func (r *Resolver) Resolve(basename string) string {
 	return r.byBin[basename]
 }
 
-// FindByDisplay matches an app by display name, case-insensitively: exact
-// first, then a substring match only when exactly one app contains the
-// needle. Fallback for when the typed command matches no binary basename.
+// FindByDisplay matches an app by display name case-insensitively: exact first, then a
+// substring match only when exactly one app contains the needle.
 func (r *Resolver) FindByDisplay(name string) (App, bool) {
 	if r == nil {
 		return App{}, false
@@ -99,8 +97,7 @@ func parseDesktop(path string) (App, bool) {
 			continue
 		}
 		if strings.HasPrefix(line, "[") {
-			// Sub-groups (Actions etc.) carry their own Exec lines that
-			// must not be picked up.
+			// Sub-groups (Actions etc.) carry their own Exec lines that must not be picked up.
 			if line == "[Desktop Entry]" {
 				inMain = true
 			} else if inMain {
@@ -140,9 +137,7 @@ func parseDesktop(path string) (App, bool) {
 	return App{Binary: binary, Display: name, Exec: clean}, true
 }
 
-// Drops XDG field codes (%u, %F, ...) and Flatpak's file-forwarding
-// sentinels (@@, @@u) — the latter are inert with no payload attached, but
-// some launchers reject them as unknown args.
+// Drops XDG field codes; Flatpak's @@/@@u are inert but some launchers reject them.
 func stripPlaceholders(tokens []string) string {
 	out := make([]string, 0, len(tokens))
 	for _, t := range tokens {

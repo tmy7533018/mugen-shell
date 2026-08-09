@@ -28,8 +28,7 @@ RowLayout {
 
     function scaled(v) { return modeManager ? modeManager.scale(v) : v }
 
-    // Skips blocked entries so the reveal stagger has no dead beat when a
-    // blocked item holds a low model index.
+    // Skips blocked entries so the reveal stagger has no dead beat.
     function visiblePosition(modelIndex) {
         let items = SystemTray.items.values
         let n = 0
@@ -53,17 +52,14 @@ RowLayout {
             readonly property bool blocked: root.isBlocked(modelData)
             readonly property bool shouldShow: root.expanded && !blocked
 
-            // Only the bloom cascades; widths open together, otherwise each
-            // width animating in turn shoves the row's icons around.
+            // Only the bloom cascades; widths open together, or each one shoves the row's icons around.
             readonly property int revealDelay: shouldShow ? root.visiblePosition(index) * 50 : 0
 
             Layout.preferredWidth: shouldShow ? root.scaled(20) : 0
             Layout.preferredHeight: root.scaled(20)
             Layout.alignment: Qt.AlignVCenter
             opacity: shouldShow ? 1.0 : 0.0
-            // shouldShow, not opacity, so a still-fading-in icon already holds
-            // its slot instead of popping in mid-animation and shoving its
-            // neighbour. Opacity only keeps it alive through the collapse.
+            // shouldShow, not opacity, so a still-fading-in icon already holds its slot.
             visible: shouldShow || opacity > 0.01
 
             property real revealScale: shouldShow ? 1.0 : 0.3

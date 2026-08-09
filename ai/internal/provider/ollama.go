@@ -26,12 +26,7 @@ type Ollama struct {
 	visionCache map[string]bool
 }
 
-// Ollama withholds the response headers until the model is loaded and the
-// first token is ready, so the shared client's header timeout already covers a
-// cold load (measured at ~4s for a 12B model). Past that point output should be
-// a steady drip — the worst gap between chunks measured under 100 ms — so a
-// long silence means generation wedged with the socket still open, which no
-// other timeout catches.
+// Past the cold load (covered by the header timeout) a silence this long means generation wedged.
 const ollamaStallTimeout = 60 * time.Second
 
 func NewOllama(host string, numCtx int, keepAlive string) *Ollama {
@@ -114,8 +109,7 @@ type ollamaToolCall struct {
 }
 
 func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opts ChatOptions, fn func(ChatChunk) error) error {
-	// Unlike OpenAI, ollama wants tool results as plain {role:"tool", content}
-	// with no tool_call_id.
+	// Unlike OpenAI, ollama wants tool results as plain {role:"tool", content} with no id.
 	msgs := make([]map[string]any, 0, len(messages))
 	for _, m := range messages {
 		msg := map[string]any{
@@ -157,13 +151,11 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 	if tw := toolsAsOpenAI(opts.Tools); len(tw) > 0 {
 		payload["tools"] = tw
 	}
-	// Ollama's 4k num_ctx default is under our tools + prompt + history
-	// footprint and it truncates the overflow silently. Clamped to model max.
+	// Ollama's 4k num_ctx default truncates our tools + prompt + history silently.
 	if o.numCtx > 0 {
 		payload["options"] = map[string]any{"num_ctx": o.numCtx}
 	}
-	// The default 5m unload makes the first reply after an idle stretch pay a
-	// multi-second cold load.
+	// The default 5m unload makes the first reply after an idle stretch pay a cold load.
 	if o.keepAlive != "" {
 		payload["keep_alive"] = o.keepAlive
 	}
@@ -191,8 +183,7 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		bodyStr := string(bodyBytes)
-		// Older / smaller models reject tools with a 400; retry without them so
-		// the conversation still works, minus the shell controls.
+		// Older / smaller models reject tools with a 400; retry without them so chat still works.
 		if resp.StatusCode == http.StatusBadRequest &&
 			strings.Contains(bodyStr, "does not support tools") &&
 			len(opts.Tools) > 0 {
@@ -208,9 +199,7 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 
-	// Armed only once the retry-without-tools branch above is behind us: that
-	// path re-enters Chat on this same context, and a timer left running would
-	// cancel the retry mid-flight.
+	// Armed only after the retry-without-tools branch: a live timer would cancel the retry.
 	var stalled atomic.Bool
 	stall := time.AfterFunc(o.stallTimeout, func() {
 		stalled.Store(true)
@@ -237,9 +226,7 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 			continue
 		}
 
-		// Ollama streams tool calls on their own chunks ahead of the done
-		// chunk, which carries none. handleChat only harvests ToolCalls from
-		// the done chunk, so accumulate and hand the set over there.
+		// Ollama streams tool calls ahead of the done chunk, which carries none — accumulate here.
 		for _, tc := range raw.Message.ToolCalls {
 			toolCalls = append(toolCalls, ToolCall{
 				ID:        fmt.Sprintf("call_%d_%d", time.Now().UnixNano(), len(toolCalls)),
@@ -261,8 +248,7 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		// Without this the caller only sees "context canceled", which is also
-		// what a client disconnect looks like.
+		// Without this the caller sees only "context canceled", which a disconnect also looks like.
 		if stalled.Load() {
 			return fmt.Errorf("ollama stopped sending output for %s", o.stallTimeout)
 		}

@@ -46,10 +46,7 @@ QtObject {
     property int workspaceCount: 5
     property string displayMonitor: ""  // Quickshell screen name; "" = first screen
 
-    // Reassigning a live PanelWindow.screen crashes Quickshell, so a monitor
-    // change needs a restart to take effect. Windows bind screen to this latched
-    // copy (frozen after the first load) instead of displayMonitor, so a live
-    // settings write can't re-resolve the screen out from under a live surface.
+    // Reassigning a live PanelWindow.screen crashes Quickshell, so windows bind this latched copy.
     property string initialDisplayMonitor: ""
     property bool _displayMonitorLatched: false
     property string barAiModel: ""  // "" = follow the backend default
@@ -67,15 +64,12 @@ QtObject {
     property string voiceTurnOpens: "panel"  // "panel" | "bar" | "none"
     property real voiceSpeed: 1.0
     property string voiceTts: ""
-    // Per-language overrides of voiceTts, keyed by 2-letter code. Japanese
-    // lives here because no lightweight multilingual model speaks it.
+    // Per-language overrides of voiceTts; Japanese is here because no light multilingual model speaks it.
     property var voiceTtsByLang: ({})
-    // Which language tab the voice picker last edited. UI state, but persisted
-    // because losing it reads as the voice override itself having been lost.
+    // Persisted because losing it reads as the voice override itself having been lost.
     property string voiceEditingLang: ""
     property bool voiceFollowUp: true
-    // Off by default: a false trigger costs the rest of a spoken reply, so it
-    // stays opt-in until it has been lived with.
+    // Off by default: a false trigger costs the rest of a spoken reply, so it stays opt-in.
     property bool voiceBargeIn: false
     property real voiceVolume: 1.0  // 0..1
     // Cue sounds from the notification sounds dir; "" = built-in beep, "none" = silent
@@ -86,8 +80,7 @@ QtObject {
     // Suppress save while applying values that just came in from disk.
     property bool _applyingExternal: false
 
-    // Last full object seen on disk. saveSettings merges over it so keys this
-    // build doesn't model yet survive our save instead of being dropped.
+    // saveSettings merges over this, so keys this build doesn't model survive our save.
     property var _rawSettings: ({})
 
     signal settingsChanged()
@@ -414,8 +407,7 @@ QtObject {
                 if (settings.voice.enabled !== undefined) {
                     voiceEnabled = settings.voice.enabled
                 }
-                // wakeOpens is the pre-retirement name, still in any
-                // settings.json the shell has not rewritten yet.
+                // wakeOpens is the pre-retirement name, still in any settings.json not yet rewritten.
                 const opens = settings.voice.turnOpens !== undefined
                     ? settings.voice.turnOpens : settings.voice.wakeOpens
                 if (opens !== undefined) {
@@ -524,8 +516,7 @@ QtObject {
                 readDefaultSettingsProcess.seed = true
                 readDefaultSettingsProcess.running = true
             } else if (settingsManager._loadRetries < 3) {
-                // Empty read almost certainly raced a writer mid-save; retry
-                // rather than overwrite the user's file.
+                // An empty read almost certainly raced a writer, so retry rather than overwrite.
                 settingsManager._loadRetries++
                 retryLoadTimer.restart()
             } else {

@@ -58,8 +58,7 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 			continue
 		}
 		if m.Role == "tool" {
-			// Gemini has no tool role: results ride back on a user-role part
-			// with functionResponse, whose response must be an object.
+			// Gemini has no tool role: results ride back as functionResponse, whose response is an object.
 			var responseObj any
 			if err := json.Unmarshal([]byte(m.Content), &responseObj); err != nil {
 				responseObj = map[string]any{"result": m.Content}
@@ -126,8 +125,7 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 		payload["tools"] = tg
 	}
 	if opts.Thinking {
-		// -1 lets the model decide how long to think. Only the 2.5 family
-		// supports it; older models 400 and hit the retry below.
+		// -1 lets the model decide; only the 2.5 family supports it, older ones 400 into the retry.
 		payload["generationConfig"] = map[string]any{
 			"thinkingConfig": map[string]any{"thinkingBudget": -1},
 		}
@@ -138,8 +136,7 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 		return err
 	}
 
-	// The key goes in a header, not the query: net/http quotes the full URL
-	// into *url.Error, and that string is handed to the client as an SSE error.
+	// The key goes in a header: net/http quotes the full URL into *url.Error, which reaches the client.
 	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?alt=sse", model)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
@@ -156,8 +153,7 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		// Older Gemini models (1.5 etc.) reject thinkingConfig; retry once
-		// without thinking so the conversation still completes.
+		// Older Gemini models reject thinkingConfig; retry once without it so the turn completes.
 		if resp.StatusCode == http.StatusBadRequest && opts.Thinking &&
 			strings.Contains(strings.ToLower(string(b)), "thinking") {
 			retry := opts

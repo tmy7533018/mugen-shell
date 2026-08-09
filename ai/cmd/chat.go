@@ -86,8 +86,7 @@ func runChat(_ *cobra.Command, _ []string) error {
 
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			// Dropping only the user message would leave two consecutive
-			// user turns in history.
+			// Dropping only the user message would leave two consecutive user turns.
 			if fullResponse == "" {
 				rt.History.RemoveLast()
 			} else {

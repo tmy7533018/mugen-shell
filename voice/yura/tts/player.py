@@ -14,8 +14,7 @@ from ..settings import voice_float
 from ..shell import set_speaking
 from .router import configured_voice, synthesize
 
-# Engines master at very different loudness (Aivis ~8 dB hotter than VOICEVOX),
-# so every clip is RMS-normalized here and a voice change stays inaudible.
+# Engines master at very different loudness, so every clip is RMS-normalized to keep swaps inaudible.
 TTS_TARGET_DBFS = float(os.environ.get("YURA_TTS_TARGET_DBFS", "-23"))
 
 _MD_JUNK = re.compile(r"```.*?```|`|[*_#>]|\[([^\]]*)\]\([^)]*\)", re.S)
@@ -44,8 +43,7 @@ def split_sentences(text: str) -> list[str]:
 
 
 def join_spoken(parts: list[str]) -> str:
-    # Latin sentences need back the space that split_sentences consumed;
-    # Japanese keeps running flush.
+    # Latin sentences need back the space split_sentences consumed; Japanese keeps running flush.
     out = ""
     for p in parts:
         if out and out[-1] in ".!?":
@@ -64,21 +62,18 @@ def play_wav(data: bytes, should_stop=None) -> None:
     x = audio.astype(np.float32) / 32768.0
     vol = voice_float("volume", 1.0, 0.0, 1.0)
     if vol <= 0.0:
-        # Muted: return instead of pushing a silent buffer, which would hold
-        # the speaking state for the sentence's full duration for nothing.
+        # Return instead of pushing a silent buffer, which would hold the speaking state for nothing.
         return
     rms = float(np.sqrt(np.mean(x * x)))
     if rms > 1e-4:
-        # Boost stays capped so quiet styles don't get their noise floor
-        # dragged up; the user's volume trim applies inside that cap.
+        # Boost stays capped so quiet styles don't get their noise floor dragged up.
         gain = min(10 ** (TTS_TARGET_DBFS / 20) / rms * vol, 3.0)
         audio = (np.clip(x * gain, -1.0, 1.0) * 32767).astype(np.int16)
     sd.play(audio, sr)
     if should_stop is None:
         sd.wait()
         return
-    # Poll while the sentence plays so a cancel (POST /cancel, the ✕ button) cuts
-    # it off immediately instead of only at the next sentence boundary.
+    # Poll while the sentence plays so a cancel cuts it off instead of waiting for the next boundary.
     stream = sd.get_stream()
     while stream.active:
         if should_stop():
@@ -91,15 +86,12 @@ def speak(text: str, on_sentence=None, should_stop=None, voice=None) -> None:
     sentences = split_sentences(clean_for_speech(text))
     if not sentences:
         return
-    # Resolved once: a settings change mid-reply must not swap the voice
-    # between two sentences of the same answer. A caller may pin one instead,
-    # which is how the Settings picker auditions a voice it hasn't saved yet.
+    # Resolved once: a settings change mid-reply must not swap the voice between two sentences.
     if voice is None:
         voice = configured_voice()
     # One-ahead synthesis pipeline: synth sentence N+1 while N plays.
     q: queue.Queue[tuple[str, bytes] | None] = queue.Queue(maxsize=2)
-    # Set once the consumer stops draining, so the producer never parks
-    # forever on a full queue (one leaked thread per cancelled reply).
+    # Set once the consumer stops draining, so the producer never parks forever on a full queue.
     done = threading.Event()
 
     def put(item) -> bool:
@@ -140,16 +132,13 @@ def speak(text: str, on_sentence=None, should_stop=None, voice=None) -> None:
                 break
 
 
-# sounddevice's module-level play/stop share a single output stream, so a
-# reply and a /speak request would cut each other off mid-sentence. Every
-# audible reply passes through speak_guarded, so serialising here is enough.
+# sounddevice's module-level play/stop share one output stream, so a reply and /speak would collide.
 _playback = threading.Lock()
 
 
 def speak_guarded(text: str, on_sentence=None, should_stop=None, voice=None) -> None:
     with _playback:
-        # Every audible reply must raise yuraSpeaking (the bar holds auto-close
-        # on it), including the error apology.
+        # Every audible reply must raise yuraSpeaking, which the bar holds auto-close on.
         set_speaking(True)
         try:
             speak(text, on_sentence, should_stop=should_stop, voice=voice)

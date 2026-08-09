@@ -64,8 +64,7 @@ Item {
         }
     }
 
-    // Popup, not an anchored Column: hit testing refuses to route clicks
-    // below the chip's box, so the list needs the overlay layer.
+    // Popup, not an anchored Column: hit testing refuses to route clicks below the chip's box.
     Popup {
         id: dropdown
         x: selector.width - width

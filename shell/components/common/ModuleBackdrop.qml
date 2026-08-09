@@ -34,8 +34,7 @@ Item {
     property real speed: 5.0
     property bool running: true
 
-    // Keeps the wallpaper's hue but pins lightness, so a bright accent can't
-    // wash the surface out and a dark one can't collapse it to black.
+    // Keeps the wallpaper's hue but pins lightness, so an accent can't wash out or collapse it.
     function hue(c, lightness, degrees) {
         if (!c) return Qt.hsla(0.72, 0.35, lightness, 1.0)
         return Qt.hsla((c.hslHue + (degrees || 0) / 360 + 1) % 1,

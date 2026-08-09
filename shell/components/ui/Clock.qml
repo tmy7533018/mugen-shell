@@ -30,8 +30,7 @@ Text {
     renderType: Text.QtRendering
     smooth: true
     
-    // Stays on and hides the glow via color alpha; toggling layer.enabled
-    // instead re-rasterizes the item and pops on every minute change.
+    // Stays on and hides the glow via alpha; toggling layer.enabled re-rasterizes and pops.
     layer.enabled: true
     layer.effect: Glow {
         samples: 20

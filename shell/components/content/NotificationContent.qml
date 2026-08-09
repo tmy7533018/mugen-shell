@@ -74,9 +74,7 @@ Item {
                     })
                 }
             } else {
-                // Same rows in the same order, but the relative "x mins ago"
-                // label mutates on each tick, so delegates need a re-push or
-                // they freeze.
+                // The relative "x mins ago" label mutates each tick, so delegates freeze without a re-push.
                 for (let i = 0; i < notifications.length; i++) {
                     notificationListModel.set(i, {
                         "modelData": notifications[i]
@@ -143,9 +141,7 @@ Item {
         id: launchAppProcess
         running: false
 
-        // hyprctl exits 0 even when a dispatch is rejected, so without this a
-        // broken focus is invisible — how the Lua config migration silently took
-        // notification click-to-focus out for two weeks.
+        // hyprctl exits 0 even when a dispatch is rejected, so a broken focus would be invisible.
         property string errorOutput: ""
 
         stderr: SplitParser {

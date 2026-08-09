@@ -45,8 +45,7 @@ def ensure_whisper_server() -> subprocess.Popen | None:
 
 
 def transcribe(wav: bytes) -> str:
-    # Per-request language wins over the server's -l startup default,
-    # so the Settings knob applies without a whisper-server restart.
+    # Per-request language wins over the server's -l default, so the knob applies without a restart.
     lang = configured_lang() or "auto"
     r = requests.post(
         f"{WHISPER_URL}/inference",

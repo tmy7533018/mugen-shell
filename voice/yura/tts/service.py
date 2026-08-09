@@ -51,9 +51,7 @@ def wait_ready(base_url: str) -> bool:
             return True
         except requests.RequestException:
             if _start_failed:
-                # A unit that is missing or refuses to start is never going to
-                # answer; waiting out the window would stall the voice picker
-                # every time it opens.
+                # A unit that refuses to start never answers; waiting would stall the voice picker.
                 log("tts", f"{SERVICE} did not start, not waiting for it")
                 return False
             if time.time() >= deadline:
