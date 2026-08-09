@@ -3,7 +3,6 @@
     "interval": 5000
   },
   "barBackground": {
-    "gradientEnabled": true,
     "palette": "harmony",
     "spread": 0.06
   },

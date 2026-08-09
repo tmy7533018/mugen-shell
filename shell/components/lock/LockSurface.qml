@@ -299,8 +299,6 @@ Item {
                 + (root.faceOpacity - root.startOpacity) * root.morphProgress) * root.exitFade
 
             theme: root.themeRef
-            gradientEnabled: false
-            reduceMotion: root.reduceMotion
         }
 
         // Elements leave the face at different times; one fade cannot cover both.

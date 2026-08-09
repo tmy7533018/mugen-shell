@@ -512,7 +512,6 @@ PanelWindow {
 
         z: 0
         baseRadius: settingsManager.barRadius
-        reduceMotion: settingsManager.reduceMotion
         moduleBackground: modeManager.currentSurfaceBackground
             ? modeManager.currentSurfaceBackground
             : (modeManager.currentModeInstance ? barWindow.defaultModuleBackground : null)
@@ -520,10 +519,6 @@ PanelWindow {
         backdropSpread: settingsManager.moduleBackdropSpread
 
         theme: theme
-
-        gradientColor1: theme.glowPrimary
-        gradientColor2: theme.glowSecondary
-        gradientColor3: theme.glowTertiary
 
         Behavior on anchors.bottomMargin {
             NumberAnimation {
@@ -554,8 +549,6 @@ PanelWindow {
                 easing.type: Easing.OutCubic
             }
         }
-
-        gradientEnabled: settingsManager.barGradientEnabled
     }
 
     Item {

@@ -300,9 +300,6 @@ PanelWindow {
         UI.MugenSurface {
             anchors.fill: parent
             theme: chatWindow.theme
-            gradientEnabled: chatWindow.settingsManager
-                ? chatWindow.settingsManager.barGradientEnabled
-                : true
             radius: chatBox.panelRadius
         }
 
