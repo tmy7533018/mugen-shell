@@ -77,8 +77,14 @@ ShellRoot {
         return best
     }
 
-    readonly property string uiScreen:
-        barRectValid ? barScreen : largestScreenName()
+    // Re-checked against live screens, or unplugging the bar's monitor leaves every surface blank.
+    readonly property string uiScreen: {
+        if (barRectValid) {
+            for (const screen of Quickshell.screens)
+                if (screen.name === barScreen) return barScreen
+        }
+        return largestScreenName()
+    }
 
     function tuningKnob(name, fallback) {
         const override = parseFloat(Quickshell.env(name))
@@ -143,7 +149,10 @@ ShellRoot {
         ["systemctl", "poweroff"],
         ["systemctl", "suspend"],
         ["systemctl", "reboot"],
-        ["loginctl", "terminate-session", Quickshell.env("XDG_SESSION_ID") || ""]
+        // hypridle is a user unit, so it hands the lock no XDG_SESSION_ID to terminate.
+        ["bash", "-c",
+         "sid=${XDG_SESSION_ID:-$(loginctl show-user \"$USER\" --value -p Display)};"
+         + " [ -n \"$sid\" ] && exec loginctl terminate-session \"$sid\""]
     ]
 
     function runPowerAction(action) {
