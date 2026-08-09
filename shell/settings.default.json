@@ -3,7 +3,9 @@
     "interval": 5000
   },
   "barBackground": {
-    "gradientEnabled": true
+    "gradientEnabled": true,
+    "palette": "harmony",
+    "spread": 0.06
   },
   "batteryIndicator": {
     "enabled": false
