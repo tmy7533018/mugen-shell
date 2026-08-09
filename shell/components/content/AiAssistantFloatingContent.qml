@@ -53,6 +53,7 @@ FocusScope {
 
     property var messages: []
     property bool streaming: false
+    property bool stopRequested: false
     property bool aiAvailable: false
     property bool hasModel: false
     property bool healthChecked: false
@@ -97,7 +98,9 @@ FocusScope {
     function addAttachments(urls) {
         let next = root.pendingAttachments.slice()
         for (const url of urls) {
-            const path = String(url).replace(/^file:\/\//, "")
+            // A pretty-printed URL still escapes the delimiters, so `#` and `?` arrive encoded.
+            let path = String(url).replace(/^file:\/\//, "")
+            try { path = decodeURIComponent(path) } catch (e) {}
             if (next.length >= root.maxAttachments) break
             if (next.indexOf(path) === -1) next.push(path)
         }
@@ -228,6 +231,7 @@ FocusScope {
     function sendMessage(text, attachments) {
         const files = attachments || []
         if ((!text && files.length === 0) || streaming) return
+        stopRequested = false
         if (root.pendingRewindId !== 0) {
             truncateProcess.messageId = root.pendingRewindId
             truncateProcess.queuedText = text
@@ -319,6 +323,7 @@ FocusScope {
 
     function stopStreaming() {
         if (!streaming) return
+        stopRequested = true
         chatProcess.signal(15)
         streaming = false
         // The backend reads the disconnect as a denial, so the card must go.
@@ -327,6 +332,7 @@ FocusScope {
 
     function newChat() {
         if (streaming) stopStreaming()
+        if (truncateProcess.running) truncateProcess.abandoned = true
         // speakingIndex is a row number, so it would mark an unrelated message
         // once the list is replaced.
         if (speakingIndex >= 0) stopReadAloud()
@@ -344,6 +350,7 @@ FocusScope {
     function selectConversation(convId) {
         if (convId === currentConvId) return
         if (streaming) stopStreaming()
+        if (truncateProcess.running) truncateProcess.abandoned = true
         if (speakingIndex >= 0) stopReadAloud()
         currentConvId = convId
         messages = []
@@ -353,6 +360,8 @@ FocusScope {
     }
 
     function deleteConversation(convId) {
+        // The stream would keep writing into whichever conversation becomes current.
+        if (streaming && convId === currentConvId) stopStreaming()
         deleteConvProcess.payload = String(convId)
         deleteConvProcess.running = true
     }
@@ -1742,9 +1751,11 @@ FocusScope {
             // A timeout or error can end the stream with a card still up, for
             // a prompt the backend has already abandoned.
             root.pendingConfirm = null
-            if (exitCode !== 0) {
+            // A stop is a SIGTERM, so curl's non-zero exit says nothing about the connection.
+            if (exitCode !== 0 && !root.stopRequested) {
                 root.updateLastMessage("\n[connection failed]")
             }
+            root.stopRequested = false
             root.refreshConversations()
             // Message ids only exist server-side, and retry/edit address them,
             // so the turn that just landed has to be read back to be actionable.
@@ -1781,7 +1792,16 @@ FocusScope {
             root._baseUrl + "/conversations/" + root.currentConvId
                 + "/messages/" + truncateProcess.messageId]
 
+        property bool abandoned: false
+
         onExited: (exitCode) => {
+            // The rewind targets the conversation it started in, so a switch orphans the resend.
+            if (truncateProcess.abandoned) {
+                truncateProcess.abandoned = false
+                truncateProcess.queuedText = ""
+                truncateProcess.queuedFiles = []
+                return
+            }
             const text = truncateProcess.queuedText
             const files = truncateProcess.queuedFiles
             truncateProcess.queuedText = ""
@@ -1955,6 +1975,15 @@ FocusScope {
                 root.refreshConversations()
             }
         }
+    }
+
+    // The panel outlives a backend that was still starting, and nothing else re-runs the check.
+    Timer {
+        id: healthRetry
+        interval: 3000
+        repeat: true
+        running: root.visible && root.healthChecked && !root.aiAvailable
+        onTriggered: healthProcess.running = true
     }
 
     Process {

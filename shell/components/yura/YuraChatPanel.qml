@@ -456,7 +456,8 @@ PanelWindow {
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                enabled: !yuraState.aiDropdownOpen
+                // The orb is invisible but still hit-testable while it flies.
+                enabled: !yuraState.aiDropdownOpen && !chatWindow.flying
                 onClicked: yuraState.toggle()
             }
         }
