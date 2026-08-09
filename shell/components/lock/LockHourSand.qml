@@ -5,7 +5,7 @@ import QtQuick
 Item {
     id: root
 
-    property var typo
+    property string fontFamily: "M PLUS 2"
     property color tint: "white"
     property color faintTint: Qt.rgba(1, 1, 1, 0.35)
     property color accent: "#a68cd9"
@@ -63,6 +63,7 @@ Item {
         // Opening at :47 must show 47 minutes at once, not fill up as you watch.
         const budget = seeding ? 40 : 3
         const mid = Math.floor(cols / 2)
+        let moved = false
         for (let i = 0; i < budget && filled < target; i++) {
             const x = mid + Math.round((Math.random() - 0.5) * 5)
             if (x < 0 || x >= cols) continue
@@ -71,11 +72,14 @@ Item {
             const roll = Math.random()
             grid[cell] = roll < 0.04 ? 4 : roll < 0.11 ? 3 : roll < 0.24 ? 2 : 1
             filled += 1
+            moved = true
         }
         if (filled >= target) seeding = false
+        return moved
     }
 
     function settle(shaking) {
+        let moved = false
         for (let y = rows - 2; y >= 0; y--) {
             for (let k = 0; k < cols; k++) {
                 // Strided: scanning in order drags every pile to one side.
@@ -87,6 +91,7 @@ Item {
                 if (!grid[at + cols]) {
                     grid[at + cols] = v
                     grid[at] = 0
+                    moved = true
                     continue
                 }
 
@@ -95,6 +100,7 @@ Item {
                 if (nx >= 0 && nx < cols && !grid[at + cols + dir] && !grid[at + dir]) {
                     grid[at + cols + dir] = v
                     grid[at] = 0
+                    moved = true
                     continue
                 }
 
@@ -103,10 +109,12 @@ Item {
                     if (sx >= 0 && sx < cols && !grid[y * cols + sx]) {
                         grid[y * cols + sx] = v
                         grid[at] = 0
+                        moved = true
                     }
                 }
             }
         }
+        return moved
     }
 
     function step() {
@@ -117,18 +125,23 @@ Item {
         }
 
         const now = new Date()
-        if (now.getHours() !== hour) reset(now.getHours())
+        let moved = false
+        if (now.getHours() !== hour) {
+            reset(now.getHours())
+            moved = true
+        }
 
         const progress = (now.getMinutes() * 60 + now.getSeconds()) / 3600
-        pour(Math.floor(progress * cols * 6) + bonus)
+        if (pour(Math.floor(progress * cols * 6) + bonus)) moved = true
 
         // Stepped more often than drawn: stop-motion look at a real speed.
         const stamp = now.getTime()
         const shaking = stamp >= shakeFrom && stamp < shakeUntil
-        settle(shaking)
-        settle(shaking)
+        const settledOnce = settle(shaking)
+        const settledTwice = settle(shaking)
+        moved = moved || settledOnce || settledTwice
 
-        canvas.requestPaint()
+        if (moved) canvas.requestPaint()
     }
 
     Timer {

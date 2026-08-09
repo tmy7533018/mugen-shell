@@ -1,11 +1,12 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import "../../lib" as Theme
 
 Item {
     id: root
 
-    property var typo
+    property string fontFamily: "M PLUS 2"
     property color tint: "white"
     property color faintTint: Qt.rgba(1, 1, 1, 0.35)
     property color accent: "#a68cd9"
@@ -28,22 +29,10 @@ Item {
         return out
     }
 
-    readonly property var monthCells: {
-        const year = today.getFullYear()
-        const month = today.getMonth()
-        const lead = (new Date(year, month, 1).getDay() - weekStart + 7) % 7
-        const span = Math.ceil((lead + new Date(year, month + 1, 0).getDate()) / 7) * 7
-        const out = []
-        for (let i = 0; i < span; i++) {
-            const d = new Date(year, month, 1 - lead + i)
-            out.push({
-                day: d.getDate(),
-                inMonth: d.getMonth() === month,
-                key: Qt.formatDate(d, "yyyy-MM-dd")
-            })
-        }
-        return out
-    }
+    // Keyed off the day, not the clock: a Repeater regenerates every cell on reassignment.
+    readonly property var monthCells: Theme.CalendarGrid.cells(
+        parseInt(todayKey.slice(0, 4), 10),
+        parseInt(todayKey.slice(5, 7), 10) - 1, weekStart, 0)
 
     readonly property var eventDays: {
         const seen = ({})
@@ -64,10 +53,6 @@ Item {
         const parts = String(time || "").split(":")
         if (parts.length !== 2) return false
         return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10) < nowMinutes
-    }
-
-    function fontFamily() {
-        return typo ? typo.fontFamily : "M PLUS 2"
     }
 
     Column {
@@ -91,7 +76,7 @@ Item {
                 anchors.bottom: parent.bottom
                 text: Qt.formatDate(root.today, "MMMM").toUpperCase()
                 color: root.tint
-                font.family: root.fontFamily()
+                font.family: root.fontFamily
                 font.weight: Font.Medium
                 font.pixelSize: 12 * root.designPx
                 font.letterSpacing: 12 * root.designPx * 0.04
@@ -102,7 +87,7 @@ Item {
                 anchors.baseline: monthLabel.baseline
                 text: Qt.formatDate(root.today, "yyyy")
                 color: root.faintTint
-                font.family: root.fontFamily()
+                font.family: root.fontFamily
                 font.pixelSize: 8 * root.designPx
                 font.letterSpacing: 8 * root.designPx * 0.16
             }
@@ -123,7 +108,7 @@ Item {
                     color: root.faintTint
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
-                    font.family: root.fontFamily()
+                    font.family: root.fontFamily
                     font.pixelSize: 8 * root.designPx
                     font.letterSpacing: 8 * root.designPx * 0.1
                 }
@@ -160,7 +145,7 @@ Item {
                                 ? root.chipTextColor
                                 : (dayCell.modelData.inMonth ? root.tint : root.faintTint)
                             opacity: dayCell.modelData.inMonth ? 1 : 0.45
-                            font.family: root.fontFamily()
+                            font.family: root.fontFamily
                             font.weight: dayCell.isToday ? Font.Medium : Font.Normal
                             font.pixelSize: 10 * root.designPx
                         }
@@ -203,7 +188,7 @@ Item {
                 anchors.bottom: parent.bottom
                 text: String(root.today.getDate()).padStart(2, "0")
                 color: root.tint
-                font.family: root.fontFamily()
+                font.family: root.fontFamily
                 font.weight: Font.Light
                 font.pixelSize: 26 * root.designPx
                 font.letterSpacing: -26 * root.designPx * 0.03
@@ -216,7 +201,7 @@ Item {
                 anchors.baseline: dayNumber.baseline
                 text: Qt.formatDate(root.today, "ddd").toUpperCase()
                 color: root.accent
-                font.family: root.fontFamily()
+                font.family: root.fontFamily
                 font.pixelSize: 9 * root.designPx
                 font.letterSpacing: 9 * root.designPx * 0.16
             }
@@ -230,7 +215,7 @@ Item {
                     : root.todayEvents.length + (root.todayEvents.length === 1
                         ? " EVENT" : " EVENTS")
                 color: root.faintTint
-                font.family: root.fontFamily()
+                font.family: root.fontFamily
                 font.pixelSize: 8 * root.designPx
                 font.letterSpacing: 8 * root.designPx * 0.14
             }
@@ -276,7 +261,7 @@ Item {
                                 ? eventRow.modelData.time : "ALL DAY"
                             color: root.faintTint
                             opacity: eventRow.past ? 0.7 : 1
-                            font.family: root.fontFamily()
+                            font.family: root.fontFamily
                             font.pixelSize: 9 * root.designPx
                             font.letterSpacing: 9 * root.designPx * 0.1
                         }
@@ -287,7 +272,7 @@ Item {
                             color: root.tint
                             opacity: eventRow.past ? 0.55 : 0.92
                             elide: Text.ElideRight
-                            font.family: root.fontFamily()
+                            font.family: root.fontFamily
                             font.pixelSize: 12 * root.designPx
                         }
                     }

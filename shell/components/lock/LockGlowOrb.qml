@@ -5,14 +5,13 @@ import QtQuick
 Item {
     id: root
 
-    property var typo
+    property string fontFamily: "M PLUS 2"
     property color tint: "white"
     property color faintTint: Qt.rgba(1, 1, 1, 0.35)
     property color accent: "#a68cd9"
     property color glow: "#a68cd9"
     property bool running: true
 
-    property string petName: "Yura"
 
     // Recomputed by the owner's clock tick; a date is not a live property.
     property date today: new Date()
@@ -96,6 +95,9 @@ Item {
     function step(dt) {
         time += dt
         energy = Math.min(1, Math.max(restingEnergy(), measuredEnergy()))
+
+        // Invisible sparks keep re-evaluating six time-bound expressions every frame.
+        if (sparks.length > 0 && time - sparks[sparks.length - 1].t0 > 2.2) sparks = []
 
         // Incommensurable rates, so the path never closes into a visible loop.
         const phase = time + advance * 1.7
@@ -237,9 +239,9 @@ Item {
 
             Text {
                 id: nameLabel
-                text: root.petName
+                text: "Yura"
                 color: root.tint
-                font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+                font.family: root.fontFamily
                 font.weight: Font.Medium
                 font.pixelSize: 16 * root.designPx
                 font.letterSpacing: 16 * root.designPx * 0.06
@@ -252,7 +254,7 @@ Item {
                 anchors.baseline: nameLabel.baseline
                 text: "LV." + root.level
                 color: root.faintTint
-                font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+                font.family: root.fontFamily
                 font.pixelSize: 10 * root.designPx
                 font.letterSpacing: 10 * root.designPx * 0.18
             }
@@ -263,7 +265,7 @@ Item {
             anchors.top: parent.top
             text: root.mood
             color: root.accent
-            font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+            font.family: root.fontFamily
             font.pixelSize: 12 * root.designPx
             font.letterSpacing: 12 * root.designPx * 0.1
         }
@@ -276,7 +278,7 @@ Item {
             Text {
                 text: "MOOD"
                 color: root.faintTint
-                font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+                font.family: root.fontFamily
                 font.pixelSize: 10 * root.designPx
                 font.letterSpacing: 10 * root.designPx * 0.18
             }

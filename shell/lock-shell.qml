@@ -433,8 +433,8 @@ ShellRoot {
     Managers.CavaManager {
         id: cava
 
-        // It spawns nothing until asked; the visualiser sits at its floor.
-        Component.onCompleted: isActive = true
+        // It spawns nothing until asked, and the visualiser sits at its floor while silent.
+        isActive: musicPlayerManager.isPlaying
     }
     Theme.IconProvider { id: icons }
 

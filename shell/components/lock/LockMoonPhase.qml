@@ -5,7 +5,7 @@ import QtQuick
 Item {
     id: root
 
-    property var typo
+    property string fontFamily: "M PLUS 2"
     property color tint: "white"
     property color faintTint: Qt.rgba(1, 1, 1, 0.35)
     property color accent: "#a68cd9"
@@ -181,7 +181,8 @@ Item {
             id: disc
             anchors.fill: parent
 
-            readonly property real phase: root.moonPhase
+            // Quantised, or the clock tick repaints the disc for a change no one can see.
+            readonly property real phase: Math.round(root.moonPhase * 1000) / 1000
             onPhaseChanged: requestPaint()
 
             property bool textureReady: false
@@ -344,7 +345,7 @@ Item {
         Text {
             text: root.moonName
             color: root.tint
-            font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+            font.family: root.fontFamily
             font.weight: Font.Medium
             font.pixelSize: 27 * root.designPx
         }
@@ -367,7 +368,7 @@ Item {
                     Text {
                         text: readout.modelData.label
                         color: root.faintTint
-                        font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+                        font.family: root.fontFamily
                         font.pixelSize: 11 * root.designPx
                         font.letterSpacing: 11 * root.designPx * 0.16
                     }
@@ -375,7 +376,7 @@ Item {
                     Text {
                         text: readout.modelData.value
                         color: root.accent
-                        font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+                        font.family: root.fontFamily
                         font.pixelSize: 11 * root.designPx
                         font.letterSpacing: 11 * root.designPx * 0.16
                     }
