@@ -22,6 +22,9 @@ Item {
         root.theme ? root.theme.glowTertiary : root.fallback
     ]
 
+    // Below 1 the compositor's blur of the desktop reads through the backdrop.
+    property real faceAlpha: 1.0
+
     property color baseTop: Qt.rgba(0.09, 0.09, 0.13, 1.0)
     property color baseBottom: Qt.rgba(0.04, 0.04, 0.06, 1.0)
     property color colorA: root.slot(0)
@@ -67,6 +70,8 @@ Item {
     ShaderEffect {
         anchors.fill: parent
         blending: true
+        // Only the mesh: overlays such as the album art stay as opaque as their own alpha says.
+        opacity: root.faceAlpha
 
         property color baseTop: root.baseTop
         property color baseBottom: root.baseBottom

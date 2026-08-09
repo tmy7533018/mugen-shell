@@ -140,6 +140,14 @@ Rectangle {
 
     property real baseRadius: 24
 
+    // Stacked translucent layers trend opaque and swing mid-fade; pinning the pair to baseColor.a keeps the blur behind steady.
+    function baseOpacityUnder(backdropOpacity) {
+        var a = baseColor.a;
+        var throughBackdrop = 1.0 - a * backdropOpacity;
+
+        return a > 0 && throughBackdrop > 0 ? (1.0 - (1.0 - a) / throughBackdrop) / a : 0.0;
+    }
+
     color: "transparent"
     radius: baseRadius
     border.width: 1
@@ -151,6 +159,7 @@ Rectangle {
         anchors.margins: 1
         radius: parent.radius - 1
         color: surface.baseColor
+        opacity: surface.baseOpacityUnder(moduleBackgroundLoader.opacity)
 
         Behavior on color {
             ColorAnimation { duration: Theme.Motion.gentle; easing.type: Easing.InOutCubic }
@@ -193,11 +202,19 @@ Rectangle {
 
     property var moduleContext: null
     property real backdropSpread: 0.06
+    property real backdropAlpha: baseColor.a
 
     Binding {
         target: moduleBackgroundLoader.item
         property: "surfaceRadius"
         value: surface.radius - 1
+        when: moduleBackgroundLoader.item !== null
+    }
+
+    Binding {
+        target: moduleBackgroundLoader.item
+        property: "faceAlpha"
+        value: surface.backdropAlpha
         when: moduleBackgroundLoader.item !== null
     }
 
