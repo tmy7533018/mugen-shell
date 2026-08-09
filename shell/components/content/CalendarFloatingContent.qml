@@ -70,24 +70,9 @@ Item {
         eventsByDate = idx
     }
 
-    function rangeForMonth(year, month) {
-        let pad = n => n < 10 ? "0" + n : "" + n
-        let prevYear = month === 1 ? year - 1 : year
-        let prevMonth = month === 1 ? 12 : month - 1
-        let nextYear = month === 12 ? year + 1 : year
-        let nextMonth = month === 12 ? 1 : month + 1
-        let start = prevYear + "-" + pad(prevMonth) + "-01"
-        let lastDay = new Date(nextYear, nextMonth, 0).getDate()
-        let end = nextYear + "-" + pad(nextMonth) + "-" + pad(lastDay)
-        return [start, end]
-    }
-
     function reloadEvents() {
-        let r = rangeForMonth(currentYear, currentMonth)
-        loadEventsProcess.command = [
-            "python3", Quickshell.shellDir + "/scripts/calendar-cli.py",
-            "list-range", "--start", r[0], "--end", r[1]
-        ]
+        loadEventsProcess.command =
+            Theme.CalendarCli.rangeArgv(currentYear, currentMonth - 1)
         loadEventsProcess.running = true
     }
 
@@ -532,32 +517,16 @@ Item {
                     columnSpacing: 0
 
                     Repeater {
-                        model: 42
+                        // 42 keeps the six rows from reflowing on a short month.
+                        model: Theme.CalendarGrid.cells(root.currentYear,
+                            root.currentMonth - 1, root.weekStart, 42)
 
                         delegate: Item {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 46
 
-                            property int dayNumber: {
-                                const firstDay = new Date(root.currentYear, root.currentMonth - 1, 1)
-                                const startOffset = (firstDay.getDay() - root.weekStart + 7) % 7
-                                const dayIndex = index - startOffset + 1
-                                const lastDay = new Date(root.currentYear, root.currentMonth, 0).getDate()
-                                if (dayIndex > 0 && dayIndex <= lastDay) return dayIndex
-                                if (dayIndex <= 0) {
-                                    const prevMonthLastDay = new Date(root.currentYear, root.currentMonth - 1, 0).getDate()
-                                    return prevMonthLastDay + dayIndex
-                                }
-                                return dayIndex - lastDay
-                            }
-
-                            property bool isCurrentMonth: {
-                                const firstDay = new Date(root.currentYear, root.currentMonth - 1, 1)
-                                const startOffset = (firstDay.getDay() - root.weekStart + 7) % 7
-                                const dayIndex = index - startOffset + 1
-                                const lastDay = new Date(root.currentYear, root.currentMonth, 0).getDate()
-                                return dayIndex > 0 && dayIndex <= lastDay
-                            }
+                            readonly property int dayNumber: modelData.day
+                            readonly property bool isCurrentMonth: modelData.inMonth
 
                             property bool isToday: isCurrentMonth
                                 && dayNumber === root.todayDay

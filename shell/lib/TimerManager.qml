@@ -95,10 +95,8 @@ QtObject {
         let json = JSON.stringify(payload, null, 2)
         // Same atomic tmp + rename as SettingsManager: a FileView watcher on
         // this path can otherwise read the file mid-truncate.
-        saveProcess.command = [
-            "bash", "-c",
-            "mkdir -p \"" + stateDir + "\" && tmp=\"" + stateFile + ".$$.tmp\" && cat > \"$tmp\" <<'JSON_EOF' && mv \"$tmp\" \"" + stateFile + "\"\n" + json + "\nJSON_EOF"
-        ]
+        saveProcess.command =
+            JsonStore.atomicWriteArgv(stateDir, stateFile, json)
         saveProcess.running = true
     }
 

@@ -67,17 +67,8 @@ Text {
         running: clockText.visible && parent.visible
         onTriggered: {
             const now = new Date();
-            let hours24 = now.getHours();
-            let suffix = "";
-            if (!clockText.use24Hour) {
-                suffix = hours24 >= 12 ? " PM" : " AM";
-                hours24 = hours24 % 12;
-                if (hours24 === 0) hours24 = 12;
-            }
-            let hh = clockText.use24Hour ? hours24.toString().padStart(2, "0") : hours24.toString();
-            let mm = now.getMinutes().toString().padStart(2, "0");
-            let ss = now.getSeconds().toString().padStart(2, "0");
-            clockText.timeString = (showSeconds ? (hh + ":" + mm + ":" + ss) : (hh + ":" + mm)) + suffix;
+            clockText.timeString = Theme.Format.clockTime(now, clockText.use24Hour, showSeconds);
+            const ss = now.getSeconds().toString().padStart(2, "0");
 
             if (ss === "59" && !clockText.isMinuteExpanding && !clockText.reduceMotion) {
                 clockText.isMinuteExpanding = true;

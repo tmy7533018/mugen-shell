@@ -125,13 +125,8 @@ ShellRoot {
         if (key === calendarDay) return
         calendarDay = key
 
-        const year = today.getFullYear()
-        const month = today.getMonth()
-        calendarProcess.command = [
-            "python3", Quickshell.shellDir + "/scripts/calendar-cli.py", "list-range",
-            "--start", Qt.formatDate(new Date(year, month - 1, 1), "yyyy-MM-dd"),
-            "--end", Qt.formatDate(new Date(year, month + 2, 0), "yyyy-MM-dd")
-        ]
+        calendarProcess.command =
+            Theme.CalendarCli.rangeArgv(today.getFullYear(), today.getMonth())
         calendarProcess.running = true
     }
 
@@ -157,19 +152,8 @@ ShellRoot {
 
     function refreshClock() {
         const now = new Date()
-        let hours = now.getHours()
-        let suffix = ""
-        if (!settingsManager.clockShow24Hour) {
-            suffix = hours >= 12 ? " PM" : " AM"
-            hours = hours % 12
-            if (hours === 0) hours = 12
-        }
-        const hh = settingsManager.clockShow24Hour
-            ? String(hours).padStart(2, "0") : String(hours)
-        const mm = String(now.getMinutes()).padStart(2, "0")
-        const ss = String(now.getSeconds()).padStart(2, "0")
-        timeText = (settingsManager.clockShowSeconds
-            ? hh + ":" + mm + ":" + ss : hh + ":" + mm) + suffix
+        timeText = Theme.Format.clockTime(now, settingsManager.clockShow24Hour,
+                                          settingsManager.clockShowSeconds)
         today = now
         reloadCalendar()
     }

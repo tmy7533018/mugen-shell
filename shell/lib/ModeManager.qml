@@ -11,7 +11,7 @@ QtObject {
     property var settingsManager
 
     property real screenWidth: 1920
-    readonly property real baseWidth: 1920
+    readonly property real baseWidth: Metrics.baseWidth
     readonly property real scaleFactor: screenWidth / baseWidth
 
     function scale(value) {

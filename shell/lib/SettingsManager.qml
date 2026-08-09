@@ -216,13 +216,8 @@ QtObject {
         _rawSettings = merged
         let jsonString = JSON.stringify(merged, null, 2)
 
-        // Atomic write: every shell process re-reads this file on change, and a
-        // reader hitting a truncate-in-progress would clobber it with defaults.
-        // $$ in the tmp name keeps two concurrent savers off the same scratch file.
-        saveSettingsProcess.command = [
-            "bash", "-c",
-            "mkdir -p \"" + configDir + "\" && tmp=\"" + userSettingsFile + ".$$.tmp\" && cat > \"$tmp\" <<'JSON_EOF' && mv \"$tmp\" \"" + userSettingsFile + "\"\n" + jsonString + "\nJSON_EOF"
-        ]
+        saveSettingsProcess.command =
+            JsonStore.atomicWriteArgv(configDir, userSettingsFile, jsonString)
         saveSettingsProcess.running = true
     }
 
