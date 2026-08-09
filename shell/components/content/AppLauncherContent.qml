@@ -131,14 +131,6 @@ FocusScope {
         modeManager.closeAllModes()
     }
 
-    function preloadApps() {
-        if (!appsLoaded && !isLoading) {
-            isLoading = true
-            iconThemeProcess.running = true
-            appsProcess.running = true
-        }
-    }
-
     function loadApps() {
         if (appsLoaded) {
             filterApps()

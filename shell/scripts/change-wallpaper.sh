@@ -231,7 +231,7 @@ if pgrep mpvpaper >/dev/null 2>&1; then
   [[ -z "${prev_png:-}" ]] && prev_png="$(grab_current_video_frame_via_ipc 2>/dev/null || true)"
 
   if [[ -n "${prev_png:-}" && -s "$prev_png" ]]; then
-    ensure_swww
+    ensure_swww || { debug_log "ensure_swww failed, aborting"; exit 1; }
     if swww_set_no_transition "$prev_png"; then
       sleep "$STILL_COMMIT_SEC"
       echo "Current frame captured and displayed"
@@ -261,7 +261,7 @@ if is_image "$WALLPAPER_ABS"; then
     fi
   fi
 
-  ensure_swww
+  ensure_swww || { debug_log "ensure_swww failed, aborting"; exit 1; }
   debug_log "Running awww img with TRANS_OPTS"
   if swww_output=$(awww img --resize crop "$WALLPAPER_ABS" "${TRANS_OPTS[@]}" 2>&1); then
     echo "$swww_output" >> "$DEBUG_LOG"
@@ -299,7 +299,7 @@ elif is_video "$WALLPAPER_ABS"; then
     fi
   fi
 
-  ensure_swww
+  ensure_swww || { debug_log "ensure_swww failed, aborting"; exit 1; }
   if [[ -f "$THUMB_FILE" ]]; then
     awww img --resize crop "$THUMB_FILE" "${TRANS_OPTS[@]}"
   else
