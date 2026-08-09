@@ -11,6 +11,7 @@ Rectangle {
     required property var settingsManager
 
     readonly property string currentPalette: settingsManager ? settingsManager.moduleBackdropPalette : "harmony"
+    readonly property bool backdropEnabled: settingsManager ? settingsManager.moduleBackdropEnabled : true
 
     width: parent ? parent.width : 420
     height: column.implicitHeight + 24
@@ -36,19 +37,40 @@ Rectangle {
         anchors.margins: 12
         spacing: 12
 
-        Text {
+        RowLayout {
             Layout.fillWidth: true
-            text: "Module Background"
-            color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-            font.pixelSize: 12
-            font.family: "M PLUS 2"
-            font.weight: Font.Normal
-            font.letterSpacing: 0.5
+            spacing: 12
+
+            Text {
+                Layout.fillWidth: true
+                text: "Module Background"
+                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                font.pixelSize: 12
+                font.family: "M PLUS 2"
+                font.weight: Font.Normal
+                font.letterSpacing: 0.5
+            }
+
+            Common.Switch {
+                checked: section.backdropEnabled
+                theme: section.theme
+
+                onToggled: value => {
+                    if (!section.settingsManager) return
+                    section.settingsManager.moduleBackdropEnabled = value
+                    section.settingsManager.saveSettings()
+                    section.bump()
+                }
+            }
         }
 
         RowLayout {
             Layout.fillWidth: true
             spacing: 10
+            enabled: section.backdropEnabled
+            opacity: enabled ? 1 : 0.35
+
+            Item { Layout.fillWidth: true }
 
             Repeater {
                 model: Theme.ModulePalettes.list
@@ -104,6 +126,8 @@ Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 24
             spacing: 12
+            enabled: section.backdropEnabled
+            opacity: enabled ? 1 : 0.35
 
             Text {
                 Layout.fillWidth: true

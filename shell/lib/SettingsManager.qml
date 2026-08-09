@@ -17,6 +17,7 @@ QtObject {
 
     // 0 = disabled, otherwise the idle timeout (ms) before a mode auto-closes.
     property int autoCloseTimerInterval: 5000
+    property bool moduleBackdropEnabled: true
     property string moduleBackdropPalette: "harmony"
     property real moduleBackdropSpread: 0.06
     property bool batteryIndicatorEnabled: false
@@ -118,6 +119,7 @@ QtObject {
                 "interval": autoCloseTimerInterval
             },
             "barBackground": {
+                "enabled": moduleBackdropEnabled,
                 "palette": moduleBackdropPalette,
                 "spread": moduleBackdropSpread
             },
@@ -240,6 +242,9 @@ QtObject {
             }
 
             if (settings.barBackground) {
+                if (settings.barBackground.enabled !== undefined) {
+                    moduleBackdropEnabled = settings.barBackground.enabled
+                }
                 if (settings.barBackground.palette !== undefined) {
                     moduleBackdropPalette = settings.barBackground.palette
                 }

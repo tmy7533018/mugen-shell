@@ -29,11 +29,6 @@ QtObject {
             "id": "spectrum", "name": "Spectrum",
             "satMin": 0.35, "satMax": 0.65, "hueOffsets": [0, 60, 120, 180], "strength": 0.90,
             "levels": [0.28, 0.14, 0.24, 0.10], "sourceIndex": [0, 1, 2, 0]
-        },
-        {
-            "id": "flat", "name": "Flat",
-            "satMin": 0.22, "satMax": 0.55, "hueOffsets": [0, 0, 0, 0], "strength": 0.0,
-            "levels": [0.24, 0.10, 0.19, 0.06], "sourceIndex": [0, 1, 2, 0]
         }
     ]
 

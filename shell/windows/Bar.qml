@@ -514,7 +514,9 @@ PanelWindow {
         baseRadius: settingsManager.barRadius
         moduleBackground: modeManager.currentSurfaceBackground
             ? modeManager.currentSurfaceBackground
-            : (modeManager.currentModeInstance ? barWindow.defaultModuleBackground : null)
+            : (modeManager.currentModeInstance && settingsManager.moduleBackdropEnabled
+                ? barWindow.defaultModuleBackground
+                : null)
         moduleContext: modeManager.currentModeInstance
         backdropSpread: settingsManager.moduleBackdropSpread
 
