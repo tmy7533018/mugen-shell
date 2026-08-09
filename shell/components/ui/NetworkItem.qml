@@ -29,9 +29,9 @@ Rectangle {
     implicitHeight: targetHeight
     height: targetHeight
 
-    readonly property bool isHighlighted: (networkMouseArea.containsMouse || root.isCurrentItem) && !root.isExpanded
+    readonly property bool isHighlighted: (rowHover.hovered || root.isCurrentItem) && !root.isExpanded
 
-    color: (networkMouseArea.containsMouse || root.isCurrentItem)
+    color: (rowHover.hovered || root.isCurrentItem)
         ? (theme ? theme.surfaceInsetCardHover : Qt.rgba(0, 0, 0, 0.75))
         : (theme ? theme.surfaceInsetCard : Qt.rgba(0, 0, 0, 0.65))
     radius: root.isExpanded ? 20 : (root.isHighlighted ? 16 : height / 2)
@@ -334,10 +334,13 @@ Rectangle {
         id: networkMouseArea
         anchors.fill: parent
         anchors.bottomMargin: root.isExpanded ? 88 : 0
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
 
-        onEntered: root.requestSelect()
+        // hoverEnabled here would take the chevron's hover with it.
+        HoverHandler {
+            id: rowHover
+            cursorShape: Qt.PointingHandCursor
+            onHoveredChanged: if (hovered) root.requestSelect()
+        }
 
         onPressed: (mouse) => {
             let chevronX = parent.width - 32
