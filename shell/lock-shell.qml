@@ -27,14 +27,15 @@ ShellRoot {
     property bool refusedToLock: false
     property bool armed: false
     property bool authenticating: false
+    property bool pamPrompted: false
     property bool unlocking: false
 
-    property bool lockWanted: false
-
-    onLockWantedChanged: engageLock()
+    // xray shows the desktop until the face is opaque, and sleep does not wait for the fade.
+    readonly property bool instantEntry: Quickshell.env("MUGEN_LOCK_INSTANT") === "1"
 
     function engageLock() {
-        if (lockEngaged || !lockWanted) return
+        if (lockEngaged) return
+        if (instantEntry) beginEntry()
         lockEngaged = true
     }
 
@@ -188,6 +189,7 @@ ShellRoot {
     }
 
     function startPam() {
+        pamPrompted = false
         pam.config = pamServices[pamService]
         if (!pam.start()) nextPamService()
     }
@@ -434,8 +436,17 @@ ShellRoot {
 
         onResponseRequiredChanged: {
             if (!responseRequired) return
+            root.pamPrompted = true
             root.armed = true
-            root.lockWanted = true
+            root.engageLock()
+        }
+
+        // A second prompt leaves responseRequired true, so only this fires for it.
+        onPamMessage: {
+            if (!responseRequired) return
+            root.pamPrompted = true
+            root.authenticating = false
+            root.armed = true
         }
 
         onCompleted: result => {
@@ -448,6 +459,8 @@ ShellRoot {
             }
 
             root.armed = false
+            // Errors arrive as completed too, so restarting here would defeat the backoff.
+            if (!root.pamPrompted) return
             root.authFailed()
             root.startPam()
         }
@@ -477,7 +490,7 @@ ShellRoot {
             if (root.lockEngaged || root.unlocking || root.refusedToLock) return
             console.warn("lock: PAM did not prompt within "
                 + interval + "ms - locking anyway")
-            root.lockWanted = true
+            root.engageLock()
         }
     }
 
