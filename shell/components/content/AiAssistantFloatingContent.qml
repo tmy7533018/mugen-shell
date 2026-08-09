@@ -82,7 +82,7 @@ FocusScope {
     property var pendingConfirm: null
 
     readonly property bool rewinding: truncateProcess.running
-    readonly property bool busy: streaming || rewinding
+    readonly property bool busy: streaming || rewinding || chatProcess.running
 
     // Absolute paths staged for the next turn; the backend reads the files.
     property var pendingAttachments: []
@@ -223,7 +223,7 @@ FocusScope {
 
     function sendMessage(text, attachments) {
         const files = attachments || []
-        if ((!text && files.length === 0) || streaming) return
+        if ((!text && files.length === 0) || streaming || chatProcess.running) return
         stopRequested = false
         if (root.pendingRewindId !== 0) {
             truncateProcess.messageId = root.pendingRewindId
