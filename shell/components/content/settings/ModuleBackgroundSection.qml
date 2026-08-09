@@ -70,7 +70,7 @@ Rectangle {
 
                         satMin: swatch.modelData.satMin
                         satMax: swatch.modelData.satMax
-                        spin: swatch.modelData.spin
+                        hueOffsets: swatch.modelData.hueOffsets
                         strength: swatch.modelData.strength
                         levels: swatch.modelData.levels
                         sourceIndex: swatch.modelData.sourceIndex

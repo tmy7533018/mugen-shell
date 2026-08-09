@@ -10,7 +10,8 @@ Item {
 
     property real satMin: 0.22
     property real satMax: 0.55
-    property real spin: 0
+    // Degrees around the wheel per source; the seed only ever carries one or two hues, so the rest are built here.
+    property var hueOffsets: [0, 0, 0, 0]
     property var levels: [0.24, 0.10, 0.19, 0.06]
     property var sourceIndex: [0, 1, 2, 0]
 
@@ -48,7 +49,7 @@ Item {
     function slot(i) {
         return root.hue(root.sources[root.sourceIndex[i]],
                         root.levels[i],
-                        (i - 1.5) / 1.5 * root.spin)
+                        root.hueOffsets[i])
     }
 
     Behavior on baseTop { ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic } }

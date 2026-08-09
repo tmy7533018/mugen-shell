@@ -173,7 +173,7 @@ PanelWindow {
             theme: barWindow.themeRef
             satMin: defaultBackdrop.pal.satMin
             satMax: defaultBackdrop.pal.satMax
-            spin: defaultBackdrop.pal.spin
+            hueOffsets: defaultBackdrop.pal.hueOffsets
             strength: defaultBackdrop.pal.strength
             levels: defaultBackdrop.pal.levels
             sourceIndex: defaultBackdrop.pal.sourceIndex
