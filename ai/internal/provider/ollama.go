@@ -198,6 +198,8 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 			len(opts.Tools) > 0 {
 			retry := opts
 			retry.Tools = nil
+			// The deferred close would otherwise hold this connection for the whole retry.
+			resp.Body.Close()
 			return o.Chat(ctx, model, messages, retry, fn)
 		}
 		return fmt.Errorf("ollama returned status %d: %s", resp.StatusCode, strings.TrimSpace(bodyStr))
