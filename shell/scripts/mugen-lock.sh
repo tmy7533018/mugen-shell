@@ -10,6 +10,7 @@ LOG_FILE="$RUNTIME_DIR/lock.log"
 SHELL_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 ENTRY="$SHELL_DIR/lock-shell.qml"
 READY_TIMEOUT_SEC=10
+MAX_RESPAWNS=3
 # session_lock_blur is a bool, so softening the lock's blur means the global radius.
 BLUR_SCALE="${MUGEN_LOCK_BLUR:-0.5}"
 
@@ -71,14 +72,31 @@ fi
 # This returns once secure, so a detached re-entry owns the restore and covers a crash.
 if [[ "${1:-}" == "--watch" ]]; then
   watched=${2:-0}
-  # ps per tick would fork twice a second for the whole lock; identity is checked once.
-  if pid_is_lock "$watched"; then
-    tail -s 0.2 --pid="$watched" -f /dev/null 2>/dev/null \
-      || while kill -0 "$watched" 2>/dev/null; do sleep 0.5; done
-  fi
-  # A newer lock owns the restore state; an absent pidfile means nobody replaced us.
-  current=$(cat "$PID_FILE" 2>/dev/null)
-  [[ -n "$current" && "$current" != "$watched" ]] && exit 0
+  respawns=0
+  while :; do
+    # ps per tick would fork twice a second for the whole lock; identity is checked once.
+    if pid_is_lock "$watched"; then
+      tail -s 0.2 --pid="$watched" -f /dev/null 2>/dev/null \
+        || while kill -0 "$watched" 2>/dev/null; do sleep 0.5; done
+    fi
+    # A newer lock owns the restore state; an absent pidfile means nobody replaced us.
+    current=$(cat "$PID_FILE" 2>/dev/null)
+    [[ -n "$current" && "$current" != "$watched" ]] && exit 0
+    # secure survives only a mid-session crash; a clean unlock or a pre-secure death removes it first.
+    [[ -e "$READY_FILE" ]] || break
+    if (( respawns >= MAX_RESPAWNS )); then
+      echo "mugen-lock: gave up respawning after $respawns crashes, session stays locked, see $LOG_FILE" >&2
+      break
+    fi
+    respawns=$((respawns + 1))
+    exec 9>"$ACQUIRE_FILE"
+    flock 9
+    rm -f "$READY_FILE"
+    MUGEN_LOCK_INSTANT=1 "$runner" -p "$ENTRY" >>"$LOG_FILE" 2>&1 9>&- &
+    watched=$!
+    echo "$watched" > "$PID_FILE"
+    exec 9>&-
+  done
   "$runner" -c mugen-shell ipc call bar restore >/dev/null 2>&1
   # A crash leaves session_lock_blur on, and the next lock would start blurred.
   hyprctl eval 'hl.config({ misc = { session_lock_blur = false } })' >/dev/null 2>&1
