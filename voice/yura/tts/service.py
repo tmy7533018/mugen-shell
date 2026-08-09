@@ -101,5 +101,6 @@ def _watchdog() -> None:
             if idle_for <= idle_min * 60:
                 continue
             _last_used = 0.0
-        log("tts", f"engine idle for {idle_min:.0f} min, stopping")
-        _systemctl("stop")
+            # prewarm() takes this lock, so a stop decided outside it can undo a fresh start.
+            log("tts", f"engine idle for {idle_min:.0f} min, stopping")
+            _systemctl("stop")

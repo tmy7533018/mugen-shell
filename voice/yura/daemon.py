@@ -209,7 +209,11 @@ class Daemon:
         return not self.cancel.is_set()
 
     def run(self) -> None:
-        self.whisper_proc = ensure_whisper_server()
+        try:
+            self.whisper_proc = ensure_whisper_server()
+        except Exception as e:
+            # A turn's own respawn brings STT back; the control socket must not die with it.
+            log("whisper", str(e))
         try:
             while self.running:
                 if not voice_settings().get("enabled", True):
@@ -239,6 +243,9 @@ class Daemon:
             except Exception:
                 pass
         self.capture.drain()
+        self._clear_turn_flags()
+
+    def _clear_turn_flags(self) -> None:
         self.trigger.clear()
         self.trigger_fresh.clear()
         self.ptt_held.clear()
@@ -255,8 +262,15 @@ class Daemon:
             self.summons.clear()
             surface_up = self._take_trigger()
             self.capture.prewarm()
-            with self.capture.stream():
-                self._run_turn(surface_up)
+            try:
+                with self.capture.stream():
+                    self._run_turn(surface_up)
+            except Exception as e:
+                # The input device can vanish mid-session; one dead turn must not take the daemon.
+                log("audio", str(e))
+                beep(330, 0.3)
+                self._clear_turn_flags()
+                time.sleep(1)
 
 
 def main() -> None:

@@ -40,6 +40,7 @@ def ensure_whisper_server() -> subprocess.Popen | None:
             return proc
         except requests.RequestException:
             time.sleep(0.5)
+    proc.terminate()
     raise RuntimeError("whisper-server did not come up in 60s")
 
 
