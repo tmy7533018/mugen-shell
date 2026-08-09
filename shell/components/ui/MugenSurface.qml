@@ -62,6 +62,7 @@ Rectangle {
         opacity: surface.moduleBackground ? 1 : 0
 
         Behavior on opacity {
+            enabled: moduleBackgroundLoader.opacity < 1
             NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.InOutCubic }
         }
 

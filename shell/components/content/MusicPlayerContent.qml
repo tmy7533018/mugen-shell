@@ -57,6 +57,7 @@ Item {
             }
 
             OpacityMask {
+                id: artMask
                 anchors.fill: parent
                 source: artHolder
                 maskSource: Rectangle {
@@ -67,6 +68,7 @@ Item {
                 opacity: bg.artRevealed && bg.art !== "" ? 1 : 0
 
                 Behavior on opacity {
+                    enabled: artMask.opacity < 1
                     NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic }
                 }
             }
