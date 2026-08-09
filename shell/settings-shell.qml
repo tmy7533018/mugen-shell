@@ -96,11 +96,7 @@ ShellRoot {
         }
     }
 
-    // Only lock/suspend/dpms write hypridle.conf, so they're queued through one
-    // Process: two of these firing together (e.g. Reset to Default) would
-    // otherwise race as concurrent read-modify-writes of the same file, and
-    // setting `running = true` on an already-running Process is a silent no-op
-    // that would drop whichever call lost the race.
+    // Queued: concurrent writes would race, and `running = true` on a busy Process is a silent no-op.
     property var _hyprIdleQueue: []
     property bool _hyprIdleBusy: false
 
@@ -311,28 +307,22 @@ ShellRoot {
         loadTimerSounds()
     }
 
-    // The settings file's very first load fires these same property-changed
-    // signals for every value that differs from the QML defaults, which would
-    // otherwise rewrite hypridle.conf and restart hypridle just from opening
-    // the settings window. settingsChanged() fires at the end of that first
-    // load (still inside the same synchronous pass, before this flag flips),
-    // so it suppresses exactly that load without blocking later real edits —
-    // including a later Reset to Default, which reloads through the same path.
-    property bool _settingsReady: false
+    // Without this the first load's property-changed storm would rewrite hypridle.conf and restart it.
+    property bool _initialLoadDone: false
 
     Connections {
         target: settingsManager
         function onSettingsChanged() {
-            root._settingsReady = true
+            root._initialLoadDone = true
         }
         function onLockTimerMinutesChanged() {
-            if (root._settingsReady) root.applyLockTimer(settingsManager.lockTimerMinutes)
+            if (root._initialLoadDone) root.applyLockTimer(settingsManager.lockTimerMinutes)
         }
         function onIdleSuspendMinutesChanged() {
-            if (root._settingsReady) root.applyIdleSuspend(settingsManager.idleSuspendMinutes)
+            if (root._initialLoadDone) root.applyIdleSuspend(settingsManager.idleSuspendMinutes)
         }
         function onIdleDpmsMinutesChanged() {
-            if (root._settingsReady) root.applyIdleDpms(settingsManager.idleDpmsMinutes)
+            if (root._initialLoadDone) root.applyIdleDpms(settingsManager.idleDpmsMinutes)
         }
     }
 }
