@@ -38,7 +38,10 @@ Item {
         }
     }
 
-    Component.onCompleted: modeManager.registerMode("weather", root)
+    Component.onCompleted: {
+        modeManager.registerMode("weather", root)
+        if (modeManager.isMode("weather") && root.weatherManager) root.weatherManager.refresh()
+    }
 
     Connections {
         target: modeManager
