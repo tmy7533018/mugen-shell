@@ -40,6 +40,7 @@ QtObject {
     }
 
     onUnitChanged: {
+        if (!ready && cachedText !== "") applyCache(cachedText)
         if (locationResolved) fetchForecast()
     }
 
@@ -48,6 +49,8 @@ QtObject {
         if (locationResolved) fetchForecast()
         else resolveLocation()
     }
+
+    property string cachedText: ""
 
     readonly property string cacheFile: Theme.Paths.cacheDir + "/weather.json"
 
@@ -58,6 +61,8 @@ QtObject {
             "savedAt": Date.now(),
             "unit": unit,
             "locationName": locationName,
+            "latitude": latitude,
+            "longitude": longitude,
             "temperature": temperature,
             "feelsLike": feelsLike,
             "humidity": humidity,
@@ -67,11 +72,8 @@ QtObject {
             "hourly": hourly,
             "daily": daily
         })
-        saveCacheProcess.command = ["bash", "-c",
-            "mkdir -p \"" + Theme.Paths.cacheDir + "\""
-            + " && tmp=\"" + cacheFile + ".$$.tmp\""
-            + " && cat > \"$tmp\" <<'JSON_EOF' && mv \"$tmp\" \"" + cacheFile + "\"\n"
-            + json + "\nJSON_EOF"]
+        saveCacheProcess.command = Theme.JsonStore.atomicWriteArgv(
+            Theme.Paths.cacheDir, cacheFile, json)
         saveCacheProcess.running = true
     }
 
@@ -92,6 +94,12 @@ QtObject {
             if (c.hourly) hourly = c.hourly
             if (c.daily) daily = c.daily
             ready = true
+            if (typeof c.latitude === "number" && typeof c.longitude === "number") {
+                latitude = c.latitude
+                longitude = c.longitude
+                // Only a cache younger than one poll cycle may stand in for a fresh resolve.
+                if (Date.now() - c.savedAt < pollTimer.interval) locationResolved = true
+            }
         } catch (e) {}
     }
 
@@ -106,8 +114,12 @@ QtObject {
 
         stdout: StdioCollector {
             onStreamFinished: {
+                // Settings load asynchronously too, so the unit may still be wrong here.
+                weatherManager.cachedText = this.text
                 // A live forecast landing first must win over the cached one.
                 if (!weatherManager.ready) weatherManager.applyCache(this.text)
+                if (weatherManager.enabled && !weatherManager.locationResolved)
+                    weatherManager.resolveLocation()
             }
         }
     }
@@ -272,14 +284,14 @@ QtObject {
                 try {
                     let j = JSON.parse(this.text)
                     let cur = j.current
-                    if (cur) {
-                        weatherManager.temperature = cur.temperature_2m
-                        weatherManager.feelsLike = cur.apparent_temperature
-                        weatherManager.humidity = Math.round(cur.relative_humidity_2m)
-                        weatherManager.wind = cur.wind_speed_10m
-                        weatherManager.weatherCode = cur.weather_code
-                        weatherManager.isDay = cur.is_day === 1
-                    }
+                    // open-meteo reports rate limits as parseable JSON with no forecast in it.
+                    if (!cur) throw new Error("no current conditions")
+                    weatherManager.temperature = cur.temperature_2m
+                    weatherManager.feelsLike = cur.apparent_temperature
+                    weatherManager.humidity = Math.round(cur.relative_humidity_2m)
+                    weatherManager.wind = cur.wind_speed_10m
+                    weatherManager.weatherCode = cur.weather_code
+                    weatherManager.isDay = cur.is_day === 1
                     let h = j.hourly
                     if (h && h.time) {
                         let rows = []
@@ -330,10 +342,8 @@ QtObject {
         onTriggered: weatherManager.refresh()
     }
 
+    // The cache read decides whether a resolve is still needed, so it owns the launch fetch.
     Component.onCompleted: {
         if (enabled) loadCacheProcess.running = true
-        Qt.callLater(() => {
-            if (enabled) resolveLocation()
-        })
     }
 }
