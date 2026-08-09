@@ -23,13 +23,6 @@ My dotfiles for a Hyprland + Quickshell desktop, packaged so they can be install
 - Smooth animation throughout, and it is easy to customize
 - A Settings window for changing all sorts of things
 
-<details>
-<summary>The Settings window</summary>
-
-<img src="docs/images/settings.png" alt="The Settings window" width="600" />
-
-</details>
-
 ---
 
 ## Yura
@@ -39,13 +32,6 @@ Yura is the desktop assistant. It can be used from an input row in the bar (`Sup
 Yura also runs the desktop. "Set volume to 30" or "start a 5 minute timer" reaches the same panels you would click. It will not do anything dangerous. External [MCP](https://modelcontextprotocol.io) servers are supported as well, with their writes held for approval.
 
 Voice input works from a button or from push-to-talk. Hold `Super + Z`, talk, and a voice model reads the reply back. The voice that ships is Japanese; install a model from [AivisHub](https://hub.aivis-project.com/) and pick it in Settings. [SETUP.en.md](SETUP.en.md#configuring-mugen-ai) has the details.
-
-<details>
-<summary>Yura's chat panel</summary>
-
-<img src="docs/images/yura.png" alt="Yura's chat panel" width="600" />
-
-</details>
 
 ---
 
