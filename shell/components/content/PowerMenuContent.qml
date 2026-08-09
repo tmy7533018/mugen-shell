@@ -222,7 +222,7 @@ FocusScope {
                 color: Qt.rgba(0.45, 0.65, 0.90, 1.0)
                 onClicked: {
                     root.resetAutoCloseTimer()
-                    Theme.Hypr.exec("~/.config/quickshell/mugen-shell/scripts/mugen-lock.sh")
+                    Theme.Hypr.exec(Quickshell.shellDir + "/scripts/mugen-lock.sh")
                     modeManager.closeAllModes()
                 }
             }
@@ -289,7 +289,7 @@ FocusScope {
                 color: Qt.rgba(0.72, 0.72, 0.82, 1.0)
                 onClicked: {
                     if (modeManager) modeManager.closeAllModes()
-                    Theme.Hypr.exec("~/.config/quickshell/mugen-shell/scripts/toggle-settings.sh")
+                    Theme.Hypr.exec(Quickshell.shellDir + "/scripts/toggle-settings.sh")
                 }
             }
         }

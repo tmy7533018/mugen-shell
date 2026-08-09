@@ -121,7 +121,7 @@ Item {
             let script = ipcRouter._detachedScripts.hasOwnProperty(name)
                 ? ipcRouter._detachedScripts[name] : ""
             if (script) {
-                Lib.Hypr.exec("~/.config/quickshell/mugen-shell/scripts/" + script)
+                Lib.Hypr.exec(Quickshell.shellDir + "/scripts/" + script)
                 return
             }
             // Idempotent open: this verb is only ever called programmatically

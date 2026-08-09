@@ -1,3 +1,4 @@
+import Quickshell
 import QtQuick
 import QtQuick.Layouts
 import "../../../lib" as Theme
@@ -24,7 +25,7 @@ Rectangle {
     }
 
     function openShortcuts() {
-        Theme.Hypr.exec("~/.config/quickshell/mugen-shell/scripts/toggle-shortcuts.sh")
+        Theme.Hypr.exec(Quickshell.shellDir + "/scripts/toggle-shortcuts.sh")
     }
 
     MouseArea {

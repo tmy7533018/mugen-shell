@@ -122,7 +122,7 @@ RowLayout {
         }
         onRightClicked: {
             if (root.modeManager) root.modeManager.closeAllModes()
-            Theme.Hypr.exec("~/.config/quickshell/mugen-shell/scripts/toggle-settings.sh")
+            Theme.Hypr.exec(Quickshell.shellDir + "/scripts/toggle-settings.sh")
         }
     }
 }

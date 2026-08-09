@@ -155,7 +155,7 @@ RowLayout {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
                     if (root.modeManager) root.modeManager.closeAllModes()
-                    Theme.Hypr.exec("~/.config/quickshell/mugen-shell/scripts/toggle-calendar.sh")
+                    Theme.Hypr.exec(Quickshell.shellDir + "/scripts/toggle-calendar.sh")
                 }
             }
         }

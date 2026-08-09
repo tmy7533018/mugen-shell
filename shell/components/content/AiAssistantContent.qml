@@ -1,3 +1,4 @@
+import Quickshell
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
@@ -253,7 +254,7 @@ FocusScope {
                         // window ignores exclusion zones, so coords map 1:1.
                         const p = orbSlot.mapToItem(null, 0, 0)
                         modeManager.closeAllModes()
-                        Theme.Hypr.exec("qs -p ~/.config/quickshell/mugen-shell/yura-shell.qml ipc call yura toggleFrom "
+                        Theme.Hypr.exec("qs -p " + Quickshell.shellDir + "/yura-shell.qml ipc call yura toggleFrom "
                             + Math.round(p.x) + " " + Math.round(p.y) + " " + Math.round(orbSlot.width))
                     }
                 }
