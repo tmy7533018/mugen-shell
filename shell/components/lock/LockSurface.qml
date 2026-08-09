@@ -395,12 +395,24 @@ Item {
                         }
                     }
 
+                    Rectangle {
+                        id: weatherMask
+                        anchors.fill: parent
+                        radius: root.boxRadius
+                        color: "white"
+                        antialiasing: true
+                        visible: false
+                        layer.enabled: true
+                    }
+
                     Content.WeatherParticles {
                         anchors.fill: parent
                         wtype: root.weatherParticleType
                         windKmh: root.weatherWind
                         tint: root.weatherPalette ? root.weatherPalette.accent : root.accentColor
                         active: !root.reduceMotion
+                        layer.enabled: true
+                        layer.effect: OpacityMask { maskSource: weatherMask }
                     }
 
                     LockWeatherBox {
