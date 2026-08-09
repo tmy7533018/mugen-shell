@@ -369,11 +369,11 @@ PanelWindow {
 
         function rect(): string {
             if (barWindow.barHidden || !barWindow.screen)
-                return "v2 none"
+                return JSON.stringify({ hidden: true })
 
             const w = Math.round(surface.width)
             const h = Math.round(surface.height)
-            if (w <= 0 || h <= 0) return "v2 none"
+            if (w <= 0 || h <= 0) return JSON.stringify({ hidden: true })
 
             // Rectangle silently clamps radius to half the shorter side, so the
             // raw setting would let the lock's radius climb as the card grows.
@@ -386,15 +386,16 @@ PanelWindow {
                                         Math.min(nw, nh) / 2)
 
             // Only exclusive top layer, so window-local == monitor-local.
-            return ["v2", barWindow.screen.name,
-                    Math.round(surface.x), Math.round(surface.y), w, h,
-                    Math.round(effective), surface.opacity.toFixed(2),
-                    settingsManager.barGradientEnabled ? 1 : 0,
-                    theme.themeMode === "light" ? "light" : "dark",
-                    settingsManager.reduceMotion ? 1 : 0,
-                    settingsManager.animationDurationMultiplier.toFixed(2),
-                    Math.round(n.leftMargin), Math.round(n.topMargin),
-                    nw, nh, Math.round(nEffective)].join(" ")
+            return JSON.stringify({
+                screen: barWindow.screen.name,
+                x: Math.round(surface.x), y: Math.round(surface.y),
+                w: w, h: h,
+                radius: Math.round(effective),
+                opacity: Number(surface.opacity.toFixed(2)),
+                themeMode: theme.themeMode === "light" ? "light" : "dark",
+                exitX: Math.round(n.leftMargin), exitY: Math.round(n.topMargin),
+                exitW: nw, exitH: nh, exitRadius: Math.round(nEffective)
+            })
         }
 
         function hide(pid: int): string {
@@ -426,11 +427,9 @@ PanelWindow {
     Process {
         id: lockProbe
         running: false
-        // `ps -p` on a resolved pid avoids the pgrep -f self-match. The verdict
-        // is on stdout because qmllint rejects any onExited handler.
+        // The verdict is on stdout because qmllint rejects any onExited handler.
         command: ["sh", "-c",
-                  "ps -p \"$1\" -o args= 2>/dev/null | grep -q lock-shell.qml"
-                  + " && echo alive || echo dead",
+                  "kill -0 \"$1\" 2>/dev/null && echo alive || echo dead",
                   "sh", String(barWindow.lockClientPid)]
 
         stdout: StdioCollector {

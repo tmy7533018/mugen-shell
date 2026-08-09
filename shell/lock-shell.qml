@@ -233,39 +233,37 @@ ShellRoot {
         rectHandled = true
         rectKillTimer.stop()
 
-        const tokens = String(text).trim().split(/\s+/)
-        if (tokens[0] !== "v2") {
+        let r = null
+        try { r = JSON.parse(String(text).trim()) } catch (e) {}
+        // No answer at all is a bar that is not there; a hidden one still wants restoring.
+        if (!r) {
             maybeSendHide()
             return
         }
         barPresent = true
 
-        if (tokens.length !== 17) {
-            maybeSendHide()
-            return
-        }
-
-        const nums = [2, 3, 4, 5, 6, 7, 12, 13, 14, 15, 16].map(i => parseFloat(tokens[i]))
-        if (nums.some(n => !isFinite(n)) || nums[2] <= 0 || nums[3] <= 0
-            || nums[8] <= 0 || nums[9] <= 0) {
+        const nums = [r.x, r.y, r.w, r.h, r.radius, r.opacity,
+                      r.exitX, r.exitY, r.exitW, r.exitH, r.exitRadius]
+        if (typeof r.screen !== "string" || nums.some(n => !isFinite(n))
+            || r.w <= 0 || r.h <= 0 || r.exitW <= 0 || r.exitH <= 0) {
             maybeSendHide()
             return
         }
 
         if (!entryStarted) {
-            barScreen = tokens[1]
-            barX = nums[0]
-            barY = nums[1]
-            barW = nums[2]
-            barH = nums[3]
-            barRadiusPx = nums[4]
-            barOpacity = nums[5]
-            barExitX = nums[6]
-            barExitY = nums[7]
-            barExitW = nums[8]
-            barExitH = nums[9]
-            barExitRadius = nums[10]
-            colors.themeMode = tokens[9] === "light" ? "light" : "dark"
+            barScreen = r.screen
+            barX = r.x
+            barY = r.y
+            barW = r.w
+            barH = r.h
+            barRadiusPx = r.radius
+            barOpacity = r.opacity
+            barExitX = r.exitX
+            barExitY = r.exitY
+            barExitW = r.exitW
+            barExitH = r.exitH
+            barExitRadius = r.exitRadius
+            colors.themeMode = r.themeMode === "light" ? "light" : "dark"
             barRectValid = true
         }
         maybeSendHide()
