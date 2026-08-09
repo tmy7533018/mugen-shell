@@ -5,7 +5,7 @@ import "../common" as Common
 Item {
     id: root
 
-    property var typo
+    property string fontFamily: "M PLUS 2"
     property color tint: "white"
     property color faintTint: Qt.rgba(1, 1, 1, 0.5)
     property string iconsBase: ""
@@ -140,7 +140,7 @@ Item {
             text: root.title
             color: root.tint
             elide: Text.ElideRight
-            font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+            font.family: root.fontFamily
             font.weight: Font.Medium
             font.pixelSize: 30 * root.designPx
         }
@@ -154,7 +154,7 @@ Item {
             text: root.artist
             color: root.faintTint
             elide: Text.ElideRight
-            font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+            font.family: root.fontFamily
             font.pixelSize: 12 * root.designPx
             font.letterSpacing: 12 * root.designPx * 0.18
         }
@@ -176,7 +176,7 @@ Item {
                 text: root.clock(root.position)
                 color: root.tint
                 opacity: 0.62
-                font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+                font.family: root.fontFamily
                 font.pixelSize: 10 * root.designPx
             }
 
@@ -188,7 +188,7 @@ Item {
                 horizontalAlignment: Text.AlignRight
                 text: root.clock(root.duration)
                 color: root.faintTint
-                font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+                font.family: root.fontFamily
                 font.pixelSize: 10 * root.designPx
             }
 
@@ -239,6 +239,7 @@ Item {
             size: 30 * root.designPx
             tint: root.tint
             source: root.iconsBase + "/track-previous.svg"
+            hitPadding: controls.spacing / 2
             anchors.verticalCenter: parent.verticalCenter
             onActivated: root.previousRequested()
         }
@@ -247,6 +248,7 @@ Item {
             size: 46 * root.designPx
             tint: root.accent
             source: root.iconsBase + (root.isPlaying ? "/pause.svg" : "/play.svg")
+            hitPadding: controls.spacing / 2
             anchors.verticalCenter: parent.verticalCenter
             onActivated: root.playPauseRequested()
         }
@@ -255,6 +257,7 @@ Item {
             size: 30 * root.designPx
             tint: root.tint
             source: root.iconsBase + "/track-next.svg"
+            hitPadding: controls.spacing / 2
             anchors.verticalCenter: parent.verticalCenter
             onActivated: root.nextRequested()
         }

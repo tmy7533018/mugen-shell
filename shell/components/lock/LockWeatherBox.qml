@@ -6,7 +6,7 @@ import Qt5Compat.GraphicalEffects
 Item {
     id: root
 
-    property var typo
+    property string fontFamily: "M PLUS 2"
     property color tint: "white"
     property color faintTint: Qt.rgba(1, 1, 1, 0.4)
     property real unit: 20
@@ -27,8 +27,8 @@ Item {
             id: icon
             anchors.fill: parent
             source: root.iconSource
-            sourceSize.width: width
-            sourceSize.height: height
+            sourceSize.width: width * 2
+            sourceSize.height: height * 2
             visible: false
         }
 
@@ -47,7 +47,7 @@ Item {
         text: root.highLow
         color: root.faintTint
         horizontalAlignment: Text.AlignRight
-        font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+        font.family: root.fontFamily
         font.pixelSize: root.unit * 0.62
     }
 
@@ -59,7 +59,7 @@ Item {
         Text {
             text: root.temperature
             color: root.tint
-            font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+            font.family: root.fontFamily
             font.weight: Font.Light
             font.pixelSize: root.unit * 2.4
         }
@@ -67,7 +67,7 @@ Item {
         Text {
             text: root.condition
             color: root.faintTint
-            font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+            font.family: root.fontFamily
             font.pixelSize: root.unit * 0.68
         }
     }

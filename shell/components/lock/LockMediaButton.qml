@@ -5,6 +5,7 @@ Item {
     id: root
 
     property real size: 12
+    property real hitPadding: 0
     property color tint: "white"
     property alias source: glyph.source
 
@@ -16,8 +17,8 @@ Item {
     Image {
         id: glyph
         anchors.fill: parent
-        sourceSize.width: root.size
-        sourceSize.height: root.size
+        sourceSize.width: root.size * 2
+        sourceSize.height: root.size * 2
         mipmap: true
         visible: false
     }
@@ -31,8 +32,8 @@ Item {
     MouseArea {
         // The glyphs are small enough to be awkward targets at their drawn size.
         anchors.centerIn: parent
-        width: parent.width * 2.4
-        height: parent.height * 2.4
+        width: parent.width + root.hitPadding * 2
+        height: parent.height + root.hitPadding * 2
         cursorShape: Qt.PointingHandCursor
         onClicked: root.activated()
     }

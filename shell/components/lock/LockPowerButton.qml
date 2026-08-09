@@ -6,7 +6,7 @@ import Qt5Compat.GraphicalEffects
 Item {
     id: root
 
-    property var typo
+    property string fontFamily: "M PLUS 2"
     property color tint: "white"
     property string source: ""
     property string label: ""
@@ -31,8 +31,8 @@ Item {
             id: icon
             anchors.fill: parent
             source: root.source
-            sourceSize.width: width
-            sourceSize.height: height
+            sourceSize.width: width * 2
+            sourceSize.height: height * 2
             visible: false
         }
 
@@ -55,7 +55,7 @@ Item {
         text: root.label
         color: root.tint
         opacity: hover.hovered ? 0.75 : 0
-        font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+        font.family: root.fontFamily
         font.pixelSize: root.unit * 0.5
         font.letterSpacing: root.unit * 0.09
 

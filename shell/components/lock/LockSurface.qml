@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Qt5Compat.GraphicalEffects
+import "../../lib" as Theme
 import "../ui" as UI
 import "../common" as Common
 import "../content" as Content
@@ -11,6 +12,7 @@ Item {
     id: root
 
     property var typo
+    readonly property string faceFontFamily: typo ? typo.fontFamily : "M PLUS 2"
     property var themeRef
 
     property string screenName: ""
@@ -79,8 +81,8 @@ Item {
     readonly property bool morphing:
         entryMorph && screenName !== "" && screenName === entryScreen
 
-    // The bar scales its margins against a 1920 reference but not its radius.
-    readonly property real faceMargin: Math.round(marginBase * width / 1920)
+    // The bar scales its margins against a reference width but not its radius.
+    readonly property real faceMargin: Theme.Metrics.scaleTo(marginBase, width)
     readonly property real faceX: faceMargin
     readonly property real faceY: faceMargin
     readonly property real faceW: width - faceMargin * 2
@@ -98,20 +100,19 @@ Item {
         exiting ? exitRadius : (morphing ? sourceRadius : faceRadius)
     readonly property real startOpacity: morphing ? sourceOpacity : faceOpacity
 
-    property real mpH: 0
-    property real mpV: 0
+    property real morphProgress: 0
     property real dimProgress: 0
     property real contentFade: 0
     property real groupFade: 0
     property real faceEnterScale: 1
     property real exitFade: 1
 
-    readonly property real liveX: startX + (faceX - startX) * mpH
-    readonly property real liveW: startW + (faceW - startW) * mpH
-    readonly property real liveY: startY + (faceY - startY) * mpV
-    readonly property real liveH: startH + (faceH - startH) * mpV
+    readonly property real liveX: startX + (faceX - startX) * morphProgress
+    readonly property real liveW: startW + (faceW - startW) * morphProgress
+    readonly property real liveY: startY + (faceY - startY) * morphProgress
+    readonly property real liveH: startH + (faceH - startH) * morphProgress
     readonly property real liveRadius:
-        startRadius + (faceRadius - startRadius) * mpV
+        startRadius + (faceRadius - startRadius) * morphProgress
 
     readonly property real cx: liveX + (liveW - faceW) / 2
     readonly property real cy: liveY + (liveH - faceH) / 2
@@ -190,8 +191,6 @@ Item {
     readonly property color glowTertiaryColor:
         themeRef ? themeRef.glowTertiary : "#a68cd9"
 
-    property int clockWeight: 200
-    property real clockOpacity: 0.7
 
     readonly property real orbBoxW: colSpan(1, 1)
     readonly property real orbBoxH: rowSpan(2)
@@ -228,8 +227,7 @@ Item {
     }
 
     function skipEntry() {
-        mpH = 1
-        mpV = 1
+        morphProgress = 1
         dimProgress = 1
         contentFade = 1
         groupFade = 1
@@ -244,7 +242,7 @@ Item {
 
     function startExit() {
         if (morphing) {
-            // Flag before the animation: mpH is still 1, so nothing jumps.
+            // Flag before the animation: the morph is settled, so nothing jumps.
             exiting = true
             morphExit.start()
         } else {
@@ -257,6 +255,8 @@ Item {
         if (!unlocking) return
         morphEntry.stop()
         scaleEntry.stop()
+        // startExit swaps the geometry assuming the entry finished, so settle it first.
+        skipEntry()
         successBloom.start()
         if (unlockGrace > 0) exitDelay.restart()
         else startExit()
@@ -266,44 +266,6 @@ Item {
         id: exitDelay
         interval: root.unlockGrace
         onTriggered: root.startExit()
-    }
-
-    Component {
-        id: weatherBackdrop
-
-        Item {
-            Rectangle {
-                anchors.fill: parent
-                radius: root.boxRadius
-                gradient: Gradient {
-                    GradientStop {
-                        position: 0
-                        color: root.weatherPalette ? root.weatherPalette.bg2 : "transparent"
-                    }
-                    GradientStop {
-                        position: 0.55
-                        color: root.weatherPalette ? root.weatherPalette.bg1 : "transparent"
-                    }
-                    GradientStop {
-                        position: 1
-                        color: root.weatherPalette ? root.weatherPalette.bg3 : "transparent"
-                    }
-                }
-                opacity: root.weatherPalette ? 0.65 : 0
-
-                Behavior on opacity {
-                    NumberAnimation { duration: 400; easing.type: Easing.InOutCubic }
-                }
-            }
-
-            Content.WeatherParticles {
-                anchors.fill: parent
-                wtype: root.weatherParticleType
-                windKmh: root.weatherWind
-                tint: root.weatherPalette ? root.weatherPalette.accent : root.accentColor
-                active: !root.reduceMotion
-            }
-        }
     }
 
     // session_lock_xray paints the desktop through anything translucent.
@@ -333,7 +295,7 @@ Item {
             baseRadius: root.liveRadius
             // The face carries none of the bar's modules, so unlocking cross-fades.
             opacity: (root.startOpacity
-                + (root.faceOpacity - root.startOpacity) * root.mpH) * root.exitFade
+                + (root.faceOpacity - root.startOpacity) * root.morphProgress) * root.exitFade
 
             theme: root.themeRef
             gradientEnabled: false
@@ -370,12 +332,12 @@ Item {
                         width: parent.width * 0.86
                         text: root.timeText
                         color: root.clockColor
-                        opacity: root.clockOpacity
+                        opacity: 0.7
                         horizontalAlignment: Text.AlignHCenter
                         fontSizeMode: Text.HorizontalFit
                         minimumPixelSize: Math.round(root.cellH * 0.2)
-                        font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
-                        font.weight: root.clockWeight
+                        font.family: root.faceFontFamily
+                        font.weight: 200
                         font.pixelSize: Math.round(root.cellH * 0.5)
                         font.letterSpacing: root.cellH * 0.5 * 0.02
                         font.hintingPreference: root.typo
@@ -393,7 +355,7 @@ Item {
 
                     LockCalendarMonth {
                         anchors.fill: parent
-                        typo: root.typo
+                        fontFamily: root.faceFontFamily
                         tint: root.clockColor
                         faintTint: root.subtleColor
                         accent: root.accentColor
@@ -410,12 +372,42 @@ Item {
                     height: root.rowSpan(2)
                     cornerRadius: root.boxRadius
                     opacity: root.columnReveal(0)
-                    background: weatherBackdrop
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: root.boxRadius
+                        gradient: Gradient {
+                            GradientStop {
+                                position: 0
+                                color: root.weatherPalette ? root.weatherPalette.bg2 : "transparent"
+                            }
+                            GradientStop {
+                                position: 0.55
+                                color: root.weatherPalette ? root.weatherPalette.bg1 : "transparent"
+                            }
+                            GradientStop {
+                                position: 1
+                                color: root.weatherPalette ? root.weatherPalette.bg3 : "transparent"
+                            }
+                        }
+                        opacity: root.weatherPalette ? 0.65 : 0
+
+                        Behavior on opacity {
+                            NumberAnimation { duration: 400; easing.type: Easing.InOutCubic }
+                        }
+                    }
+
+                    Content.WeatherParticles {
+                        anchors.fill: parent
+                        wtype: root.weatherParticleType
+                        windKmh: root.weatherWind
+                        tint: root.weatherPalette ? root.weatherPalette.accent : root.accentColor
+                        active: !root.reduceMotion
+                    }
 
                     LockWeatherBox {
                         anchors.fill: parent
                         anchors.margins: root.cellH * 0.2
-                        typo: root.typo
+                        fontFamily: root.faceFontFamily
                         tint: root.clockColor
                         faintTint: root.subtleColor
                         unit: Math.round(root.cellH * 0.2)
@@ -483,8 +475,8 @@ Item {
                                 id: shackleGlyph
                                 anchors.fill: parent
                                 source: root.iconsBase + "/lock-shackle.svg"
-                                sourceSize.width: width
-                                sourceSize.height: height
+                                sourceSize.width: width * 2
+                                sourceSize.height: height * 2
                                 mipmap: true
                                 visible: false
                             }
@@ -501,8 +493,8 @@ Item {
                             id: bodyGlyph
                             anchors.fill: parent
                             source: root.iconsBase + "/lock-body.svg"
-                            sourceSize.width: width
-                            sourceSize.height: height
+                            sourceSize.width: width * 2
+                            sourceSize.height: height * 2
                             mipmap: true
                             visible: false
                         }
@@ -526,7 +518,7 @@ Item {
 
                     LockMoonPhase {
                         anchors.fill: parent
-                        typo: root.typo
+                        fontFamily: root.faceFontFamily
                         textureSource: root.texturesBase === ""
                             ? "" : root.texturesBase + "/moon-nearside.png"
                         tint: root.clockColor
@@ -548,7 +540,7 @@ Item {
                     LockGlowOrb {
                         id: glowOrb
                         anchors.fill: parent
-                        typo: root.typo
+                        fontFamily: root.faceFontFamily
                         tint: root.clockColor
                         faintTint: root.subtleColor
                         accent: root.accentColor
@@ -566,7 +558,7 @@ Item {
                     cornerRadius: root.boxRadius
                     opacity: root.columnReveal(1)
 
-                    typo: root.typo
+                    fontFamily: root.faceFontFamily
                     tint: root.clockColor
                     faintTint: root.subtleColor
                     iconsBase: root.iconsBase
@@ -625,7 +617,7 @@ Item {
                     LockHourSand {
                         id: hourSand
                         anchors.fill: parent
-                        typo: root.typo
+                        fontFamily: root.faceFontFamily
                         tint: root.clockColor
                         faintTint: root.subtleColor
                         accent: root.accentColor
@@ -657,7 +649,7 @@ Item {
 
                         LockPowerButton {
                             anchors.fill: parent
-                            typo: root.typo
+                            fontFamily: root.faceFontFamily
                             tint: root.clockColor
                             unit: Math.round(root.cellH * 0.18)
                             source: root.iconsBase + powerBox.modelData.icon
@@ -773,11 +765,7 @@ Item {
         id: morphEntry
 
         NumberAnimation {
-            target: root; property: "mpH"; to: 1
-            duration: root.morphDuration; easing.type: Easing.OutExpo
-        }
-        NumberAnimation {
-            target: root; property: "mpV"; to: 1
+            target: root; property: "morphProgress"; to: 1
             duration: root.morphDuration; easing.type: Easing.OutExpo
         }
         NumberAnimation {
@@ -821,9 +809,8 @@ Item {
                 easing.type: Easing.OutCubic
             }
         }
-        // mpH/mpV are the identity here, but the geometry bindings read them.
-        NumberAnimation { target: root; property: "mpH"; to: 1; duration: 0 }
-        NumberAnimation { target: root; property: "mpV"; to: 1; duration: 0 }
+        // The geometry bindings read it even when this path does not morph.
+        NumberAnimation { target: root; property: "morphProgress"; to: 1; duration: 0 }
     }
 
     SequentialAnimation {
@@ -895,11 +882,7 @@ Item {
         }
 
         NumberAnimation {
-            target: root; property: "mpH"; to: 0
-            duration: root.morphDuration; easing.type: Easing.OutExpo
-        }
-        NumberAnimation {
-            target: root; property: "mpV"; to: 0
+            target: root; property: "morphProgress"; to: 0
             duration: root.morphDuration; easing.type: Easing.OutExpo
         }
         NumberAnimation {
