@@ -1,6 +1,11 @@
 singleton Hypr 1.0 Hypr.qml
+singleton CalendarGrid 1.0 CalendarGrid.qml
+singleton CalendarCli 1.0 CalendarCli.qml
+singleton Format 1.0 Format.qml
+singleton JsonStore 1.0 JsonStore.qml
 singleton ModulePalettes 1.0 ModulePalettes.qml
 singleton Motion 1.0 Motion.qml
+singleton Metrics 1.0 Metrics.qml
 singleton Paths 1.0 Paths.qml
 singleton YuraCtl 1.0 YuraCtl.qml
 AiBackend 1.0 AiBackend.qml
