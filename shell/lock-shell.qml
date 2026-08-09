@@ -86,22 +86,6 @@ ShellRoot {
         return largestScreenName()
     }
 
-    function tuningKnob(name, fallback) {
-        const override = parseFloat(Quickshell.env(name))
-        return isFinite(override) && override >= 0 && override <= 1
-            ? override : fallback
-    }
-
-    readonly property real surfaceOpacity: tuningKnob("MUGEN_LOCK_OPACITY", 0.92)
-
-    // Pre-scale, in the same margin units the bar itself uses.
-    readonly property int faceMarginBase: {
-        const override = parseInt(Quickshell.env("MUGEN_LOCK_MARGIN"), 10)
-        return isFinite(override) && override >= 0 && override <= 200
-            ? override : settingsManager.barMarginV
-    }
-    readonly property real dimStrength: tuningKnob("MUGEN_LOCK_DIM", 0.30)
-
     property bool rectHandled: false
     property bool hideSent: false
     property bool restoreSent: false
@@ -571,10 +555,8 @@ ShellRoot {
                 exitHeight: root.barExitH
                 exitRadius: root.barExitRadius
 
-                marginBase: root.faceMarginBase
+                marginBase: settingsManager.barMarginV
                 radiusBase: settingsManager.barRadius
-                faceOpacity: root.surfaceOpacity
-                dimStrength: root.dimStrength
 
                 timeText: root.timeText
                 today: root.today

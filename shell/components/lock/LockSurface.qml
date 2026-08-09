@@ -37,8 +37,9 @@ Item {
 
     property int marginBase: 6
     property int radiusBase: 50
-    property real faceOpacity: 0.92
-    property real dimStrength: 0.30
+    // Opaque: the desktop shows only through the margin around the face.
+    property real faceOpacity: 1.0
+    property real dimStrength: 0.60
 
     property string timeText: ""
     property date today: new Date()
