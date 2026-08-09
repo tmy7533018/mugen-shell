@@ -501,6 +501,16 @@ ShellRoot {
         id: sessionLock
         locked: root.lockEngaged
 
+        // A refused lock arrives as locked dropping on its own; lingering would poison lock.pid.
+        onLockStateChanged: {
+            if (locked || !root.lockEngaged || root.unlocking) return
+            root.refusedToLock = true
+            console.warn("lock: the compositor refused the session lock - releasing")
+            root.releaseBlur()
+            root.sendBarRestore()
+            Qt.quit()
+        }
+
         onSecureStateChanged: {
             if (root.readyFile === "") return
             readyStamp.command = secure
