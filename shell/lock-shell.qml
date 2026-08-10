@@ -29,6 +29,7 @@ ShellRoot {
     property bool authenticating: false
     property bool pamPrompted: false
     property bool unlocking: false
+    property bool pamFailureNotified: false
 
     // xray shows the desktop until the face is opaque, and sleep does not wait for the fade.
     readonly property bool instantEntry: Quickshell.env("MUGEN_LOCK_INSTANT") === "1"
@@ -197,6 +198,13 @@ ShellRoot {
             pamService = 0
             pamRetryTimer.restart()
             console.warn("lock: no usable PAM service, retrying")
+            if (!pamFailureNotified) {
+                pamFailureNotified = true
+                Quickshell.execDetached([
+                    "notify-send", "-u", "critical", "mugen-shell",
+                    "Lock screen can't reach any PAM service; retrying, but the password field won't work until it recovers."
+                ])
+            }
             return
         }
         refusedToLock = true
@@ -516,6 +524,8 @@ ShellRoot {
         }
 
         onSecureStateChanged: {
+            // The softened radius was only for the lock surface's first frame.
+            if (secure) root.restoreDesktopBlur()
             if (root.readyFile === "") return
             readyStamp.command = secure
                 ? ["sh", "-c", "mkdir -p \"$(dirname \"$1\")\" && : > \"$1\"",

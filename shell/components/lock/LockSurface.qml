@@ -102,7 +102,8 @@ Item {
     readonly property real startOpacity: morphing ? sourceOpacity : faceOpacity
 
     property real morphProgress: 0
-    property real dimProgress: 0
+    // Floor, not 0: session_lock_xray paints the desktop before entryStarted's first tick.
+    property real dimProgress: 0.5
     property real contentFade: 0
     property real groupFade: 0
     property real faceEnterScale: 1
