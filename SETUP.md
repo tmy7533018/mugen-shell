@@ -31,7 +31,7 @@ mkdir -p ~/.local/share/mugen-shell/sounds && cp /run/current-system/sw/share/so
 <details>
 <summary><b>Path A — NixOS</b></summary>
 
-NixOS では、アンブレラ flake (`?dir=nixos`) を使います:
+NixOS では、リポジトリ root の flake 一つで済みます:
 
 ```nix
 # /etc/nixos/flake.nix
@@ -40,7 +40,7 @@ NixOS では、アンブレラ flake (`?dir=nixos`) を使います:
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
-    mugen-shell.url = "github:tmy7533018/mugen-shell?dir=nixos";
+    mugen-shell.url = "github:tmy7533018/mugen-shell";
     mugen-shell.inputs.nixpkgs.follows = "nixpkgs";
   };
 

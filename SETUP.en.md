@@ -31,7 +31,7 @@ Three install paths — open the one that matches your setup.
 <details>
 <summary><b>Path A — NixOS</b></summary>
 
-NixOS users go through the umbrella flake at `?dir=nixos`:
+NixOS users just need the repo root flake:
 
 ```nix
 # /etc/nixos/flake.nix
@@ -40,7 +40,7 @@ NixOS users go through the umbrella flake at `?dir=nixos`:
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
-    mugen-shell.url = "github:tmy7533018/mugen-shell?dir=nixos";
+    mugen-shell.url = "github:tmy7533018/mugen-shell";
     mugen-shell.inputs.nixpkgs.follows = "nixpkgs";
   };
 

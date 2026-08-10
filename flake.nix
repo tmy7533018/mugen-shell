@@ -4,10 +4,15 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+
+    home-manager = {
+      url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
-    { self, nixpkgs, flake-utils }:
+    { self, nixpkgs, flake-utils, home-manager }:
     let
       # The home-manager module defaults to `pkgs.mugen-shell`, which only
       # resolves once this overlay is applied.
@@ -15,12 +20,75 @@
         mugen-ai = self.packages.${prev.system}.mugen-ai;
         mugen-shell = self.packages.${prev.system}.mugen-shell;
       };
+
+      nixosModule =
+        { ... }:
+        {
+          imports = [ ./nixos/module.nix ];
+          nixpkgs.overlays = [ overlay ];
+        };
     in
     {
       overlays.default = overlay;
 
       homeManagerModules.default = ./nix/home-manager.nix;
       homeManagerModules.mugen-shell = ./nix/home-manager.nix;
+
+      nixosModules.default = nixosModule;
+      nixosModules.mugen-shell = nixosModule;
+
+      # Build-only scaffold, never a real host: it exists so eval/type errors
+      # in module.nix surface in CI rather than on someone's machine.
+      nixosConfigurations.smoke = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          nixosModule
+          ({ pkgs, ... }: {
+            programs.mugen-shell.enable = true;
+
+            # Bare minimum to make a NixOS config evaluate.
+            boot.loader.grub.device = "nodev";
+            fileSystems."/" = { device = "/dev/null"; fsType = "tmpfs"; };
+            users.users.test = {
+              isNormalUser = true;
+              home = "/home/test";
+            };
+            system.stateVersion = "25.05";
+          })
+        ];
+      };
+
+      nixosConfigurations.vm = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          nixosModule
+          home-manager.nixosModules.home-manager
+          ./nixos/vm.nix
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.users.mugen = { lib, ... }: {
+              imports = [ self.homeManagerModules.default ];
+              programs.mugen-shell = {
+                enable = true;
+                # module.nix already installs the stack system-wide.
+                includeSystemDeps = false;
+              };
+              home.stateVersion = "25.05";
+
+              # Hardware cursor planes are unreliable on QEMU's virtio-gpu.
+              # Appends, because installMugenSystemDefaults only copies once.
+              home.activation.vmHyprCursorTweak =
+                lib.hm.dag.entryAfter [ "installMugenSystemDefaults" ] ''
+                  conf="$HOME/.config/hypr/hyprland.conf"
+                  if [[ -f "$conf" ]] && ! grep -q no_hardware_cursors "$conf"; then
+                    printf '\n# QEMU/virtio: hardware cursor planes are unreliable\ncursor {\n  no_hardware_cursors = true\n}\n' >> "$conf"
+                  fi
+                '';
+            };
+          }
+        ];
+      };
     }
     // flake-utils.lib.eachDefaultSystem (
       system:
