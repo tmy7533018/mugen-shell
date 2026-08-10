@@ -244,6 +244,9 @@ QtObject {
             if (settings.barBackground) {
                 if (settings.barBackground.enabled !== undefined) {
                     moduleBackdropEnabled = settings.barBackground.enabled
+                } else if (settings.barBackground.gradientEnabled !== undefined) {
+                    // Pre-839a636 key: same on/off, renamed when the flat gradient was dropped.
+                    moduleBackdropEnabled = settings.barBackground.gradientEnabled
                 }
                 if (settings.barBackground.palette !== undefined) {
                     moduleBackdropPalette = settings.barBackground.palette
