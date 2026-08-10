@@ -773,6 +773,7 @@ FocusScope {
 
     Component.onCompleted: {
         loadFavoritesProcess.running = true
+        iconThemeProcess.running = true
         if (modeManager) {
             modeManager.registerMode("launcher", root)
             if (modeManager.isMode("launcher")) {

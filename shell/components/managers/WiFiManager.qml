@@ -41,7 +41,8 @@ QtObject {
                 "bash", "-c",
                 "export LANG=C; set -e; tmp=$(mktemp); trap 'rm -f \"$tmp\"' EXIT; " +
                 "printf '802-11-wireless-security.psk:%s\\n' \"$MUGEN_WIFI_PSK\" > \"$tmp\"; " +
-                "nmcli connection delete \"$1\" >/dev/null 2>&1 || true; " +
+                // Reuse an existing profile so its custom settings (e.g. a static IP) survive.
+                "nmcli -t -f NAME connection show | grep -Fxq \"$1\" || " +
                 "nmcli connection add type wifi con-name \"$1\" ssid \"$1\" -- wifi-sec.key-mgmt wpa-psk >/dev/null; " +
                 "nmcli connection up \"$1\" passwd-file \"$tmp\"",
                 "bash", ssid
