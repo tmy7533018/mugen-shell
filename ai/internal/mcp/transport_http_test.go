@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -9,7 +10,7 @@ import (
 	"time"
 )
 
-func recvWithTimeout(t *testing.T, tr *httpTransport) []byte {
+func recvResult(t *testing.T, tr *httpTransport) ([]byte, error) {
 	t.Helper()
 	type res struct {
 		data []byte
@@ -22,14 +23,20 @@ func recvWithTimeout(t *testing.T, tr *httpTransport) []byte {
 	}()
 	select {
 	case r := <-ch:
-		if r.err != nil {
-			t.Fatalf("recv failed: %v", r.err)
-		}
-		return r.data
+		return r.data, r.err
 	case <-time.After(2 * time.Second):
 		t.Fatal("recv timed out")
-		return nil
+		return nil, nil
 	}
+}
+
+func recvWithTimeout(t *testing.T, tr *httpTransport) []byte {
+	t.Helper()
+	data, err := recvResult(t, tr)
+	if err != nil {
+		t.Fatalf("recv failed: %v", err)
+	}
+	return data
 }
 
 func TestHTTPTransportJSONResponse(t *testing.T) {
@@ -100,8 +107,49 @@ func TestHTTPTransportSSEResponse(t *testing.T) {
 	}
 }
 
-func TestHTTPTransportSynthesizesErrorOnFailure(t *testing.T) {
+func TestHTTPTransportBreaksOnDialFailure(t *testing.T) {
 	tr, err := newHTTPTransport("test", "http://127.0.0.1:1") // nothing listens
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tr.close()
+
+	if err := tr.send([]byte(`{"jsonrpc":"2.0","id":9,"method":"ping"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := recvResult(t, tr); err == nil {
+		t.Error("expected recv to report the dead connection")
+	}
+}
+
+func TestHTTPTransportBreaksOnRejectedSession(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "session expired", http.StatusNotFound)
+	}))
+	defer ts.Close()
+
+	tr, err := newHTTPTransport("test", ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tr.close()
+
+	if err := tr.send([]byte(`{"jsonrpc":"2.0","id":9,"method":"tools/call"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := recvResult(t, tr); err == nil {
+		t.Error("expected recv to report the rejected session")
+	}
+}
+
+// A per-call server error leaves the session usable, so only that call fails.
+func TestHTTPTransportSynthesizesErrorOnServerError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "boom", http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	tr, err := newHTTPTransport("test", ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,6 +161,23 @@ func TestHTTPTransportSynthesizesErrorOnFailure(t *testing.T) {
 	got := recvWithTimeout(t, tr)
 	if !strings.Contains(string(got), `"error"`) || !strings.Contains(string(got), `"id":9`) {
 		t.Errorf("expected synthesized JSON-RPC error for id 9, got: %s", got)
+	}
+}
+
+// Manager.Call re-dials on Closed(), so the break has to have arrived by the time the call returns.
+func TestClientClosedAfterHTTPBreak(t *testing.T) {
+	tr, err := newHTTPTransport("test", "http://127.0.0.1:1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := newClient("test", tr)
+	defer c.Close()
+
+	if _, err := c.CallTool(context.Background(), "anything", nil); err == nil {
+		t.Error("expected the call to fail")
+	}
+	if !c.Closed() {
+		t.Error("expected the client to report closed so Manager.Call re-dials")
 	}
 }
 

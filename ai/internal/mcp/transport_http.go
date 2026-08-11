@@ -27,11 +27,14 @@ type httpTransport struct {
 
 	mu      sync.Mutex
 	session string // Mcp-Session-Id, when the server issues one
+	failErr error
 
 	outbound  chan []byte
 	queue     chan []byte
 	done      chan struct{}
+	broken    chan struct{}
 	closeOnce sync.Once
+	breakOnce sync.Once
 }
 
 func newHTTPTransport(name, rawURL string) (*httpTransport, error) {
@@ -50,6 +53,7 @@ func newHTTPTransport(name, rawURL string) (*httpTransport, error) {
 		outbound: make(chan []byte, 32),
 		queue:    make(chan []byte, 32),
 		done:     make(chan struct{}),
+		broken:   make(chan struct{}),
 	}
 	go t.sendLoop()
 	return t, nil
@@ -99,7 +103,7 @@ func (t *httpTransport) post(data []byte) {
 
 	resp, err := t.client.Do(req)
 	if err != nil {
-		t.deliverError(probe.ID, hasID, fmt.Sprintf("http transport: %v", err))
+		t.fail(fmt.Errorf("http transport: %w", err))
 		return
 	}
 	defer resp.Body.Close()
@@ -114,14 +118,14 @@ func (t *httpTransport) post(data []byte) {
 	case resp.StatusCode == http.StatusAccepted:
 		return // notification/response accepted, nothing comes back
 	case resp.StatusCode >= 400:
-		// Without dropping the stale id, a restarted server stays wedged behind a dead session.
-		if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusUnauthorized {
-			t.mu.Lock()
-			t.session = ""
-			t.mu.Unlock()
-		}
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		t.deliverError(probe.ID, hasID, fmt.Sprintf("http transport: server returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(body))))
+		text := fmt.Sprintf("http transport: server returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		// A rejected session cannot be re-initialized in place, so hand the whole transport back to re-dial.
+		if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusUnauthorized {
+			t.fail(errors.New(text))
+			return
+		}
+		t.deliverError(probe.ID, hasID, text)
 		return
 	}
 
@@ -195,10 +199,24 @@ func (t *httpTransport) deliverError(id json.RawMessage, hasID bool, text string
 	t.deliver(out)
 }
 
+// Only a dropped connection makes Closed() report the break that Manager.Call re-dials on.
+func (t *httpTransport) fail(err error) {
+	t.breakOnce.Do(func() {
+		t.mu.Lock()
+		t.failErr = err
+		t.mu.Unlock()
+		close(t.broken)
+	})
+}
+
 func (t *httpTransport) recv() ([]byte, error) {
 	select {
 	case msg := <-t.queue:
 		return msg, nil
+	case <-t.broken:
+		t.mu.Lock()
+		defer t.mu.Unlock()
+		return nil, t.failErr
 	case <-t.done:
 		return nil, io.EOF
 	}
