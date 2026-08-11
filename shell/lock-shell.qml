@@ -29,7 +29,7 @@ ShellRoot {
     property bool authenticating: false
     property bool pamPrompted: false
     property bool unlocking: false
-    property bool pamFailureNotified: false
+    property bool pamFaulted: false
 
     // xray shows the desktop until the face is opaque, and sleep does not wait for the fade.
     readonly property bool instantEntry: Quickshell.env("MUGEN_LOCK_INSTANT") === "1"
@@ -196,15 +196,10 @@ ShellRoot {
         }
         if (lockEngaged) {
             pamService = 0
+            // A notification would only surface after the unlock it is warning about.
+            pamFaulted = true
             pamRetryTimer.restart()
             console.warn("lock: no usable PAM service, retrying")
-            if (!pamFailureNotified) {
-                pamFailureNotified = true
-                Quickshell.execDetached([
-                    "notify-send", "-u", "critical", "mugen-shell",
-                    "Lock screen can't reach any PAM service; retrying, but the password field won't work until it recovers."
-                ])
-            }
             return
         }
         refusedToLock = true
@@ -436,6 +431,7 @@ ShellRoot {
         onResponseRequiredChanged: {
             if (!responseRequired) return
             root.pamPrompted = true
+            root.pamFaulted = false
             root.armed = true
             root.engageLock()
         }
@@ -444,6 +440,7 @@ ShellRoot {
         onPamMessage: {
             if (!responseRequired) return
             root.pamPrompted = true
+            root.pamFaulted = false
             root.authenticating = false
             root.armed = true
         }
@@ -574,6 +571,8 @@ ShellRoot {
                 calendarEvents: root.calendarEvents
 
                 passwordLength: root.password.length
+                faultText: root.pamFaulted
+                    ? "Authentication is unavailable — retrying" : ""
                 authenticating: root.authenticating
                 unlocking: root.unlocking
                 unlockGrace: root.unlockGrace

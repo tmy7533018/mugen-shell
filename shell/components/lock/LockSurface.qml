@@ -74,6 +74,7 @@ Item {
     signal powerActionRequested(int action)
 
     property int passwordLength: 0
+    property string faultText: ""
     property bool authenticating: false
     property bool unlocking: false
     property int unlockGrace: 0
@@ -517,6 +518,21 @@ Item {
                             color: root.clockColor
                             opacity: lockIcon.glyphOpacity
                         }
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: root.cellH * 0.17
+                        width: parent.width * 0.82
+                        text: root.faultText
+                        visible: root.faultText !== ""
+                        color: root.errorColor
+                        opacity: 0.9
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        font.family: root.faceFontFamily
+                        font.pixelSize: Math.round(root.cellH * 0.13)
                     }
                 }
 
