@@ -398,7 +398,7 @@ Item {
         Common.GlowText {
             anchors.centerIn: parent
             anchors.horizontalCenterOffset: -70
-            text: "Dream rhythm loading..."
+            text: "Nothing playing"
             color: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70)
             font.pixelSize: 22
             font.weight: Font.Light
