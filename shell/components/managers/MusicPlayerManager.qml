@@ -39,6 +39,7 @@ QtObject {
     property string _artBroken: ""
     property string _artVideoId: ""
     property string _artWanted: ""
+    property real _artTrackSince: 0
     property string status: "Stopped"
     property bool isPlaying: status === "Playing"
     property bool isAvailable: availablePlayers.length > 0
@@ -141,11 +142,23 @@ QtObject {
         return id === "" ? "" : "https://img.youtube.com/vi/" + id + "/hqdefault.jpg"
     }
 
+    // Firefox stages the cover it fetched for the page but never publishes it as mpris:artUrl.
+    readonly property string firefoxArtSource: "firefox-mpris"
+    readonly property int artStageGraceSeconds: 10
+
     readonly property string artCacheScript: 'dir="${XDG_CACHE_HOME:-$HOME/.cache}/mugen-shell/art"\n'
         + 'mkdir -p "$dir" || exit 1\n'
-        + 'f="$dir/$(printf %s "$1" | sha1sum | cut -c1-32)"\n'
+        + 'src="$1"\n'
+        + 'key="$1"\n'
+        + 'if [ "$src" = "firefox-mpris" ]; then\n'
+        + '  src=$(ls -t "${XDG_CONFIG_HOME:-$HOME/.config}/mozilla/firefox/firefox-mpris/"* 2>/dev/null | head -1)\n'
+        + '  [ -n "$src" ] && [ "$(stat -c %Y "$src")" -ge "$3" ] || exit 1\n'
+        + '  key="$src:$(stat -c %Y "$src")"\n'
+        + '  src="file://$src"\n'
+        + 'fi\n'
+        + 'f="$dir/$(printf %s "$key" | sha1sum | cut -c1-32)"\n'
         + 'if [ ! -s "$f" ]; then\n'
-        + '  curl -sfL --max-time 10 --max-filesize 8388608 -o "$f.part" "$1" || { rm -f "$f.part"; exit 1; }\n'
+        + '  curl -sfL --max-time 10 --max-filesize 8388608 -o "$f.part" "$src" || { rm -f "$f.part"; exit 1; }\n'
         + '  python3 "$2" "$f.part" 2>/dev/null\n'
         + '  mv -f "$f.part" "$f" || exit 1\n'
         + '  ls -1t "$dir" | tail -n +129 | (cd "$dir" && xargs -r rm -f)\n'
@@ -173,19 +186,20 @@ QtObject {
         if (artCacheProcess.running) return
         // Firefox keeps one MPRIS art file at a time and unlinks it on the next track, so copy it out too.
         if (!_artWanted.startsWith("http://") && !_artWanted.startsWith("https://")
-            && !_artWanted.startsWith("file://")) {
+            && !_artWanted.startsWith("file://") && _artWanted !== firefoxArtSource) {
             artUrl = _artWanted
             return
         }
         // A fetch that failed still beats an empty slot, so show the source until a retry lands.
         if (_artWanted === _artUnreachable) {
-            artUrl = _artWanted
+            artUrl = _artWanted === firefoxArtSource ? "" : _artWanted
             return
         }
         if (_artWanted === _artCachedUrl) return
         _artFetching = _artWanted
         artCacheProcess.command = ["bash", "-c", artCacheScript, "bash", _artWanted,
-                                  Quickshell.shellDir + "/scripts/trim-art-bars.py"]
+                                  Quickshell.shellDir + "/scripts/trim-art-bars.py",
+                                  String(Math.floor(_artTrackSince))]
         artCacheProcess.running = true
     }
 
@@ -316,6 +330,10 @@ QtObject {
                     let trackKey = newTitle + "|" + newArtist
                     let trackChanged = trackKey !== musicManager._artTrackKey
                     if (trackChanged) {
+                        // A file staged before the shell started is still this track's, so only stamp later switches.
+                        musicManager._artTrackSince = musicManager._artTrackKey === ""
+                            ? 0
+                            : Date.now() / 1000 - musicManager.artStageGraceSeconds
                         musicManager._artBroken = ""
                         musicManager._artVideoId = ""
                         musicManager._artTrackKey = trackKey
@@ -336,6 +354,9 @@ QtObject {
                             musicManager._artIsFallback = newArtUrl === ""
                             // Re-adopting a url that already failed to render would loop it back to empty.
                             if (newArtUrl === musicManager._artBroken) newArtUrl = ""
+                            if (newArtUrl === "" && musicManager.activePlayer.includes("firefox")) {
+                                newArtUrl = musicManager.firefoxArtSource
+                            }
                         }
                     } else {
                         newArtUrl = musicManager._artWanted
