@@ -195,50 +195,59 @@ Item {
                             spacing: root.scaled(2)
 
                             Text {
+                                Layout.alignment: Qt.AlignLeft
                                 text: root.weatherManager ? root.weatherManager.locationName : ""
                                 font.family: "M PLUS 2"; font.pixelSize: root.scaled(10.5)
                                 font.letterSpacing: 2.5
                                 font.capitalization: Font.AllUppercase
                                 color: root.cDim
                             }
-                            RowLayout {
-                                Layout.topMargin: root.scaled(4)
-                                spacing: root.scaled(10)
+
+                            Item { Layout.fillHeight: true }
+
+                            ColumnLayout {
+                                Layout.alignment: Qt.AlignHCenter
+                                spacing: root.scaled(2)
+
+                                RowLayout {
+                                    spacing: root.scaled(10)
+                                    Text {
+                                        id: bigTemp
+                                        Layout.preferredHeight: root.scaled(62)
+                                        verticalAlignment: Text.AlignVCenter
+                                        text: root.weatherManager ? Math.round(root.weatherManager.temperature) + "°" : "—"
+                                        font.family: "M PLUS 2"; font.pixelSize: root.scaled(58); font.weight: Font.Light
+                                        color: root.cFg
+                                        layer.enabled: true
+                                        layer.effect: Glow { color: root.cGlow; radius: 14; samples: 25; spread: 0.2; transparentBorder: true }
+                                    }
+                                    UI.SvgIcon {
+                                        Layout.alignment: Qt.AlignVCenter
+                                        Layout.preferredWidth: root.scaled(58)
+                                        Layout.preferredHeight: root.scaled(58)
+                                        source: (root.icons && root.weatherManager) ? root.icons.weatherIcon(root.weatherManager.weatherCode, root.weatherManager.isDay) : ""
+                                        color: root.cAccent
+                                        layer.enabled: true
+                                        layer.effect: Glow { color: root.cGlow; radius: 10; samples: 21; spread: 0.3; transparentBorder: true }
+                                    }
+                                }
                                 Text {
-                                    id: bigTemp
-                                    Layout.preferredHeight: root.scaled(62)
-                                    verticalAlignment: Text.AlignVCenter
-                                    text: root.weatherManager ? Math.round(root.weatherManager.temperature) + "°" : "—"
-                                    font.family: "M PLUS 2"; font.pixelSize: root.scaled(58); font.weight: Font.Light
-                                    color: root.cFg
-                                    layer.enabled: true
-                                    layer.effect: Glow { color: root.cGlow; radius: 14; samples: 25; spread: 0.2; transparentBorder: true }
+                                    Layout.topMargin: root.scaled(5)
+                                    text: (root.icons && root.weatherManager) ? root.icons.weatherText(root.weatherManager.weatherCode) : ""
+                                    font.family: "M PLUS 2"; font.pixelSize: root.scaled(15)
+                                    color: root.cDim
                                 }
-                                UI.SvgIcon {
-                                    Layout.alignment: Qt.AlignVCenter
-                                    Layout.preferredWidth: root.scaled(58)
-                                    Layout.preferredHeight: root.scaled(58)
-                                    source: (root.icons && root.weatherManager) ? root.icons.weatherIcon(root.weatherManager.weatherCode, root.weatherManager.isDay) : ""
-                                    color: root.cAccent
-                                    layer.enabled: true
-                                    layer.effect: Glow { color: root.cGlow; radius: 10; samples: 21; spread: 0.3; transparentBorder: true }
+                                Text {
+                                    Layout.topMargin: root.scaled(12)
+                                    text: root.weatherManager ? ("Feels " + Math.round(root.weatherManager.feelsLike) + "°   ·   Humidity " + root.weatherManager.humidity + "%") : ""
+                                    font.family: "M PLUS 2"; font.pixelSize: root.scaled(11.5); color: root.cDim
+                                }
+                                Text {
+                                    text: root.weatherManager ? "Wind " + Math.round(root.weatherManager.wind) + " km/h" : ""
+                                    font.family: "M PLUS 2"; font.pixelSize: root.scaled(11.5); color: root.cDim
                                 }
                             }
-                            Text {
-                                Layout.topMargin: root.scaled(5)
-                                text: (root.icons && root.weatherManager) ? root.icons.weatherText(root.weatherManager.weatherCode) : ""
-                                font.family: "M PLUS 2"; font.pixelSize: root.scaled(15)
-                                color: root.cDim
-                            }
-                            Text {
-                                Layout.topMargin: root.scaled(12)
-                                text: root.weatherManager ? ("Feels " + Math.round(root.weatherManager.feelsLike) + "°   ·   Humidity " + root.weatherManager.humidity + "%") : ""
-                                font.family: "M PLUS 2"; font.pixelSize: root.scaled(11.5); color: root.cDim
-                            }
-                            Text {
-                                text: root.weatherManager ? "Wind " + Math.round(root.weatherManager.wind) + " km/h" : ""
-                                font.family: "M PLUS 2"; font.pixelSize: root.scaled(11.5); color: root.cDim
-                            }
+
                             Item { Layout.fillHeight: true }
                         }
                     }
