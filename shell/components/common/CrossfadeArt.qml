@@ -17,7 +17,15 @@ Item {
     onSourceChanged: root.adopt()
 
     function adopt() {
-        if (root.source === "") return
+        // Holding the layers would leave the previous track's art up for a track that has none.
+        if (root.source === "") {
+            fade.stop()
+            layerA.url = ""
+            layerB.url = ""
+            layerA.opacity = 0
+            layerB.opacity = 0
+            return
+        }
         const front = root._aIsFront ? layerA : layerB
         const back = root._aIsFront ? layerB : layerA
         if (root.source === front.url) return

@@ -35,6 +35,8 @@ QtObject {
     property string _artTrackKey: ""
     property bool _artIsFallback: false
     property string _artCachedUrl: ""
+    // Distinct from _artUnreachable, which is a fetch failure the retry timer keeps re-arming.
+    property string _artBroken: ""
     property string status: "Stopped"
     property bool isPlaying: status === "Playing"
     property bool isAvailable: availablePlayers.length > 0
@@ -116,7 +118,12 @@ QtObject {
         // Refusing only once we are already showing the derivation is what stops the loop.
         if (url === _artCachedUrl && _artIsFallback) return
         let derived = extractYoutubeThumbnail(_artTrackKey)
-        if (derived === "" || derived === url) return
+        // With no derivation left, holding the url would keep the previous track's art on screen.
+        if (derived === "" || derived === url) {
+            _artBroken = url
+            artUrl = ""
+            return
+        }
         artUrl = derived
         _artIsFallback = true
     }
@@ -149,7 +156,10 @@ QtObject {
 
     function cacheRemoteArt() {
         if (artCacheProcess.running) return
-        if (!artUrl.startsWith("http://") && !artUrl.startsWith("https://")) return
+        // Firefox keeps one MPRIS art file at a time and unlinks it on the next track, so copy it out too.
+        if (!artUrl.startsWith("http://") && !artUrl.startsWith("https://")
+            && !artUrl.startsWith("file://")) return
+        if (artUrl === _artCachedUrl) return
         if (artUrl === _artUnreachable) return
         _artFetching = artUrl
         artCacheProcess.command = ["bash", "-c", artCacheScript, "bash", artUrl,
@@ -280,12 +290,16 @@ QtObject {
                     let newStatus = parts[4] ? parts[4].trim() : "Stopped"
                     let newUrl = (parts.length >= 6 && parts[5]) ? parts[5].trim() : ""
 
-                    let trackKey = newUrl !== "" ? newUrl : (newTitle + "|" + newArtist)
+                    // A YouTube Music playlist reports one url for every track, so the url alone cannot identify one.
+                    let trackKey = newUrl + "|" + newTitle + "|" + newArtist
                     if (trackKey !== musicManager._artTrackKey || musicManager.artUrl === "") {
+                        if (trackKey !== musicManager._artTrackKey) musicManager._artBroken = ""
                         musicManager._artIsFallback = newArtUrl === ""
                         if (newArtUrl === "" && newUrl !== "") {
                             newArtUrl = musicManager.extractYoutubeThumbnail(newUrl)
                         }
+                        // Re-adopting a url that already failed to render would loop it back to empty.
+                        if (newArtUrl === musicManager._artBroken) newArtUrl = ""
                         musicManager._artTrackKey = trackKey
                     } else if (musicManager._artIsFallback && newArtUrl !== "") {
                         musicManager._artIsFallback = false
