@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Trim the solid letterbox/pillarbox bars some services pad cover art with.
 
+Only bars a centered 16:9 or square frame would leave are considered, so a flat
+margin belonging to the art itself is never mistaken for padding.
+
 Rewrites the image in place when bars are found. Exits 0 and leaves the file
 untouched for anything it cannot improve, so callers can ignore the result.
 """
@@ -8,45 +11,46 @@ untouched for anything it cannot improve, so callers can ignore the result.
 import os
 import sys
 
-FLAT_TOLERANCE = 8
-MATCH_TOLERANCE = 12
-MAX_TRIM_RATIO = 0.45
+FLAT_TOLERANCE = 16
+MIN_BAR = 4
+# The bar meets the art, and the bar running the other way, in bands of ringing that are not flat.
+BAR_INSET_RATIO = 0.2
+BAR_END_INSET_RATIO = 0.05
+FRAME_ASPECTS = (16 / 9, 1.0)
 
 
-def is_bar(extrema, reference):
-    for (low, high), ref in zip(extrema, reference):
-        if high - low > FLAT_TOLERANCE or abs((low + high) // 2 - ref) > MATCH_TOLERANCE:
-            return False
-    return True
+def bar_boxes(width, height, aspect):
+    """The pair of bars a centered frame of this aspect leaves, inset away from the art."""
+    if width * 1.0 / height > aspect:
+        bar = (width - round(height * aspect)) // 2
+        deep = max(1, round(bar * BAR_INSET_RATIO))
+        end = max(1, round(height * BAR_END_INSET_RATIO))
+        return bar, [(0, end, bar - deep, height - end),
+                     (width - bar + deep, end, width, height - end)]
+    bar = (height - round(width / aspect)) // 2
+    deep = max(1, round(bar * BAR_INSET_RATIO))
+    end = max(1, round(width * BAR_END_INSET_RATIO))
+    return bar, [(end, 0, width - end, bar - deep),
+                 (end, height - bar + deep, width - end, height)]
 
 
-def bar_width(image, span, box_at):
-    reference = [(low + high) // 2 for low, high in image.crop(box_at(0)).getextrema()]
-    offset = 0
-    while offset < span and is_bar(image.crop(box_at(offset)).getextrema(), reference):
-        offset += 1
-    return offset
+def is_flat(image, box):
+    if box[2] - box[0] < 1 or box[3] - box[1] < 1:
+        return False
+    return all(high - low <= FLAT_TOLERANCE for low, high in image.crop(box).getextrema())
 
 
-def bars(image):
-    width, height = image.size
-
-    left = bar_width(image, width, lambda x: (x, 0, x + 1, height))
-    if left >= width:
-        return 0, 0, 0, 0
-    right = bar_width(image, width, lambda x: (width - 1 - x, 0, width - x, height))
-    if left > width * MAX_TRIM_RATIO or right > width * MAX_TRIM_RATIO:
-        left = right = 0
-
-    inner = image.crop((left, 0, width - right, height))
-    top = bar_width(inner, height, lambda y: (0, y, inner.width, y + 1))
-    if top >= height:
-        return left, right, 0, 0
-    bottom = bar_width(inner, height, lambda y: (0, height - 1 - y, inner.width, height - y))
-    if top > height * MAX_TRIM_RATIO or bottom > height * MAX_TRIM_RATIO:
-        top = bottom = 0
-
-    return left, right, top, bottom
+def unpad(image):
+    for aspect in FRAME_ASPECTS:
+        width, height = image.size
+        bar, boxes = bar_boxes(width, height, aspect)
+        if bar < MIN_BAR or not all(is_flat(image, box) for box in boxes):
+            continue
+        if width * 1.0 / height > aspect:
+            image = image.crop((bar, 0, width - bar, height))
+        else:
+            image = image.crop((0, bar, width, height - bar))
+    return image
 
 
 def main():
@@ -70,17 +74,13 @@ def main():
     if width < 8 or height < 8:
         return 0
 
-    left, right, top, bottom = bars(rgb)
-    if left + right + top + bottom == 0:
-        return 0
-
-    box = (left, top, width - right, height - bottom)
-    if box[2] - box[0] < 8 or box[3] - box[1] < 8:
+    trimmed = unpad(rgb)
+    if trimmed.size == rgb.size:
         return 0
 
     staged = path + ".trim"
     try:
-        rgb.crop(box).save(staged, format=image.format or "PNG")
+        trimmed.save(staged, format=image.format or "PNG")
     except Exception:
         try:
             os.remove(staged)
