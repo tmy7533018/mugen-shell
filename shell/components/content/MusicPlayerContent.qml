@@ -336,33 +336,25 @@ Item {
                             visible: !progressSlider.seekable && root.musicManager && root.musicManager.isPlaying
                             anchors.top: parent.top
                             anchors.bottom: parent.bottom
-                            width: parent.width * 0.28
+                            anchors.left: parent.left
+                            anchors.right: parent.right
                             radius: parent.radius
-                            color: Qt.rgba(albumArtDisplay.extractedColor.r, albumArtDisplay.extractedColor.g, albumArtDisplay.extractedColor.b, 0.45)
+                            color: Qt.rgba(albumArtDisplay.extractedColor.r, albumArtDisplay.extractedColor.g, albumArtDisplay.extractedColor.b, 0.55)
 
                             layer.enabled: true
                             layer.effect: Glow {
-                                samples: 32
-                                radius: 14
-                                spread: 0.5
+                                samples: 24
+                                radius: 5
+                                spread: 0.65
                                 color: Qt.rgba(albumArtDisplay.extractedColor.r, albumArtDisplay.extractedColor.g, albumArtDisplay.extractedColor.b, 0.45)
                                 transparentBorder: true
                             }
 
-                            SequentialAnimation on x {
+                            SequentialAnimation on opacity {
                                 running: indeterminateGlow.visible
                                 loops: Animation.Infinite
-                                NumberAnimation {
-                                    from: 0
-                                    to: track.width - indeterminateGlow.width
-                                    duration: 2600
-                                    easing.type: Easing.InOutSine
-                                }
-                                NumberAnimation {
-                                    to: 0
-                                    duration: 2600
-                                    easing.type: Easing.InOutSine
-                                }
+                                NumberAnimation { from: 1.0; to: 0.45; duration: 1100; easing.type: Easing.InOutSine }
+                                NumberAnimation { from: 0.45; to: 1.0; duration: 1100; easing.type: Easing.InOutSine }
                             }
                         }
                     }
