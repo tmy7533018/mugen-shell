@@ -37,6 +37,8 @@ QtObject {
     property string _artCachedUrl: ""
     // Distinct from _artUnreachable, which is a fetch failure the retry timer keeps re-arming.
     property string _artBroken: ""
+    property string _artVideoId: ""
+    property string _artWanted: ""
     property string status: "Stopped"
     property bool isPlaying: status === "Playing"
     property bool isAvailable: availablePlayers.length > 0
@@ -117,21 +119,26 @@ QtObject {
         if (url === "" || url !== artUrl) return
         // Refusing only once we are already showing the derivation is what stops the loop.
         if (url === _artCachedUrl && _artIsFallback) return
-        let derived = extractYoutubeThumbnail(_artTrackKey)
+        let derived = youtubeThumbnail(_artVideoId)
         // With no derivation left, holding the url would keep the previous track's art on screen.
         if (derived === "" || derived === url) {
             _artBroken = url
-            artUrl = ""
+            wantArt("")
             return
         }
-        artUrl = derived
+        wantArt(derived)
         _artIsFallback = true
     }
 
-    function extractYoutubeThumbnail(url) {
+    function extractYoutubeId(url) {
         if (!url) return ""
         var match = url.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/)|youtu\.be\/|music\.youtube\.com\/watch\?.*v=)([\w-]{11})/)
-        return match ? "https://img.youtube.com/vi/" + match[1] + "/mqdefault.jpg" : ""
+        return match ? match[1] : ""
+    }
+
+    // hqdefault is the largest size YouTube generates for every video; maxres/sd 404 on some.
+    function youtubeThumbnail(id) {
+        return id === "" ? "" : "https://img.youtube.com/vi/" + id + "/hqdefault.jpg"
     }
 
     readonly property string artCacheScript: 'dir="${XDG_CACHE_HOME:-$HOME/.cache}/mugen-shell/art"\n'
@@ -149,20 +156,35 @@ QtObject {
     property string _artUnreachable: ""
     property string _artCacheOutput: ""
 
-    onArtUrlChanged: {
+    onArtUrlChanged: extractArtAccent()
+
+    // Publishing the source url would show the untrimmed image until the cached copy lands.
+    function wantArt(url) {
+        if (url === _artWanted) return
+        _artWanted = url
+        if (url === "" || url === _artCachedUrl) {
+            artUrl = url
+            return
+        }
         cacheRemoteArt()
-        extractArtAccent()
     }
 
     function cacheRemoteArt() {
         if (artCacheProcess.running) return
         // Firefox keeps one MPRIS art file at a time and unlinks it on the next track, so copy it out too.
-        if (!artUrl.startsWith("http://") && !artUrl.startsWith("https://")
-            && !artUrl.startsWith("file://")) return
-        if (artUrl === _artCachedUrl) return
-        if (artUrl === _artUnreachable) return
-        _artFetching = artUrl
-        artCacheProcess.command = ["bash", "-c", artCacheScript, "bash", artUrl,
+        if (!_artWanted.startsWith("http://") && !_artWanted.startsWith("https://")
+            && !_artWanted.startsWith("file://")) {
+            artUrl = _artWanted
+            return
+        }
+        // A fetch that failed still beats an empty slot, so show the source until a retry lands.
+        if (_artWanted === _artUnreachable) {
+            artUrl = _artWanted
+            return
+        }
+        if (_artWanted === _artCachedUrl) return
+        _artFetching = _artWanted
+        artCacheProcess.command = ["bash", "-c", artCacheScript, "bash", _artWanted,
                                   Quickshell.shellDir + "/scripts/trim-art-bars.py"]
         artCacheProcess.running = true
     }
@@ -182,7 +204,7 @@ QtObject {
             musicManager._artFetching = ""
             if (exitCode === 0 && path !== "") {
                 musicManager.artRetryTimer.interval = 2000
-                if (musicManager.artUrl === source) {
+                if (musicManager._artWanted === source) {
                     musicManager._artCachedUrl = "file://" + path
                     musicManager.artUrl = musicManager._artCachedUrl
                 }
@@ -290,21 +312,33 @@ QtObject {
                     let newStatus = parts[4] ? parts[4].trim() : "Stopped"
                     let newUrl = (parts.length >= 6 && parts[5]) ? parts[5].trim() : ""
 
-                    // A YouTube Music playlist reports one url for every track, so the url alone cannot identify one.
-                    let trackKey = newUrl + "|" + newTitle + "|" + newArtist
-                    if (trackKey !== musicManager._artTrackKey || musicManager.artUrl === "") {
-                        if (trackKey !== musicManager._artTrackKey) musicManager._artBroken = ""
-                        musicManager._artIsFallback = newArtUrl === ""
-                        if (newArtUrl === "" && newUrl !== "") {
-                            newArtUrl = musicManager.extractYoutubeThumbnail(newUrl)
-                        }
-                        // Re-adopting a url that already failed to render would loop it back to empty.
-                        if (newArtUrl === musicManager._artBroken) newArtUrl = ""
+                    // A YouTube Music playlist reports one url for every track, and reports it bare right after a switch.
+                    let trackKey = newTitle + "|" + newArtist
+                    let trackChanged = trackKey !== musicManager._artTrackKey
+                    if (trackChanged) {
+                        musicManager._artBroken = ""
+                        musicManager._artVideoId = ""
                         musicManager._artTrackKey = trackKey
-                    } else if (musicManager._artIsFallback && newArtUrl !== "") {
-                        musicManager._artIsFallback = false
+                    }
+
+                    let knownId = musicManager._artVideoId
+                    let videoId = musicManager.extractYoutubeId(newUrl) || knownId
+                    let idAppeared = videoId !== knownId
+                    if (idAppeared) musicManager._artVideoId = videoId
+
+                    if (trackChanged || idAppeared || musicManager._artWanted === "") {
+                        // The browser publishes a 60px cover for YouTube Music; the video thumbnail is the same art, larger.
+                        let derived = musicManager.youtubeThumbnail(videoId)
+                        if (derived !== "" && derived !== musicManager._artBroken) {
+                            newArtUrl = derived
+                            musicManager._artIsFallback = true
+                        } else {
+                            musicManager._artIsFallback = newArtUrl === ""
+                            // Re-adopting a url that already failed to render would loop it back to empty.
+                            if (newArtUrl === musicManager._artBroken) newArtUrl = ""
+                        }
                     } else {
-                        newArtUrl = musicManager.artUrl
+                        newArtUrl = musicManager._artWanted
                     }
 
                     // some players only expose xesam:title
@@ -319,7 +353,7 @@ QtObject {
                     musicManager.title = newTitle || ""
                     musicManager.artist = newArtist || ""
                     musicManager.album = newAlbum || ""
-                    musicManager.artUrl = newArtUrl || ""
+                    musicManager.wantArt(newArtUrl || "")
                     musicManager.status = newStatus || "Stopped"
                 } else {
                     if (parts.length > 0) {
@@ -418,7 +452,7 @@ QtObject {
         title = ""
         artist = ""
         album = ""
-        artUrl = ""
+        wantArt("")
         status = "Stopped"
     }
 

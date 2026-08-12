@@ -47,6 +47,7 @@ Item {
             visible: false
             asynchronous: true
             cache: true
+            mipmap: true
 
             onStatusChanged: {
                 if (status === Image.Error && root.musicManager) {
