@@ -55,8 +55,20 @@ ColumnLayout {
             
             readonly property bool needsScroll: originalWidth > parent.width
 
+            // Dropping out of the running condition is what rewinds the scroll; x alone would be overwritten.
+            property bool scrollArmed: true
+
+            Connections {
+                target: root.musicManager
+                function onTitleChanged() {
+                    titleText.scrollArmed = false
+                    titleText.x = 0
+                    Qt.callLater(() => titleText.scrollArmed = true)
+                }
+            }
+
             SequentialAnimation on x {
-                running: titleText.needsScroll && root.musicManager && root.musicManager.isAvailable
+                running: titleText.scrollArmed && titleText.needsScroll && root.musicManager && root.musicManager.isAvailable
                 loops: Animation.Infinite
                 
                 PauseAnimation { duration: 2500 }
