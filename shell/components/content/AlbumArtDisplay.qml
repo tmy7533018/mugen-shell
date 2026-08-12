@@ -31,14 +31,11 @@ Item {
         anchors.centerIn: parent
         width: modeManager.scale(80)
         height: modeManager.scale(80)
-        radius: root.hasArt ? modeManager.scale(12) : width / 2
-        color: "transparent"
-        border.width: 0
+        radius: modeManager.scale(12)
+        color: root.hasArt ? "transparent" : Qt.rgba(1, 1, 1, 0.05)
+        border.width: root.hasArt ? 0 : 1
+        border.color: Qt.rgba(1, 1, 1, 0.12)
         z: 1
-
-        Behavior on radius {
-            NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
-        }
 
         scale: 1.0
 

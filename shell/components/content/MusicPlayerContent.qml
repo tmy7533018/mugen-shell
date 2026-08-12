@@ -15,9 +15,9 @@ Item {
     property var icons
     
     readonly property var requiredBarSize: ({
-        "height": modeManager.scale(120),
-        "leftMargin": modeManager.scale(580),
-        "rightMargin": modeManager.scale(580),
+        "height": modeManager.scale(106),
+        "leftMargin": modeManager.scale(640),
+        "rightMargin": modeManager.scale(640),
         "topMargin": modeManager.normalBarSize.topMargin,
         "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
