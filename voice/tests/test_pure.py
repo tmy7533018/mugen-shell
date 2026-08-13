@@ -14,6 +14,7 @@ from yura.tts.player import (  # noqa: E402
     clean_for_speech,
     join_spoken,
     split_sentences,
+    stream_sentences,
 )
 
 
@@ -63,6 +64,49 @@ class SplitSentences(unittest.TestCase):
     def test_empty(self):
         self.assertEqual(split_sentences(""), [])
         self.assertEqual(split_sentences("   "), [])
+
+    def test_full_width_marks_end_a_sentence(self):
+        self.assertEqual(split_sentences("すごいね！明日は晴れるみたいだよ。"),
+                         ["すごいね！", "明日は晴れるみたいだよ。"])
+
+
+class StreamSentences(unittest.TestCase):
+    def test_first_sentence_lands_before_the_rest_arrives(self):
+        chunks = ["これは長めの日本語の文だよ。", "続きはまだ生成中"]
+        stream = stream_sentences(iter(chunks))
+        self.assertEqual(next(stream), "これは長めの日本語の文だよ。")
+
+    def test_sentence_split_across_chunks(self):
+        self.assertEqual(
+            list(stream_sentences(iter(["これは長めの", "日本語の文だよ。"]))),
+            ["これは長めの日本語の文だよ。"])
+
+    def test_trailing_text_without_a_terminator_still_speaks(self):
+        self.assertEqual(list(stream_sentences(iter(["終わりの句点がない話"]))),
+                         ["終わりの句点がない話"])
+
+    def test_short_tail_waits_for_the_next_chunk(self):
+        # Mid-reply there is no previous sentence to glue onto, so it must not gasp alone.
+        self.assertEqual(
+            list(stream_sentences(iter(["これは長めの日本語の文だよ。", "はい。", "そして最後の文だよ。"]))),
+            ["これは長めの日本語の文だよ。", "はい。そして最後の文だよ。"])
+
+    def test_leading_short_sentence_is_spoken_immediately(self):
+        # An early acknowledgement is the point of streaming, so it does not wait.
+        stream = stream_sentences(iter(["うん。", "それでね、続きの長い話をするよ。"]))
+        self.assertEqual(next(stream), "うん。")
+
+    def test_cleaned_per_sentence(self):
+        self.assertEqual(list(stream_sentences(iter(["やったね🎉すごく長い文だよ。"]))),
+                         ["やったねすごく長い文だよ。"])
+
+    def test_matches_batch_splitting_when_fed_whole(self):
+        text = "これは長めの日本語の文だよ。次の文もそれなりに長いから独立するはず。"
+        self.assertEqual(list(stream_sentences(iter([text]))), split_sentences(text))
+
+    def test_empty(self):
+        self.assertEqual(list(stream_sentences(iter([]))), [])
+        self.assertEqual(list(stream_sentences(iter(["", "  "]))), [])
 
 
 class JoinSpoken(unittest.TestCase):

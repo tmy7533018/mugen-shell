@@ -32,7 +32,7 @@ from .shell import (
 from .shell import state as shell_state
 from .sound import beep, cue
 from .stt import ensure_whisper_server, transcribe
-from .tts import join_spoken, prewarm_tts, speak_guarded
+from .tts import join_spoken, prewarm_tts, speak_guarded, stream_sentences
 
 
 class Daemon:
@@ -166,28 +166,33 @@ class Daemon:
             mirror_bar = shell_ipc_read("panel", "current") == "ai"
             if mirror_bar:
                 shell_ipc("yura", "voice_input", text)
-            reply = self.chat.ask(text)
+            spoken: list[str] = []
+
+            def on_sentence(s: str) -> None:
+                # It is audible now, so the bar must stop showing the turn as still thinking.
+                if not spoken:
+                    set_thinking(False)
+                spoken.append(s)
+                if mirror_bar:
+                    shell_ipc("yura", "voice_reply", join_spoken(spoken))
+
+            # The mic runs through playback so the user can cut in; the monitor also eats the echo residue.
+            monitor = (BargeMonitor(self.capture, self._barge_vad)
+                       if barge_enabled() else NullMonitor())
+            monitor.start()
+            try:
+                speak_guarded(
+                    stream_sentences(self.chat.ask(text, lambda: msg("tool"))),
+                    on_sentence,
+                    should_stop=lambda: (self.cancel.is_set()
+                                         or monitor.triggered))
+            finally:
+                self._barge_seed = monitor.stop()
         finally:
             set_thinking(False)
-        if not reply:
+        if not spoken:
             return False
-        log("yura", reply[:120].replace("\n", " "))
-        spoken: list[str] = []
-
-        def on_sentence(s: str) -> None:
-            spoken.append(s)
-            shell_ipc("yura", "voice_reply", join_spoken(spoken))
-
-        # The mic runs through playback so the user can cut in; the monitor also eats the echo residue.
-        monitor = (BargeMonitor(self.capture, self._barge_vad)
-                   if barge_enabled() else NullMonitor())
-        monitor.start()
-        try:
-            speak_guarded(reply, on_sentence if mirror_bar else None,
-                          should_stop=lambda: (self.cancel.is_set()
-                                               or monitor.triggered))
-        finally:
-            self._barge_seed = monitor.stop()
+        log("yura", join_spoken(spoken)[:120].replace("\n", " "))
         return not self.cancel.is_set()
 
     def run(self) -> None:

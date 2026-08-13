@@ -11,6 +11,7 @@ from .player import (
     speak,
     speak_guarded,
     split_sentences,
+    stream_sentences,
 )
 from .router import configured_voice, synthesize
 from .router import prewarm as prewarm_tts
@@ -25,5 +26,6 @@ __all__ = [
     "speak",
     "speak_guarded",
     "split_sentences",
+    "stream_sentences",
     "synthesize",
 ]

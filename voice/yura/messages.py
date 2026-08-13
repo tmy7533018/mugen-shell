@@ -4,9 +4,11 @@ from .lang import configured_lang
 MESSAGES = {
     "ja": {
         "error": "ごめんね、エラーで返事できなかった。",
+        "tool": "ちょっと調べるね。",
     },
     "en": {
         "error": "Sorry, something went wrong and I couldn't reply.",
+        "tool": "Let me check on that.",
     },
 }
 

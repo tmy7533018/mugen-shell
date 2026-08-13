@@ -5,6 +5,7 @@ import re
 import threading
 import time
 import wave
+from collections.abc import Iterable, Iterator
 
 import numpy as np
 import sounddevice as sd
@@ -27,19 +28,55 @@ def clean_for_speech(text: str) -> str:
     return re.sub(r"[ \t]+", " ", text).strip()
 
 
-def split_sentences(text: str) -> list[str]:
-    # ASCII periods only count at a whitespace boundary so decimals survive.
-    raw = re.split(r"(?<=[。!?!?\n])|(?<=\.)\s+", text)
+# ASCII periods only count at a whitespace boundary so decimals survive.
+_SENTENCE_END = re.compile(r"(?<=[。!?！？\n])|(?<=\.)\s+")
+MIN_SENTENCE = 8
+
+
+def _cut(buf: str, final: bool, hold_short: bool = True) -> tuple[list[str], str]:
+    """Sentences ready to speak, plus text not yet known to be a whole sentence."""
+    parts = _SENTENCE_END.split(buf)
+    tail = "" if final else parts.pop()
     out: list[str] = []
-    for s in (s.strip() for s in raw):
+    for s in (p.strip() for p in parts):
         if not s:
             continue
         # Glue tiny fragments to the previous sentence so TTS doesn't gasp.
-        if out and len(s) < 8:
+        if out and len(s) < MIN_SENTENCE:
             out[-1] += s
         else:
             out.append(s)
-    return out
+    # Its previous sentence is already spoken, so a short first piece joins what follows instead.
+    if not final and hold_short and out and len(out[0]) < MIN_SENTENCE:
+        if len(out) > 1:
+            out[1] = out[0] + out[1]
+        else:
+            tail = out[0] + tail
+        out.pop(0)
+    return out, tail
+
+
+def split_sentences(text: str) -> list[str]:
+    return _cut(text, final=True)[0]
+
+
+def stream_sentences(chunks: Iterable[str]) -> Iterator[str]:
+    """Speakable sentences from a reply that is still being generated."""
+    buf = ""
+    started = False
+
+    def speakable(sentences):
+        nonlocal started
+        for s in sentences:
+            if spoken := clean_for_speech(s):
+                started = True
+                yield spoken
+
+    for chunk in chunks:
+        # Speaking the first sentence early is the whole point, so it never waits for a neighbour.
+        ready, buf = _cut(buf + chunk, final=False, hold_short=started)
+        yield from speakable(ready)
+    yield from speakable(_cut(buf, final=True)[0])
 
 
 def join_spoken(parts: list[str]) -> str:
@@ -82,10 +119,10 @@ def play_wav(data: bytes, should_stop=None) -> None:
         time.sleep(0.03)
 
 
-def speak(text: str, on_sentence=None, should_stop=None, voice=None) -> None:
-    sentences = split_sentences(clean_for_speech(text))
-    if not sentences:
-        return
+def speak(text: str | Iterable[str], on_sentence=None, should_stop=None,
+          voice=None) -> None:
+    sentences = (split_sentences(clean_for_speech(text)) if isinstance(text, str)
+                 else text)
     # Resolved once: a settings change mid-reply must not swap the voice between two sentences.
     if voice is None:
         voice = configured_voice()
@@ -136,7 +173,8 @@ def speak(text: str, on_sentence=None, should_stop=None, voice=None) -> None:
 _playback = threading.Lock()
 
 
-def speak_guarded(text: str, on_sentence=None, should_stop=None, voice=None) -> None:
+def speak_guarded(text: str | Iterable[str], on_sentence=None, should_stop=None,
+                  voice=None) -> None:
     with _playback:
         # Every audible reply must raise yuraSpeaking, which the bar holds auto-close on.
         set_speaking(True)

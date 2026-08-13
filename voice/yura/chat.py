@@ -1,6 +1,9 @@
 import json
 import os
+import queue
+import threading
 import time
+from collections.abc import Callable, Iterator
 
 import requests
 
@@ -42,26 +45,56 @@ class Chat:
             log("chat", f"model changed to {want}, rotating conversation")
             self.reset()
 
-    def ask(self, text: str) -> str:
+    def ask(self, text: str,
+            tool_filler: Callable[[], str] | None = None) -> Iterator[str]:
+        """Reply text as it is generated, so speech can start before the last token.
+
+        Drained by its own thread: pacing the read by playback would stall the
+        backend mid-reply, delaying its tool calls and history writes.
+        """
+        chunks: queue.Queue[tuple[str, object]] = queue.Queue()
+
+        def pump() -> None:
+            try:
+                for chunk in self._reply(text, tool_filler):
+                    chunks.put(("chunk", chunk))
+                chunks.put(("end", None))
+            except BaseException as e:
+                chunks.put(("error", e))
+
+        threading.Thread(target=pump, daemon=True).start()
+        while True:
+            kind, value = chunks.get()
+            if kind == "chunk":
+                yield str(value)
+            elif kind == "error":
+                raise value  # type: ignore[misc]
+            else:
+                return
+
+    def _reply(self, text: str,
+               tool_filler: Callable[[], str] | None) -> Iterator[str]:
         # One read serves both the rotation check and the payload, so a mid-turn write can't split it.
         want = settings().get("ai", {}).get("barModel", "")
         self.maybe_rotate(want)
+        spoke = False
         try:
-            reply = self._ask(text, want)
+            for chunk in self._ask(text, want, tool_filler):
+                spoke = True
+                yield chunk
         except requests.HTTPError as e:
             # 400 with a bound id = the conversation was deleted from the panel behind our back.
-            if (self.conversation_id and e.response is not None
+            if (not spoke and self.conversation_id and e.response is not None
                     and e.response.status_code == 400):
                 log("chat", "conversation gone, starting a new one")
                 self.reset()
-                reply = self._ask(text, want)
+                yield from self._ask(text, want, tool_filler)
             else:
                 raise
         self.last_turn = time.time()
-        return reply
 
-    def _ask(self, text: str, model: str = "") -> str:
-        parts: list[str] = []
+    def _ask(self, text: str, model: str = "",
+             tool_filler: Callable[[], str] | None = None) -> Iterator[str]:
         payload = {"message": text, "conversation_id": self.conversation_id,
                    "voice": True}
         lang = configured_lang()
@@ -75,6 +108,7 @@ class Chat:
             r.raise_for_status()
             # The SSE content-type carries no charset, so requests would fall back to latin-1.
             r.encoding = "utf-8"
+            said = False
             for line in r.iter_lines(decode_unicode=True):
                 if not line or not line.startswith("data: "):
                     continue
@@ -89,7 +123,13 @@ class Chat:
                         timeout=3)
                     yura_ipc("show_conversation", str(self.conversation_id))
                 if "content" in ev:
-                    parts.append(ev["content"])
+                    said = True
+                    yield ev["content"]
+                # A tool round-trip is silent for seconds, so fill it — unless the reply already spoke.
+                if ev.get("tool_calls") and tool_filler and not said:
+                    if filler := tool_filler():
+                        said = True
+                        yield filler
                 if "tool_confirm" in ev:
                     # Voice can't render an approval card; decline and let the model explain.
                     ai.post(f"{AI_URL}/chat/confirm", json={
@@ -99,4 +139,3 @@ class Chat:
                     raise RuntimeError(ev["error"])
                 if ev.get("done"):
                     break
-        return "".join(parts)
