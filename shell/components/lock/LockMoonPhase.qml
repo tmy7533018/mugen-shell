@@ -33,9 +33,10 @@ Item {
 
     readonly property string moonName: {
         const age = moonAge
-        return age < 1.5 ? "新月" : age < 5.5 ? "三日月" : age < 9.5 ? "上弦の月"
-            : age < 13.5 ? "十三夜月" : age < 16.5 ? "満月" : age < 20.5 ? "居待月"
-            : age < 24.5 ? "下弦の月" : "有明月"
+        return age < 1.5 ? "New Moon" : age < 5.5 ? "Waxing Crescent"
+            : age < 9.5 ? "First Quarter" : age < 13.5 ? "Waxing Gibbous"
+            : age < 16.5 ? "Full Moon" : age < 20.5 ? "Waning Gibbous"
+            : age < 24.5 ? "Last Quarter" : "Waning Crescent"
     }
 
     readonly property real discRadius: 61 * designPx
