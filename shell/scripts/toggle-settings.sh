@@ -5,8 +5,8 @@ set -u
 
 SHELL_PATH="$HOME/.config/quickshell/mugen-shell/settings-shell.qml"
 
-if pgrep -f "settings-shell\.qml" >/dev/null 2>&1; then
-    pkill -f "settings-shell\.qml"
+if pgrep -f "/settings-shell\.qml" >/dev/null 2>&1; then
+    pkill -f "/settings-shell\.qml"
     exit 0
 fi
 

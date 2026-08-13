@@ -140,26 +140,8 @@ ShellRoot {
         ])
     }
 
-    function openAiConfig() {
-        let cfgHome = Quickshell.env("XDG_CONFIG_HOME")
-        if (!cfgHome || cfgHome === "") cfgHome = Quickshell.env("HOME") + "/.config"
-        openAiConfigProcess.command = ["xdg-open", cfgHome + "/mugen-ai/config.toml"]
-        openAiConfigProcess.running = true
-    }
-
-    function restartAi() {
-        restartAiProcess.command = ["systemctl", "--user", "restart", "mugen-ai.service"]
-        restartAiProcess.running = true
-    }
-
     Process {
-        id: openAiConfigProcess
-        command: []
-        running: false
-    }
-
-    Process {
-        id: restartAiProcess
+        id: openYuraSettingsProcess
         command: []
         running: false
     }
@@ -278,6 +260,9 @@ ShellRoot {
         visible: true
         title: "Mugen Settings"
         color: "transparent"
+        // Without an implicit size the window opens at its minimum, which fits four rows.
+        implicitWidth: 1100
+        implicitHeight: 740
         minimumSize: Qt.size(800, 540)
 
         Content.SettingsFloatingContent {
@@ -296,8 +281,11 @@ ShellRoot {
             onApplyPreset: name => root.applyBlurPreset(name)
             onApplySound: name => root.applyNotificationSound(name)
             onApplyTimerSound: name => root.applyTimerSound(name)
-            onEditAiConfig: root.openAiConfig()
-            onRestartAi: root.restartAi()
+            onOpenYuraSettings: {
+                openYuraSettingsProcess.command =
+                    ["bash", Quickshell.shellDir + "/scripts/toggle-yura-settings.sh"]
+                openYuraSettingsProcess.running = true
+            }
         }
     }
 
