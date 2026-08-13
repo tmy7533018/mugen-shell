@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="moonG" gradientUnits="userSpaceOnUse" x1="62" y1="22" x2="86" y2="172">
+      <stop offset="0.02" stop-color="#fce7c8"></stop>
+      <stop offset="0.1" stop-color="#fdf2cf"></stop>
+      <stop offset="0.24" stop-color="#feebd4"></stop>
+      <stop offset="0.33" stop-color="#fdded7"></stop>
+      <stop offset="0.42" stop-color="#fdcbe1"></stop>
+      <stop offset="0.5" stop-color="#fbb1f1"></stop>
+      <stop offset="0.58" stop-color="#dfa0f6"></stop>
+      <stop offset="0.67" stop-color="#a59bfb"></stop>
+      <stop offset="0.76" stop-color="#6b97fb"></stop>
+      <stop offset="0.85" stop-color="#3f9af8"></stop>
+      <stop offset="0.93" stop-color="#25a8f2"></stop>
+      <stop offset="1" stop-color="#12a2ee"></stop>
+    </linearGradient>
+    <mask id="moonMask">
+      <circle cx="105.3" cy="96.7" r="75" fill="#fff"></circle>
+      <circle cx="124.1" cy="83.6" r="68.9" fill="#000"></circle>
+    </mask>
+  </defs>
+  <g mask="url(#moonMask)">
+    <rect x="0" y="0" width="200" height="200" fill="url(#moonG)"></rect>
+  </g>
+</svg>

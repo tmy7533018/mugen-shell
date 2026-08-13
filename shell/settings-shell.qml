@@ -147,6 +147,12 @@ ShellRoot {
     }
 
     Process {
+        id: openUrlProcess
+        command: []
+        running: false
+    }
+
+    Process {
         id: listPresetsProcess
         command: ["bash", Quickshell.shellDir + "/scripts/blur-preset.sh", "list"]
         running: false
@@ -285,6 +291,10 @@ ShellRoot {
                 openYuraSettingsProcess.command =
                     ["bash", Quickshell.shellDir + "/scripts/toggle-yura-settings.sh"]
                 openYuraSettingsProcess.running = true
+            }
+            onOpenUrl: url => {
+                openUrlProcess.command = ["xdg-open", url]
+                openUrlProcess.running = true
             }
         }
     }

@@ -19,6 +19,7 @@ Item {
     signal applySound(string name)
     signal applyTimerSound(string name)
     signal openYuraSettings()
+    signal openUrl(string url)
 
     readonly property var categories: [
         { id: "appearance", label: "Appearance",   types: ["theme", "moduleBackground", "blur", "animation", "dateFormat", "clock", "weather", "calendarWeekStart", "barLayout"] },
@@ -27,6 +28,7 @@ Item {
         { id: "timer",      label: "Timer & Lock", types: ["timer", "lockTimer", "idlePower"] },
         { id: "system",     label: "System",       types: ["battery", "workspaces", "launcherTerminal", "displayMonitor", "shortcuts"] },
         { id: "yura",       label: "Yura →",       action: "yura-settings" },
+        { id: "about",      label: "About",        types: ["about"] },
         { id: "reset",      label: "Reset",        types: ["reset"], danger: true }
     ]
 
@@ -53,6 +55,7 @@ Item {
             case "workspaces":        return workspaceSection
             case "displayMonitor":    return displayMonitorSection
             case "shortcuts":         return shortcutsSection
+            case "about":             return aboutSection
             case "reset":             return resetSection
             default:                  return null
         }
@@ -181,6 +184,12 @@ Item {
     Component { id: shortcutsSection; Settings.KeyboardShortcutsSection {
         theme: root.theme
         modeManager: root.modeManager
+    }}
+    Component { id: aboutSection; Settings.AboutSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+        onOpenUrl: url => root.openUrl(url)
     }}
     Component { id: resetSection; Settings.ResetSection {
         theme: root.theme

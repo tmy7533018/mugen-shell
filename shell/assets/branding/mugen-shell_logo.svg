@@ -1,0 +1,183 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="512" height="512">
+
+  <defs>
+    <linearGradient id="bgBase" x1="0.44" y1="0" x2="0.56" y2="1">
+      <stop offset="0" stop-color="#f2a6d6"></stop>
+      <stop offset="0.17" stop-color="#a598da"></stop>
+      <stop offset="0.35" stop-color="#6c88df"></stop>
+      <stop offset="0.52" stop-color="#4276d6"></stop>
+      <stop offset="0.68" stop-color="#2a61c6"></stop>
+      <stop offset="0.84" stop-color="#2149a9"></stop>
+      <stop offset="1" stop-color="#182a85"></stop>
+    </linearGradient>
+    <radialGradient id="bgPink" cx="0.22" cy="-0.05" r="0.76">
+      <stop offset="0" stop-color="#ffa2e0" stop-opacity="0.98"></stop>
+      <stop offset="0.5" stop-color="#f5a3d6" stop-opacity="0.5"></stop>
+      <stop offset="1" stop-color="#dfa4d2" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="bgBlue" cx="1.06" cy="0.4" r="0.72">
+      <stop offset="0" stop-color="#0d6ce6" stop-opacity="0.95"></stop>
+      <stop offset="0.6" stop-color="#2a70dc" stop-opacity="0.38"></stop>
+      <stop offset="1" stop-color="#3a6fd0" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="bgDeep" cx="0.26" cy="1.04" r="0.86">
+      <stop offset="0" stop-color="#03248a" stop-opacity="0.98"></stop>
+      <stop offset="0.5" stop-color="#0a2c8e" stop-opacity="0.55"></stop>
+      <stop offset="1" stop-color="#123398" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="edgeHi" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.2"></stop>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity="0.05"></stop>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.08"></stop>
+    </linearGradient>
+    <linearGradient id="moonG" gradientUnits="userSpaceOnUse" x1="62" y1="22" x2="86" y2="172">
+        <stop offset="0.02" stop-color="#fce7c8"></stop>
+        <stop offset="0.1" stop-color="#fdf2cf"></stop>
+        <stop offset="0.24" stop-color="#feebd4"></stop>
+        <stop offset="0.33" stop-color="#fdded7"></stop>
+        <stop offset="0.42" stop-color="#fdcbe1"></stop>
+        <stop offset="0.5" stop-color="#fbb1f1"></stop>
+        <stop offset="0.58" stop-color="#dfa0f6"></stop>
+        <stop offset="0.67" stop-color="#a59bfb"></stop>
+        <stop offset="0.76" stop-color="#6b97fb"></stop>
+        <stop offset="0.85" stop-color="#3f9af8"></stop>
+        <stop offset="0.93" stop-color="#25a8f2"></stop>
+        <stop offset="1" stop-color="#12a2ee"></stop>
+    </linearGradient>
+      <linearGradient id="p0" gradientUnits="userSpaceOnUse" x1="-8" y1="4" x2="6" y2="-63">
+        <stop offset="0" stop-color="#fbb0bd"></stop>
+        <stop offset="0.42" stop-color="#fdc9af"></stop>
+        <stop offset="0.78" stop-color="#fee1cd"></stop>
+        <stop offset="1" stop-color="#fdf2e6"></stop>
+      </linearGradient>
+      <linearGradient id="p1" gradientUnits="userSpaceOnUse" x1="-8" y1="4" x2="6" y2="-63">
+        <stop offset="0" stop-color="#f897c4"></stop>
+        <stop offset="0.42" stop-color="#f893ce"></stop>
+        <stop offset="0.78" stop-color="#efb0e6"></stop>
+        <stop offset="1" stop-color="#f5dcf4"></stop>
+      </linearGradient>
+      <linearGradient id="p2" gradientUnits="userSpaceOnUse" x1="-8" y1="4" x2="6" y2="-63">
+        <stop offset="0" stop-color="#f892c0"></stop>
+        <stop offset="0.42" stop-color="#dd85da"></stop>
+        <stop offset="0.78" stop-color="#b08ce6"></stop>
+        <stop offset="1" stop-color="#cdc4f3"></stop>
+      </linearGradient>
+      <linearGradient id="p3" gradientUnits="userSpaceOnUse" x1="-8" y1="4" x2="6" y2="-63">
+        <stop offset="0" stop-color="#f895c2"></stop>
+        <stop offset="0.42" stop-color="#e086d6"></stop>
+        <stop offset="0.78" stop-color="#b78ce8"></stop>
+        <stop offset="1" stop-color="#d4c7f5"></stop>
+      </linearGradient>
+      <linearGradient id="p4" gradientUnits="userSpaceOnUse" x1="-8" y1="4" x2="6" y2="-63">
+        <stop offset="0" stop-color="#fbadc2"></stop>
+        <stop offset="0.42" stop-color="#fdc6a4"></stop>
+        <stop offset="0.78" stop-color="#fedec6"></stop>
+        <stop offset="1" stop-color="#fdf3ea"></stop>
+      </linearGradient>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="7" result="n"></feTurbulence>
+      <feColorMatrix in="n" type="saturate" values="0"></feColorMatrix>
+    </filter>
+    <mask id="moonMask">
+      <circle cx="105.3" cy="96.7" r="75" fill="#fff"></circle>
+      <circle cx="124.1" cy="83.6" r="68.9" fill="#000"></circle>
+    </mask>
+    <g id="icoTile">
+      <rect x="0" y="0" width="200" height="200" rx="46" fill="url(#bgBase)"></rect>
+      <g>
+        <rect x="0" y="0" width="200" height="200" rx="46" fill="url(#bgPink)"></rect>
+        <rect x="0" y="0" width="200" height="200" rx="46" fill="url(#bgBlue)"></rect>
+        <rect x="0" y="0" width="200" height="200" rx="46" fill="url(#bgDeep)"></rect>
+        <rect x="0" y="0" width="200" height="200" rx="46" filter="url(#grain)" opacity="0.15" style="mix-blend-mode:overlay"></rect>
+      </g>
+      <rect x="0.6" y="0.6" width="198.8" height="198.8" rx="45.6" fill="none" stroke="url(#edgeHi)" stroke-width="1.2"></rect>
+    </g>
+    <g id="icoStars" fill="#ffffff">
+      <circle cx="22" cy="135" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="180" cy="34" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="159" cy="44" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="8" cy="127" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="169" cy="134" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="133" cy="43" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="70" cy="62" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="175" cy="74" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="174" cy="85" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="147" cy="107" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="128" cy="37" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="137" cy="51" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="157" cy="131" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="146" cy="40" r="0.58" fill-opacity="0.43"></circle>
+      <circle cx="158" cy="121" r="0.47" fill-opacity="0.43"></circle>
+      <circle cx="181" cy="16" r="0.47" fill-opacity="0.43"></circle>
+      <circle cx="111" cy="133" r="0.47" fill-opacity="0.43"></circle>
+      <circle cx="164" cy="96" r="0.47" fill-opacity="0.42"></circle>
+      <circle cx="155" cy="139" r="0.47" fill-opacity="0.41"></circle>
+      <circle cx="139" cy="64" r="0.47" fill-opacity="0.40"></circle>
+      <circle cx="8" cy="117" r="0.47" fill-opacity="0.40"></circle>
+      <circle cx="162" cy="140" r="0.47" fill-opacity="0.40"></circle>
+      <circle cx="179" cy="159" r="0.47" fill-opacity="0.39"></circle>
+      <circle cx="145" cy="188" r="0.47" fill-opacity="0.38"></circle>
+      <circle cx="22" cy="176" r="0.47" fill-opacity="0.37"></circle>
+      <circle cx="188" cy="146" r="0.47" fill-opacity="0.35"></circle>
+      <circle cx="173" cy="64" r="0.47" fill-opacity="0.35"></circle>
+      <circle cx="19" cy="68" r="0.39" fill-opacity="0.34"></circle>
+      <circle cx="13" cy="93" r="0.39" fill-opacity="0.34"></circle>
+      <circle cx="90" cy="187" r="0.39" fill-opacity="0.34"></circle>
+      <circle cx="181" cy="183" r="0.39" fill-opacity="0.33"></circle>
+      <circle cx="187" cy="117" r="0.39" fill-opacity="0.33"></circle>
+      <circle cx="74" cy="106" r="0.39" fill-opacity="0.32"></circle>
+      <circle cx="30" cy="26" r="0.39" fill-opacity="0.32"></circle>
+      <circle cx="189" cy="139" r="0.39" fill-opacity="0.32"></circle>
+      <circle cx="168" cy="122" r="0.39" fill-opacity="0.31"></circle>
+      <circle cx="130" cy="21" r="0.39" fill-opacity="0.31"></circle>
+      <circle cx="18" cy="36" r="0.39" fill-opacity="0.30"></circle>
+      <circle cx="7" cy="69" r="0.39" fill-opacity="0.30"></circle>
+      <circle cx="13" cy="112" r="0.39" fill-opacity="0.30"></circle>
+      <circle cx="155" cy="174" r="0.39" fill-opacity="0.30"></circle>
+      <circle cx="97" cy="28" r="0.39" fill-opacity="0.30"></circle>
+      <circle cx="180" cy="134" r="0.39" fill-opacity="0.29"></circle>
+      <circle cx="9" cy="164" r="0.39" fill-opacity="0.29"></circle>
+      <circle cx="113" cy="26" r="0.34" fill-opacity="0.29"></circle>
+      <circle cx="103" cy="24" r="0.34" fill-opacity="0.29"></circle>
+      <circle cx="180" cy="176" r="0.34" fill-opacity="0.28"></circle>
+      <circle cx="170" cy="151" r="0.34" fill-opacity="0.28"></circle>
+      <circle cx="109" cy="190" r="0.34" fill-opacity="0.28"></circle>
+      <circle cx="162" cy="61" r="0.34" fill-opacity="0.28"></circle>
+      <circle cx="31" cy="152" r="0.34" fill-opacity="0.27"></circle>
+      <circle cx="26" cy="187" r="0.34" fill-opacity="0.27"></circle>
+      <circle cx="179" cy="127" r="0.34" fill-opacity="0.27"></circle>
+      <circle cx="40" cy="52" r="0.34" fill-opacity="0.27"></circle>
+      <circle cx="62" cy="175" r="0.34" fill-opacity="0.27"></circle>
+      <circle cx="134" cy="33" r="0.34" fill-opacity="0.27"></circle>
+      <circle cx="33" cy="58" r="0.34" fill-opacity="0.27"></circle>
+      <circle cx="174" cy="115" r="0.34" fill-opacity="0.27"></circle>
+      <circle cx="46" cy="34" r="0.34" fill-opacity="0.26"></circle>
+      <circle cx="144" cy="18" r="0.34" fill-opacity="0.26"></circle>
+      <circle cx="50" cy="26" r="0.34" fill-opacity="0.26"></circle>
+      <circle cx="166" cy="174" r="0.34" fill-opacity="0.26"></circle>
+      <circle cx="16" cy="161" r="0.34" fill-opacity="0.25"></circle>
+      <circle cx="50" cy="16" r="0.34" fill-opacity="0.25"></circle>
+      <circle cx="95" cy="46" r="0.34" fill-opacity="0.25"></circle>
+      <circle cx="17" cy="128" r="0.34" fill-opacity="0.25"></circle>
+      <circle cx="25" cy="104" r="0.34" fill-opacity="0.25"></circle>
+      <circle cx="113" cy="17" r="0.34" fill-opacity="0.25"></circle>
+      <circle cx="191" cy="83" r="0.34" fill-opacity="0.25"></circle>
+    </g>
+    <g id="icoMoon" mask="url(#moonMask)">
+      <rect x="0" y="0" width="200" height="200" fill="url(#moonG)"></rect>
+    </g>
+    <g id="icoFlower">
+      <g transform="translate(123,95)">
+        <g transform="rotate(0)"><path d="M0,0 C13,-15 19,-37 0,-63 C-19,-37 -13,-15 0,0 Z" fill="url(#p0)"></path></g>
+        <g transform="rotate(72)"><path d="M0,0 C13,-15 19,-37 0,-63 C-19,-37 -13,-15 0,0 Z" fill="url(#p1)"></path></g>
+        <g transform="rotate(144)"><path d="M0,0 C13,-15 19,-37 0,-63 C-19,-37 -13,-15 0,0 Z" fill="url(#p2)"></path></g>
+        <g transform="rotate(216)"><path d="M0,0 C13,-15 19,-37 0,-63 C-19,-37 -13,-15 0,0 Z" fill="url(#p3)"></path></g>
+        <g transform="rotate(288)"><path d="M0,0 C13,-15 19,-37 0,-63 C-19,-37 -13,-15 0,0 Z" fill="url(#p4)"></path></g>
+      </g>
+    </g>
+  </defs>
+  <use href="#icoTile"></use>
+  <use href="#icoStars"></use>
+  <use href="#icoMoon"></use>
+  <use href="#icoFlower"></use>
+</svg>
