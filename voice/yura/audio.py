@@ -82,6 +82,17 @@ def dump_audio(frames, tag: str) -> None:
         log("dump", str(e))
 
 
+def log_capture(outcome: str, peak: float, seconds: float, frames=None) -> None:
+    """Record what a capture decided and the number that decided it.
+
+    Tuning VAD_THRESHOLD needs the peak probability of the captures it rejected,
+    and a discarded utterance leaves no other trace.
+    """
+    log("vad", f"{outcome} peak={peak:.2f} thr={VAD_THRESHOLD} {seconds:.1f}s")
+    if frames:
+        dump_audio(frames, outcome)
+
+
 class Capture:
     """Owns the mic stream and turns it into endpointed utterances."""
 
@@ -150,6 +161,7 @@ class Capture:
         seen = 0
         hold_started = started if (held is not None and held()) else None
         heard_speech = False
+        peak = 0.0
 
         while self._running():
             if self._cancel.is_set():
@@ -163,6 +175,7 @@ class Capture:
                     return frames or None
                 continue
             p = self.vad.prob(frame)
+            peak = max(peak, p)
             seen += 1
             if hold_started is not None:
                 preroll.append(frame)
@@ -178,15 +191,17 @@ class Capture:
                     if time.time() - started > MAX_UTTERANCE_S:
                         # Without this a long silent hold reaches whisper and comes back hallucinated.
                         if not heard_speech:
-                            log("listen", "ptt hold capped, no speech")
+                            log_capture("ptt-hold-capped-no-speech", peak,
+                                        time.time() - started, frames)
                             return None
                         break
                     continue
                 if time.time() - hold_started >= PTT_TAP_S:
                     if not heard_speech:
-                        log("listen", "ptt release, no speech")
+                        log_capture("ptt-release-no-speech", peak,
+                                    time.time() - started, frames)
                         return None
-                    log("listen", "ptt release")
+                    log_capture("ptt-release", peak, time.time() - started)
                     break
                 log("listen", "ptt tap, falling back to vad")
                 hold_started = None
@@ -203,12 +218,15 @@ class Capture:
                     speech_started = True
                     frames = preroll[:]
                 elif time.time() - started > timeout:
+                    log_capture("no-onset", peak, time.time() - started, preroll)
                     return None
                 continue
             frames.append(frame)
             silence_run = 0.0 if p >= VAD_THRESHOLD else silence_run + frame_s
             if silence_run >= SILENCE_END_S:
+                log_capture("endpointed", peak, time.time() - started)
                 break
             if time.time() - started > MAX_UTTERANCE_S:
+                log_capture("length-capped", peak, time.time() - started)
                 break
         return frames
