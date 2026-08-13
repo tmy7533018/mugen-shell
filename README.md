@@ -19,6 +19,7 @@ Hyprland + Quickshell デスクトップ向けの私の dotfiles を、Nix flake
 - 壁紙は画像・動画に対応しており、滑らかなトランジションで切り替わります。
 - 壁紙からカラーパレットをいくつか生成します。選択したカラーパレットをデスクトップに配色します。
 - ひととおりのシステム操作ができます — オーディオ、バックライト、WiFi、Bluetooth、IME、バッテリー、システムトレイ
+- ロック画面もシェルの一部です。時計、カレンダー、再生中の曲、天気を並べたグリッドデザインです。
 - デスクトップのアシスタント Yura に、チャットや音声で話しかけられます。
 - 全体がなめらかなアニメーションで動きます。アニメーションは簡単なカスタマイズができます。
 - Settings ウィンドウでいろいろな設定を変更できます。
@@ -40,7 +41,7 @@ Yura はデスクトップの操作も可能です。「音量 30 にして」�
 インストールせずに試すならデモ VM が使えます。Hyprland に自動ログインします (資格情報は `mugen` / `mugen`):
 
 ```sh
-cd nixos && nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm
+nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm
 ```
 
 各設定項目はすべて [SETUP.md](SETUP.md) にまとめました。
