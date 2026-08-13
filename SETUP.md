@@ -182,6 +182,8 @@ make install
 
 設定を checkout に symlink したあと、mugen-ai をビルドして有効化します — この経路だけ Go が要ります。システムスタックは Path B と同じ `yay -S` リスト。`make uninstall` で外せます。`~/.config/hypr`・`kitty`・`cava`・`matugen`・`fastfetch` と `starship.toml` は clone への symlink になるので、あとから設定をいじるとその差分が `git status` に出ます。
 
+**Path B の「Arch 固有のハマりどころ 2 つ」もそのまま当てはまります** — 特に `/etc/pam.d/mugen-lock` は、無いとロック画面が認証できないまま `ext-session-lock` がセッションを掴み続けます。`make install` はこのファイルを作りません。
+
 </details>
 
 ---
