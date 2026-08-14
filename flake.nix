@@ -76,13 +76,19 @@
               };
               home.stateVersion = "25.05";
 
-              # Hardware cursor planes are unreliable on QEMU's virtio-gpu.
-              home.activation.vmHyprCursorTweak =
+              # Seeded per file: the shell creates the wallpaper directory itself.
+              home.activation.vmDemoDefaults =
                 lib.hm.dag.entryAfter [ "installMugenSystemDefaults" ] ''
+                  wallpaper="$HOME/.local/share/mugen-shell/wallpapers/desert-sunset.jpg"
+                  if [[ ! -e "$wallpaper" ]]; then
+                    mkdir -p "$(dirname "$wallpaper")"
+                    install -m 644 ${./nixos/assets/desert-sunset.jpg} "$wallpaper"
+                  fi
+
                   overrides="$HOME/.config/hypr/configs/user-overrides.lua"
                   if [[ ! -e "$overrides" ]]; then
                     mkdir -p "$(dirname "$overrides")"
-                    echo 'hl.config({ cursor = { no_hardware_cursors = true } })' > "$overrides"
+                    install -m 644 ${./nixos/assets/vm-user-overrides.lua} "$overrides"
                   fi
                 '';
             };
