@@ -1,6 +1,5 @@
--- Hyprland Lua config (mugen-shell). Lua counterpart of hyprland.conf, kept
--- side-by-side: Hyprland prefers this .lua when present, so removing it restores
--- the legacy .conf. Personalize monitors/env below (see `hyprctl monitors`).
+-- Hyprland Lua config (mugen-shell), needing Hyprland 0.55+. Personal tweaks
+-- belong in configs/user-overrides.lua, not here.
 
 local HOME = os.getenv("HOME")
 
@@ -14,19 +13,11 @@ end
 ----------------
 ---- MONITORS --
 ----------------
--- Generic fallback — works on any single or multi-monitor setup.
--- To customize, run `hyprctl monitors` and replace with your own entries.
+-- Generic fallback; add your own `hyprctl monitors` entries to user-overrides.lua.
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })
 
 hl.workspace_rule({ workspace = "1", persistent = true, default = true })
 hl.workspace_rule({ workspace = "2", persistent = true })
-
------------------
----- PROGRAMS ---
------------------
-local terminal    = "kitty"
-local fileManager = "thunar"
-local browser     = "firefox"
 
 --------------------------
 ---- ENVIRONMENT VARS ----
@@ -149,123 +140,8 @@ hl.animation({ leaf = "fade",             enabled = true, speed = 5, bezier = "f
 hl.animation({ leaf = "workspaces",       enabled = true, speed = 7, bezier = "breeze",   style = "slide" })
 hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 9, bezier = "softDown", style = "slidevert" })
 
---------------------
----- WINDOW RULES --
---------------------
-hl.window_rule({ name = "quickshell-nofocus", match = { class = "^(quickshell)$" }, no_focus = true })
-hl.layer_rule({ name = "quickshell-blur", match = { namespace = "quickshell" }, blur = true, ignore_alpha = 0 })
+dofile(HOME .. "/.config/hypr/configs/windowrules.lua")
+dofile(HOME .. "/.config/hypr/configs/keybinds.lua")
 
-hl.window_rule({ name = "suppress-maximize", match = { class = ".*" }, suppress_event = "maximize" })
-hl.window_rule({ name = "fix-xwayland-drag", match = { xwayland = true, class = "^$", title = "^$" }, no_focus = true })
-
-hl.window_rule({ name = "pavucontrol",     match = { class = "^(org\\.pulseaudio\\.pavucontrol)$" }, float = true, size = "(monitor_w*0.5) (monitor_h*0.6)", center = true })
-hl.window_rule({ name = "save-dialog",     match = { title = "^(Save As|Save a File|Pick Files)$" },  float = true, size = "(monitor_w*0.5) (monitor_h*0.6)", center = true })
-hl.window_rule({ name = "open-files",      match = { initial_title = "^(Open Files)$" },               float = true, size = "(monitor_w*0.7) (monitor_h*0.6)", center = true })
-hl.window_rule({ name = "jp-file-dialog",  match = { title = "^(.*ファイル.*)$" },                       float = true, size = "(monitor_w*0.5) (monitor_h*0.5)", center = true })
-
-hl.window_rule({ name = "kitty-float",     match = { class = "^(kitty)$" },  float = true, size = "1050 600", center = true })
-hl.window_rule({ name = "thunar-float",    match = { class = "^(thunar)$" }, float = true, size = "1050 600", center = true })
-hl.window_rule({ name = "imv-float",       match = { class = "^(imv)$" },    float = true, size = "1050 600", center = true })
-hl.window_rule({ name = "mpv-float",       match = { class = "^(mpv)$" },    float = true, size = "1050 600", center = true })
-
-hl.window_rule({ name = "mugen-shortcuts", match = { title = "^(Mugen Shortcuts)$" }, float = true, size = "560 540", center = true })
-hl.window_rule({ name = "mugen-calendar",  match = { title = "^(Mugen Calendar)$" },  float = true, size = "900 560", center = true })
-hl.window_rule({ name = "mugen-settings",  match = { title = "^(Mugen Settings)$" },  float = true, size = "800 540", center = true })
-hl.window_rule({ name = "steam-settings",  match = { class = "^(steam)$", title = "^(Steam設定)$" }, float = true, size = "1050 600", center = true })
-
-------------------
----- KEYBINDS ----
-------------------
-local mainMod = "SUPER"
-
-hl.bind(mainMod .. " + RETURN",    hl.dsp.exec_cmd(terminal))
-hl.bind(mainMod .. " + SHIFT + R", hl.dsp.exec_cmd("hyprctl reload"))
-hl.bind(mainMod .. " + backspace", hl.dsp.window.close())
-hl.bind(mainMod .. " + N",         hl.dsp.exec_cmd(fileManager))
-hl.bind(mainMod .. " + B",         hl.dsp.exec_cmd(browser))
-
--- Move focus (vim-style hjkl)
-hl.bind(mainMod .. " + h", hl.dsp.focus({ direction = "left" }))
-hl.bind(mainMod .. " + j", hl.dsp.focus({ direction = "down" }))
-hl.bind(mainMod .. " + k", hl.dsp.focus({ direction = "up" }))
-hl.bind(mainMod .. " + l", hl.dsp.focus({ direction = "right" }))
-
--- Cycle windows on the current workspace and raise the result
-hl.bind(mainMod .. " + Tab",         hl.dsp.exec_cmd("hyprctl dispatch 'hl.dsp.window.cycle_next()' && hyprctl dispatch 'hl.dsp.window.bring_to_top()'"))
-hl.bind(mainMod .. " + SHIFT + Tab", hl.dsp.exec_cmd("hyprctl dispatch 'hl.dsp.window.cycle_next({ prev = true })' && hyprctl dispatch 'hl.dsp.window.bring_to_top()'"))
-
--- Workspaces
-for i = 1, 10 do
-    local key = i == 10 and 0 or i
-    hl.bind(mainMod .. " + " .. key,         hl.dsp.focus({ workspace = tostring(i) }))
-    hl.bind("ALT + SHIFT + " .. key,         hl.dsp.window.move({ workspace = tostring(i), follow = true }))
-    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = tostring(i), follow = false }))
-end
-
--- Workspace scroll
-hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
-hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
-
--- Move / resize with the mouse
-hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(),   { mouse = true })
-hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
-
--- Volume keys — explicitly open the volume panel (change-detection mis-fires on sink swap)
-hl.bind("code:122", hl.dsp.exec_cmd("pactl set-sink-volume @DEFAULT_SINK@ -2% && ~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh open volume"))
-hl.bind("code:123", hl.dsp.exec_cmd("pactl set-sink-volume @DEFAULT_SINK@ +2% && ~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh open volume"))
-hl.bind("code:121", hl.dsp.exec_cmd("pactl set-sink-mute @DEFAULT_SINK@ toggle && ~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh open volume"))
-hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("pactl set-source-mute @DEFAULT_SOURCE@ toggle && ~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh open volume"))
-
--- Brightness
-hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl --class backlight set +5% && ~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh open brightness"))
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl --class backlight set 5%- && ~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh open brightness"))
-
--- Fullscreen
-hl.bind(mainMod .. " + F", hl.dsp.window.fullscreen())
-
--- Screenshots
-hl.bind(mainMod .. " + F12", hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/take-screenshot.sh"))
-hl.bind("Print",             hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/take-screenshot.sh"))
-
--- Move window (vim-style hjkl)
-hl.bind(mainMod .. " + SHIFT + h", hl.dsp.window.move({ direction = "left" }))
-hl.bind(mainMod .. " + SHIFT + j", hl.dsp.window.move({ direction = "down" }))
-hl.bind(mainMod .. " + SHIFT + k", hl.dsp.window.move({ direction = "up" }))
-hl.bind(mainMod .. " + SHIFT + l", hl.dsp.window.move({ direction = "right" }))
-
-hl.bind(mainMod .. " + SHIFT + mouse:272", hl.dsp.window.float({ action = "toggle" }), { mouse = true })
-hl.bind(mainMod .. " + SHIFT + SPACE",     hl.dsp.window.float({ action = "toggle" }))
-
--- Special workspace
-hl.bind(mainMod .. " + SHIFT + S", hl.dsp.workspace.toggle_special("magic"))
-
--- Media keys
-hl.bind("code:172", hl.dsp.exec_cmd("playerctl play-pause"))
-hl.bind("code:171", hl.dsp.exec_cmd("playerctl next"))
-hl.bind("code:173", hl.dsp.exec_cmd("playerctl previous"))
-
--- Mugen Shell modules
-hl.bind(mainMod .. " + R",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh launcher"))
-hl.bind(mainMod .. " + W",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh wallpaper"))
-hl.bind(mainMod .. " + P",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh powermenu"))
-hl.bind(mainMod .. " + M",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh music"))
-hl.bind(mainMod .. " + T",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh notification"))
-hl.bind(mainMod .. " + Y",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh ai"))
-hl.bind(mainMod .. " + V",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh clipboard"))
-hl.bind(mainMod .. " + C",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/toggle-calendar.sh"))
-hl.bind(mainMod .. " + S",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh screenshot-gallery"))
-hl.bind(mainMod .. " + U",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh volume"))
-hl.bind(mainMod .. " + I",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh wifi"))
-hl.bind(mainMod .. " + E",         hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh bluetooth"))
-hl.bind(mainMod .. " + SHIFT + W", hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh weather"))
-hl.bind(mainMod .. " + comma",     hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/toggle-settings.sh"))
-hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/mugen-shell-ipc.sh timer"))
-hl.bind(mainMod .. " + SHIFT + Y", hl.dsp.exec_cmd("qs -p ~/.config/quickshell/mugen-shell/yura-shell.qml ipc call yura toggle"))
-hl.bind(mainMod .. " + slash",     hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/toggle-shortcuts.sh"))
-
--- Push-to-talk. `global` forwards press and release to the shell's
--- GlobalShortcut; a normal bind would only ever report the press.
-hl.bind(mainMod .. " + Z", hl.dsp.global("mugen-shell:ptt"))
-
--- Idle inhibitor toggle
-hl.bind(mainMod .. " + SHIFT + I", hl.dsp.exec_cmd("~/.config/quickshell/mugen-shell/scripts/idle_inhibitor.sh"))
+-- Last, so a personal hl.config value wins over the one shipped above.
+pcall(dofile, HOME .. "/.config/hypr/configs/user-overrides.lua")
