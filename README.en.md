@@ -9,17 +9,17 @@
 
 https://github.com/user-attachments/assets/375659b6-8b1d-4d08-8621-7451d6791e71
 
-My dotfiles for a Hyprland + Quickshell desktop, packaged so they can be installed via Nix flake or `make install`.
+My dotfiles for a Hyprland + Quickshell desktop, packaged so they can be installed via a Nix flake.
 
 ---
 
 ## Features
 
-- Panels for the everyday things — calendar, timer, music, clipboard, notifications, app launcher, and screenshots
+- Panels for the everyday things: calendar, timer, music, clipboard, notifications, app launcher, and screenshots
 - Wallpapers can be images or video, and they change through a smooth transition
 - Several color palettes generated from the wallpaper; the one you pick is applied across the desktop
 - The usual system controls: audio, backlight, WiFi, Bluetooth, IME, battery, and the system tray
-- The lock screen is part of the shell — a grid of the clock, calendar, current track, and weather, with no external locker involved
+- The lock screen is part of the shell: a grid of the clock, calendar, current track, and weather, with no external locker involved
 - Yura, the desktop assistant, reachable by chat or by voice
 - Smooth animation throughout, and it is easy to customize
 - A Settings window for changing all sorts of things
@@ -38,7 +38,7 @@ Voice input works from a button or from push-to-talk. Hold `Super + Z`, talk, an
 
 ## Installation
 
-Try it without installing anything — the demo VM autologins into Hyprland, with `mugen` / `mugen` as the credentials:
+Try it without installing anything. The demo VM autologins into Hyprland, with `mugen` / `mugen` as the credentials:
 
 ```sh
 nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm
@@ -50,7 +50,7 @@ Every configuration option is documented in [SETUP.en.md](SETUP.en.md).
 
 ## Credits
 
-mugen-shell stands on [Hyprland](https://hypr.land/), [Quickshell](https://quickshell.outfoxxed.me/), and many other projects — the full list is in [SETUP.en.md → Credits](SETUP.en.md#credits).
+mugen-shell stands on [Hyprland](https://hypr.land/), [Quickshell](https://quickshell.outfoxxed.me/), and many other projects. The full list is in [SETUP.en.md → Credits](SETUP.en.md#credits).
 
 ---
 
