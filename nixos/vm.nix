@@ -34,8 +34,7 @@
     };
   };
 
-  # hyprland.conf's exec-once lines need the configs home-manager's first
-  # activation copies into ~/.config, so greetd must not race it on first boot.
+  # On first boot greetd must not race the activation that fills ~/.config.
   systemd.services.greetd = {
     after = [ "home-manager-mugen.service" ];
     wants = [ "home-manager-mugen.service" ];

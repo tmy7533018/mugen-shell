@@ -151,7 +151,7 @@ in
         socat
         curl
         fastfetch
-        hyprpolkitagent # mugen-shell.conf starts its user unit via exec-once
+        hyprpolkitagent # mugen-shell.lua starts its user unit at hyprland.start
         # pygobject3 for list-apps.py, pillow+numpy for extract-color.py / trim-art-bars.py.
         (python3.withPackages (ps: [ ps.pygobject3 ps.pillow ps.numpy ]))
         gtk3

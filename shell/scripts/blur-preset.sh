@@ -4,7 +4,6 @@ set -euo pipefail
 CFG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/hypr/configs"
 PRESETS="$CFG_DIR/blur-presets.json"
 STATE="$CFG_DIR/.blur-current"
-BLUR_CONF="$CFG_DIR/blur.conf"
 BLUR_LUA="$CFG_DIR/blur.lua"
 DEFAULT_PRESET="glow blur"
 
@@ -35,25 +34,6 @@ write_atomic() {
     fi
 }
 
-write_blur_conf() {
-    write_atomic "$BLUR_CONF" python3 -c '
-import json, sys
-name = sys.argv[2]
-with open(sys.argv[1]) as f:
-    presets = json.load(f)
-for p in presets:
-    if p["name"] == name:
-        for k, v in p["params"].items():
-            if isinstance(v, bool):
-                v = "true" if v else "false"
-            print(f"decoration:blur:{k} = {v}")
-        sys.exit(0)
-sys.stderr.write(f"preset not found: {name}\n")
-sys.exit(1)
-' "$PRESETS" "$1"
-}
-
-# Lua-config counterpart of blur.conf; dofile'd by hyprland.lua.
 write_blur_lua() {
     write_atomic "$BLUR_LUA" python3 -c '
 import json, sys
@@ -76,30 +56,9 @@ sys.exit(1)
 
 apply_live() {
     local name="$1"
-    # Persisted so a matugen / wallpaper autoreload doesn't drop the runtime keyword values.
-    write_blur_conf "$name"
     write_blur_lua "$name"
-    if [[ "$(hyprctl systeminfo 2>/dev/null | grep -oP 'configProvider:\s*\K\w+')" == "lua" ]]; then
-        # `hyprctl keyword` is rejected under a Lua config; a reload re-runs it and dofiles blur.lua.
-        hyprctl reload >/dev/null 2>&1 || true
-    else
-        # Immediate feedback via IPC; the autoreload that follows applies the same values.
-        while IFS=$'\t' read -r key val; do
-            hyprctl keyword "$key" "$val" >/dev/null 2>&1 || true
-        done < <(python3 -c '
-import json, sys
-name = sys.argv[2]
-with open(sys.argv[1]) as f:
-    presets = json.load(f)
-for p in presets:
-    if p["name"] == name:
-        for k, v in p["params"].items():
-            if isinstance(v, bool):
-                v = "true" if v else "false"
-            print(f"decoration:blur:{k}\t{v}")
-        sys.exit(0)
-' "$PRESETS" "$name")
-    fi
+    # `hyprctl keyword` is rejected under a Lua config; a reload re-dofiles blur.lua.
+    hyprctl reload >/dev/null 2>&1 || true
     echo "$name" > "$STATE"
 }
 
