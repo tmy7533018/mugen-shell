@@ -50,9 +50,10 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
-      # pytest has to share one interpreter with the voice dependencies.
+      # The flake's own nixpkgs, because a runner has no NIX_PATH to resolve <nixpkgs>.
       - name: Test
         run: |
-          nix shell --impure \
-            --expr 'with import <nixpkgs> {}; python314.withPackages (ps: [ps.pytest ps.numpy ps.requests ps.sounddevice])' \
+          nix shell --impure --expr '
+            let pkgs = (builtins.getFlake (toString ./.)).inputs.nixpkgs.legacyPackages.${builtins.currentSystem};
+            in pkgs.python314.withPackages (ps: [ps.pytest ps.numpy ps.requests ps.sounddevice])' \
             --command pytest voice/tests -q
