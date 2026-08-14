@@ -77,12 +77,12 @@
               home.stateVersion = "25.05";
 
               # Hardware cursor planes are unreliable on QEMU's virtio-gpu.
-              # Appends, because installMugenSystemDefaults only copies once.
               home.activation.vmHyprCursorTweak =
                 lib.hm.dag.entryAfter [ "installMugenSystemDefaults" ] ''
-                  conf="$HOME/.config/hypr/hyprland.conf"
-                  if [[ -f "$conf" ]] && ! grep -q no_hardware_cursors "$conf"; then
-                    printf '\n# QEMU/virtio: hardware cursor planes are unreliable\ncursor {\n  no_hardware_cursors = true\n}\n' >> "$conf"
+                  overrides="$HOME/.config/hypr/configs/user-overrides.lua"
+                  if [[ ! -e "$overrides" ]]; then
+                    mkdir -p "$(dirname "$overrides")"
+                    echo 'hl.config({ cursor = { no_hardware_cursors = true } })' > "$overrides"
                   fi
                 '';
             };
