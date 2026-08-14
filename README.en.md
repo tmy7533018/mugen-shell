@@ -7,7 +7,7 @@
 
 <p align="center"><i>A 夢幻 shell, built on Quickshell + Hyprland.</i></p>
 
-https://github.com/user-attachments/assets/375659b6-8b1d-4d08-8621-7451d6791e71
+https://github.com/user-attachments/assets/cd9e2538-a30f-4c8c-a143-9f8c2c7b3a8f
 
 My dotfiles for a Hyprland + Quickshell desktop, packaged so they can be installed via a Nix flake.
 
