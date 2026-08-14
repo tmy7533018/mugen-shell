@@ -54,6 +54,9 @@ FocusScope {
     property bool aiAvailable: false
     property bool hasModel: false
     property bool healthChecked: false
+    // /health status verbatim: "ok", "no_model" (nothing configured) or
+    // "provider_unavailable" (a model is set but its backend did not answer).
+    property string healthStatus: ""
     property bool userScrolled: false
     property int speakingIndex: -1
     property string currentModel: ""
@@ -1642,7 +1645,9 @@ FocusScope {
 
             Text {
                 Layout.alignment: Qt.AlignHCenter
-                text: !root.aiAvailable ? "mugen-ai is not running" : "No models available"
+                text: !root.aiAvailable ? "mugen-ai is not running"
+                    : root.healthStatus === "provider_unavailable" ? "Model provider unreachable"
+                    : "No model yet"
                 color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.9)
                 font.pixelSize: modeManager.scale(16)
                 font.family: "M PLUS 2"
@@ -1655,8 +1660,10 @@ FocusScope {
                 Layout.alignment: Qt.AlignHCenter
                 horizontalAlignment: Text.AlignHCenter
                 text: !root.aiAvailable
-                    ? "Install mugen-ai from this repo:\nmake install-ai"
-                    : "Pull an Ollama model (e.g. ollama pull gemma3:4b)\nor configure Gemini in ~/.config/mugen-ai/config.toml"
+                    ? "systemctl --user start mugen-ai"
+                    : root.healthStatus === "provider_unavailable"
+                        ? (root.currentModel || "The configured model") + " did not answer.\nCheck that Ollama, or whichever provider serves it, is running."
+                        : "Yura needs a model of your own. Install Ollama and pull one\n(ollama pull qwen3:4b), or put an API key in ~/.config/mugen-ai/.env.\nSettings → Yura → Model lists what the backend can see."
                 color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.7)
                 font.pixelSize: modeManager.scale(12)
                 font.family: !root.aiAvailable ? "monospace" : "M PLUS 2"
@@ -1937,11 +1944,13 @@ FocusScope {
         onExited: (exitCode) => {
             root.aiAvailable = (exitCode === 0)
             root.healthChecked = true
+            root.healthStatus = ""
             if (exitCode === 0) {
                 try {
                     let obj = JSON.parse(buf)
                     root.currentModel = obj.model || ""
                     root.defaultModel = obj.model || ""
+                    root.healthStatus = obj.status || ""
                     root.hasModel = obj.status === "ok"
                 } catch (e) {}
                 modelsProcess.running = true

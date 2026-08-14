@@ -44,6 +44,9 @@ FocusScope {
     property bool aiAvailable: false
     property bool hasModel: false
     property bool healthChecked: false
+    // /health status verbatim: "ok", "no_model" (nothing configured) or
+    // "provider_unavailable" (a model is set but its backend did not answer).
+    property string healthStatus: ""
     property string currentModel: ""
     property int currentConvId: 0
 
@@ -57,7 +60,8 @@ FocusScope {
     readonly property string idlePlaceholder: {
         if (!healthChecked) return "Ask anything…"
         if (!aiAvailable) return "mugen-ai is not running"
-        if (!hasModel) return "No model available"
+        if (healthStatus === "provider_unavailable") return "Model provider unreachable"
+        if (!hasModel) return "No model — Settings → Yura → Model"
         return "Ask anything…"
     }
     readonly property bool isThinking: streaming && responseDisplay.length === 0
@@ -747,10 +751,12 @@ FocusScope {
         onExited: (exitCode) => {
             root.aiAvailable = (exitCode === 0)
             root.healthChecked = true
+            root.healthStatus = ""
             if (exitCode === 0) {
                 try {
                     let obj = JSON.parse(buf)
                     root.currentModel = obj.model || ""
+                    root.healthStatus = obj.status || ""
                     root.hasModel = obj.status === "ok"
                 } catch (e) {}
             }
