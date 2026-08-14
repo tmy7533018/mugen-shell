@@ -1,0 +1,58 @@
+name: CI
+
+# No QML job: its harness lives in the untracked dev/. Run dev/test-all.sh locally for that half.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  nix:
+    name: nix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # Covers every install route in SETUP: the module, the demo VM, and home-manager.
+      - name: Flake check
+        run: nix flake check --print-build-logs
+
+      - name: Build the packages
+        run: nix build --print-build-logs .#mugen-ai .#mugen-shell
+
+  go:
+    name: go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # The SQLite driver needs cgo, so a C compiler has to come along.
+      - name: Test
+        run: nix shell nixpkgs#go nixpkgs#gcc --command go test ./...
+        working-directory: ai
+
+  voice:
+    name: voice
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v30
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      # pytest has to share one interpreter with the voice dependencies.
+      - name: Test
+        run: |
+          nix shell --impure \
+            --expr 'with import <nixpkgs> {}; python314.withPackages (ps: [ps.pytest ps.numpy ps.requests ps.sounddevice])' \
+            --command pytest voice/tests -q

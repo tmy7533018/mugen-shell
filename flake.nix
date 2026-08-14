@@ -96,6 +96,26 @@
         pkgs = nixpkgs.legacyPackages.${system};
       in
       {
+        # SETUP's Path B reaches no other output, so nothing else would notice it breaking.
+        checks = nixpkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+          home-manager = (home-manager.lib.homeManagerConfiguration {
+            pkgs = import nixpkgs {
+              inherit system;
+              overlays = [ overlay ];
+            };
+            modules = [
+              self.homeManagerModules.default
+              {
+                home.username = "check";
+                home.homeDirectory = "/home/check";
+                programs.mugen-shell.enable = true;
+                programs.mugen-shell.includeSystemDeps = false;
+                home.stateVersion = "26.05";
+              }
+            ];
+          }).activationPackage;
+        };
+
         packages = rec {
           mugen-ai = pkgs.buildGoModule {
             pname = "mugen-ai";

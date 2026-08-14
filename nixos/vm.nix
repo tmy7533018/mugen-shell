@@ -44,6 +44,10 @@
   services.openssh.enable = true;
   services.openssh.settings.PasswordAuthentication = true;
 
+  # The vmVariant supplies the real disk; these exist so the base system still evaluates.
+  fileSystems."/" = { device = "/dev/disk/by-label/nixos"; fsType = "ext4"; };
+  boot.loader.grub.device = "nodev";
+
   virtualisation.vmVariant.virtualisation = {
     memorySize = 8192;
     cores = 4;
