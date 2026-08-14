@@ -26,7 +26,7 @@ mkdir -p ~/.local/share/mugen-shell/sounds && cp /run/current-system/sw/share/so
 
 ## Install
 
-Three install paths — open the one that matches your setup.
+Three install paths — open the one that matches your setup. All of them need **Hyprland 0.55 or newer** (the release that introduced the Lua config); 0.56.1 is what this is tested on.
 
 <details>
 <summary><b>Path A — NixOS</b></summary>
@@ -146,19 +146,19 @@ Wiring Hyprland into your display manager or login session is left to you (`Hypr
 
 Activation copies the shipped `system/hypr/` into `~/.config/hypr/`, and does the same for `cava`, `kitty`, `matugen`, `fastfetch` and `starship.toml` — each only when that path does not exist yet, so configs you already have are left alone. If you already have a Hyprland config, add the autostart to it by hand — without it nothing spawns `quickshell -c mugen-shell`:
 
-```hypr
-source = ~/.config/hypr/configs/mugen-shell.conf
-```
-
-Copy that file out of the package output once: `$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.conf`.
-
-**Using a Lua config instead?** The equivalent line is:
-
 ```lua
 dofile(os.getenv("HOME") .. "/.config/hypr/configs/mugen-shell.lua")
 ```
 
-Switching config languages needs a relog; `hyprctl reload` is not enough.
+Copy that file out of the package output once: `$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.lua`.
+
+**Still on a hyprlang (`.conf`) config?** The equivalent line is:
+
+```hypr
+source = ~/.config/hypr/configs/mugen-shell.conf
+```
+
+Lua replaced hyprlang in 0.55 and upstream has announced it will drop hyprlang within a few releases, so the shipped config is Lua only. Switching config languages needs a relog; `hyprctl reload` is not enough.
 
 Two Arch-specific items the NixOS module handles automatically:
 
@@ -167,7 +167,7 @@ Two Arch-specific items the NixOS module handles automatically:
   ```bash
   printf '#%%PAM-1.0\nauth include system-auth\n' | sudo tee /etc/pam.d/mugen-lock
   ```
-- **fcitx5 env vars.** The shipped `system/hypr/configs/ime.conf` exports `XMODIFIERS` for Hyprland sessions; add it to `/etc/environment` for anything started outside the compositor. Do **not** set `GTK_IM_MODULE` / `QT_IM_MODULE` / `SDL_IM_MODULE` — they force a broken legacy input path.
+- **fcitx5 env vars.** The shipped `system/hypr/hyprland.lua` exports `XMODIFIERS` for Hyprland sessions; add it to `/etc/environment` for anything started outside the compositor. Do **not** set `GTK_IM_MODULE` / `QT_IM_MODULE` / `SDL_IM_MODULE` — they force a broken legacy input path.
 
 </details>
 
@@ -403,7 +403,7 @@ context.modules = [
 | `Super + Z` | Hold to talk to Yura |
 | `Print` / `Super + F12` | Region screenshot, copied to the clipboard |
 
-Media, microphone and brightness keys work as they do anywhere else. Every binding is defined in `system/hypr/hyprland.lua`.
+Media, microphone and brightness keys work as they do anywhere else. Every binding is defined in `system/hypr/configs/keybinds.lua`.
 
 ---
 

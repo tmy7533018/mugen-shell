@@ -26,7 +26,7 @@ mkdir -p ~/.local/share/mugen-shell/sounds && cp /run/current-system/sw/share/so
 
 ## インストール
 
-インストール経路は 3 つあります。環境に合うものを開いてください。
+インストール経路は 3 つあります。環境に合うものを開いてください。どの経路でも **Hyprland 0.55 以上**が要ります (config が Lua になった版。動作確認は 0.56.1)。
 
 <details>
 <summary><b>Path A — NixOS</b></summary>
@@ -146,19 +146,19 @@ yay -S hyprland quickshell hypridle zsh kitty starship libnotify \
 
 アクティベートは同梱の `system/hypr/` を `~/.config/hypr/` にコピーします。`cava` / `kitty` / `matugen` / `fastfetch` と `starship.toml` も同様です。どれもそのパスがまだ無いときだけなので、既にある設定には触りません。既に自前の Hyprland 設定があるなら、autostart は自分で足してください。この行がないと `quickshell -c mugen-shell` が走りません:
 
-```hypr
-source = ~/.config/hypr/configs/mugen-shell.conf
-```
-
-このファイルはパッケージ出力から一度コピーしておきます: `$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.conf`。
-
-**自前の config が Lua なら**、同じ行の Lua 版はこれです:
-
 ```lua
 dofile(os.getenv("HOME") .. "/.config/hypr/configs/mugen-shell.lua")
 ```
 
-config 言語の切り替えには relog が必要で、`hyprctl reload` では切り替わりません。
+このファイルはパッケージ出力から一度コピーしておきます: `$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.lua`。
+
+**自前の config がまだ hyprlang (`.conf`) なら**、同じ行の hyprlang 版はこれです:
+
+```hypr
+source = ~/.config/hypr/configs/mugen-shell.conf
+```
+
+hyprlang は 0.55 で Lua に置き換わり、上流が数リリース中に削除すると告知しています。同梱の config は Lua だけです。config 言語の切り替えには relog が必要で、`hyprctl reload` では切り替わりません。
 
 NixOS モジュールが自動でやってくれる、Arch 固有のハマりどころが 2 つあります:
 
@@ -167,7 +167,7 @@ NixOS モジュールが自動でやってくれる、Arch 固有のハマりど
   ```bash
   printf '#%%PAM-1.0\nauth include system-auth\n' | sudo tee /etc/pam.d/mugen-lock
   ```
-- **fcitx5 の環境変数。** 同梱の `system/hypr/configs/ime.conf` が Hyprland セッション向けに `XMODIFIERS` をエクスポートします。コンポジタ外から起動するもの向けには `/etc/environment` にも書いておきます。`GTK_IM_MODULE` / `QT_IM_MODULE` / `SDL_IM_MODULE` は**設定しないでください** — 壊れた旧経路に引き戻されます。
+- **fcitx5 の環境変数。** 同梱の `system/hypr/hyprland.lua` が Hyprland セッション向けに `XMODIFIERS` をエクスポートします。コンポジタ外から起動するもの向けには `/etc/environment` にも書いておきます。`GTK_IM_MODULE` / `QT_IM_MODULE` / `SDL_IM_MODULE` は**設定しないでください** — 壊れた旧経路に引き戻されます。
 
 </details>
 
@@ -403,7 +403,7 @@ context.modules = [
 | `Super + Z` | 長押しで Yura に話しかける |
 | `Print` / `Super + F12` | 範囲スクリーンショット、クリップボードへコピー |
 
-メディアキー、マイク、輝度キーは他と同じように効きます。定義はすべて `system/hypr/hyprland.lua` にあります。
+メディアキー、マイク、輝度キーは他と同じように効きます。定義はすべて `system/hypr/configs/keybinds.lua` にあります。
 
 ---
 
