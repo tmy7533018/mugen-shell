@@ -260,8 +260,8 @@ func TestCallCmdTemplateDispatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Call: %v", err)
 	}
-	if fr.name != "mugen-ai" {
-		t.Fatalf("dispatched %q, want the mugen-ai binary", fr.name)
+	if fr.name != selfPath() {
+		t.Fatalf("dispatched %q, want the running binary %q", fr.name, selfPath())
 	}
 	want := []string{"calendar", "add", "--date=2026-05-20", "--time=15:00", "--title=design review"}
 	if !reflect.DeepEqual(fr.args, want) {

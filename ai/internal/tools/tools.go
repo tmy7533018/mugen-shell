@@ -89,6 +89,14 @@ func execCommand(ctx context.Context, name string, args []string) (string, error
 	return strings.TrimSpace(string(out)), err
 }
 
+// The service unit sets no PATH, so re-invoking by name would miss the binary.
+var selfPath = sync.OnceValue(func() string {
+	if path, err := os.Executable(); err == nil {
+		return path
+	}
+	return "mugen-ai"
+})
+
 // Addressing by pid is what makes this work headless: `qs ipc` otherwise matches on the display.
 func (r *Registry) shellIPC(ctx context.Context, pid int, target, fn string) (string, bool) {
 	args := []string{"-c", r.qsConfig, "ipc", "call", target, fn}
@@ -442,6 +450,9 @@ func expandTemplate(tmpl []string, args map[string]any, scriptsDir string) ([]st
 		var unresolved string
 		s := placeholderRe.ReplaceAllStringFunc(tok, func(m string) string {
 			key := m[2 : len(m)-2]
+			if key == "self" {
+				return selfPath()
+			}
 			if key == "scripts_dir" {
 				if scriptsDir == "" {
 					unresolved = key
@@ -817,7 +828,7 @@ func builtin() []Tool {
 				},
 				"required": []string{"date", "time", "title"},
 			},
-			cmdTemplate: []string{"mugen-ai", "calendar", "add", "--date={{date}}", "--time={{time}}", "--title={{title}}"},
+			cmdTemplate: []string{"{{self}}", "calendar", "add", "--date={{date}}", "--time={{time}}", "--title={{title}}"},
 		},
 		{
 			Name:        "calendar_delete",
@@ -829,13 +840,13 @@ func builtin() []Tool {
 				},
 				"required": []string{"id"},
 			},
-			cmdTemplate: []string{"mugen-ai", "calendar", "delete", "--id={{id}}"},
+			cmdTemplate: []string{"{{self}}", "calendar", "delete", "--id={{id}}"},
 		},
 		{
 			Name:        "calendar_list_today",
 			Description: "List today's calendar events as JSON { events: [{ id, date, time, title }, ...] }.",
 			Parameters:  emptyParams(),
-			cmdTemplate: []string{"mugen-ai", "calendar", "list-today"},
+			cmdTemplate: []string{"{{self}}", "calendar", "list-today"},
 			readonly:    true,
 		},
 		{
@@ -849,7 +860,7 @@ func builtin() []Tool {
 				},
 				"required": []string{"start", "end"},
 			},
-			cmdTemplate: []string{"mugen-ai", "calendar", "list-range", "--start={{start}}", "--end={{end}}"},
+			cmdTemplate: []string{"{{self}}", "calendar", "list-range", "--start={{start}}", "--end={{end}}"},
 			readonly:    true,
 		},
 	}

@@ -162,7 +162,7 @@ func (r *Registry) DesktopContext(ctx context.Context) string {
 	})
 
 	gather("calendar", func() {
-		out, err := r.run(ctx, "mugen-ai", []string{"calendar", "list-today"})
+		out, err := r.run(ctx, selfPath(), []string{"calendar", "list-today"})
 		if err != nil {
 			return
 		}
