@@ -260,10 +260,10 @@ func TestCallCmdTemplateDispatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Call: %v", err)
 	}
-	if fr.name != "/scripts/calendar-cli.py" {
-		t.Fatalf("dispatched %q, want the calendar-cli.py path", fr.name)
+	if fr.name != "mugen-ai" {
+		t.Fatalf("dispatched %q, want the mugen-ai binary", fr.name)
 	}
-	want := []string{"add", "--date=2026-05-20", "--time=15:00", "--title=design review"}
+	want := []string{"calendar", "add", "--date=2026-05-20", "--time=15:00", "--title=design review"}
 	if !reflect.DeepEqual(fr.args, want) {
 		t.Fatalf("args = %v, want %v", fr.args, want)
 	}

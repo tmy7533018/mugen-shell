@@ -20,7 +20,7 @@ func desktopFakeRun(results map[string]string) func(context.Context, string, []s
 				return "", fmt.Errorf("unexpected qs args %v", args)
 			}
 			key = args[4] + "/" + args[5]
-		} else if strings.HasSuffix(name, "calendar-cli.py") {
+		} else if name == "mugen-ai" {
 			key = "calendar"
 		} else {
 			return "", fmt.Errorf("unexpected exec %s", name)

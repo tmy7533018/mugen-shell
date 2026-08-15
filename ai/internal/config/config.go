@@ -109,7 +109,7 @@ type Shell struct {
 	// QsConfig is the quickshell `-c` name used to target mugen-shell from
 	// `qs ipc call`. Defaults to "mugen-shell".
 	QsConfig string `toml:"qs_config" json:"qs_config"`
-	// ScriptsDir holds calendar-cli.py / toggle-*.sh, for tools that can't fit through IPC.
+	// ScriptsDir holds toggle-*.sh, for tools that can't fit through IPC.
 	// Defaults to "$XDG_CONFIG_HOME/quickshell/mugen-shell/scripts".
 	ScriptsDir string `toml:"scripts_dir" json:"scripts_dir"`
 }

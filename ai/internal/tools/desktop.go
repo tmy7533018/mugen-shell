@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -163,7 +162,7 @@ func (r *Registry) DesktopContext(ctx context.Context) string {
 	})
 
 	gather("calendar", func() {
-		out, err := r.run(ctx, filepath.Join(r.scriptsDir, "calendar-cli.py"), []string{"list-today"})
+		out, err := r.run(ctx, "mugen-ai", []string{"calendar", "list-today"})
 		if err != nil {
 			return
 		}

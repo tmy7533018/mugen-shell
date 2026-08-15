@@ -310,7 +310,7 @@ in
       };
       Service = {
         Type = "oneshot";
-        ExecStart = "${pkgs.python3}/bin/python3 ${cfg.package}/scripts/notify-events.py";
+        ExecStart = "${cfg.ai.package}/bin/mugen-ai calendar notify";
       };
     };
 

@@ -79,7 +79,7 @@ Item {
     function addEvent(date, title, time) {
         if (!date || !title) return
         addEventProcess.command = [
-            "python3", Quickshell.shellDir + "/scripts/calendar-cli.py",
+            "mugen-ai", "calendar",
             "add", "--date", date, "--title", title, "--time", time || ""
         ]
         addEventProcess.running = true
@@ -88,7 +88,7 @@ Item {
     function deleteEvent(id) {
         if (!id) return
         deleteEventProcess.command = [
-            "python3", Quickshell.shellDir + "/scripts/calendar-cli.py",
+            "mugen-ai", "calendar",
             "delete", "--id", id
         ]
         deleteEventProcess.running = true

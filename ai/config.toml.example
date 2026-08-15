@@ -24,8 +24,8 @@
   # dispatcher. The mugen-shell default is "mugen-shell"; only change if you
   # run a forked / renamed quickshell config.
   qs_config = "mugen-shell"
-  # Override where mugen-ai looks for cmdTemplate scripts (calendar-cli.py
-  # etc.). Defaults to $XDG_CONFIG_HOME/quickshell/mugen-shell/scripts.
+  # Override where mugen-ai looks for cmdTemplate scripts (toggle-*.sh etc.).
+  # Defaults to $XDG_CONFIG_HOME/quickshell/mugen-shell/scripts.
   # scripts_dir = "/path/to/scripts"
 
 # Each [provider.*] block enables that provider, IF its API key env var is

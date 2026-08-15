@@ -817,7 +817,7 @@ func builtin() []Tool {
 				},
 				"required": []string{"date", "time", "title"},
 			},
-			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "add", "--date={{date}}", "--time={{time}}", "--title={{title}}"},
+			cmdTemplate: []string{"mugen-ai", "calendar", "add", "--date={{date}}", "--time={{time}}", "--title={{title}}"},
 		},
 		{
 			Name:        "calendar_delete",
@@ -829,13 +829,13 @@ func builtin() []Tool {
 				},
 				"required": []string{"id"},
 			},
-			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "delete", "--id={{id}}"},
+			cmdTemplate: []string{"mugen-ai", "calendar", "delete", "--id={{id}}"},
 		},
 		{
 			Name:        "calendar_list_today",
 			Description: "List today's calendar events as JSON { events: [{ id, date, time, title }, ...] }.",
 			Parameters:  emptyParams(),
-			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "list-today"},
+			cmdTemplate: []string{"mugen-ai", "calendar", "list-today"},
 			readonly:    true,
 		},
 		{
@@ -849,7 +849,7 @@ func builtin() []Tool {
 				},
 				"required": []string{"start", "end"},
 			},
-			cmdTemplate: []string{"{{scripts_dir}}/calendar-cli.py", "list-range", "--start={{start}}", "--end={{end}}"},
+			cmdTemplate: []string{"mugen-ai", "calendar", "list-range", "--start={{start}}", "--end={{end}}"},
 			readonly:    true,
 		},
 	}
