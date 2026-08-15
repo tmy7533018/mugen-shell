@@ -122,10 +122,10 @@ in
       environment.sessionVariables.GI_TYPELIB_PATH =
         import ../nix/gi-typelib-dirs.nix pkgs;
 
-      # The QML tree imports Qt5Compat.GraphicalEffects, which nixpkgs'
-      # quickshell doesn't bundle.
+      # Neither Qt5Compat.GraphicalEffects nor Mugen.Audio ships with quickshell.
       environment.sessionVariables.QML2_IMPORT_PATH = [
         "${pkgs.qt6Packages.qt5compat}/lib/qt-6/qml"
+        "${pkgs.mugen-audio}/lib/qt-6/qml"
       ];
 
       environment.systemPackages = with pkgs; [

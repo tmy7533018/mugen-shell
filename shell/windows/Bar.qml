@@ -483,13 +483,12 @@ PanelWindow {
     Managers.CavaManager {
         id: cavaManager
 
-        // Keep always active to prevent multiple process conflicts
         Component.onCompleted: {
             isActive = true
         }
     }
 
-    Managers.MicCavaManager { id: micCavaManager }
+    Managers.CavaManager { id: micCavaManager; source: "mic" }
 
     Managers.ImeStatus {
         id: imeStatus

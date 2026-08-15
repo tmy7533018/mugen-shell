@@ -25,7 +25,7 @@ FocusScope {
     onVoiceListeningChanged: voiceListening ? listenCava.start() : listenCava.stop()
 
     // Private instance: the volume panel stops the shared one on its own schedule.
-    Managers.MicCavaManager { id: listenCava }
+    Managers.CavaManager { id: listenCava; source: "mic" }
 
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://localhost"
     readonly property var _transportArgs: aiBackend ? aiBackend.transportArgs : []

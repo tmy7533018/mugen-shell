@@ -136,8 +136,11 @@ in
     home.sessionVariables = lib.mkIf cfg.includeSystemDeps {
       GI_TYPELIB_PATH =
         lib.concatStringsSep ":" (import ./gi-typelib-dirs.nix pkgs);
-      # Qt5Compat.GraphicalEffects, which nixpkgs' quickshell doesn't bundle.
-      QML2_IMPORT_PATH = "${pkgs.qt6Packages.qt5compat}/lib/qt-6/qml";
+      # Neither Qt5Compat.GraphicalEffects nor Mugen.Audio ships with quickshell.
+      QML2_IMPORT_PATH = lib.concatStringsSep ":" [
+        "${pkgs.qt6Packages.qt5compat}/lib/qt-6/qml"
+        "${pkgs.mugen-audio}/lib/qt-6/qml"
+      ];
     };
 
     home.packages =

@@ -28,7 +28,7 @@ FocusScope {
     }
 
     // Private instance — the volume panel stops the shared one on its own schedule.
-    Managers.MicCavaManager { id: listenCava }
+    Managers.CavaManager { id: listenCava; source: "mic" }
 
     // Lets a host count keyboard-only use as activity; the timer only sees taps and pointer motion.
     signal userActivity()
