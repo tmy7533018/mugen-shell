@@ -61,6 +61,8 @@ Row {
                 width: root.barWidth
                 height: root.minBarHeight
                 x: 0
+                // Set by updateAppearance() before anything reads it.
+                property real targetHeight: 0
                 property real targetY: (parent.height - root.minBarHeight) / 2
                 y: targetY
                 property real currentLevel: 0
@@ -135,16 +137,19 @@ Row {
                     }
                 }
                 
+                // Read back, bar.height is mid-Behavior, and a feed's last frame freezes that.
                 function updateAppearance() {
                     if (!root.cavaManager) {
-                        bar.height = root.minBarHeight
-                        bar.targetY = (parent.height - bar.height) / 2
+                        bar.targetHeight = root.minBarHeight
+                        bar.height = bar.targetHeight
+                        bar.targetY = (parent.height - bar.targetHeight) / 2
                         return
                     }
                     let level = root.getBarLevel(index)
                     let barMaxHeight = root.getBarMaxHeight(index)
-                    bar.height = root.minBarHeight + level * (barMaxHeight - root.minBarHeight)
-                    bar.targetY = (parent.height - bar.height) / 2
+                    bar.targetHeight = root.minBarHeight + level * (barMaxHeight - root.minBarHeight)
+                    bar.height = bar.targetHeight
+                    bar.targetY = (parent.height - bar.targetHeight) / 2
                 }
                 
                 Connections {

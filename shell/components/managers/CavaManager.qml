@@ -12,10 +12,15 @@ QtObject {
     readonly property alias audioLevel: cavaSource.audioLevel
     readonly property alias rms: cavaSource.rms
 
+    // Draining through cava's fall-off, not a cut to zero, matches an always-on one.
+    property Timer drainTimer: Timer { interval: 700 }
+
+    onIsActiveChanged: if (!isActive) drainTimer.restart()
+
     property CavaSource cavaSource: CavaSource {
         id: cavaSource
         bars: 16
-        active: cavaManager.isActive
+        active: cavaManager.isActive || cavaManager.drainTimer.running
         source: cavaManager.source === "mic" ? "auto_input" : "auto"
     }
 
