@@ -12,6 +12,11 @@ import (
 	"strings"
 )
 
+const (
+	initialEventBuf = 64 * 1024
+	maxEventLine    = 1 << 20
+)
+
 // Substrings, not names: "activewindowv2" has to match through "window".
 var relevantEvents = []string{
 	"workspace", "window", "move", "focus", "monitor",
@@ -62,6 +67,8 @@ func Monitor(out io.Writer) error {
 	defer conn.Close()
 
 	scanner := bufio.NewScanner(conn)
+	// A window title is unbounded, and Scanner's default 64KB cap kills the stream for good.
+	scanner.Buffer(make([]byte, 0, initialEventBuf), maxEventLine)
 	for scanner.Scan() {
 		line := scanner.Text()
 		name, _, found := strings.Cut(line, ">>")
