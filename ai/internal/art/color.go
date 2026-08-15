@@ -98,7 +98,7 @@ func ensureMinLightness(c RGB) RGB {
 	}
 
 	lum := luminance(c)
-	h, s, l := hlsFromRGBSwapped(c)
+	h, l, s := hlsFromRGB(c)
 
 	var lFinal, sFinal float64
 	if lum < targetLuminance {
@@ -121,7 +121,7 @@ func adjustDarkColor(c RGB, lum float64) (float64, float64) {
 		}
 	}
 
-	_, sScaled, _ := hlsFromRGBSwapped(scaled)
+	_, _, sScaled := hlsFromRGB(scaled)
 
 	lFinal := math.Min(0.85, targetLuminance+0.1)
 	sFinal := math.Max(0.5, math.Min(1.0, sScaled*1.3))
@@ -156,19 +156,16 @@ func finalizeLuminance(c RGB) RGB {
 	return c
 }
 
-// Positional like the python's `h, s, l = rgb_to_hls(...)`, which mis-binds the
-// (h, l, s) it actually returns, so callers read lightness where they say s.
-func hlsFromRGBSwapped(c RGB) (h, second, third float64) {
+func hlsFromRGB(c RGB) (h, l, s float64) {
 	maxc := math.Max(c.R, math.Max(c.G, c.B))
 	minc := math.Min(c.R, math.Min(c.G, c.B))
 	sumc := maxc + minc
 	rangec := maxc - minc
-	l := sumc / 2.0
+	l = sumc / 2.0
 	if minc == maxc {
 		return 0.0, l, 0.0
 	}
 
-	var s float64
 	if l <= 0.5 {
 		s = rangec / sumc
 	} else {
