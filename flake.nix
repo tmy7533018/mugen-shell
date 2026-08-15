@@ -18,6 +18,7 @@
       # resolves once this overlay is applied.
       overlay = final: prev: {
         mugen-ai = self.packages.${prev.system}.mugen-ai;
+        mugen-audio = self.packages.${prev.system}.mugen-audio;
         mugen-shell = self.packages.${prev.system}.mugen-shell;
       };
 
@@ -139,6 +140,29 @@
               homepage = "https://github.com/tmy7533018/mugen-shell";
               license = pkgs.lib.licenses.mit;
               mainProgram = "mugen-ai";
+            };
+          };
+
+          # Separate so mugen-shell stays a plain copy that needs no build step.
+          mugen-audio = pkgs.stdenv.mkDerivation {
+            pname = "mugen-audio";
+            version = "0.1.0";
+            src = ./plugin;
+            nativeBuildInputs = with pkgs; [
+              cmake
+              ninja
+              pkg-config
+              qt6.wrapQtAppsHook
+            ];
+            buildInputs = with pkgs; [
+              qt6.qtbase
+              qt6.qtdeclarative
+              libcava
+            ];
+            meta = {
+              description = "Qt QML module exposing libcava's spectrum to mugen-shell";
+              homepage = "https://github.com/tmy7533018/mugen-shell";
+              license = pkgs.lib.licenses.mit;
             };
           };
 
