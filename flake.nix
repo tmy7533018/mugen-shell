@@ -128,7 +128,7 @@
             pname = "mugen-ai";
             version = "0.1.0";
             src = ./ai;
-            vendorHash = "sha256-n4brPv9eZJPqdTvnjdqQK7Q8JVgZvJbD5ndKFQEfu0I=";
+            vendorHash = "sha256-Bf6NpGE1lub1IR1hAL+ZdFgnUmJeb3m0UdYMg2cfgCk=";
             # Ship the config templates so Nix users get the schemas without
             # cloning the repo.
             postInstall = ''

@@ -169,8 +169,8 @@ in
           socat
           curl
           fastfetch
-          # pygobject3 for list-apps.py, pillow+numpy for extract-color.py / trim-art-bars.py.
-          (python3.withPackages (ps: [ ps.pygobject3 ps.pillow ps.numpy ]))
+          # pygobject3 for list-apps.py.
+          (python3.withPackages (ps: [ ps.pygobject3 ]))
           gtk3
           # Referenced by the shipped .zshrc.
           starship
@@ -185,7 +185,8 @@ in
           firefox
         ]
       )
-      ++ lib.optionals cfg.ai.enable [ cfg.ai.package ];
+      # Ungated: the music module shells out to `mugen-ai art` regardless.
+      ++ [ cfg.ai.package ];
 
     # graphical-session.target sets RefuseManualStart, so Hyprland (no session
     # manager here) can't start it directly. It starts this target instead,

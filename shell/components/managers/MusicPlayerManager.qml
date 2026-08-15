@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell
 import Quickshell.Io
 
 QtObject {
@@ -152,14 +151,14 @@ QtObject {
         + 'key="$1"\n'
         + 'if [ "$src" = "firefox-mpris" ]; then\n'
         + '  src=$(ls -t "${XDG_CONFIG_HOME:-$HOME/.config}/mozilla/firefox/firefox-mpris/"* 2>/dev/null | head -1)\n'
-        + '  [ -n "$src" ] && [ "$(stat -c %Y "$src")" -ge "$3" ] || exit 1\n'
+        + '  [ -n "$src" ] && [ "$(stat -c %Y "$src")" -ge "$2" ] || exit 1\n'
         + '  key="$src:$(stat -c %Y "$src")"\n'
         + '  src="file://$src"\n'
         + 'fi\n'
         + 'f="$dir/$(printf %s "$key" | sha1sum | cut -c1-32)"\n'
         + 'if [ ! -s "$f" ]; then\n'
         + '  curl -sfL --max-time 10 --max-filesize 8388608 -o "$f.part" "$src" || { rm -f "$f.part"; exit 1; }\n'
-        + '  python3 "$2" "$f.part" 2>/dev/null\n'
+        + '  mugen-ai art trim "$f.part" 2>/dev/null\n'
         + '  mv -f "$f.part" "$f" || exit 1\n'
         + '  ls -1t "$dir" | tail -n +129 | (cd "$dir" && xargs -r rm -f)\n'
         + 'fi\n'
@@ -198,7 +197,6 @@ QtObject {
         if (_artWanted === _artCachedUrl) return
         _artFetching = _artWanted
         artCacheProcess.command = ["bash", "-c", artCacheScript, "bash", _artWanted,
-                                  Quickshell.shellDir + "/scripts/trim-art-bars.py",
                                   String(Math.floor(_artTrackSince))]
         artCacheProcess.running = true
     }
@@ -256,7 +254,7 @@ QtObject {
         } catch (e) {
         }
         _accentSource = artUrl
-        artColorProcess.command = ["python3", Quickshell.shellDir + "/scripts/extract-color.py", path]
+        artColorProcess.command = ["mugen-ai", "art", "color", path]
         artColorProcess.running = true
     }
 

@@ -57,7 +57,8 @@ in
 
   config = lib.mkIf cfg.enable (lib.mkMerge [
     {
-      environment.systemPackages = [ cfg.package ];
+      # mugen-ai rides along because the shell calls `mugen-ai art` for album art.
+      environment.systemPackages = [ cfg.package pkgs.mugen-ai ];
 
       # The lock screen's own PAM stack. ext-session-lock keeps the session
       # locked even if the client dies, so a missing stack does not fail open
@@ -152,8 +153,8 @@ in
         curl
         fastfetch
         hyprpolkitagent # mugen-shell.lua starts its user unit at hyprland.start
-        # pygobject3 for list-apps.py, pillow+numpy for extract-color.py / trim-art-bars.py.
-        (python3.withPackages (ps: [ ps.pygobject3 ps.pillow ps.numpy ]))
+        # pygobject3 for list-apps.py.
+        (python3.withPackages (ps: [ ps.pygobject3 ]))
         gtk3
         kitty
         firefox
