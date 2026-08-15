@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import Quickshell
 import Quickshell.Io
 import "../notification" as NotificationComponents
 import "../ui" as UI
@@ -154,7 +153,7 @@ Item {
 
         onExited: (exitCode) => {
             if (exitCode !== 0) {
-                console.warn("focus_or_launch failed (" + exitCode + "): "
+                console.warn("hypr focus-or-launch failed (" + exitCode + "): "
                              + launchAppProcess.errorOutput.trim())
             }
         }
@@ -331,7 +330,7 @@ Item {
                 if (idx >= 0 && idx < notifications.length) {
                     let notif = notifications[idx]
                     if (notif && notif.desktopEntry && notif.desktopEntry.length > 0) {
-                        launchAppProcess.command = ["python3", Quickshell.shellDir + "/scripts/focus_or_launch.py", notif.desktopEntry]
+                        launchAppProcess.command = ["mugen-ai", "hypr", "focus-or-launch", notif.desktopEntry]
                         launchAppProcess.running = true
                     }
                     if (notif && notif.id !== undefined) {
@@ -634,7 +633,7 @@ Item {
                         
                         onActionRequested: (notif) => {
                             if (notif.desktopEntry && notif.desktopEntry.length > 0) {
-                                launchAppProcess.command = ["python3", Quickshell.shellDir + "/scripts/focus_or_launch.py", notif.desktopEntry]
+                                launchAppProcess.command = ["mugen-ai", "hypr", "focus-or-launch", notif.desktopEntry]
                                 launchAppProcess.running = true
                             }
                             root.removeNotification(notif.id)

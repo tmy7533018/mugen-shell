@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
 import "../../lib" as Theme
@@ -78,10 +77,7 @@ Item {
     property Process hyprlandIpcMonitor: Process {
         id: ipcMonitor
 
-        command: [
-            "python3",
-            Quickshell.shellDir + "/scripts/hyprland_ipc_monitor.py"
-        ]
+        command: ["mugen-ai", "hypr", "monitor"]
 
         running: workspacesRoot.visible && !restartTimer.running
 
