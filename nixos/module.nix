@@ -60,6 +60,12 @@ in
       # mugen-ai rides along because the shell calls `mugen-ai art` for album art.
       environment.systemPackages = [ cfg.package pkgs.mugen-ai ];
 
+      # Mugen.Audio is built from this repo, so no distro can supply it in our place.
+      environment.sessionVariables.QML2_IMPORT_PATH =
+        [ "${pkgs.mugen-audio}/lib/qt-6/qml" ]
+        ++ lib.optional cfg.includeSystemDeps
+          "${pkgs.qt6Packages.qt5compat}/lib/qt-6/qml";
+
       # The lock screen's own PAM stack. ext-session-lock keeps the session
       # locked even if the client dies, so a missing stack does not fail open
       # — it strands the session with no way to authenticate. Deliberately not
@@ -122,12 +128,6 @@ in
       # via Hyprland → quickshell.
       environment.sessionVariables.GI_TYPELIB_PATH =
         import ../nix/gi-typelib-dirs.nix pkgs;
-
-      # Neither Qt5Compat.GraphicalEffects nor Mugen.Audio ships with quickshell.
-      environment.sessionVariables.QML2_IMPORT_PATH = [
-        "${pkgs.qt6Packages.qt5compat}/lib/qt-6/qml"
-        "${pkgs.mugen-audio}/lib/qt-6/qml"
-      ];
 
       environment.systemPackages = with pkgs; [
         quickshell

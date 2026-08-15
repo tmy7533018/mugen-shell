@@ -133,14 +133,16 @@ in
       else cfg.package;
 
     # Session-wide so Hyprland → quickshell → python3 inherits it.
-    home.sessionVariables = lib.mkIf cfg.includeSystemDeps {
+    home.sessionVariables = {
+      # Mugen.Audio is built from this repo, so no distro can supply it in our place.
+      QML2_IMPORT_PATH = lib.concatStringsSep ":" (
+        [ "${pkgs.mugen-audio}/lib/qt-6/qml" ]
+        ++ lib.optional cfg.includeSystemDeps
+          "${pkgs.qt6Packages.qt5compat}/lib/qt-6/qml"
+      );
+    } // lib.optionalAttrs cfg.includeSystemDeps {
       GI_TYPELIB_PATH =
         lib.concatStringsSep ":" (import ./gi-typelib-dirs.nix pkgs);
-      # Neither Qt5Compat.GraphicalEffects nor Mugen.Audio ships with quickshell.
-      QML2_IMPORT_PATH = lib.concatStringsSep ":" [
-        "${pkgs.qt6Packages.qt5compat}/lib/qt-6/qml"
-        "${pkgs.mugen-audio}/lib/qt-6/qml"
-      ];
     };
 
     home.packages =

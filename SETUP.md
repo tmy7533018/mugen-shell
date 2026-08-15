@@ -140,6 +140,8 @@ yay -S hyprland quickshell hypridle zsh kitty starship libnotify \
        python-gobject
 ```
 
+オーディオビジュアライザの QML モジュールは Nix 側でビルドされます。quickshell が `Mugen.Audio` の import に失敗して `version 'Qt_6.11' not found` と出る場合、distro の Qt6 がビルド時のものより古いということなので、Qt を更新するか、`plugin/` を自分でビルドしてインストール先を `QML2_IMPORT_PATH` に足してください。
+
 `includeSystemDeps = true` にすれば、このうちユーザ空間のツール (Quickshell、hypridle、awww、matugen、kitty など) は Nix 側から入ります。Hyprland 本体とシステムサービス、テーマ類は、どちらにしても pacman のままです。
 
 Hyprland をどう起動するか (TTY から `Hyprland` を叩く、sddm にセッションを登録する、など) は自分で用意してください。

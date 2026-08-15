@@ -104,24 +104,68 @@
       in
       {
         # SETUP's Path B reaches no other output, so nothing else would notice it breaking.
-        checks = nixpkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
-          home-manager = (home-manager.lib.homeManagerConfiguration {
-            pkgs = import nixpkgs {
-              inherit system;
-              overlays = [ overlay ];
-            };
-            modules = [
-              self.homeManagerModules.default
-              {
-                home.username = "check";
-                home.homeDirectory = "/home/check";
-                programs.mugen-shell.enable = true;
-                programs.mugen-shell.includeSystemDeps = false;
-                home.stateVersion = "26.05";
-              }
-            ];
-          }).activationPackage;
-        };
+        checks = nixpkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux (
+          let
+            pathB = (home-manager.lib.homeManagerConfiguration {
+              pkgs = import nixpkgs {
+                inherit system;
+                overlays = [ overlay ];
+              };
+              modules = [
+                self.homeManagerModules.default
+                {
+                  home.username = "check";
+                  home.homeDirectory = "/home/check";
+                  programs.mugen-shell.enable = true;
+                  programs.mugen-shell.includeSystemDeps = false;
+                  home.stateVersion = "26.05";
+                }
+              ];
+            }).activationPackage;
+
+            nixosOwnStack = (nixpkgs.lib.nixosSystem {
+              modules = [
+                nixosModule
+                {
+                  nixpkgs.hostPlatform = system;
+                  programs.mugen-shell.enable = true;
+                  programs.mugen-shell.includeSystemDeps = false;
+
+                  boot.loader.grub.device = "nodev";
+                  fileSystems."/" = { device = "/dev/null"; fsType = "tmpfs"; };
+                  system.stateVersion = "25.05";
+                }
+              ];
+            }).config.environment.sessionVariables.QML2_IMPORT_PATH;
+          in
+          {
+            # Activating proves nothing: a missing Mugen.Audio only surfaces once quickshell parses QML.
+            home-manager = pkgs.runCommand "check-path-b" { } ''
+              vars=${pathB}/home-path/etc/profile.d/hm-session-vars.sh
+              path=$(sed -n 's/^export QML2_IMPORT_PATH="\(.*\)"$/\1/p' "$vars")
+              hit=$(echo "$path" | tr ':' '\n' | while read -r dir; do
+                [ -f "$dir/Mugen/Audio/qmldir" ] && echo "$dir"
+              done)
+              if [ -z "$hit" ]; then
+                echo "no Mugen/Audio/qmldir on QML2_IMPORT_PATH (got: ''${path:-unset})" >&2
+                exit 1
+              fi
+              touch $out
+            '';
+
+            # nixosConfigurations.vm only ever exercises includeSystemDeps = true.
+            nixos-own-stack = pkgs.runCommand "check-nixos-own-stack" { } ''
+              hit=$(echo ${nixpkgs.lib.escapeShellArg nixosOwnStack} | tr ':' '\n' | while read -r dir; do
+                [ -f "$dir/Mugen/Audio/qmldir" ] && echo "$dir"
+              done)
+              if [ -z "$hit" ]; then
+                echo "no Mugen/Audio/qmldir on the NixOS QML2_IMPORT_PATH" >&2
+                exit 1
+              fi
+              touch $out
+            '';
+          }
+        );
 
         packages = rec {
           mugen-ai = pkgs.buildGoModule {
