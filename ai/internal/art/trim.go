@@ -28,7 +28,7 @@ func TrimBars(path string) error {
 	if err != nil {
 		return nil
 	}
-	img, format, err := image.Decode(file)
+	img, format, err := decodeImage(file)
 	file.Close()
 	if err != nil {
 		return nil

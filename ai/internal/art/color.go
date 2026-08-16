@@ -3,7 +3,6 @@
 package art
 
 import (
-	"image"
 	"image/color"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -35,7 +34,7 @@ func DominantColor(path string) (RGB, error) {
 	}
 	defer file.Close()
 
-	img, _, err := image.Decode(file)
+	img, _, err := decodeImage(file)
 	if err != nil {
 		return DefaultColor, err
 	}
