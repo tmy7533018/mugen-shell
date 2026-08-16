@@ -2,6 +2,7 @@ package calendar
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -81,8 +82,13 @@ func Notify(now time.Time) error {
 	return saveFired(pruneFired(fired, now))
 }
 
+// Reported to the journal: a silent failure here is a notification the user never learns was due.
 func send(summary, body string) {
-	exec.Command("notify-send", "-a", "mugen-shell", "-i", "x-office-calendar", summary, body).Run()
+	out, err := exec.Command("notify-send", "-a", "mugen-shell",
+		"-i", "x-office-calendar", summary, body).CombinedOutput()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "notify-send: %v: %s\n", err, out)
+	}
 }
 
 func loadFired() map[string]bool {
