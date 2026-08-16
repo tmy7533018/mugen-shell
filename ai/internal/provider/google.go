@@ -20,7 +20,7 @@ type Google struct {
 
 func NewGoogle(apiKey string, models []string) *Google {
 	if len(models) == 0 {
-		models = []string{"gemini-2.5-flash"}
+		models = []string{"gemini-3.7-flash"}
 	}
 	return &Google{
 		apiKey: apiKey,

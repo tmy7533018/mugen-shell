@@ -46,7 +46,7 @@
 # [provider.google]
 #   # Requires GEMINI_API_KEY (or GOOGLE_API_KEY). Legacy single-string
 #   # `model` is still honoured as a fallback when `models` is empty.
-#   models = ["gemini-2.5-flash", "gemini-2.5-pro"]
+#   models = [...]   # omit for the default model; see Google's docs for current IDs
 
 # [provider.openai]
 #   # OpenAI-compatible endpoint. Requires OPENAI_API_KEY (or local server).
@@ -56,8 +56,8 @@
 #   models = []                                     # empty = ask /v1/models
 
 # [provider.anthropic]
-#   # Requires ANTHROPIC_API_KEY. Omit `models` to default to claude-haiku-4-5.
-#   models = ["claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-7"]
+#   # Requires ANTHROPIC_API_KEY. Omit `models` for the default model.
+#   models = [...]   # see Anthropic's docs for current IDs
 #   max_tokens = 2048   # reply cap per turn
 #   effort = "high"     # reasoning depth while thinking is on:
 #                       # low | medium | high | xhigh | max
