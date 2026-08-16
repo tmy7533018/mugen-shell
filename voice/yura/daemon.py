@@ -45,6 +45,8 @@ class Daemon:
         self.ptt_held = threading.Event()
         self.ptt_turn = threading.Event()
         self.summons = threading.Event()
+        # Held across a whole request so the end-of-turn reset cannot land inside one.
+        self._flags = threading.RLock()
         self.capture = Capture(lambda: self.running, self.cancel)
         self.chat = Chat()
         self.read_aloud = ReadAloud()
@@ -60,19 +62,21 @@ class Daemon:
             self.whisper_proc = None
 
     def request_turn(self, fresh: bool = False) -> None:
-        (self.trigger_fresh if fresh else self.trigger).set()
-        self.summons.set()
+        with self._flags:
+            (self.trigger_fresh if fresh else self.trigger).set()
+            self.summons.set()
 
     def _trigger_name(self) -> str:
         return "ptt key" if self.ptt_turn.is_set() else "mic button"
 
     def request_ptt(self, down: bool, fresh: bool = False) -> None:
-        if down:
-            self.ptt_held.set()
-            self.ptt_turn.set()
-            self.request_turn(fresh=fresh)
-        else:
-            self.ptt_held.clear()
+        with self._flags:
+            if down:
+                self.ptt_held.set()
+                self.ptt_turn.set()
+                self.request_turn(fresh=fresh)
+            else:
+                self.ptt_held.clear()
 
     def request_cancel(self) -> None:
         self.cancel.set()
@@ -233,11 +237,14 @@ class Daemon:
         self._clear_turn_flags()
 
     def _clear_turn_flags(self) -> None:
-        self.trigger.clear()
-        self.trigger_fresh.clear()
-        self.ptt_held.clear()
-        self.ptt_turn.clear()
-        self.summons.clear()
+        with self._flags:
+            # A press landing in the turn's last moments asks for the next turn, not this one's litter.
+            if self.summons.is_set():
+                return
+            self.trigger.clear()
+            self.trigger_fresh.clear()
+            self.ptt_held.clear()
+            self.ptt_turn.clear()
 
     def _idle_session(self) -> None:
         log("ready", "push to talk")

@@ -44,6 +44,7 @@ def bare_daemon() -> Daemon:
     d.ptt_held = threading.Event()
     d.ptt_turn = threading.Event()
     d.summons = threading.Event()
+    d._flags = threading.RLock()
     d.read_aloud = _FakeReadAloud()
     d.chat = _FakeChat()
     return d
@@ -96,14 +97,25 @@ class Summons(unittest.TestCase):
         d.request_ptt(False)
         self.assertFalse(d.summons.is_set())
 
-    def test_finishing_a_turn_clears_every_trigger(self):
-        d = bare_daemon()
-        d._handle_turn = lambda surface_up=False: None
+    def _turn(self, d, during=None):
+        d._handle_turn = lambda surface_up=False: during and during()
         d.capture = types.SimpleNamespace(drain=lambda: None)
         d.request_ptt(True)
+        # The idle loop consumes the summons before running the turn it asked for.
+        d.summons.clear()
         d._run_turn(False)
+
+    def test_finishing_a_turn_clears_every_trigger(self):
+        d = bare_daemon()
+        self._turn(d)
         for flag in ("trigger", "trigger_fresh", "ptt_held", "ptt_turn", "summons"):
             self.assertFalse(getattr(d, flag).is_set(), flag)
+
+    def test_a_press_at_the_end_of_a_turn_survives_the_reset(self):
+        d = bare_daemon()
+        self._turn(d, during=lambda: d.request_ptt(True))
+        for flag in ("trigger", "ptt_held", "ptt_turn", "summons"):
+            self.assertTrue(getattr(d, flag).is_set(), flag)
 
 
 class TakeTrigger(unittest.TestCase):
