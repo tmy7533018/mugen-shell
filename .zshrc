@@ -24,14 +24,15 @@ precmd_functions+=(set_win_title)
 
 
 ## Plugins section: Enable fish style features
-# Arch nests plugins under zsh/plugins/<name>; Nix profiles put them
-# directly under share/<name>. Probe both layouts.
+# Both layouts appear under every prefix: nixpkgs alone uses each for a different plugin.
 for _plug in zsh-syntax-highlighting zsh-autosuggestions zsh-history-substring-search; do
-    for _dir in /usr/share/zsh/plugins/$_plug /run/current-system/sw/share/$_plug $HOME/.nix-profile/share/$_plug; do
-        [[ -e $_dir/$_plug.zsh ]] && { source $_dir/$_plug.zsh; break }
+    for _root in /usr/share /run/current-system/sw/share $HOME/.nix-profile/share; do
+        for _dir in $_root/zsh/plugins/$_plug $_root/$_plug; do
+            [[ -e $_dir/$_plug.zsh ]] && { source $_dir/$_plug.zsh; break 2 }
+        done
     done
 done
-unset _plug _dir
+unset _plug _root _dir
 
 for _dir in /usr/share/fzf /run/current-system/sw/share/fzf $HOME/.nix-profile/share/fzf; do
     if [[ -e $_dir/key-bindings.zsh ]]; then
@@ -207,13 +208,13 @@ fi
 
 ## Useful aliases
 
-# Replace ls with exa when available
-if command -v exa &>/dev/null; then
-    alias ls='exa -al --color=always --group-directories-first --icons'
-    alias la='exa -a --color=always --group-directories-first --icons'
-    alias ll='exa -l --color=always --group-directories-first --icons'
-    alias lt='exa -aT --color=always --group-directories-first --icons'
-    alias l.='exa -ald --color=always --group-directories-first --icons .*'
+# Replace ls with eza when available
+if command -v eza &>/dev/null; then
+    alias ls='eza -al --color=always --group-directories-first --icons'
+    alias la='eza -a --color=always --group-directories-first --icons'
+    alias ll='eza -l --color=always --group-directories-first --icons'
+    alias lt='eza -aT --color=always --group-directories-first --icons'
+    alias l.='eza -ald --color=always --group-directories-first --icons .*'
 fi
 
 # ascii_fetch combines jp2a + fastfetch; fall through to bare fastfetch when
