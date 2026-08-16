@@ -97,6 +97,21 @@ in
       '';
     };
 
+    zsh.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Install the packaged zsh config (starship prompt, fish-style
+        plugins, aliases, and the jp2a + fastfetch splash) and the tools
+        it calls. The fastfetch and starship configs it draws are
+        installed either way.
+
+        Your own <filename>~/.zshrc</filename> is never written over.
+        Enable <literal>programs.zsh</literal> as well and the source
+        line is added for you; otherwise add the line SETUP gives you.
+      '';
+    };
+
     ai = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -137,10 +152,20 @@ in
   config = lib.mkIf cfg.enable {
     # mkOutOfStoreSymlink keeps a live checkout editable without home-manager
     # reclaiming the path on every rebuild.
-    xdg.configFile."quickshell/mugen-shell".source =
-      if cfg.qmlDir != null
-      then config.lib.file.mkOutOfStoreSymlink cfg.qmlDir
-      else cfg.package;
+    xdg.configFile = {
+      "quickshell/mugen-shell".source =
+        if cfg.qmlDir != null
+        then config.lib.file.mkOutOfStoreSymlink cfg.qmlDir
+        else cfg.package;
+    } // lib.optionalAttrs cfg.zsh.enable {
+      # A stable path to source: the store path it points at changes every update.
+      "mugen-shell/mugen-shell.zshrc".source =
+        "${cfg.package}/share/zsh/mugen-shell.zshrc";
+    };
+
+    # Inert unless programs.zsh is enabled too; SETUP covers the manual line.
+    programs.zsh.initContent = lib.mkIf cfg.zsh.enable
+      "source ${config.xdg.configHome}/mugen-shell/mugen-shell.zshrc";
 
     # Session-wide so Hyprland → quickshell → python3 inherits it.
     home.sessionVariables = {
@@ -180,21 +205,29 @@ in
           xdg-utils      # `xdg-open` for Settings → Personality → Edit toml
           socat
           curl
-          fastfetch
+          fzf            # the blur preset picker falls back to it
           # pygobject3 for list-apps.py.
           (python3.withPackages (ps: [ ps.pygobject3 ]))
           gtk3
-          # Referenced by the shipped .zshrc.
-          starship
-          jp2a
-          fzf
-          zsh-syntax-highlighting
-          zsh-autosuggestions
-          zsh-history-substring-search
           # $terminal/$fileManager/$browser defaults; override via home.packages.
           kitty
           thunar
           firefox
+        ]
+      )
+      # What the packaged .zshrc calls; nothing else in the desktop needs them.
+      ++ lib.optionals (cfg.includeSystemDeps && cfg.zsh.enable) (
+        with pkgs;
+        [
+          starship
+          jp2a
+          fastfetch
+          eza
+          bat
+          ugrep
+          zsh-syntax-highlighting
+          zsh-autosuggestions
+          zsh-history-substring-search
         ]
       )
       # Ungated: the music module shells out to `mugen-ai art` regardless.

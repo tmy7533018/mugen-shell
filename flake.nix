@@ -123,6 +123,24 @@
               ];
             }).activationPackage;
 
+            zshOptIn = (home-manager.lib.homeManagerConfiguration {
+              pkgs = import nixpkgs {
+                inherit system;
+                overlays = [ overlay ];
+              };
+              modules = [
+                self.homeManagerModules.default
+                {
+                  home.username = "check";
+                  home.homeDirectory = "/home/check";
+                  programs.mugen-shell.enable = true;
+                  programs.mugen-shell.includeSystemDeps = false;
+                  programs.mugen-shell.zsh.enable = true;
+                  home.stateVersion = "26.05";
+                }
+              ];
+            }).activationPackage;
+
             nixosOwnStack = (nixpkgs.lib.nixosSystem {
               modules = [
                 nixosModule
@@ -160,6 +178,24 @@
               done)
               if [ -z "$hit" ]; then
                 echo "no Mugen/Audio/qmldir on the NixOS QML2_IMPORT_PATH" >&2
+                exit 1
+              fi
+              touch $out
+            '';
+
+            # The splash and the prompt are dead weight without the file that calls them.
+            zsh-opt-in = pkgs.runCommand "check-zsh-opt-in" { } ''
+              rc=${zshOptIn}/home-files/.config/mugen-shell/mugen-shell.zshrc
+              if [ ! -e "$rc" ]; then
+                echo "zsh.enable did not place mugen-shell.zshrc" >&2
+                exit 1
+              fi
+              if ! grep -q 'ascii_fetch' "$rc"; then
+                echo "the placed zshrc is not the packaged one" >&2
+                exit 1
+              fi
+              if [ -e ${pathB}/home-files/.config/mugen-shell/mugen-shell.zshrc ]; then
+                echo "the zshrc landed with zsh.enable off" >&2
                 exit 1
               fi
               touch $out
@@ -244,6 +280,9 @@
             mkdir -p $out/voice
             cp ${./voice/yurad.py} $out/voice/yurad.py
             cp -r ${./voice/yura} $out/voice/yura
+            # Opt-in terminal half: sourced from the user's ~/.zshrc, never over it.
+            mkdir -p $out/share/zsh
+            cp ${./.zshrc} $out/share/zsh/mugen-shell.zshrc
           '';
 
           default = mugen-shell;

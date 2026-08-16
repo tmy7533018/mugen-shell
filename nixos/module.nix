@@ -35,6 +35,19 @@ in
       '';
     };
 
+    zsh.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = ''
+        Install what the packaged zsh config calls (starship, jp2a,
+        fastfetch, fzf, the zsh plugins).
+
+        This only puts the tools on the system path. The config itself
+        lands via the home-manager module's option of the same name,
+        which is what writes <filename>~/.config/fastfetch</filename>.
+      '';
+    };
+
     fcitx5Addons = lib.mkOption {
       type = lib.types.listOf lib.types.package;
       default = [];
@@ -88,6 +101,13 @@ in
 
     (lib.mkIf cfg.includeSystemDeps {
       programs.hyprland.enable = true;
+
+      # Both ship their shell integration outside the share subdirs NixOS links
+      # by default, so the packaged .zshrc cannot find them without this.
+      environment.pathsToLink = lib.optionals cfg.zsh.enable [
+        "/share/zsh-syntax-highlighting"
+        "/share/fzf"
+      ];
 
       # Thunar (what Super+N opens) needs the module, not the bare package: the
       # package has no xfconf D-Bus service, so every preference it writes is
@@ -151,21 +171,29 @@ in
         xdg-utils     # `xdg-open` for Settings → Personality → Edit toml
         socat
         curl
-        fastfetch
+        fzf             # the blur preset picker falls back to it
         hyprpolkitagent # mugen-shell.lua starts its user unit at hyprland.start
         # pygobject3 for list-apps.py.
         (python3.withPackages (ps: [ ps.pygobject3 ]))
         gtk3
         kitty
         firefox
-        # Referenced by the shipped .zshrc.
-        starship
-        jp2a
-        fzf
-        zsh-syntax-highlighting
-        zsh-autosuggestions
-        zsh-history-substring-search
-      ];
+      ]
+      # What the packaged .zshrc calls; home-manager is what places the config.
+      ++ lib.optionals cfg.zsh.enable (
+        with pkgs;
+        [
+          starship
+          jp2a
+          fastfetch
+          eza
+          bat
+          ugrep
+          zsh-syntax-highlighting
+          zsh-autosuggestions
+          zsh-history-substring-search
+        ]
+      );
 
       # systemPackages alone doesn't register a package's user units, which the
       # hypr configs start with `systemctl --user start`.
