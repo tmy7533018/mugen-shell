@@ -11,6 +11,16 @@ let
   voiceDir =
     if cfg.voice.sourceDir != null then cfg.voice.sourceDir else "${cfg.package}/voice";
 
+  # Off NixOS a user unit inherits no profile, so home.packages resolves nowhere.
+  unitPath = lib.concatStringsSep ":" [
+    "${config.home.profileDirectory}/bin"
+    "/run/wrappers/bin"
+    "/run/current-system/sw/bin"
+    "/usr/local/bin"
+    "/usr/bin"
+    "/bin"
+  ];
+
   sileroVad = pkgs.callPackage ./voice/silero-vad.nix { };
 
   voicePython = pkgs.python314.withPackages (
@@ -244,6 +254,8 @@ in
       };
       Service = {
         ExecStart = "${cfg.ai.package}/bin/mugen-ai serve";
+        # An MCP server's command (npx, uvx, ...) is resolved by this PATH.
+        Environment = [ "PATH=${unitPath}" ];
         # The socket lives here; systemd creates it 0700 and clears it on stop.
         RuntimeDirectory = "mugen-ai";
         # Leading dash marks the API-key file optional, so the service still
@@ -270,6 +282,7 @@ in
       Service = {
         WorkingDirectory = voiceDir;
         Environment = [
+          "PATH=${unitPath}"
           "YURA_SILERO_VAD=${sileroVad}"
           "YURA_WHISPER_BIN=${pkgs.whisper-cpp-vulkan}/bin/whisper-server"
           "YURA_WHISPER_MODEL=${whisperModel}"
@@ -312,6 +325,7 @@ in
       };
       Service = {
         Type = "oneshot";
+        Environment = [ "PATH=${unitPath}" ];
         ExecStart = "${cfg.ai.package}/bin/mugen-ai calendar notify";
       };
     };

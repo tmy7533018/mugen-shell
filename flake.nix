@@ -164,6 +164,18 @@
               fi
               touch $out
             '';
+
+            # Off NixOS the unit inherits no profile, so notify-send and an MCP
+            # server's command resolve only if the unit spells PATH out itself.
+            unit-path = pkgs.runCommand "check-unit-path" { } ''
+              unit=${pathB}/home-files/.config/systemd/user/mugen-event-notifier.service
+              if ! grep -q '^Environment=PATH=.*/home/check/.nix-profile/bin' "$unit"; then
+                echo "the profile bin is not on the unit PATH:" >&2
+                grep '^Environment=' "$unit" >&2 || echo "(no Environment= at all)" >&2
+                exit 1
+              fi
+              touch $out
+            '';
           }
         );
 
