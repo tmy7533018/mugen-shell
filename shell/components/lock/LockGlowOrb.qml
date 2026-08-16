@@ -42,6 +42,13 @@ Item {
     property real orbY: 0
 
     property var trail: []
+    property real trailClock: 0
+
+    // Time-based: one point per frame makes the tail 4x shorter at 240Hz than at 60.
+    readonly property real trailSpan: 3.0
+    readonly property int trailPoints: 48
+    readonly property real trailFloor: 0.35
+    readonly property real trailGain: 1.8
 
     // Time counts as much as typing, or Yura sits at LV.1 all evening.
     readonly property int level:
@@ -122,10 +129,15 @@ Item {
         orbX = posX + Math.sin(time * 0.32) * 9 * designPx
         orbY = posY + Math.sin(time * 0.52) * 6 * designPx
 
-        const points = trail.slice()
-        points.push({ x: orbX, y: orbY })
-        if (points.length > 48) points.shift()
-        trail = points
+        trailClock += dt
+        const interval = trailSpan / (trailPoints - 1)
+        if (trailClock >= interval) {
+            trailClock -= interval
+            const points = trail.slice()
+            points.push({ x: orbX, y: orbY })
+            if (points.length > trailPoints) points.shift()
+            trail = points
+        }
     }
 
     // Six samples read the same as the whole history at this size.
@@ -134,7 +146,9 @@ Item {
         if (count === 0) return Qt.vector4d(-1000, -1000, 0, 0)
         const index = Math.min(count - 1, Math.round(slot * (count - 1) / 5))
         const point = trail[index]
-        return Qt.vector4d(point.x, point.y, index / Math.max(1, count - 1), 0)
+        const age = index / Math.max(1, count - 1)
+        return Qt.vector4d(point.x, point.y,
+                           (trailFloor + (1 - trailFloor) * age) * trailGain, 0)
     }
 
     NumberAnimation {
@@ -172,7 +186,7 @@ Item {
         property real sigmaMain: 2 * Math.pow(radius * 0.5, 2)
         property real sigmaCore: 2 * Math.pow(coreRadius, 2)
         property real sigmaLight: 2 * Math.pow(radius * 0.72 * 0.5, 2)
-        property real sigmaTrail: 170 * root.designPx * root.designPx
+        property real sigmaTrail: 500 * root.designPx * root.designPx
 
         property vector4d trail0: root.trailPoint(0)
         property vector4d trail1: root.trailPoint(1)
