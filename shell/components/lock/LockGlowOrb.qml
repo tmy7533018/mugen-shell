@@ -10,6 +10,7 @@ Item {
     property color faintTint: Qt.rgba(1, 1, 1, 0.35)
     property color accent: "#a68cd9"
     property color glow: "#a68cd9"
+    property color subTone: "#a68cd9"
     property bool running: true
 
 
@@ -175,7 +176,7 @@ Item {
             (7 + root.energy * 2 + Math.sin(root.time * 0.9) * 0.9) * root.designPx
 
         property color mainColor: root.accent
-        property color subColor: root.glow
+        property color subColor: root.subTone
         property vector2d res: Qt.vector2d(width, height)
         property vector2d orb: Qt.vector2d(root.orbX, root.orbY)
         property vector2d light: Qt.vector2d(

@@ -572,6 +572,7 @@ Item {
                         faintTint: root.subtleColor
                         accent: root.accentColor
                         glow: root.orbBase
+                        subTone: root.glowSecondaryColor
                         today: root.today
                         running: !root.reduceMotion
                     }
@@ -648,7 +649,6 @@ Item {
                         tint: root.clockColor
                         faintTint: root.subtleColor
                         accent: root.accentColor
-                        glow: root.orbBase
                         glowSecondary: root.glowSecondaryColor
                         glowTertiary: root.glowTertiaryColor
                         running: !root.reduceMotion

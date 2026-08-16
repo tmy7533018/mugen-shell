@@ -72,8 +72,8 @@ void main() {
     float inside = (1.0 - smoothstep(halfSize - 0.5, halfSize + 0.5, offset.x))
                  * (1.0 - smoothstep(halfSize - 0.5, halfSize + 0.5, offset.y));
 
-    vec3 tinted = mod(index.x * 3.0 + index.y * 5.0, 11.0) < 0.5
-        ? subColor.rgb : mainColor.rgb;
+    // Scattered off the hash rather than a modulus: any lattice reads as stripes.
+    vec3 tinted = fract(hash * 7.31) < 0.25 ? subColor.rgb : mainColor.rgb;
     // Off-hue, so the resting field reads as unlit rather than as the accent.
     vec3 rgb = v > 0.92
         ? vec3(1.0)

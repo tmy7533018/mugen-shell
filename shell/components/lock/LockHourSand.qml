@@ -9,14 +9,13 @@ Item {
     property color tint: "white"
     property color faintTint: Qt.rgba(1, 1, 1, 0.35)
     property color accent: "#a68cd9"
-    property color glow: "#a68cd9"
     property color glowSecondary: "#a68cd9"
     property color glowTertiary: "#a68cd9"
     property bool running: true
 
     // Mixed from the wallpaper's glows so the pile is not one flat colour.
     readonly property var grainColors:
-        [accent, glow, glowSecondary, glowTertiary]
+        [accent, glowSecondary, glowTertiary, tint]
 
     readonly property real designPx: height / 221
 
