@@ -58,11 +58,11 @@ void main() {
                                   + hash * 6.2832);
     float slow = 0.5 + 0.5 * sin(time * 0.21
                                  - (index.x * 0.5 - index.y * 0.7) * 0.11);
-    float ember = (0.03 + 0.11 * pow(drift * slow, 1.5)) * (0.5 + hash);
+    float ember = (0.08 + 0.26 * pow(drift * slow, 0.9)) * (0.5 + hash);
     v = max(v, ember);
 
     float size = (cell - 1.0) * min(1.0, v * 1.35);
-    if (size < 0.42) {
+    if (size < 0.20) {
         fragColor = vec4(0.0);
         return;
     }
@@ -77,7 +77,7 @@ void main() {
     // Off-hue, so the resting field reads as unlit rather than as the accent.
     vec3 rgb = v > 0.92
         ? vec3(1.0)
-        : mix(vec3(0.72, 0.76, 0.86), tinted, smoothstep(0.12, 0.42, v));
+        : mix(vec3(0.72, 0.76, 0.86), tinted, smoothstep(0.03, 0.18, v));
 
     float a = min(0.95, v * 1.05) * inside * qt_Opacity;
     fragColor = vec4(rgb * a, a);
