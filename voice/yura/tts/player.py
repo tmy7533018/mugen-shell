@@ -140,13 +140,16 @@ def speak(text: str | Iterable[str], on_sentence=None, should_stop=None,
                 continue
         return False
 
+    # Raised on the caller's thread below: swallowed here, the turn would end in silence.
+    failure: list[BaseException] = []
+
     def producer():
         try:
             for s in sentences:
                 if done.is_set() or not put((s, synthesize(s, voice))):
                     return
         except Exception as e:
-            log("tts", f"synthesis failed: {e}")
+            failure.append(e)
         finally:
             put(None)
 
@@ -167,6 +170,8 @@ def speak(text: str | Iterable[str], on_sentence=None, should_stop=None,
                 q.get_nowait()
             except queue.Empty:
                 break
+    if failure:
+        raise failure[0]
 
 
 # sounddevice's module-level play/stop share one output stream, so a reply and /speak would collide.
