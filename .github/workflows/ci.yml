@@ -23,7 +23,7 @@ jobs:
         run: nix flake check --print-build-logs
 
       - name: Build the packages
-        run: nix build --print-build-logs .#mugen-ai .#mugen-shell
+        run: nix build --print-build-logs .#mugen-ai .#mugen-shell .#mugen-audio
 
   go:
     name: go
