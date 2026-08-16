@@ -36,16 +36,30 @@ Item {
 
     // Survives the hour, so time at the keyboard shows in the pile.
     property int bonus: 0
+    readonly property int capacity: Math.round(cols * rows * 0.35)
+    property bool collapsing: false
 
     function bump() {
-        if (!running) return
+        if (!running || collapsing) return
 
         // Grains need this long to land; shaking sooner disturbs an untouched pile.
         const now = Date.now()
         if (now > shakeUntil) shakeFrom = now + 620
         shakeUntil = Math.max(shakeUntil, shakeFrom + 420)
 
-        bonus = Math.min(bonus + 6, Math.round(cols * rows * 0.35))
+        if (bonus >= capacity) collapsing = true
+        else bonus = Math.min(bonus + 6, capacity)
+    }
+
+    // Empties the floor so a full pile sinks out of the box rather than vanishing.
+    function drain() {
+        const floor = (rows - 1) * cols
+        for (let x = 0; x < cols; x++) {
+            if (!grid[floor + x]) continue
+            grid[floor + x] = 0
+            filled -= 1
+        }
+        return filled > 0
     }
 
     function reset(nextHour) {
@@ -56,6 +70,7 @@ Item {
         shakeUntil = 0
         hour = nextHour
         seeding = true
+        collapsing = false
     }
 
     function pour(target) {
@@ -131,7 +146,12 @@ Item {
         }
 
         const progress = (now.getMinutes() * 60 + now.getSeconds()) / 3600
-        if (pour(Math.floor(progress * cols * 6) + bonus)) moved = true
+        if (collapsing) {
+            if (!drain()) reset(now.getHours())
+            moved = true
+        } else if (pour(Math.floor(progress * cols * 6) + bonus)) {
+            moved = true
+        }
 
         // Stepped more often than drawn: stop-motion look at a real speed.
         const stamp = now.getTime()
