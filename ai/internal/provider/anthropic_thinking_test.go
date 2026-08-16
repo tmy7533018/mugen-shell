@@ -25,7 +25,7 @@ func stubAnthropic(t *testing.T, sse string, capture *[]byte) *httptest.Server {
 }
 
 func testAnthropic(url string) *Anthropic {
-	a := NewAnthropic("test-key", nil, 2048, 1024)
+	a := NewAnthropic("test-key", nil, 2048, "high")
 	a.baseURL = url
 	return a
 }
@@ -129,6 +129,63 @@ func TestThinkingIsReplayedAheadOfTheToolCall(t *testing.T) {
 	}
 	if content[len(content)-1]["type"] != "tool_use" {
 		t.Errorf("tool_use must still be present, got %+v", content)
+	}
+}
+
+func thinkingField(t *testing.T, body []byte) (map[string]any, map[string]any) {
+	t.Helper()
+	var payload struct {
+		Thinking     map[string]any `json:"thinking"`
+		OutputConfig map[string]any `json:"output_config"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("request body: %v", err)
+	}
+	return payload.Thinking, payload.OutputConfig
+}
+
+// budget_tokens was removed from the API and now 400s, so the shape of this
+// field is the whole feature working or not working.
+func TestThinkingAsksForAdaptiveDepth(t *testing.T) {
+	var body []byte
+	srv := stubAnthropic(t, "data: {\"type\":\"message_stop\"}\n", &body)
+	defer srv.Close()
+
+	err := testAnthropic(srv.URL).Chat(context.Background(), "claude-x",
+		[]Message{{Role: "user", Content: "hi"}}, ChatOptions{Thinking: true},
+		func(ChatChunk) error { return nil })
+	if err != nil {
+		t.Fatalf("chat: %v", err)
+	}
+
+	thinking, output := thinkingField(t, body)
+	if thinking["type"] != "adaptive" {
+		t.Errorf("thinking = %+v, want type adaptive", thinking)
+	}
+	if _, ok := thinking["budget_tokens"]; ok {
+		t.Errorf("budget_tokens is rejected by the API: %+v", thinking)
+	}
+	if output["effort"] != "high" {
+		t.Errorf("effort = %v, want high", output["effort"])
+	}
+}
+
+// Leaving the field out reads as adaptive on newer models, so off has to be explicit.
+func TestThinkingOffIsStatedExplicitly(t *testing.T) {
+	var body []byte
+	srv := stubAnthropic(t, "data: {\"type\":\"message_stop\"}\n", &body)
+	defer srv.Close()
+
+	err := testAnthropic(srv.URL).Chat(context.Background(), "claude-x",
+		[]Message{{Role: "user", Content: "hi"}}, ChatOptions{Thinking: false},
+		func(ChatChunk) error { return nil })
+	if err != nil {
+		t.Fatalf("chat: %v", err)
+	}
+
+	thinking, _ := thinkingField(t, body)
+	if thinking["type"] != "disabled" {
+		t.Errorf("thinking = %+v, want type disabled", thinking)
 	}
 }
 

@@ -259,7 +259,7 @@ func buildRegistry(cfg config.Config, model string) (*provider.Registry, *provid
 			anthropicKey,
 			cfg.Provider.Anthropic.Models,
 			cfg.Provider.Anthropic.MaxTokens,
-			cfg.Provider.Anthropic.ThinkingBudget,
+			cfg.Provider.Anthropic.Effort,
 		))
 	}
 	return provider.NewRegistry(model, providers...), ollama

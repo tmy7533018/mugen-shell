@@ -58,8 +58,9 @@
 # [provider.anthropic]
 #   # Requires ANTHROPIC_API_KEY. Omit `models` to default to claude-haiku-4-5.
 #   models = ["claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-7"]
-#   max_tokens = 2048        # reply cap per turn
-#   thinking_budget = 1024   # extended-thinking budget when thinking is on
+#   max_tokens = 2048   # reply cap per turn
+#   effort = "high"     # reasoning depth while thinking is on:
+#                       # low | medium | high | xhigh | max
 
 # [tools.app_launch]
 #   # Strict allowlist for the app_launch tool: Yura can only launch

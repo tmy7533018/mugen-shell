@@ -11,33 +11,41 @@ import (
 	"strings"
 )
 
-type Anthropic struct {
-	apiKey         string
-	http           *http.Client
-	models         []string
-	maxTokens      int
-	thinkingBudget int
-	baseURL        string
+// Adaptive thinking spends from max_tokens, so each depth needs its own headroom on top of the reply cap.
+var effortHeadroom = map[string]int{
+	"low":    4096,
+	"medium": 8192,
+	"high":   16384,
+	"xhigh":  32768,
+	"max":    65536,
 }
 
-func NewAnthropic(apiKey string, models []string, maxTokens, thinkingBudget int) *Anthropic {
+type Anthropic struct {
+	apiKey    string
+	http      *http.Client
+	models    []string
+	maxTokens int
+	effort    string
+	baseURL   string
+}
+
+func NewAnthropic(apiKey string, models []string, maxTokens int, effort string) *Anthropic {
 	if len(models) == 0 {
 		models = []string{"claude-haiku-4-5"}
 	}
 	if maxTokens <= 0 {
 		maxTokens = 2048
 	}
-	// The API rejects budgets under 1024 tokens.
-	if thinkingBudget < 1024 {
-		thinkingBudget = 1024
+	if _, ok := effortHeadroom[effort]; !ok {
+		effort = "high"
 	}
 	return &Anthropic{
-		apiKey:         apiKey,
-		http:           streamingHTTPClient(),
-		models:         models,
-		maxTokens:      maxTokens,
-		thinkingBudget: thinkingBudget,
-		baseURL:        "https://api.anthropic.com",
+		apiKey:    apiKey,
+		http:      streamingHTTPClient(),
+		models:    models,
+		maxTokens: maxTokens,
+		effort:    effort,
+		baseURL:   "https://api.anthropic.com",
 	}
 }
 
@@ -138,9 +146,8 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 	}
 
 	maxTokens := a.maxTokens
-	if opts.Thinking && maxTokens < a.thinkingBudget+2048 {
-		// budget_tokens must be < max_tokens, with room left to answer after the reasoning spend.
-		maxTokens = a.thinkingBudget + 2048
+	if opts.Thinking {
+		maxTokens += effortHeadroom[a.effort]
 	}
 	payload := map[string]any{
 		"model":      model,
@@ -154,10 +161,11 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		payload["system"] = systemBlocks
 	}
 	if opts.Thinking {
-		payload["thinking"] = map[string]any{
-			"type":          "enabled",
-			"budget_tokens": a.thinkingBudget,
-		}
+		payload["thinking"] = map[string]any{"type": "adaptive"}
+		payload["output_config"] = map[string]any{"effort": a.effort}
+	} else {
+		// Omitting the field leaves thinking on for newer models, so "off" has to be said out loud.
+		payload["thinking"] = map[string]any{"type": "disabled"}
 	}
 	if len(toolsPayload) > 0 {
 		// cache_control on the last tool covers the whole preceding block: ~10% input cost on hits.

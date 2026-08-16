@@ -130,12 +130,13 @@ type Provider struct {
 	Anthropic Anthropic `toml:"anthropic" json:"anthropic"`
 }
 
-// Anthropic lists the Claude models to expose (empty → claude-haiku-4-5). MaxTokens
-// caps each reply (0 → 2048); ThinkingBudget is the extended-thinking budget (0 → 1024).
+// Anthropic lists the Claude models to expose (empty → one default model). MaxTokens
+// caps each reply (0 → 2048); Effort is the reasoning depth while thinking is on
+// ("low" | "medium" | "high" | "xhigh" | "max"; anything else → "high").
 type Anthropic struct {
-	Models         []string `toml:"models" json:"models"`
-	MaxTokens      int      `toml:"max_tokens" json:"max_tokens"`
-	ThinkingBudget int      `toml:"thinking_budget" json:"thinking_budget"`
+	Models    []string `toml:"models" json:"models"`
+	MaxTokens int      `toml:"max_tokens" json:"max_tokens"`
+	Effort    string   `toml:"effort" json:"effort"`
 }
 
 type Ollama struct {
