@@ -14,19 +14,13 @@ Everything lives outside the repo, under XDG dirs:
 | `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/,timer-sounds/,tts/}` | User-supplied media |
 | `$XDG_PICTURES_DIR/mugen-screenshots/` | Captured screenshots |
 
-The notification sound dropdown rescans every time Settings opens. Quickest way to get a sound working:
-
-```bash
-mkdir -p ~/.local/share/mugen-shell/sounds && cp /usr/share/sounds/freedesktop/stereo/{bell,message,message-new-instant}.oga ~/.local/share/mugen-shell/sounds/
-# NixOS (no /usr/share — install sound-theme-freedesktop, then):
-mkdir -p ~/.local/share/mugen-shell/sounds && cp /run/current-system/sw/share/sounds/freedesktop/stereo/{bell,message,message-new-instant}.oga ~/.local/share/mugen-shell/sounds/
-```
+Audio files dropped into `sounds/` and `timer-sounds/` above show up in the Settings dropdowns for notification and timer sounds.
 
 ---
 
 ## Install
 
-Three install paths. Open the one that matches your setup. All of them need **Hyprland 0.55 or newer**.
+Two install paths. Open the one that matches your setup. Both need **Hyprland 0.55 or newer**.
 
 <details>
 <summary><b>Path A: NixOS</b></summary>
@@ -71,6 +65,21 @@ NixOS users just need the repo root flake:
 ```
 
 Then `nixos-rebuild switch --flake /etc/nixos#mybox`.
+
+**Making the terminal match the desktop**
+
+The starship prompt, fish-style completion and history, aliases like `ls` → `eza`, and the splash kitty opens with. The tools come from the system layer and the config from the home-manager one, so both need it:
+
+```nix
+programs.mugen-shell.zsh.enable = true;                    # system layer
+home-manager.users.YOUR_USER.programs.mugen-shell.zsh.enable = true;
+```
+
+Then add one line to your own `~/.zshrc` (not needed if you use home-manager's `programs.zsh`):
+
+```sh
+source ~/.config/mugen-shell/mugen-shell.zshrc
+```
 
 **Japanese (or other) input via fcitx5**
 
@@ -128,14 +137,13 @@ Point at the user-level flake (the repo root); the Wayland and compositor stack 
 Install the system stack with pacman before the first switch:
 
 ```bash
-yay -S hyprland quickshell hypridle zsh kitty starship libnotify \
+yay -S hyprland quickshell qt6-5compat hypridle zsh kitty libnotify \
        pipewire pipewire-pulse pavucontrol cava playerctl \
        networkmanager network-manager-applet bluez bluez-utils \
        fcitx5 fcitx5-mozc fcitx5-im fcitx5-configtool \
        awww mpvpaper ffmpeg matugen-bin socat \
-       grim slurp wl-clipboard cliphist imv curl jq xdg-utils brightnessctl \
-       zsh-syntax-highlighting zsh-autosuggestions zsh-history-substring-search fzf \
-       eza bat ugrep fastfetch jp2a thunar \
+       grim slurp wl-clipboard cliphist imv curl jq xdg-utils brightnessctl fzf \
+       thunar \
        ttf-mplus-nerd bibata-cursor-theme colloid-gtk-theme-git \
        python-gobject
 ```
@@ -143,6 +151,27 @@ yay -S hyprland quickshell hypridle zsh kitty starship libnotify \
 The audio visualiser's QML module is built by Nix. If quickshell fails to import `Mugen.Audio` with `version 'Qt_6.11' not found`, your Qt6 is older than the one it was built against: update Qt, or build `plugin/` yourself and put its install prefix on `QML2_IMPORT_PATH`.
 
 `includeSystemDeps = true` pulls the user-space tools on that list (Quickshell, hypridle, awww, matugen, kitty, …) into Nix instead; Hyprland itself, the system services, and the themes stay on pacman either way.
+
+**Making the terminal match the desktop**
+
+The starship prompt, fish-style completion and history, aliases like `ls` → `eza`, and the splash kitty opens with.
+
+```nix
+programs.mugen-shell.zsh.enable = true;
+```
+
+With `includeSystemDeps = false`, take the tools from pacman:
+
+```bash
+yay -S starship jp2a fastfetch eza bat ugrep \
+       zsh-syntax-highlighting zsh-autosuggestions zsh-history-substring-search
+```
+
+Then add one line to your own `~/.zshrc` (not needed if you use home-manager's `programs.zsh`):
+
+```sh
+source ~/.config/mugen-shell/mugen-shell.zshrc
+```
 
 Wiring Hyprland into your display manager or login session is left to you (`Hyprland` from TTY, sddm session entry, etc.).
 
@@ -193,17 +222,17 @@ language = "en"
 system_prompt = "You are a helpful desktop assistant. Be concise."
 
 [provider.google]
-models = ["gemini-2.5-flash"]
+# models = [...]   # omit for the provider's default model
 
 [provider.anthropic]
-models = ["claude-haiku-4-5", "claude-sonnet-4-6", "claude-opus-4-7"]
+# models = [...]   # omit for the provider's default model
 
 [provider.openai]
 # Any OpenAI-compatible backend: OpenAI, OpenRouter, LM Studio, vLLM, etc.
 # base_url = "https://api.openai.com/v1"        # OpenAI itself
 # base_url = "https://openrouter.ai/api/v1"     # OpenRouter
 # base_url = "http://localhost:1234/v1"         # LM Studio (no API key needed)
-# models = ["gpt-4o-mini", "gpt-4o"]            # leave empty to query /v1/models
+# models = [...]                                # leave empty to query /v1/models
 
 [tools.app_launch]
 # Empty = Yura cannot launch anything. The Allowed apps picker fills this.
@@ -217,7 +246,7 @@ disabled_categories = []
 ```
 
 - `[provider.ollama]`: pointed at `http://localhost:11434` out of the box, but **no install path ships Ollama itself**, so install it and pull a model yourself. Override `host` only if your daemon lives elsewhere.
-- `[provider.google].models` needs `GEMINI_API_KEY`; `[provider.anthropic].models` needs `ANTHROPIC_API_KEY` (omit `models` and it defaults to `claude-haiku-4-5`).
+- `[provider.google]` needs `GEMINI_API_KEY`; `[provider.anthropic]` needs `ANTHROPIC_API_KEY`. `models` is optional for both — omitted, each provider falls back to a single default model. To pin one, check that provider's own docs for a current model ID.
 - `[provider.openai]`: any OpenAI-compatible provider. Active once `OPENAI_API_KEY` is set or `base_url` points at a local server. Leave `models` empty to query the backend's `/v1/models`.
 - `[tools.app_launch].allowed_commands`: matched on binary basename. Off-`$PATH` binaries resolve through their `.desktop` entry, and Flatpak apps match by display name once `flatpak` itself is listed.
 - `[tools].disabled_categories`: an MCP server name works here too, which disables that whole server.
