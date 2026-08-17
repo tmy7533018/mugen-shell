@@ -35,6 +35,17 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
 
+      # gofmt -l reports rather than exits non-zero, so turn its output into the failure.
+      - name: Format
+        run: |
+          nix shell nixpkgs#go --command sh -c \
+            'unformatted=$(gofmt -l .); [ -z "$unformatted" ] || { echo "$unformatted"; exit 1; }'
+        working-directory: ai
+
+      - name: Vet
+        run: nix shell nixpkgs#go nixpkgs#gcc --command go vet ./...
+        working-directory: ai
+
       # The SQLite driver needs cgo, so a C compiler has to come along.
       - name: Test
         run: nix shell nixpkgs#go nixpkgs#gcc --command go test ./...
