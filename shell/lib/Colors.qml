@@ -5,11 +5,6 @@ import Quickshell.Io
 QtObject {
     id: palette
 
-    readonly property string stateDir: {
-        let xdg = Quickshell.env("XDG_STATE_HOME")
-        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/state"
-        return xdg + "/mugen-shell"
-    }
     readonly property string cacheDir: {
         let xdg = Quickshell.env("XDG_CACHE_HOME")
         if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.cache"
@@ -17,9 +12,10 @@ QtObject {
     }
 
     property string colorsJsonFile: cacheDir + "/colors.json"
-    property string themeModeFile: stateDir + "/theme-mode"
+    property string themeModeFile: Paths.stateDir + "/theme-mode"
 
     property string themeMode: "dark"
+    property bool themeSaveQueued: false
 
     function toggleThemeMode() {
         themeMode = (themeMode === "dark") ? "light" : "dark"
@@ -27,10 +23,17 @@ QtObject {
     }
 
     function saveThemeMode() {
-        saveThemeModeProcess.command = [
-            "bash", "-c",
-            "mkdir -p \"" + stateDir + "\" && echo \"" + themeMode + "\" > \"" + themeModeFile + "\""
-        ]
+        // running = true on an already-running Process is a no-op, so a second toggle would vanish.
+        if (saveThemeModeProcess.running) {
+            themeSaveQueued = true
+            return
+        }
+        _writeThemeMode()
+    }
+
+    function _writeThemeMode() {
+        saveThemeModeProcess.command =
+            JsonStore.atomicWriteArgv(Paths.stateDir, themeModeFile, themeMode)
         saveThemeModeProcess.running = true
     }
     
@@ -96,7 +99,9 @@ QtObject {
         }
         
         onExited: (exitCode) => {
-            if (exitCode === 0 && readThemeModeProcess.output.trim().length > 0) {
+            // Until our own write lands the file still holds the previous mode, undoing a newer toggle.
+            const ourWritePending = palette.saveThemeModeProcess.running || palette.themeSaveQueued
+            if (!ourWritePending && exitCode === 0 && readThemeModeProcess.output.trim().length > 0) {
                 let mode = readThemeModeProcess.output.trim()
                 if (mode === "light" || mode === "dark") {
                     palette.themeMode = mode
@@ -109,6 +114,12 @@ QtObject {
     property Process saveThemeModeProcess: Process {
         command: []
         running: false
+
+        onRunningChanged: {
+            if (running || !palette.themeSaveQueued) return
+            palette.themeSaveQueued = false
+            palette._writeThemeMode()
+        }
     }
     
     Component.onCompleted: {
