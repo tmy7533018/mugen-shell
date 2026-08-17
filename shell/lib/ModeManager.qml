@@ -1,5 +1,4 @@
 import QtQuick
-import Quickshell
 import Quickshell.Io
 
 QtObject {
@@ -90,15 +89,8 @@ QtObject {
     function listModes() {
     }
     
-    // Per-user: a fixed name under shared /tmp lets any local user pre-create the file and feed modes in.
-    property string ipcFile: {
-        const runtimeDir = Quickshell.env("XDG_RUNTIME_DIR")
-        if (runtimeDir && runtimeDir !== "") {
-            return runtimeDir + "/mugen-shell-ipc"
-        }
-        const user = Quickshell.env("USER") || "shell"
-        return "/tmp/mugen-shell-" + user + "/ipc"
-    }
+    // XDG_RUNTIME_DIR only: a fixed name under shared /tmp is another local user's to claim.
+    property string ipcFile: Paths.runtimeDir === "" ? "" : Paths.runtimeDir + "/mugen-shell-ipc"
     // scripts/mugen-shell-ipc.sh appends here; that is how keybinds reach this manager.
     property FileView ipcWatcher: FileView {
         path: manager.ipcFile

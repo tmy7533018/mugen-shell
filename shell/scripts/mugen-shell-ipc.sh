@@ -1,14 +1,7 @@
 #!/usr/bin/env bash
 
-if [ -n "${XDG_RUNTIME_DIR:-}" ]; then
-    IPC_FILE="$XDG_RUNTIME_DIR/mugen-shell-ipc"
-else
-    # Shared /tmp: a fixed name is another user's to claim. Must match ModeManager.ipcFile.
-    IPC_DIR="/tmp/mugen-shell-${USER:-shell}"
-    mkdir -p -m 700 "$IPC_DIR"
-    [ -O "$IPC_DIR" ] || { echo "$0: $IPC_DIR is not owned by us" >&2; exit 1; }
-    IPC_FILE="$IPC_DIR/ipc"
-fi
+# Never /tmp: a fixed name there is another local user's to claim. Must match ModeManager.ipcFile.
+IPC_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/mugen-shell-ipc"
 
 if [ $# -eq 0 ]; then
     cat << EOF
