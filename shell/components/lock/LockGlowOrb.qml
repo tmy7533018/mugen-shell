@@ -51,7 +51,7 @@ Item {
     readonly property real trailFloor: 0.35
     readonly property real trailGain: 1.8
 
-    // Time counts as much as typing, or Yura sits at LV.1 all evening.
+    // Time counts as much as typing, or Hitodama sits at LV.1 all evening.
     readonly property int level:
         Math.min(99, 1 + Math.floor(keystrokes / 12 + time / 45))
 
@@ -90,7 +90,7 @@ Item {
         return 0.5 - 0.5 * Math.cos((hour - 4) / 24 * 2 * Math.PI)
     }
 
-    // Yura has moods of its own; without this it is asleep unless typed at.
+    // Hitodama has moods of its own; without this it is asleep unless typed at.
     function restingEnergy() {
         const breath = 0.5 + 0.5
             * Math.sin(time * 0.11 + Math.sin(time * 0.047) * 1.3)
@@ -265,7 +265,7 @@ Item {
 
             Text {
                 id: nameLabel
-                text: "Yura"
+                text: "Hitodama"
                 color: root.tint
                 font.family: root.fontFamily
                 font.weight: Font.Medium
