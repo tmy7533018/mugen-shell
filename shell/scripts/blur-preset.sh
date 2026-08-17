@@ -20,6 +20,10 @@ get_current() {
     [[ -f "$STATE" ]] && cat "$STATE" || echo ""
 }
 
+has_preset() {
+    list_presets | grep -qxF "$1"
+}
+
 # Redirecting straight at the destination empties it first, so an unknown preset would leave none.
 write_atomic() {
     local dest="$1"
@@ -67,10 +71,11 @@ pick() {
     mapfile -t P < <(list_presets)
     ((${#P[@]})) || { echo "no presets in $PRESETS" >&2; exit 1; }
 
+    # Cancelling exits non-zero, and set -e would take it before the "no selection" check below.
     if command -v rofi >/dev/null; then
-        sel="$(printf '%s\n' "${P[@]}" | rofi -dmenu -p 'Blur preset')"
+        sel="$(printf '%s\n' "${P[@]}" | rofi -dmenu -p 'Blur preset' || true)"
     elif command -v fzf >/dev/null; then
-        sel="$(printf '%s\n' "${P[@]}" | fzf --prompt='Blur preset> ')"
+        sel="$(printf '%s\n' "${P[@]}" | fzf --prompt='Blur preset> ' || true)"
     else
         echo "available presets:"; nl -ba <(printf '%s\n' "${P[@]}")
         read -rp 'number: ' n
@@ -87,7 +92,9 @@ pick() {
 boot() {
     local name
     name="$(get_current)"
-    [[ -z "$name" ]] && name="$DEFAULT_PRESET"
+    if [[ -z "$name" ]] || ! has_preset "$name"; then
+        name="$DEFAULT_PRESET"
+    fi
     apply_live "$name"
     echo "restored preset: $name"
 }
