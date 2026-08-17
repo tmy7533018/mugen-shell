@@ -73,8 +73,14 @@ Item {
         advanceAnim.to = advance + 1
         advanceAnim.start()
 
-        velY -= (70 + Math.random() * 55) * designPx
-        velX += (Math.random() - 0.5) * 150 * designPx
+        const kick = (70 + Math.random() * 55) * designPx
+        // Spent sideways as the ceiling nears, or repeated kicks outrun the drag and pin the orb there.
+        const headroom = height > 2 * margin
+            ? Math.max(0, Math.min(1, (posY - margin) / (height - 2 * margin)))
+            : 0
+        const inward = posX < width * 0.5 ? 1 : -1
+        velY -= kick * headroom
+        velX += (Math.random() - 0.5) * 150 * designPx + inward * kick * (1 - headroom)
         spawnSparks()
     }
 
@@ -124,8 +130,13 @@ Item {
         posX += velX * dt
         posY += velY * dt
 
-        posX = Math.max(margin, Math.min(width - margin, posX))
-        posY = Math.max(margin, Math.min(height - margin, posY))
+        const heldX = Math.max(margin, Math.min(width - margin, posX))
+        const heldY = Math.max(margin, Math.min(height - margin, posY))
+        // Keeping the velocity a clamp just absorbed leaves the orb pressed against the wall.
+        if (heldX !== posX) velX = 0
+        if (heldY !== posY) velY = 0
+        posX = heldX
+        posY = heldY
 
         orbX = posX + Math.sin(time * 0.32) * 9 * designPx
         orbY = posY + Math.sin(time * 0.52) * 6 * designPx
