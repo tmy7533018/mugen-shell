@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "../../lib" as Theme
 
 QtObject {
     id: idleInhibitorManager
@@ -11,9 +12,7 @@ QtObject {
     property bool isLoadingState: false
 
     readonly property string toggleScript: Quickshell.shellDir + "/scripts/idle_inhibitor.sh"
-    // Left unexpanded: every read/write goes through bash -c, which expands these.
-    readonly property string stateDir: "${XDG_STATE_HOME:-$HOME/.local/state}/mugen-shell"
-    readonly property string stateFile: stateDir + "/idle-inhibitor.json"
+    readonly property string stateFile: Theme.Paths.stateDir + "/idle-inhibitor.json"
 
     function refreshStatus() {
         if (!statusProcess.running) {
@@ -38,10 +37,8 @@ QtObject {
         }
         let jsonString = JSON.stringify(state, null, 2)
 
-        saveStateProcess.command = [
-            "bash", "-c",
-            "mkdir -p \"" + stateDir + "\" && echo '" + jsonString + "' > \"" + stateFile + "\""
-        ]
+        saveStateProcess.command =
+            Theme.JsonStore.atomicWriteArgv(Theme.Paths.stateDir, stateFile, jsonString)
         saveStateProcess.running = true
     }
 
@@ -50,7 +47,7 @@ QtObject {
             return
         }
         isLoadingState = true
-        loadStateProcess.command = ["bash", "-c", "cat \"" + stateFile + "\""]
+        loadStateProcess.command = ["cat", stateFile]
         loadStateProcess.running = true
     }
 

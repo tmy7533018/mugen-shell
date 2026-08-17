@@ -1,16 +1,10 @@
 import QtQuick
-import Quickshell
 import Quickshell.Io
 
 QtObject {
     id: timerManager
 
-    readonly property string stateDir: {
-        let xdg = Quickshell.env("XDG_STATE_HOME")
-        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/state"
-        return xdg + "/mugen-shell"
-    }
-    property string stateFile: stateDir + "/timer.json"
+    property string stateFile: Paths.stateDir + "/timer.json"
 
     property bool running: false
     property bool paused: false
@@ -93,7 +87,7 @@ QtObject {
         let json = JSON.stringify(payload, null, 2)
         // Same atomic tmp + rename as SettingsManager: a FileView watcher can read mid-truncate.
         saveProcess.command =
-            JsonStore.atomicWriteArgv(stateDir, stateFile, json)
+            JsonStore.atomicWriteArgv(Paths.stateDir, stateFile, json)
         saveProcess.running = true
     }
 

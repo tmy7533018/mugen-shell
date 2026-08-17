@@ -13,6 +13,11 @@ QtObject {
         if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.cache"
         return xdg + "/mugen-shell"
     }
+    readonly property string stateDir: {
+        let xdg = Quickshell.env("XDG_STATE_HOME")
+        if (!xdg || xdg === "") xdg = Quickshell.env("HOME") + "/.local/state"
+        return xdg + "/mugen-shell"
+    }
     readonly property string soundsDir: dataDir + "/sounds"
     readonly property string timerSoundsDir: dataDir + "/timer-sounds"
 
