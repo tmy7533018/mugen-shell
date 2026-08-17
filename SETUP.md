@@ -297,7 +297,7 @@ chmod 600 ~/.config/mugen-ai/.env
 systemctl --user restart mugen-ai.service
 ```
 
-値が入っているキーの分だけ、プロバイダが有効になります。
+値が入っているキーの分だけ、プロバイダが有効になります。`GEMINI_API_KEY` が空のときは `GOOGLE_API_KEY` も読まれます。
 
 ### シェル操作に向くモデル
 
