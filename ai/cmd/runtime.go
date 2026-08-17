@@ -236,14 +236,12 @@ func buildRegistry(cfg config.Config, model string) (*provider.Registry, *provid
 	if len(googleModels) == 0 && cfg.Provider.Google.Model != "" {
 		googleModels = []string{cfg.Provider.Google.Model}
 	}
-	if len(googleModels) > 0 {
-		key := os.Getenv("GEMINI_API_KEY")
-		if key == "" {
-			key = os.Getenv("GOOGLE_API_KEY")
-		}
-		if key != "" {
-			providers = append(providers, provider.NewGoogle(key, googleModels))
-		}
+	googleKey := os.Getenv("GEMINI_API_KEY")
+	if googleKey == "" {
+		googleKey = os.Getenv("GOOGLE_API_KEY")
+	}
+	if googleKey != "" {
+		providers = append(providers, provider.NewGoogle(googleKey, googleModels))
 	}
 	openaiKey := os.Getenv("OPENAI_API_KEY")
 	if openaiKey != "" || cfg.Provider.OpenAI.BaseURL != "" {
