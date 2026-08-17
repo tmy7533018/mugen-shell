@@ -35,6 +35,8 @@ if [ "$#" -eq 0 ]; then
   exit 1
 fi
 
+FAILED=0
+
 for ARG in "$@"; do
   if [ -e "$ARG" ]; then
     ARG="$(cd "$(dirname "$ARG")" && pwd)/$(basename "$ARG")"
@@ -45,13 +47,18 @@ for ARG in "$@"; do
 
   if [ -d "$ARG" ]; then
     while IFS= read -r -d '' f; do
-      convert_video "$f"
-    done < <(find "$ARG" -type f -iname '*.mp4' -print0)
+      convert_video "$f" || FAILED=$((FAILED + 1))
+    done < <(find "$ARG" -type f -iname '*.mp4' ! -iname '*_wall.mp4' -print0)
   elif [ -f "$ARG" ]; then
-    convert_video "$ARG"
+    convert_video "$ARG" || FAILED=$((FAILED + 1))
   else
     echo "Not found: $ARG"
   fi
 done
+
+if [ "$FAILED" -ne 0 ]; then
+  echo "Done, $FAILED failed." >&2
+  exit 1
+fi
 
 echo "Done!"
