@@ -155,9 +155,16 @@ def speak(text: str | Iterable[str], on_sentence=None, should_stop=None,
 
     threading.Thread(target=producer, daemon=True).start()
     try:
-        while (item := q.get()) is not None:
+        while True:
             if should_stop and should_stop():
                 log("tts", "stopped")
+                break
+            try:
+                # Polled: blocking outright would hold the cancel until the next sentence is synthesised.
+                item = q.get(timeout=0.1)
+            except queue.Empty:
+                continue
+            if item is None:
                 break
             sentence, wav = item
             if on_sentence:

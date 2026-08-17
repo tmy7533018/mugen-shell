@@ -5,6 +5,8 @@ Run from voice/:  python -m unittest discover -s tests
 
 import os
 import sys
+import threading
+import time
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -44,3 +46,24 @@ class StreamFailure(unittest.TestCase):
         player.speak(iter(["one", "two"]), self.spoken.append,
                      should_stop=lambda: True, voice="stub")
         self.assertEqual(self.spoken, [])
+
+    def test_a_stop_lands_while_the_next_sentence_is_still_generating(self):
+        stalled = threading.Event()
+        cancelled = threading.Event()
+
+        def sentences():
+            yield "first"
+            stalled.wait(5)
+
+        def on_sentence(sentence):
+            self.spoken.append(sentence)
+            cancelled.set()
+
+        started = time.monotonic()
+        player.speak(sentences(), on_sentence,
+                     should_stop=cancelled.is_set, voice="stub")
+        elapsed = time.monotonic() - started
+        stalled.set()
+
+        self.assertEqual(self.spoken, ["first"])
+        self.assertLess(elapsed, 2)
