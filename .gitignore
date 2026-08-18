@@ -48,3 +48,4 @@ result-*
 
 # Per-user hypr overrides, dofile'd by hyprland.lua but never shipped
 system/hypr/configs/user-overrides.lua
+system/hypr/configs/keybind-overrides.lua
