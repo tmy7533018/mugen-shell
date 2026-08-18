@@ -52,7 +52,6 @@ unset _dir
 
 
 ## Options section
-setopt correct                                                  # Auto correct mistakes
 setopt extendedglob                                             # Extended globbing. Allows using regular expressions with *
 setopt nocaseglob                                               # Case insensitive globbing
 setopt rcexpandparam                                            # Array expension with parameters
@@ -355,5 +354,3 @@ fi
 # IME for fcitx5. Only XMODIFIERS — Wayland clients use the text-input
 # frontend, and GTK_IM_MODULE would force GTK back onto the legacy module path.
 export XMODIFIERS=@im=fcitx
-
-unsetopt correct
