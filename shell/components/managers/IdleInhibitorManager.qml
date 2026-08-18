@@ -10,6 +10,7 @@ QtObject {
     property bool isBusy: false
     property string lastError: ""
     property bool isLoadingState: false
+    property bool stateSaveQueued: false
 
     readonly property string toggleScript: Quickshell.shellDir + "/scripts/idle_inhibitor.sh"
     readonly property string stateFile: Theme.Paths.stateDir + "/idle-inhibitor.json"
@@ -32,10 +33,16 @@ QtObject {
     }
 
     function saveState() {
-        let state = {
-            "enabled": isInhibited
+        // running = true on an already-running Process is a no-op, so a fast re-toggle would vanish.
+        if (saveStateProcess.running) {
+            stateSaveQueued = true
+            return
         }
-        let jsonString = JSON.stringify(state, null, 2)
+        writeState()
+    }
+
+    function writeState() {
+        let jsonString = JSON.stringify({ "enabled": isInhibited }, null, 2)
 
         saveStateProcess.command =
             Theme.JsonStore.atomicWriteArgv(Theme.Paths.stateDir, stateFile, jsonString)
@@ -112,6 +119,12 @@ QtObject {
     property Process saveStateProcess: Process {
         command: []
         running: false
+
+        onRunningChanged: {
+            if (running || !idleInhibitorManager.stateSaveQueued) return
+            idleInhibitorManager.stateSaveQueued = false
+            idleInhibitorManager.writeState()
+        }
 
         onExited: (exitCode) => {
             if (exitCode !== 0) {
