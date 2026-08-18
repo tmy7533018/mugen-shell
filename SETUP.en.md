@@ -181,7 +181,7 @@ Activation places the shipped `system/hypr/` and `matugen/` under `~/.config/`. 
 dofile(os.getenv("HOME") .. "/.config/hypr/configs/mugen-shell.lua")
 ```
 
-Copy that file out of the package output once: `$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.lua`.
+Activation already places that file at `~/.config/hypr/configs/mugen-shell.lua`, so there is nothing to copy.
 
 **Still on a hyprlang (`.conf`) config?** The equivalent line is:
 
@@ -208,7 +208,7 @@ Everything is configured under **Settings → Yura**: personality, provider stat
 
 Three defaults worth knowing. **No model ships with this.** The input reads "No model yet" until you install Ollama and pull one (`ollama pull qwen3:4b`, say) or put an API key in `~/.config/mugen-ai/.env`. **Allowed apps starts empty** too, so Yura cannot launch anything until you pick apps there. And when `mugen-ai.service` itself is not running, the bar shows the command to start it.
 
-A full annotated template lives at `ai/config.toml.example` (or `$(nix path-info .#mugen-ai)/share/mugen-ai/config.toml.example` if you installed via Nix).
+A full annotated template lives at `ai/config.toml.example` (or `$(nix build --no-link --print-out-paths github:tmy7533018/mugen-shell#mugen-ai)/share/mugen-ai/config.toml.example` if you installed via Nix).
 
 <details>
 <summary>A minimal <code>~/.config/mugen-ai/config.toml</code></summary>
@@ -279,7 +279,7 @@ Tools are merged under a `<name>__<tool>` prefix, so keep the server name short,
 
 ### Provider API keys
 
-Copy `ai/.env.example` (Nix install: `$(nix path-info .#mugen-ai)/share/mugen-ai/.env.example`) to `~/.config/mugen-ai/.env` and fill in the keys you have, or append directly:
+Copy `ai/.env.example` (Nix install: `$(nix build --no-link --print-out-paths github:tmy7533018/mugen-shell#mugen-ai)/share/mugen-ai/.env.example`) to `~/.config/mugen-ai/.env` and fill in the keys you have, or append directly:
 
 ```sh
 cat >> ~/.config/mugen-ai/.env <<'EOF'

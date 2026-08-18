@@ -41,7 +41,7 @@ Voice input works from a button or from push-to-talk. Hold `Super + Z`, talk, an
 Try it without installing anything. The demo VM autologins into Hyprland, with `mugen` / `mugen` as the credentials:
 
 ```sh
-nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm
+nix build github:tmy7533018/mugen-shell#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm
 ```
 
 Every configuration option is documented in [SETUP.en.md](SETUP.en.md).

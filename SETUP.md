@@ -157,7 +157,7 @@ Hyprland の起動方法 (TTY から `Hyprland` を叩く、sddm にセッショ
 dofile(os.getenv("HOME") .. "/.config/hypr/configs/mugen-shell.lua")
 ```
 
-読み込むファイル自体は、パッケージ出力から一度コピーしておきます: `$(nix path-info .#mugen-shell)/hypr/configs/mugen-shell.lua`
+読み込むファイル自体は、アクティベート時に `~/.config/hypr/configs/mugen-shell.lua` へ置かれます。コピーは要りません。
 
 自前の config がまだ hyprlang (`.conf`) の場合は、同じ内容の hyprlang 版を使ってください:
 
@@ -212,7 +212,7 @@ source ~/.config/mugen-shell/mugen-shell.zshrc
 2. **Allowed apps は空の状態から始まります。** ここでアプリを許可するまで、Yura は何も起動できません。
 3. **`mugen-ai.service` が止まっている場合**は、バーに起動用のコマンドが表示されます。
 
-注釈付きのフル版テンプレートは `ai/config.toml.example` にあります (Nix インストールの場合は `$(nix path-info .#mugen-ai)/share/mugen-ai/config.toml.example`)。
+注釈付きのフル版テンプレートは `ai/config.toml.example` にあります (Nix インストールの場合は `$(nix build --no-link --print-out-paths github:tmy7533018/mugen-shell#mugen-ai)/share/mugen-ai/config.toml.example`)。
 
 <details>
 <summary>最小構成の <code>~/.config/mugen-ai/config.toml</code></summary>
@@ -285,7 +285,7 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 
 ### プロバイダ API キー
 
-`ai/.env.example` (Nix インストールの場合は `$(nix path-info .#mugen-ai)/share/mugen-ai/.env.example`) を `~/.config/mugen-ai/.env` にコピーして手持ちのキーを埋めるか、次のように直接追記してください:
+`ai/.env.example` (Nix インストールの場合は `$(nix build --no-link --print-out-paths github:tmy7533018/mugen-shell#mugen-ai)/share/mugen-ai/.env.example`) を `~/.config/mugen-ai/.env` にコピーして手持ちのキーを埋めるか、次のように直接追記してください:
 
 ```sh
 cat >> ~/.config/mugen-ai/.env <<'EOF'

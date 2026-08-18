@@ -43,7 +43,7 @@ Yura はデスクトップの操作も可能です。「音量 30 にして」�
 インストールせずに試すならデモ VM が使えます。Hyprland に自動ログインします (資格情報は `mugen` / `mugen`):
 
 ```sh
-nix build .#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm
+nix build github:tmy7533018/mugen-shell#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm
 ```
 
 各設定項目はすべて [SETUP.md](SETUP.md) にまとめました。
