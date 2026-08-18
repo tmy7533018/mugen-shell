@@ -212,6 +212,28 @@
               fi
               touch $out
             '';
+
+            # An existing ~/.config silently keeps a shipped fix out, so assert what refreshes and what does not.
+            config-refresh = pkgs.runCommand "check-config-refresh" { } ''
+              call=$(grep -A2 'install_product_tree /nix/store/[^ ]*-hypr ' ${pathB}/activate) || {
+                echo "hypr is no longer installed as refreshable product" >&2
+                exit 1
+              }
+              case "$call" in
+                *configs/keybinds.lua*)
+                  echo "keybinds.lua is seeded, so a shipped keybind never reaches an existing install:" >&2
+                  echo "$call" >&2
+                  exit 1 ;;
+              esac
+              case "$call" in
+                *hypridle.conf*) ;;
+                *)
+                  echo "hypridle.conf is not seeded, so the idle timers reset on every activation:" >&2
+                  echo "$call" >&2
+                  exit 1 ;;
+              esac
+              touch $out
+            '';
           }
         );
 

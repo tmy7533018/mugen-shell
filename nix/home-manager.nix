@@ -377,8 +377,7 @@ in
       };
     };
 
-    # Copied rather than symlinked from the store so these stay writable and
-    # user edits survive later activations.
+    # Copied rather than symlinked so matugen, blur-preset.sh and the user can keep writing into these.
     home.activation.installMugenSystemDefaults =
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         install_dir() {
@@ -397,10 +396,31 @@ in
           fi
         }
 
-        install_dir   ${./../system/hypr}      "$HOME/.config/hypr"
+        # Product is refreshed every activation, or an existing ~/.config keeps a shipped fix out forever.
+        install_product_tree() {
+          local src="$1" dst="$2"; shift 2
+          local f rel mode skip
+          # Trailing names are seeded once: the machine or the user owns them afterwards.
+          while IFS= read -r -d "" f; do
+            rel="''${f#"$src"/}"
+            for skip in "$@"; do
+              if [[ "$rel" == "$skip" ]]; then
+                install_file "$f" "$dst/$rel"
+                continue 2
+              fi
+            done
+            mode=644
+            [[ -x "$f" ]] && mode=755
+            $DRY_RUN_CMD install -D -m "$mode" "$f" "$dst/$rel"
+          done < <(find "$src" -type f -print0)
+        }
+
+        install_product_tree ${./../system/hypr} "$HOME/.config/hypr" \
+          hypridle.conf colors.lua configs/blur.lua configs/.blur-current \
+          configs/user-overrides.lua configs/keybind-overrides.lua
+        install_product_tree ${./../system/matugen} "$HOME/.config/matugen"
         install_dir   ${./../system/cava}      "$HOME/.config/cava"
         install_dir   ${./../system/kitty}     "$HOME/.config/kitty"
-        install_dir   ${./../system/matugen}   "$HOME/.config/matugen"
         install_dir   ${./../system/fastfetch} "$HOME/.config/fastfetch"
         install_file  ${./../system/starship.toml} "$HOME/.config/starship.toml"
       '';
