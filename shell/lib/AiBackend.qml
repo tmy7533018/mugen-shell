@@ -11,10 +11,7 @@ QtObject {
         if (explicit && explicit.length > 0) {
             return explicit
         }
-        const runtimeDir = Quickshell.env("XDG_RUNTIME_DIR")
-        return runtimeDir && runtimeDir.length > 0
-            ? runtimeDir + "/mugen-ai/mugen-ai.sock"
-            : ""
+        return Paths.runtimeDir === "" ? "" : Paths.runtimeDir + "/mugen-ai/mugen-ai.sock"
     }
 
     // The host is inert once curl dials a socket; callers splice transportArgs in ahead of the URL.
