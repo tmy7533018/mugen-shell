@@ -14,6 +14,7 @@ Item {
     required property var timerSounds
     property string soundsDir: ""
     property string timerSoundsDir: ""
+    property string initialCategory: ""
 
     signal applyPreset(string name)
     signal applySound(string name)
@@ -21,12 +22,17 @@ Item {
     signal openYuraSettings()
     signal openUrl(string url)
 
+    function openCategory(id) {
+        frame.selectedCategory = id
+    }
+
     readonly property var categories: [
         { id: "appearance", label: "Appearance",   types: ["theme", "moduleBackground", "blur", "animation", "dateFormat", "clock", "weather", "calendarWeekStart", "barLayout"] },
         { id: "sound",      label: "Sound",        types: ["notificationSound", "timerSound"] },
         { id: "notifications", label: "Notifications", types: ["doNotDisturb", "notificationTimeout"] },
         { id: "timer",      label: "Timer & Lock", types: ["timer", "lockTimer", "idlePower"] },
-        { id: "system",     label: "System",       types: ["battery", "workspaces", "launcherTerminal", "displayMonitor", "shortcuts"] },
+        { id: "system",     label: "System",       types: ["battery", "workspaces", "launcherTerminal", "displayMonitor"] },
+        { id: "keybinds",   label: "Keyboard",     types: ["keybinds"] },
         { id: "yura",       label: "Yura →",       action: "yura-settings" },
         { id: "about",      label: "About",        types: ["about"] },
         { id: "reset",      label: "Reset",        types: ["reset"], danger: true }
@@ -54,7 +60,7 @@ Item {
             case "launcherTerminal":  return launcherTerminalSection
             case "workspaces":        return workspaceSection
             case "displayMonitor":    return displayMonitorSection
-            case "shortcuts":         return shortcutsSection
+            case "keybinds":          return keybindsSection
             case "about":             return aboutSection
             case "reset":             return resetSection
             default:                  return null
@@ -62,9 +68,11 @@ Item {
     }
 
     Settings.SettingsFrame {
+        id: frame
         anchors.fill: parent
         theme: root.theme
         categories: root.categories
+        initialCategory: root.initialCategory
         resolveSection: root.sectionFor
         onCategoryAction: action => {
             if (action === "yura-settings") root.openYuraSettings()
@@ -181,9 +189,10 @@ Item {
         modeManager: root.modeManager
         settingsManager: root.settingsManager
     }}
-    Component { id: shortcutsSection; Settings.KeyboardShortcutsSection {
+    Component { id: keybindsSection; Settings.KeybindsSection {
         theme: root.theme
         modeManager: root.modeManager
+        onOpenUrl: url => root.openUrl(url)
     }}
     Component { id: aboutSection; Settings.AboutSection {
         theme: root.theme

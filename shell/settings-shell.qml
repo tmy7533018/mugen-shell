@@ -272,6 +272,7 @@ ShellRoot {
         minimumSize: Qt.size(800, 540)
 
         Content.SettingsFloatingContent {
+            id: settingsContent
             anchors.fill: parent
             modeManager: modeStub
             theme: themeColors
@@ -283,6 +284,7 @@ ShellRoot {
             timerSounds: root.timerSounds
             soundsDir: root.soundsDir
             timerSoundsDir: root.timerSoundsDir
+            initialCategory: Quickshell.env("MUGEN_SETTINGS_CATEGORY") || ""
 
             onApplyPreset: name => root.applyBlurPreset(name)
             onApplySound: name => root.applyNotificationSound(name)
@@ -322,5 +324,11 @@ ShellRoot {
         function onIdleDpmsMinutesChanged() {
             if (root._initialLoadDone) root.applyIdleDpms(settingsManager.idleDpmsMinutes)
         }
+    }
+
+    // Called by toggle-settings.sh so Super+/ switches category on an already-open window.
+    IpcHandler {
+        target: "settings"
+        function openCategory(category: string) { settingsContent.openCategory(category) }
     }
 }

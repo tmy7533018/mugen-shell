@@ -106,8 +106,7 @@ Item {
     // These are separate quickshell processes, so their toggle scripts are what make a window appear.
     readonly property var _detachedScripts: ({
         "settings": "toggle-settings.sh",
-        "calendar": "toggle-calendar.sh",
-        "shortcuts": "toggle-shortcuts.sh"
+        "calendar": "toggle-calendar.sh"
     })
 
     IpcHandler {

@@ -3,6 +3,7 @@ singleton CalendarGrid 1.0 CalendarGrid.qml
 singleton CalendarCli 1.0 CalendarCli.qml
 singleton Format 1.0 Format.qml
 singleton JsonStore 1.0 JsonStore.qml
+singleton Keybinds 1.0 Keybinds.qml
 singleton ModulePalettes 1.0 ModulePalettes.qml
 singleton Motion 1.0 Motion.qml
 singleton Metrics 1.0 Metrics.qml

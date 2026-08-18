@@ -21,7 +21,10 @@ Item {
     // A category carrying `action` opens something else instead of listing sections.
     signal categoryAction(string action)
 
-    property string selectedCategory: categories.length > 0 ? categories[0].id : ""
+    property string initialCategory: ""
+    property string selectedCategory: initialCategory !== ""
+        ? initialCategory
+        : (categories.length > 0 ? categories[0].id : "")
     property string query: ""
 
     // "moduleBackground" -> "Module Background", so search needs no second copy of the titles.
