@@ -173,22 +173,25 @@ QtObject {
             "--session",
             "sender='org.freedesktop.systemd1'"
         ]
-        running: false
+        running: idleInhibitorManager.isInitialized && !idleInhibitorManager.monitorRestartTimer.running
 
         stdout: SplitParser {
             onRead: data => {
-                if (!idleInhibitorManager.isInitialized) return
-
                 if (data.includes("hypridle") || data.includes("ActiveState")) {
                     idleDebounceTimer.restart()
                 }
             }
         }
 
-        stderr: SplitParser {
-            onRead: data => {
-            }
+        // The stream ends when the process does, so this is where a dead monitor shows up.
+        stderr: StdioCollector {
+            onStreamFinished: idleInhibitorManager.monitorRestartTimer.restart()
         }
+    }
+
+    // A bus hiccup would otherwise leave the idle-inhibit state frozen until the shell restarts.
+    property Timer monitorRestartTimer: Timer {
+        interval: 2000
     }
 
     property Timer idleDebounceTimer: Timer {
@@ -205,10 +208,7 @@ QtObject {
     property Timer initDelayTimer: Timer {
         interval: 500
         repeat: false
-        onTriggered: {
-            idleInhibitorManager.isInitialized = true
-            idleInhibitorManager.dbusMonitor.running = true
-        }
+        onTriggered: idleInhibitorManager.isInitialized = true
     }
 
     Component.onCompleted: {

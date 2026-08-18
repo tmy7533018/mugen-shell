@@ -18,25 +18,30 @@ QtObject {
     
     property Process dbusMonitor: Process {
         id: monitor
-        
+
         command: [
             "dbus-monitor",
             "--session",
             "sender='org.fcitx.Fcitx5'"
         ]
-        
-        running: true
-        
+
+        running: !root.monitorRestartTimer.running
+
         stdout: SplitParser {
             onRead: data => {
                 debounceTimer.restart()
             }
         }
-        
-        stderr: SplitParser {
-            onRead: data => {
-            }
+
+        // The stream ends when the process does, so this is where a dead monitor shows up.
+        stderr: StdioCollector {
+            onStreamFinished: root.monitorRestartTimer.restart()
         }
+    }
+
+    // A bus hiccup would otherwise leave the IME indicator frozen until the shell restarts.
+    property Timer monitorRestartTimer: Timer {
+        interval: 2000
     }
     
     property Timer debounceTimer: Timer {

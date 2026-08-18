@@ -56,7 +56,7 @@ QtObject {
 
     property Process rfkillMonitor: Process {
         command: ["bash", "-c", "rfkill event"]
-        running: airplaneManager.active
+        running: airplaneManager.active && !airplaneManager.monitorRestartTimer.running
 
         stdout: SplitParser {
             onRead: data => {
@@ -64,10 +64,15 @@ QtObject {
             }
         }
 
-        stderr: SplitParser {
-            onRead: data => {
-            }
+        // The stream ends when the process does, so this is where a dead monitor shows up.
+        stderr: StdioCollector {
+            onStreamFinished: airplaneManager.monitorRestartTimer.restart()
         }
+    }
+
+    // A dead rfkill monitor would otherwise freeze airplane mode until the shell restarts.
+    property Timer monitorRestartTimer: Timer {
+        interval: 2000
     }
 
     property Timer debounceTimer: Timer {

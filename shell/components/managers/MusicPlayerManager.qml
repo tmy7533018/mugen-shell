@@ -490,17 +490,23 @@ QtObject {
             "type='signal',interface='org.freedesktop.DBus.ObjectManager',member='InterfacesAdded'",
             "type='signal',interface='org.freedesktop.DBus.ObjectManager',member='InterfacesRemoved'"
         ]
-        running: true
-        
+        running: !musicManager.monitorRestartTimer.running
+
         stdout: SplitParser {
             onRead: data => {
                 musicDebounceTimer.restart()
             }
         }
-        
-        stderr: SplitParser {
-            onRead: data => {}
+
+        // The stream ends when the process does, so this is where a dead monitor shows up.
+        stderr: StdioCollector {
+            onStreamFinished: musicManager.monitorRestartTimer.restart()
         }
+    }
+
+    // A bus hiccup would otherwise leave the media state frozen until the shell restarts.
+    property Timer monitorRestartTimer: Timer {
+        interval: 2000
     }
     
     property Timer musicDebounceTimer: Timer {
