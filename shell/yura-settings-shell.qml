@@ -35,10 +35,11 @@ ShellRoot {
         }
     }
 
+    // The folder always has a registered handler (the file manager); the file itself may not.
     function openAiConfig() {
         let cfgHome = Quickshell.env("XDG_CONFIG_HOME")
         if (!cfgHome || cfgHome === "") cfgHome = Quickshell.env("HOME") + "/.config"
-        openAiConfigProcess.command = ["xdg-open", cfgHome + "/mugen-ai/config.toml"]
+        openAiConfigProcess.command = ["xdg-open", cfgHome + "/mugen-ai"]
         openAiConfigProcess.running = true
     }
 

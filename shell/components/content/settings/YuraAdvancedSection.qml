@@ -32,6 +32,12 @@ Rectangle {
         if (!x || x === "") x = Quickshell.env("HOME") + "/.local/state"
         return x + "/mugen-ai/audit.log"
     }
+    // The folder always has a registered handler (the file manager); the file itself may not.
+    readonly property string auditDir: {
+        let x = Quickshell.env("XDG_STATE_HOME")
+        if (!x || x === "") x = Quickshell.env("HOME") + "/.local/state"
+        return x + "/mugen-ai"
+    }
 
     property string qsConfig: ""
     property bool auditEnabled: true
@@ -247,7 +253,7 @@ Rectangle {
             }
 
             ActionButton {
-                label: "Edit toml"
+                label: "Open folder"
                 onClicked: { section.editConfig(); section.bump() }
             }
         }
@@ -276,8 +282,8 @@ Rectangle {
             }
 
             ActionButton {
-                label: "View log"
-                onClicked: { section.openPath(section.auditPath); section.bump() }
+                label: "Open folder"
+                onClicked: { section.openPath(section.auditDir); section.bump() }
             }
         }
 
