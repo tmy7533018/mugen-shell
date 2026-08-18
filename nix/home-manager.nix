@@ -202,7 +202,7 @@ in
           pulseaudio   # provides `pactl`, which the audio panel shells out to
           brightnessctl
           jq             # App Launcher running-apps filter, several shell scripts
-          xdg-utils      # `xdg-open` for Settings → Personality → Edit toml
+          xdg-utils      # `xdg-open` for every Settings "Open folder" button
           socat
           curl
           fzf            # the blur preset picker falls back to it

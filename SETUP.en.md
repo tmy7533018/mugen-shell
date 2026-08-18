@@ -175,7 +175,7 @@ source ~/.config/mugen-shell/mugen-shell.zshrc
 
 Wiring Hyprland into your display manager or login session is left to you (`Hyprland` from TTY, sddm session entry, etc.).
 
-Activation copies the shipped `system/hypr/` into `~/.config/hypr/`, and does the same for `cava`, `kitty`, `matugen`, `fastfetch` and `starship.toml`, each only when that path does not exist yet, so configs you already have are left alone. If you already have a Hyprland config, add the autostart to it by hand; without it nothing spawns `quickshell -c mugen-shell`:
+Activation places the shipped `system/hypr/` and `matugen/` under `~/.config/`. Their contents are refreshed on every later activation too, except `hypridle.conf`, `colors.lua`, `configs/blur.lua`, `configs/user-overrides.lua` and `configs/keybind-overrides.lua`, which are created only once and left alone after that. `cava`, `kitty`, `fastfetch` and `starship.toml` still copy only when that path does not exist yet, as before. If you already have a Hyprland config, add the autostart to it by hand; without it nothing spawns `quickshell -c mugen-shell`:
 
 ```lua
 dofile(os.getenv("HOME") .. "/.config/hypr/configs/mugen-shell.lua")

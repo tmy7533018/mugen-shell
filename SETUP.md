@@ -145,7 +145,7 @@ yay -S hyprland quickshell qt6-5compat hypridle zsh kitty libnotify \
 home-manager switch --flake ~/.config/home-manager#YOUR_USER
 ```
 
-アクティベートすると、同梱の `system/hypr/` が `~/.config/hypr/` にコピーされます。`cava`・`kitty`・`matugen`・`fastfetch` の設定と `starship.toml` も同様です。コピーされるのはその場所にまだ設定が無いときだけなので、既存の設定が上書きされる心配はありません。
+アクティベートすると、同梱の `system/hypr/` と `matugen/` が `~/.config/` に配置されます。中身は次回以降のアクティベートでも更新されますが、`hypridle.conf`・`colors.lua`・`configs/blur.lua`・`configs/user-overrides.lua`・`configs/keybind-overrides.lua` はその場所にまだ無いときだけ作られ、以降は触られません。`cava`・`kitty`・`fastfetch` の設定と `starship.toml` は今まで通りその場所にまだ設定が無いときだけコピーされます。
 
 Hyprland の起動方法 (TTY から `Hyprland` を叩く、sddm にセッションを登録する、など) は自分で用意してください。
 
