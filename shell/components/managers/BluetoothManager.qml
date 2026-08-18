@@ -8,6 +8,7 @@ QtObject {
     property bool isScanning: false
     property var pairedDevices: []
     property var availableDevices: []
+    property var deviceNameQueue: []
     property bool isConnecting: false
     property bool isPairing: false
     property string connectionError: ""
@@ -109,18 +110,44 @@ QtObject {
         }
     }
 
-    function fetchDeviceName(deviceAddress) {
+    function applyPairedName(deviceAddress) {
         let pairedDevice = pairedDevices.find(dev => dev.address === deviceAddress)
-        if (pairedDevice && pairedDevice.name && pairedDevice.name.length > 0) {
-            for (let i = 0; i < availableDevices.length; i++) {
-                if (availableDevices[i].address === deviceAddress) {
-                    availableDevices[i].name = pairedDevice.name
-                    availableDevices = availableDevices.slice()
-                    return
-                }
+        if (!pairedDevice || !pairedDevice.name || pairedDevice.name.length === 0) return false
+
+        for (let i = 0; i < availableDevices.length; i++) {
+            if (availableDevices[i].address === deviceAddress) {
+                availableDevices[i].name = pairedDevice.name
+                availableDevices = availableDevices.slice()
+                return true
             }
         }
+        return false
+    }
 
+    function fetchDeviceName(deviceAddress) {
+        if (applyPairedName(deviceAddress)) return
+
+        // The reply is matched by deviceAddress, so overwriting it mid-flight files device A's name under B.
+        if (deviceNameProcess.running) {
+            if (!deviceNameQueue.includes(deviceAddress)) {
+                deviceNameQueue = deviceNameQueue.concat([deviceAddress])
+            }
+            return
+        }
+        startDeviceNameFetch(deviceAddress)
+    }
+
+    function fetchNextQueuedDeviceName() {
+        while (deviceNameQueue.length > 0) {
+            let next = deviceNameQueue[0]
+            deviceNameQueue = deviceNameQueue.slice(1)
+            if (applyPairedName(next)) continue
+            startDeviceNameFetch(next)
+            return
+        }
+    }
+
+    function startDeviceNameFetch(deviceAddress) {
         let escapedAddress = deviceAddress.replace(/'/g, "'\\''")
         deviceNameProcess.deviceAddress = deviceAddress
         deviceNameProcess.command = ["bash", "-c", "bluetoothctl info '" + escapedAddress + "' 2>/dev/null | grep -E '^\\s*(Alias|Name):' | sed -E 's/^\\s*(Alias|Name):\\s*//' | head -1"]
@@ -574,7 +601,9 @@ QtObject {
             }
             deviceNameProcess.outputData = ""
 
-            if (deviceNameFetchTimer.currentIndex < deviceNameFetchTimer.addresses.length) {
+            if (bluetoothManager.deviceNameQueue.length > 0) {
+                Qt.callLater(() => bluetoothManager.fetchNextQueuedDeviceName())
+            } else if (deviceNameFetchTimer.currentIndex < deviceNameFetchTimer.addresses.length) {
                 deviceNameFetchTimer.start()
             }
         }
