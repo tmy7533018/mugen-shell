@@ -11,7 +11,6 @@ hl.window_rule({ name = "save-dialog",     match = { title = "^(Save As|Save a F
 hl.window_rule({ name = "open-files",      match = { initial_title = "^(Open Files)$" },               float = true, size = "(monitor_w*0.5) (monitor_h*0.5)", center = true })
 hl.window_rule({ name = "jp-file-dialog",  match = { title = "^(.*ファイル.*)$" },                       float = true, size = "(monitor_w*0.5) (monitor_h*0.5)", center = true })
 
-hl.window_rule({ name = "kitty-float",     match = { class = "^(kitty)$" },  float = true, size = "1050 600", center = true })
 hl.window_rule({ name = "thunar-float",    match = { class = "^(thunar)$" }, float = true, size = "1050 600", center = true })
 hl.window_rule({ name = "imv-float",       match = { class = "^(imv)$" },    float = true, size = "1050 600", center = true })
 hl.window_rule({ name = "mpv-float",       match = { class = "^(mpv)$" },    float = true, size = "1050 600", center = true })
