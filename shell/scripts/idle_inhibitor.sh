@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -uo pipefail
+
 if systemctl --user is-active --quiet hypridle.service; then
     systemctl --user stop hypridle.service
 else

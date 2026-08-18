@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -uo pipefail
+
 # Never /tmp: a fixed name there is another local user's to claim. Must match ModeManager.ipcFile.
 IPC_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/mugen-shell-ipc"
 

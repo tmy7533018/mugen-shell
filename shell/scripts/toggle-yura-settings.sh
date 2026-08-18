@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Toggle the Yura settings window.
 
-set -u
+set -uo pipefail
 
 SHELL_PATH="$HOME/.config/quickshell/mugen-shell/yura-settings-shell.qml"
 

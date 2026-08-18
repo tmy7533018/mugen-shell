@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Toggle the mugen-shell floating settings window; with a category argument, an already-open window switches there over ipc instead of closing.
 
-set -u
+set -uo pipefail
 
 SHELL_PATH="$HOME/.config/quickshell/mugen-shell/settings-shell.qml"
 category="${1:-}"

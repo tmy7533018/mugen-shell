@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Toggle the floating calendar; a separate quickshell process keeps the bar responsive.
 
-set -u
+set -uo pipefail
 
 SHELL_PATH="$HOME/.config/quickshell/mugen-shell/calendar-shell.qml"
 
