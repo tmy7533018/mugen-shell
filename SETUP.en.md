@@ -68,7 +68,7 @@ Then `nixos-rebuild switch --flake /etc/nixos#mybox`.
 
 **Making the terminal match the desktop**
 
-The starship prompt, fish-style completion and history, aliases like `ls` → `eza`, and the splash kitty opens with. The tools come from the system layer and the config from the home-manager one, so both need it:
+The starship prompt, fish-style completion and history, aliases like `ls` → `eza`, and an ASCII-art `fastfetch`. The tools come from the system layer and the config from the home-manager one, so both need it:
 
 ```nix
 programs.mugen-shell.zsh.enable = true;                    # system layer
@@ -154,7 +154,7 @@ The audio visualiser's QML module is built by Nix. If quickshell fails to import
 
 **Making the terminal match the desktop**
 
-The starship prompt, fish-style completion and history, aliases like `ls` → `eza`, and the splash kitty opens with.
+The starship prompt, fish-style completion and history, aliases like `ls` → `eza`, and an ASCII-art `fastfetch`.
 
 ```nix
 programs.mugen-shell.zsh.enable = true;

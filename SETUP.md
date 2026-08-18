@@ -55,7 +55,7 @@
 
 **ターミナルも mugen-shell の見た目にする (オプション)**
 
-有効にすると、starship のプロンプト、fish 風の補完と履歴、`ls` → `eza` のエイリアス、kitty 起動時のスプラッシュが入ります。ツールはシステム層、設定ファイルは home-manager 層に入るため、次の 2 行が両方必要です:
+有効にすると、starship のプロンプト、fish 風の補完と履歴、`ls` → `eza` のエイリアス、`fastfetch` の ASCII アート表示が入ります。ツールはシステム層、設定ファイルは home-manager 層に入るため、次の 2 行が両方必要です:
 
 ```nix
 programs.mugen-shell.zsh.enable = true;                    # システム層
@@ -175,7 +175,7 @@ source = ~/.config/hypr/configs/mugen-shell.conf
 
 **ターミナルも mugen-shell の見た目にする (オプション)**
 
-starship のプロンプト、fish 風の補完と履歴、`ls` → `eza` のエイリアス、kitty 起動時のスプラッシュが入ります。
+starship のプロンプト、fish 風の補完と履歴、`ls` → `eza` のエイリアス、`fastfetch` の ASCII アート表示が入ります。
 
 ```nix
 programs.mugen-shell.zsh.enable = true;

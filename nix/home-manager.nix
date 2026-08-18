@@ -102,7 +102,7 @@ in
       default = false;
       description = ''
         Install the packaged zsh config (starship prompt, fish-style
-        plugins, aliases, and the jp2a + fastfetch splash) and the tools
+        plugins, aliases, and a jp2a-rendered fastfetch) and the tools
         it calls. The fastfetch and starship configs it draws are
         installed either way.
 
