@@ -26,6 +26,11 @@ input_path  = '~/.config/matugen/templates/matugen-cava'
 output_path = '~/.config/cava/themes/colors.conf'
 post_hook   = "pkill -USR1 cava"
 
+[templates.sunayama]
+input_path  = '~/.config/matugen/templates/matugen-sunayama'
+output_path = '~/.config/sunayama/colors.conf'
+post_hook   = "pkill -USR1 sunayama"
+
 [templates.quickshell-json]
 input_path = '~/.config/matugen/templates/quickshell-colors.json'
 output_path = '~/.cache/mugen-shell/colors.json'
