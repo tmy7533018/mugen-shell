@@ -32,11 +32,9 @@ Item {
     }
 
     onCurrentDataChanged: {
-        if (currentData && currentData.icon) {
-            Qt.callLater(() => {
-                loadIcon()
-            })
-        }
+        Qt.callLater(() => {
+            loadIcon()
+        })
     }
 
     function loadIcon() {
