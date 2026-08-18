@@ -316,7 +316,7 @@ Yura がチャットだけでなく実際にシェル操作までこなせるか
 Yura は音声での入出力にも対応しています。`Super + Z` を長押ししながら話しかけると、返事が読み上げられます。
 
 ```
-mic → silero VAD → whisper.cpp → mugen-ai /chat → TTS (VOICEVOX / AivisSpeech / Piper)
+mic → silero VAD → whisper.cpp → mugen-ai /chat → TTS (AivisSpeech / VOICEVOX / sherpa-onnx)
 ```
 
 前提として mugen-ai が動いている必要があります。有効化は home-manager モジュール (Path A・B 共通) の 1 行だけで、必要なものは一式まとめて入ります:
@@ -423,5 +423,6 @@ context.modules = [
 - [whisper.cpp](https://github.com/ggml-org/whisper.cpp): 音声認識
 - [VOICEVOX](https://voicevox.hiroshiba.jp/): TTS エンジン
 - [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine): VOICEVOX 互換の Style-Bert-VITS2 系 TTS。モデルは [AivisHub](https://hub.aivis-project.com/) から
-- [Piper](https://github.com/rhasspy/piper): 日本語以外の声向け TTS
+- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx): ローカル音声をプロセス内で鳴らす TTS
+- [Piper](https://github.com/rhasspy/piper): 既定の英語音声のモデル
 - [LRO WAC の月面モザイク](https://commons.wikimedia.org/wiki/File:Moon_nearside_LRO.jpg): ロック画面の月。NASA/GSFC/Arizona State University、パブリックドメイン（明るさを調整して 320px に縮小したものを収録）

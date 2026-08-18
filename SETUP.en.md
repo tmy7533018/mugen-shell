@@ -310,7 +310,7 @@ Conversations live in SQLite at `~/.local/state/mugen-ai/history.db`. For termin
 Yura also takes spoken input: hold `Super + Z`, speak, and the reply is read aloud.
 
 ```
-mic → silero VAD → whisper.cpp → mugen-ai /chat → TTS (VOICEVOX / AivisSpeech / Piper)
+mic → silero VAD → whisper.cpp → mugen-ai /chat → TTS (AivisSpeech / VOICEVOX / sherpa-onnx)
 ```
 
 The default stack is Japanese-first but not Japanese-only (see *Other languages* below). It sits on top of a running mugen-ai, and the home-manager module (Paths A and B) packages the whole thing behind one option:
@@ -397,5 +397,6 @@ Media, microphone and brightness keys work as they do anywhere else. Every bindi
 - [whisper.cpp](https://github.com/ggml-org/whisper.cpp): Speech-to-text
 - [VOICEVOX](https://voicevox.hiroshiba.jp/): TTS engine
 - [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine): VOICEVOX-compatible TTS with Style-Bert-VITS2 voices, models from [AivisHub](https://hub.aivis-project.com/)
-- [Piper](https://github.com/rhasspy/piper): TTS for non-Japanese voices
+- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx): in-process TTS for local voices
+- [Piper](https://github.com/rhasspy/piper): the model behind the default English voice
 - [LRO WAC moon mosaic](https://commons.wikimedia.org/wiki/File:Moon_nearside_LRO.jpg): the moon on the lock screen. NASA/GSFC/Arizona State University, public domain (bundled brightness-adjusted and scaled down to 320px)
