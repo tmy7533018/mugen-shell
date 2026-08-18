@@ -345,7 +345,7 @@ Rectangle {
 
                 Text {
                     Layout.fillWidth: true
-                    text: "Rebind by editing keybind-overrides.lua, e.g. [\"panel.launcher\"] = \"SUPER + K\", then reload Hyprland."
+                    text: "Rebind by editing keybind-overrides.lua, e.g. keys = { [\"panel.launcher\"] = \"SUPER + K\" }, then reload Hyprland."
                     color: section.theme ? section.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
                     font.pixelSize: 10
                     font.family: "M PLUS 2"

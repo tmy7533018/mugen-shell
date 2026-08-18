@@ -1,10 +1,20 @@
 -- Keybinds, dofile'd by hyprland.lua. Rebind by hand-editing keybind-overrides.lua.
 
-local HOME        = os.getenv("HOME")
+local HOME = os.getenv("HOME")
+
+-- Loaded before the app choices below so keybind-overrides.lua's `apps` table can win.
+local overridesFile = {}
+do
+    local ok, loaded = pcall(dofile, HOME .. "/.config/hypr/configs/keybind-overrides.lua")
+    if ok and type(loaded) == "table" then overridesFile = loaded end
+end
+local appOverrides = type(overridesFile.apps) == "table" and overridesFile.apps or {}
+local keyOverrides = type(overridesFile.keys) == "table" and overridesFile.keys or {}
+
 local mainMod     = "SUPER"
-local terminal    = "kitty"
-local fileManager = "thunar"
-local browser     = "firefox"
+local terminal    = appOverrides.terminal or "kitty"
+local fileManager = appOverrides.fileManager or "thunar"
+local browser     = appOverrides.browser or "firefox"
 
 local shellDir = HOME .. "/.config/quickshell/mugen-shell"
 local scripts  = shellDir .. "/scripts"
@@ -168,10 +178,6 @@ local binds = {
       action = function() return script("take-screenshot.sh") end },
 }
 
-local overrides = {}
-local ok, loaded = pcall(dofile, HOME .. "/.config/hypr/configs/keybind-overrides.lua")
-if ok and type(loaded) == "table" then overrides = loaded end
-
 -- b.keys/b.display stay the shipped default so Settings -> Keyboard can flag an overridden row.
 for _, b in ipairs(binds) do
     if b.each then
@@ -180,7 +186,7 @@ for _, b in ipairs(binds) do
         end
     else
         local effectiveKeys = b.keys
-        if type(overrides[b.id]) == "string" then effectiveKeys = overrides[b.id] end
+        if type(keyOverrides[b.id]) == "string" then effectiveKeys = keyOverrides[b.id] end
         hl.bind(effectiveKeys, b.action, b.opts)
         b.effectiveKeys = effectiveKeys
     end
