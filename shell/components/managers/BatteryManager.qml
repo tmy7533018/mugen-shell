@@ -53,7 +53,7 @@ QtObject {
         property string output: ""
 
         stdout: SplitParser {
-            onRead: data => { readProcess.output += data }
+            onRead: data => { readProcess.output += data + "\n" }
         }
 
         onExited: () => {
