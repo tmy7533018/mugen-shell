@@ -124,6 +124,8 @@ Rectangle {
         stdout: SplitParser { onRead: data => auditSaveProc.buf += data }
         onRunningChanged: { if (running) buf = "" }
         onExited: (exitCode) => {
+            // The onStarted assignment severs the binding, so re-arm or the next save never closes stdin.
+            auditSaveProc.stdinEnabled = true
             if (exitCode === 0 && auditSaveProc.buf.indexOf("saved") >= 0) {
                 section.auditEnabled = section.auditTarget
                 section.auditStatus = "saved, applying…"

@@ -261,6 +261,8 @@ Rectangle {
         stdout: SplitParser { onRead: data => saveProcess.buf += data }
         onRunningChanged: { if (running) buf = "" }
         onExited: (exitCode) => {
+            // The onStarted assignment severs the binding, so re-arm or the next save never closes stdin.
+            saveProcess.stdinEnabled = true
             if (exitCode === 0 && saveProcess.buf.indexOf("saved") >= 0) {
                 section.statusText = "saved, restarting mugen-ai…"
                 restartProcess.running = true
