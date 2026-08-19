@@ -1554,6 +1554,7 @@ FocusScope {
 
                                 Text {
                                     Layout.fillWidth: true
+                                    textFormat: Text.PlainText
                                     text: {
                                         let v = confirmCard.pc.arguments[argRow.modelData]
                                         return (typeof v === "string") ? v : JSON.stringify(v)

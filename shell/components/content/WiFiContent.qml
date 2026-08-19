@@ -457,6 +457,7 @@ Item {
                         spacing: 2
                         
                         Text {
+                            textFormat: Text.PlainText
                             text: wifiManager.isConnected ? wifiManager.currentSsid : "Not connected"
                             color: (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
                             font.pixelSize: 16
