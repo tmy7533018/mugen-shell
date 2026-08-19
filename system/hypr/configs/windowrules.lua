@@ -15,7 +15,6 @@ hl.window_rule({ name = "thunar-float",    match = { class = "^(thunar)$" }, flo
 hl.window_rule({ name = "imv-float",       match = { class = "^(imv)$" },    float = true, size = "1050 600", center = true })
 hl.window_rule({ name = "mpv-float",       match = { class = "^(mpv)$" },    float = true, size = "1050 600", center = true })
 
-hl.window_rule({ name = "mugen-shortcuts", match = { title = "^(Mugen Shortcuts)$" }, float = true, size = "560 540", center = true })
 hl.window_rule({ name = "mugen-calendar",  match = { title = "^(Mugen Calendar)$" },  float = true, size = "900 560", center = true })
 -- Sized by the window itself; a rule here would override its implicit size.
 hl.window_rule({ name = "mugen-settings",  match = { title = "^(Mugen Settings)$" }, float = true, center = true })
