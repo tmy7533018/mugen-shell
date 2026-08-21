@@ -141,13 +141,13 @@
               ];
             }).activationPackage;
 
-            nixosOwnStack = (nixpkgs.lib.nixosSystem {
+            nixosQmlPath = includeSystemDeps: (nixpkgs.lib.nixosSystem {
               modules = [
                 nixosModule
                 {
                   nixpkgs.hostPlatform = system;
                   programs.mugen-shell.enable = true;
-                  programs.mugen-shell.includeSystemDeps = false;
+                  programs.mugen-shell.includeSystemDeps = includeSystemDeps;
 
                   boot.loader.grub.device = "nodev";
                   fileSystems."/" = { device = "/dev/null"; fsType = "tmpfs"; };
@@ -155,31 +155,46 @@
                 }
               ];
             }).config.environment.sessionVariables.QML2_IMPORT_PATH;
+
+            requireQmlModules = ''
+              require_modules() {
+                for mod in "$@"; do
+                  hit=""
+                  for dir in $(echo "$QML2_IMPORT_PATH" | tr ':' ' '); do
+                    if [ -f "$dir/$mod/qmldir" ]; then hit=$dir; fi
+                  done
+                  if [ -z "$hit" ]; then
+                    echo "no $mod/qmldir on QML2_IMPORT_PATH (got: ''${QML2_IMPORT_PATH:-unset})" >&2
+                    exit 1
+                  fi
+                done
+              }
+            '';
           in
           {
             # Activating proves nothing: a missing Mugen.Audio only surfaces once quickshell parses QML.
             home-manager = pkgs.runCommand "check-path-b" { } ''
-              vars=${pathB}/home-path/etc/profile.d/hm-session-vars.sh
-              path=$(sed -n 's/^export QML2_IMPORT_PATH="\(.*\)"$/\1/p' "$vars")
-              hit=$(echo "$path" | tr ':' '\n' | while read -r dir; do
-                [ -f "$dir/Mugen/Audio/qmldir" ] && echo "$dir"
-              done)
-              if [ -z "$hit" ]; then
-                echo "no Mugen/Audio/qmldir on QML2_IMPORT_PATH (got: ''${path:-unset})" >&2
-                exit 1
-              fi
+              ${requireQmlModules}
+              unset QML2_IMPORT_PATH
+              . ${pathB}/home-path/etc/profile.d/hm-session-vars.sh
+              require_modules Mugen/Audio
+              touch $out
+            '';
+
+            # SETUP's NixOS recipe stacks both modules, and only the HM one writes this file.
+            path-a = pkgs.runCommand "check-path-a" { } ''
+              ${requireQmlModules}
+              export QML2_IMPORT_PATH=${nixpkgs.lib.escapeShellArg (nixosQmlPath true)}
+              . ${pathB}/home-path/etc/profile.d/hm-session-vars.sh
+              require_modules Mugen/Audio Qt5Compat/GraphicalEffects
               touch $out
             '';
 
             # nixosConfigurations.vm only ever exercises includeSystemDeps = true.
             nixos-own-stack = pkgs.runCommand "check-nixos-own-stack" { } ''
-              hit=$(echo ${nixpkgs.lib.escapeShellArg nixosOwnStack} | tr ':' '\n' | while read -r dir; do
-                [ -f "$dir/Mugen/Audio/qmldir" ] && echo "$dir"
-              done)
-              if [ -z "$hit" ]; then
-                echo "no Mugen/Audio/qmldir on the NixOS QML2_IMPORT_PATH" >&2
-                exit 1
-              fi
+              ${requireQmlModules}
+              export QML2_IMPORT_PATH=${nixpkgs.lib.escapeShellArg (nixosQmlPath false)}
+              require_modules Mugen/Audio
               touch $out
             '';
 

@@ -170,11 +170,12 @@ in
     # Session-wide so Hyprland → quickshell → python3 inherits it.
     home.sessionVariables = {
       # Mugen.Audio is built from this repo, so no distro can supply it in our place.
+      # Appended rather than assigned: the NixOS layer puts qt5compat here first.
       QML2_IMPORT_PATH = lib.concatStringsSep ":" (
         [ "${pkgs.mugen-audio}/lib/qt-6/qml" ]
         ++ lib.optional cfg.includeSystemDeps
           "${pkgs.qt6Packages.qt5compat}/lib/qt-6/qml"
-      );
+      ) + "\${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}";
     } // lib.optionalAttrs cfg.includeSystemDeps {
       GI_TYPELIB_PATH =
         lib.concatStringsSep ":" (import ./gi-typelib-dirs.nix pkgs);
