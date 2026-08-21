@@ -399,7 +399,10 @@ in
             done
             mode=644
             [[ -x "$f" ]] && mode=755
-            $DRY_RUN_CMD install -D -m "$mode" "$f" "$dst/$rel"
+            $DRY_RUN_CMD mkdir -p "$(dirname "$dst/$rel")"
+            # `install` unlinks first, and a Hyprland reload landing in that window latches an error.
+            $DRY_RUN_CMD install -m "$mode" "$f" "$dst/$rel.hm-new"
+            $DRY_RUN_CMD mv -f "$dst/$rel.hm-new" "$dst/$rel"
           done < <(find "$src" -type f -print0)
         }
 
