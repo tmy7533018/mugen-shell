@@ -236,9 +236,11 @@ func (r *Registry) rejectAppLaunch(args map[string]any) string {
 		return "error: cmd is empty."
 	}
 	bin := filepath.Base(tokens[0])
+	// A path must match verbatim: /tmp/evil/firefox shares a basename with the real one.
+	bare := !strings.ContainsRune(tokens[0], filepath.Separator)
 	if len(tokens) == 1 {
 		for _, a := range r.allowedApps {
-			if a == bin || a == tokens[0] {
+			if a == tokens[0] || (bare && a == bin) {
 				return ""
 			}
 		}
