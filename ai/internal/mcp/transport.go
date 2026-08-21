@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 )
 
@@ -28,9 +29,33 @@ type stdioTransport struct {
 	mu     sync.Mutex // serialises writes; recv runs on one goroutine only
 }
 
+// Name-shaped rather than a fixed list, so a provider added later is covered too.
+func envWithoutSecrets() []string {
+	out := make([]string, 0, 64)
+	for _, kv := range os.Environ() {
+		name, _, _ := strings.Cut(kv, "=")
+		if isSecretName(name) {
+			continue
+		}
+		out = append(out, kv)
+	}
+	return out
+}
+
+func isSecretName(name string) bool {
+	up := strings.ToUpper(name)
+	for _, s := range []string{"API_KEY", "APIKEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL"} {
+		if strings.Contains(up, s) {
+			return true
+		}
+	}
+	return false
+}
+
 func newStdioTransport(name, command string, args []string, env map[string]string) (*stdioTransport, error) {
 	cmd := exec.Command(command, args...)
-	cmd.Env = os.Environ()
+	// The parent holds the provider API keys; a server gets only what its config declares.
+	cmd.Env = envWithoutSecrets()
 	for k, v := range env {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
