@@ -483,9 +483,10 @@ PanelWindow {
     Managers.CavaManager {
         id: cavaManager
 
-        Component.onCompleted: {
-            isActive = true
-        }
+        // The bar visualiser only draws while playing; the two panels need it while open.
+        isActive: musicPlayerManager.isPlaying
+            || modeManager.isMode("volume")
+            || modeManager.isMode("music")
     }
 
     Managers.CavaManager { id: micCavaManager; source: "mic" }

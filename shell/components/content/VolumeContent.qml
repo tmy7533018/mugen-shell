@@ -111,6 +111,9 @@ Item {
 
     onIsMicModeChanged: updateMicCavaState()
 
+    // The Loader drops this panel on the same signal the Connections below listen to.
+    Component.onDestruction: if (micCavaManager) micCavaManager.stop()
+
     MouseArea {
         anchors.fill: parent
         z: 1
