@@ -455,9 +455,15 @@ ShellRoot {
             }
 
             root.armed = false
-            // Errors arrive as completed too, so restarting here would defeat the backoff.
-            if (!root.pamPrompted) return
-            root.authFailed()
+            // error() arrives first and has already scheduled the retry for this one.
+            if (result === PamResult.Error) return
+
+            if (root.pamPrompted) root.authFailed()
+            // A spent or prompt-less service never lets us back in, so move off it.
+            if (result === PamResult.MaxTries || !root.pamPrompted) {
+                root.nextPamService()
+                return
+            }
             root.startPam()
         }
 
@@ -468,7 +474,8 @@ ShellRoot {
                 return
             }
             console.warn("lock: PAM error - " + PamError.toString(error))
-            root.startPam()
+            root.pamFaulted = true
+            pamRetryTimer.restart()
         }
     }
 
