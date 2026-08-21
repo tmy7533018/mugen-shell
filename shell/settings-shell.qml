@@ -96,7 +96,7 @@ ShellRoot {
         }
     }
 
-    // Queued: concurrent writes would race, and `running = true` on a busy Process is a silent no-op.
+    // Queued because concurrent writes to hypridle.conf would race.
     property var _hyprIdleQueue: []
     property bool _hyprIdleBusy: false
 
