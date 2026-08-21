@@ -54,6 +54,9 @@ Item {
             if (modeManager.isMode("normal")) {
                 modeManager.switchMode("notification-popup")
                 root.restartAutoClose()
+            } else if (root.modeManager.isMode("notification-popup")) {
+                // Otherwise a burst's later arrivals inherit the first one's deadline.
+                root.restartAutoClose()
             }
         }
     }
