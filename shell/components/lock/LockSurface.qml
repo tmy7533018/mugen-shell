@@ -411,7 +411,8 @@ Item {
                         wtype: root.weatherParticleType
                         windKmh: root.weatherWind
                         tint: root.weatherPalette ? root.weatherPalette.accent : root.accentColor
-                        active: !root.reduceMotion
+                        // A ParticleSystem does not stop just because its surface is hidden.
+                        active: !root.reduceMotion && root.uiVisible
                         layer.enabled: true
                         layer.effect: OpacityMask { maskSource: weatherMask }
                     }
@@ -774,7 +775,7 @@ Item {
                                                       root.errorColor.g,
                                                       root.errorColor.b,
                                                       orbSlot.murk * 0.8))
-                            active: !root.unlocking
+                            active: !root.unlocking && root.uiVisible
                             breathEnabled: !root.reduceMotion && !root.unlocking
                             idleBreathPeak: root.authenticating ? 1.13 : 1.05
                             idleBreathDuration: root.authenticating ? 850 : 3500
