@@ -121,10 +121,27 @@ PanelWindow {
 
     property bool _sizeReady: false
 
+    readonly property int autoCollapseMin:
+        chatWindow.settingsManager ? chatWindow.settingsManager.yuraAutoCollapseMin : 0
+    readonly property bool autoCollapseArmed: yuraState.expanded
+        && chatWindow.autoCollapseMin > 0
+        && !(contentLoader.item && contentLoader.item.streaming)
+
+    // restart() severs a running: binding for good, so the timer is driven from here alone.
+    function noteActivity() {
+        if (chatWindow.autoCollapseArmed) idleCollapse.restart()
+    }
+
+    onAutoCollapseArmedChanged: {
+        if (chatWindow.autoCollapseArmed) idleCollapse.restart()
+        else idleCollapse.stop()
+    }
+
     // A fresh yura-shell can't be mid-stream, so clear a glow left by a process that died streaming.
     Component.onCompleted: {
         Theme.Hypr.exec("qs -c mugen-shell ipc call yura set_thinking false")
         chatWindow.setBarPanelOpen(false)
+        chatWindow.noteActivity()
     }
 
     function setBarPanelOpen(on) {
@@ -232,7 +249,7 @@ PanelWindow {
         TapHandler {
             onPressedChanged: if (pressed) {
                 chatWindow.grabWanted = true
-                idleCollapse.restart()
+                chatWindow.noteActivity()
             }
         }
 
@@ -327,7 +344,7 @@ PanelWindow {
                 orbEmptyScale: 0.48
                 orbEmptyYRatio: 0.10
 
-                onUserActivity: idleCollapse.restart()
+                onUserActivity: chatWindow.noteActivity()
 
                 Component.onCompleted: {
                     if (chatWindow.settingsManager) {
@@ -451,7 +468,7 @@ PanelWindow {
 
         // Not a full-fill hoverEnabled MouseArea: it would swallow hover and leave row states dead.
         HoverHandler {
-            onPointChanged: idleCollapse.restart()
+            onPointChanged: chatWindow.noteActivity()
         }
 
         Item {
@@ -507,10 +524,7 @@ PanelWindow {
 
     Timer {
         id: idleCollapse
-        interval: Math.max(1, chatWindow.settingsManager ? chatWindow.settingsManager.yuraAutoCollapseMin : 0) * 60 * 1000
-        running: yuraState.expanded
-            && (chatWindow.settingsManager ? chatWindow.settingsManager.yuraAutoCollapseMin : 0) > 0
-            && !(contentLoader.item && contentLoader.item.streaming)
+        interval: chatWindow.autoCollapseMin * 60 * 1000
         onTriggered: yuraState.close()
     }
 
