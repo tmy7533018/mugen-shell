@@ -86,6 +86,20 @@ Item {
     // Dismissals overlap, so each carries its own deadline.
     property var pendingDismissals: ({})
 
+    // Closing the panel destroys the sweeper mid-flight, so its debt is paid here.
+    Component.onDestruction: {
+        if (root.isClearingAll) {
+            notificationManager.clearAll()
+            return
+        }
+        for (const key in root.pendingDismissals) {
+            const entry = root.pendingDismissals[key]
+            if (entry.dispatched) continue
+            entry.dispatched = true
+            notificationManager.removeNotification(isNaN(key) ? key : Number(key))
+        }
+    }
+
     readonly property int dismissAnimationMs: 500
     readonly property int dismissFlagClearMs: 950
 
