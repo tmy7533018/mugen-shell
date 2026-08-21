@@ -35,6 +35,10 @@ func usesLuaConfig(ctx context.Context) bool {
 }
 
 func clients(ctx context.Context) []client {
+	// The caller's context carries no deadline, and a wedged hyprctl would hang the launch.
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
 	out, err := exec.CommandContext(ctx, "hyprctl", "clients", "-j").Output()
 	if err != nil {
 		return nil
