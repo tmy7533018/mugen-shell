@@ -258,7 +258,6 @@ FocusScope {
                 TextInput {
                     id: inputField
                     anchors.left: parent.left
-                    // Invisible items keep their geometry, so skip the mic slot when voice is off.
                     anchors.right: sendIcon.left
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.leftMargin: modeManager.scale(20)

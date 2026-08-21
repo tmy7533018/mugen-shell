@@ -1173,7 +1173,6 @@ FocusScope {
             id: inputFlick
             anchors.left: attachIcon.right
             anchors.leftMargin: modeManager.scale(8)
-            // Invisible items keep their geometry, so the mic slot is anchored around when voice is off.
             anchors.right: sendIcon.left
             anchors.rightMargin: modeManager.scale(12)
             // Grows symmetrically, so a single line sits where it did before Shift+Enter existed.
