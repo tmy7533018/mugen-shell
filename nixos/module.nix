@@ -30,8 +30,10 @@ in
         bluetooth, NetworkManager) the shell expects to be running.
 
         Set to <literal>false</literal> if you already manage Hyprland and
-        the rest of the stack yourself; the module will then only put
-        cfg.package on the system path.
+        the rest of the stack yourself; the module then contributes only
+        mugen-ai and QML2_IMPORT_PATH. The QML tree itself is delivered by
+        the home-manager module, which symlinks it into ~/.config —
+        cfg.package has no bin/ for the system path to pick up.
       '';
     };
 
