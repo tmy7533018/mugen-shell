@@ -209,3 +209,84 @@ func TestThinkingIsNotReplayedWhenDisabled(t *testing.T) {
 		}
 	}
 }
+
+// Adaptive and output_config both 400 on pre-4.6 tiers, and claude-haiku-4-5 is
+// the default fallback model, so this path is the common one, not the exotic one.
+func TestLegacyModelAsksForABudget(t *testing.T) {
+	var body []byte
+	srv := stubAnthropic(t, "data: {\"type\":\"message_stop\"}\n", &body)
+	defer srv.Close()
+
+	err := testAnthropic(srv.URL).Chat(context.Background(), "claude-haiku-4-5",
+		[]Message{{Role: "user", Content: "hi"}}, ChatOptions{Thinking: true},
+		func(ChatChunk) error { return nil })
+	if err != nil {
+		t.Fatalf("chat: %v", err)
+	}
+
+	thinking, output := thinkingField(t, body)
+	if thinking["type"] != "enabled" {
+		t.Errorf("thinking = %+v, want type enabled", thinking)
+	}
+	if thinking["budget_tokens"] == nil {
+		t.Errorf("legacy tiers need budget_tokens: %+v", thinking)
+	}
+	if output != nil {
+		t.Errorf("output_config is rejected on legacy tiers: %+v", output)
+	}
+}
+
+func TestThinkingOffIsOmittedWhereItCannotBeSaid(t *testing.T) {
+	for _, model := range []string{"claude-fable-5", "claude-haiku-4-5"} {
+		var body []byte
+		srv := stubAnthropic(t, "data: {\"type\":\"message_stop\"}\n", &body)
+
+		err := testAnthropic(srv.URL).Chat(context.Background(), model,
+			[]Message{{Role: "user", Content: "hi"}}, ChatOptions{Thinking: false},
+			func(ChatChunk) error { return nil })
+		srv.Close()
+		if err != nil {
+			t.Fatalf("%s: chat: %v", model, err)
+		}
+
+		if thinking, _ := thinkingField(t, body); thinking != nil {
+			t.Errorf("%s: sending thinking at all is a 400 here, got %+v", model, thinking)
+		}
+	}
+}
+
+// The rescue used to match the word "thinking" only, so an output_config
+// rejection failed the turn outright instead of retrying without thinking.
+func TestEffortRejectionFallsBackToNoThinking(t *testing.T) {
+	var bodies [][]byte
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		bodies = append(bodies, b)
+		if len(bodies) == 1 {
+			w.WriteHeader(http.StatusBadRequest)
+			io.WriteString(w, `{"error":{"type":"invalid_request_error","message":"output_config.effort: unsupported"}}`)
+			return
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		io.WriteString(w, "data: {\"type\":\"message_stop\"}\n")
+	}))
+	defer srv.Close()
+
+	err := testAnthropic(srv.URL).Chat(context.Background(), "claude-x",
+		[]Message{{Role: "user", Content: "hi"}}, ChatOptions{Thinking: true},
+		func(ChatChunk) error { return nil })
+	if err != nil {
+		t.Fatalf("chat: %v", err)
+	}
+	if len(bodies) != 2 {
+		t.Fatalf("want one retry, got %d request(s)", len(bodies))
+	}
+
+	thinking, output := thinkingField(t, bodies[1])
+	if thinking["type"] != "disabled" {
+		t.Errorf("retry thinking = %+v, want disabled", thinking)
+	}
+	if output != nil {
+		t.Errorf("retry must drop output_config: %+v", output)
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -18,6 +19,31 @@ var effortHeadroom = map[string]int{
 	"high":   16384,
 	"xhigh":  32768,
 	"max":    65536,
+}
+
+// Deny-listing the pre-4.6 tiers keeps models released after this code on the adaptive path.
+func usesLegacyThinking(model string) bool {
+	for _, p := range []string{"claude-haiku-4-5", "claude-sonnet-4-5", "claude-opus-4-5", "claude-3"} {
+		if strings.HasPrefix(model, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// These think unconditionally, and an explicit "disabled" is a 400.
+func thinkingAlwaysOn(model string) bool {
+	return strings.HasPrefix(model, "claude-fable-") || strings.HasPrefix(model, "claude-mythos-")
+}
+
+func rejectedThinkingField(body []byte) bool {
+	s := strings.ToLower(string(body))
+	for _, k := range []string{"thinking", "output_config", "effort", "budget_tokens"} {
+		if strings.Contains(s, k) {
+			return true
+		}
+	}
+	return false
 }
 
 type Anthropic struct {
@@ -161,9 +187,13 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		payload["system"] = systemBlocks
 	}
 	if opts.Thinking {
-		payload["thinking"] = map[string]any{"type": "adaptive"}
-		payload["output_config"] = map[string]any{"effort": a.effort}
-	} else {
+		if usesLegacyThinking(model) {
+			payload["thinking"] = map[string]any{"type": "enabled", "budget_tokens": effortHeadroom[a.effort]}
+		} else {
+			payload["thinking"] = map[string]any{"type": "adaptive"}
+			payload["output_config"] = map[string]any{"effort": a.effort}
+		}
+	} else if !usesLegacyThinking(model) && !thinkingAlwaysOn(model) {
 		// Omitting the field leaves thinking on for newer models, so "off" has to be said out loud.
 		payload["thinking"] = map[string]any{"type": "disabled"}
 	}
@@ -195,8 +225,10 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		// Not all Claude tiers support extended thinking, so a rejection is re-issued without it.
-		if resp.StatusCode == http.StatusBadRequest && opts.Thinking &&
-			strings.Contains(strings.ToLower(string(b)), "thinking") {
+		if resp.StatusCode == http.StatusBadRequest && opts.Thinking && rejectedThinkingField(b) {
+			// Silently dropping it turns a hard failure into thinking that never runs.
+			fmt.Fprintf(os.Stderr, "anthropic: %s rejected the thinking request, retrying without it: %s\n",
+				model, parseAnthropicError(b, resp.StatusCode))
 			retry := opts
 			retry.Thinking = false
 			return a.Chat(ctx, model, messages, retry, fn)
