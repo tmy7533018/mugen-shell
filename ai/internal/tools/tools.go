@@ -60,6 +60,9 @@ type Registry struct {
 	tools        []Tool
 	mu           sync.RWMutex
 
+	// A field so tests need not wait out the real budget.
+	callTimeout time.Duration
+
 	// A field so tests can substitute a fake for the real subprocess exec.
 	run func(ctx context.Context, name string, args []string) (string, error)
 }
@@ -81,8 +84,12 @@ func New(qsConfig, scriptsDir string, allowedApps, disabledCategories []string, 
 		apps:         apps.Load(),
 		tools:        builtin(),
 		run:          execCommand,
+		callTimeout:  defaultCallTimeout,
 	}
 }
+
+// Held under the registry lock, so an unbounded tool would wedge every conversation.
+const defaultCallTimeout = 60 * time.Second
 
 func execCommand(ctx context.Context, name string, args []string) (string, error) {
 	out, err := exec.CommandContext(ctx, name, args...).CombinedOutput()
@@ -316,6 +323,9 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 		r.mu.Lock()
 		defer r.mu.Unlock()
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, r.callTimeout)
+	defer cancel()
 
 	if name == "app_launch" {
 		if rejection := r.rejectAppLaunch(args); rejection != "" {
