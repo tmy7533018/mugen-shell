@@ -65,6 +65,7 @@ Item {
         }
 
         Text {
+            textFormat: Text.PlainText
             text: root.condition
             color: root.faintTint
             font.family: root.fontFamily

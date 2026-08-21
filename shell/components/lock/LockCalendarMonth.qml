@@ -257,6 +257,7 @@ Item {
                         spacing: 3 * root.designPx
 
                         Text {
+                            textFormat: Text.PlainText
                             text: eventRow.modelData.time
                                 ? eventRow.modelData.time : "ALL DAY"
                             color: root.faintTint
@@ -268,6 +269,7 @@ Item {
 
                         Text {
                             width: dayColumn.width - 12 * root.designPx
+                            textFormat: Text.PlainText
                             text: eventRow.modelData.title
                             color: root.tint
                             opacity: eventRow.past ? 0.55 : 0.92

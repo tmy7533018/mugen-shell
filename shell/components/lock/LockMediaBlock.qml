@@ -16,6 +16,9 @@ Item {
     property string title: ""
     property string artist: ""
     property string artUrl: ""
+    // A failed art cache publishes the raw remote URL, and this surface is shown while locked.
+    readonly property string localArt:
+        /^(file:\/\/|\/)/.test(root.artUrl) ? root.artUrl : ""
     property real position: 0
     property real duration: 0
 
@@ -39,7 +42,7 @@ Item {
         id: artBackdrop
         anchors.fill: parent
         visible: false
-        source: root.artUrl
+        source: root.localArt
         frameWidth: root.width
         frameHeight: root.height
         blurRadius: 64
@@ -49,7 +52,7 @@ Item {
     OpacityMask {
         anchors.fill: parent
         source: artBackdrop
-        opacity: root.artUrl === "" ? 0 : 1
+        opacity: root.localArt === "" ? 0 : 1
         maskSource: Rectangle {
             width: root.width
             height: root.height
@@ -71,7 +74,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: root.cornerRadius
-        opacity: root.artUrl === "" ? 1 : 0
+        opacity: root.localArt === "" ? 1 : 0
         gradient: Gradient {
             orientation: Gradient.Horizontal
             GradientStop {
@@ -103,7 +106,7 @@ Item {
         Image {
             id: artImage
             anchors.fill: parent
-            source: root.artUrl
+            source: root.localArt
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
             visible: false
@@ -137,6 +140,7 @@ Item {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
+            textFormat: Text.PlainText
             text: root.title
             color: root.tint
             elide: Text.ElideRight
@@ -151,6 +155,7 @@ Item {
             anchors.right: parent.right
             anchors.top: titleLabel.bottom
             anchors.topMargin: 9 * root.designPx
+            textFormat: Text.PlainText
             text: root.artist
             color: root.faintTint
             elide: Text.ElideRight
