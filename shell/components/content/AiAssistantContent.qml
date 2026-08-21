@@ -39,6 +39,7 @@ FocusScope {
     })
 
     property bool streaming: false
+    property bool stopRequested: false
     // Bar.qml blocks its auto-close timer on this, so closing never eats unsent text.
     readonly property bool hasDraft: inputField.text.trim().length > 0 && !displayingResponse
     property bool aiAvailable: false
@@ -88,6 +89,7 @@ FocusScope {
         if (!aiAvailable || !hasModel) return
         responseDisplay = ""
         displayingResponse = false
+        stopRequested = false
         streaming = true
         // Empty string falls back to the backend's registry default.
         let modelChoice = (settingsManager && settingsManager.barAiModel) ? settingsManager.barAiModel : ""
@@ -103,6 +105,7 @@ FocusScope {
 
     function stopStreaming() {
         if (!streaming) return
+        stopRequested = true
         chatProcess.signal(15) // SIGTERM
         streaming = false
         // The backend reads the disconnect as a denial, so the strip goes too.
@@ -726,9 +729,11 @@ FocusScope {
             root.streaming = false
             // A timed-out stream can leave the strip up on a prompt the backend already abandoned.
             root.pendingConfirm = null
-            if (exitCode !== 0 && root.responseDisplay.length === 0) {
+            // A stop is a SIGTERM, so curl's non-zero exit says nothing about the connection.
+            if (exitCode !== 0 && !root.stopRequested && root.responseDisplay.length === 0) {
                 root.responseDisplay = "[connection failed]"
             }
+            root.stopRequested = false
             // Parked in the input field so it can be scrolled / copied.
             if (root.responseDisplay.length > 0) {
                 inputField.text = root.mdFlat(root.responseDisplay)
