@@ -56,6 +56,11 @@ QtObject {
     }
     
     function switchMode(newMode, viaIpc) {
+        // IPC and the MCP panel_open tool both reach here with a caller-supplied name.
+        if (knownModes.indexOf(newMode) < 0) {
+            console.warn("mode: refusing unknown mode " + newMode)
+            return
+        }
         // openedViaIpc before currentMode: listeners read it synchronously to decide focus.
         if (newMode === currentMode) {
             openedViaIpc = false
@@ -86,7 +91,15 @@ QtObject {
         interaction()
     }
     
+    // Bar.qml's Loaders define these; any other name leaves every panel inactive.
+    readonly property var knownModes: [
+        "normal", "ai", "bluetooth", "brightness", "clipboard", "launcher", "music",
+        "notification", "notification-popup", "powermenu", "screenshot-gallery",
+        "timer", "volume", "wallpaper", "weather", "wifi"
+    ]
+
     function listModes() {
+        return knownModes
     }
     
     // XDG_RUNTIME_DIR only: a fixed name under shared /tmp is another local user's to claim.
