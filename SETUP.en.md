@@ -137,7 +137,7 @@ Point at the user-level flake (the repo root); the Wayland and compositor stack 
 Install the system stack with pacman before the first switch:
 
 ```bash
-yay -S hyprland quickshell qt6-5compat hypridle zsh kitty libnotify \
+yay -S hyprland quickshell qt6-5compat hypridle hyprpolkitagent zsh kitty libnotify \
        pipewire pipewire-pulse pavucontrol cava playerctl \
        networkmanager network-manager-applet bluez bluez-utils \
        fcitx5 fcitx5-mozc fcitx5-im fcitx5-configtool \

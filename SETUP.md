@@ -90,7 +90,7 @@ programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
 home-manager を switch する前に、まずシステム側を揃えます:
 
 ```bash
-yay -S hyprland quickshell qt6-5compat hypridle zsh kitty libnotify \
+yay -S hyprland quickshell qt6-5compat hypridle hyprpolkitagent zsh kitty libnotify \
        pipewire pipewire-pulse pavucontrol cava playerctl \
        networkmanager network-manager-applet bluez bluez-utils \
        fcitx5 fcitx5-mozc fcitx5-im fcitx5-configtool \
