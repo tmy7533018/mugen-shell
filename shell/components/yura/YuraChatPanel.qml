@@ -22,26 +22,12 @@ PanelWindow {
         if (contentLoader.item) contentLoader.item.showConversation(convId)
     }
 
-    property bool voiceListening: false
     property bool voiceSpeaking: false
-
-    function setVoiceListening(on) {
-        voiceListening = on
-        if (on) voiceListeningFailsafe.restart()
-        else voiceListeningFailsafe.stop()
-    }
 
     function setVoiceSpeaking(on) {
         voiceSpeaking = on
         if (on) voiceSpeakingFailsafe.restart()
         else voiceSpeakingFailsafe.stop()
-    }
-
-    // If yurad dies mid-capture its clearing IPC never arrives.
-    Timer {
-        id: voiceListeningFailsafe
-        interval: 60 * 1000
-        onTriggered: chatWindow.voiceListening = false
     }
 
     // A spoken reply runs minutes at most; past that yurad died mid-turn.
@@ -339,7 +325,6 @@ PanelWindow {
                 aiBackend: chatWindow.aiBackend
                 settingsManager: chatWindow.settingsManager
                 showInternalOrb: false
-                voiceListening: chatWindow.voiceListening
                 voiceSpeaking: chatWindow.voiceSpeaking
                 orbEmptyScale: 0.48
                 orbEmptyYRatio: 0.10

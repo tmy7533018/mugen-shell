@@ -2,10 +2,8 @@
 
 import QtQuick
 import Quickshell
-import Quickshell.Hyprland
 import Quickshell.Services.Notifications as NS
 import "./windows" as Windows
-import "./lib" as Lib
 
 ShellRoot {
     id: root
@@ -13,15 +11,6 @@ ShellRoot {
     Windows.Bar {
         id: barWindow
         // screen is resolved in Bar.qml: it needs SettingsManager, which lives inside the bar window.
-    }
-
-    GlobalShortcut {
-        appid: "mugen-shell"
-        name: "ptt"
-        description: "Hold to talk to Yura"
-
-        onPressed: Lib.YuraCtl.pttDown(!barWindow.yuraSurfaceOpen)
-        onReleased: Lib.YuraCtl.pttUp()
     }
 
     Connections {

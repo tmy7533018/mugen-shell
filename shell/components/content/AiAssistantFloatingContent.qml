@@ -6,7 +6,6 @@ import Quickshell.Io
 import "../../lib" as Theme
 import "../ui" as UI
 import "../common" as Common
-import "../managers" as Managers
 import "./ai" as Ai
 
 FocusScope {
@@ -18,17 +17,13 @@ FocusScope {
     property var aiBackend
     property var settingsManager
     property bool showInternalOrb: true
-    property bool voiceListening: false
     property bool voiceSpeaking: false
-    readonly property bool voiceActive: voiceListening || voiceSpeaking
-    onVoiceListeningChanged: voiceListening ? listenCava.start() : listenCava.stop()
     onVoiceSpeakingChanged: {
         if (voiceSpeaking) speakGuard.stop()
         else speakingIndex = -1
     }
 
     // Private instance — the volume panel stops the shared one on its own schedule.
-    Managers.CavaManager { id: listenCava; source: "mic" }
 
     // Lets a host count keyboard-only use as activity; the timer only sees taps and pointer motion.
     signal userActivity()
@@ -1179,7 +1174,7 @@ FocusScope {
             anchors.left: attachIcon.right
             anchors.leftMargin: modeManager.scale(8)
             // Invisible items keep their geometry, so the mic slot is anchored around when voice is off.
-            anchors.right: micIcon.visible ? listenViz.left : sendIcon.left
+            anchors.right: sendIcon.left
             anchors.rightMargin: modeManager.scale(12)
             // Grows symmetrically, so a single line sits where it did before Shift+Enter existed.
             anchors.verticalCenter: parent.verticalCenter
@@ -1286,90 +1281,7 @@ FocusScope {
             }
         }
 
-        Item {
-            id: listenViz
-            anchors.right: micIcon.left
-            anchors.rightMargin: root.voiceListening ? modeManager.scale(4) : 0
-            anchors.bottom: parent.bottom
-            width: root.voiceListening ? modeManager.scale(48) : 0
-            height: inputBar.rowHeight
-            clip: true
 
-            Behavior on width { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
-
-            Common.BarVisualizer {
-                anchors.centerIn: parent
-                cavaManager: listenCava
-                barCount: 8
-                barIndices: [14, 10, 6, 2, 3, 7, 11, 15]
-                maxHeightMultipliers: [0.5, 0.7, 0.9, 1.0, 1.0, 0.9, 0.7, 0.5]
-                barWidth: modeManager.scale(2.5)
-                barSpacing: modeManager.scale(2.5)
-                minBarHeight: modeManager.scale(4)
-                maxBarHeight: modeManager.scale(20)
-                barColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
-                baseColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
-            }
-        }
-
-        Item {
-            id: micIcon
-            anchors.right: sendIcon.left
-            anchors.rightMargin: modeManager.scale(6)
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: modeManager.scale(6)
-            width: modeManager.scale(34)
-            height: modeManager.scale(34)
-            visible: !root.settingsManager || root.settingsManager.voiceEnabled
-            // HoverHandler, not MouseArea: containsMouse misses Wayland leave events when a click reflows.
-            opacity: (root.voiceActive || micHover.hovered) ? 1.0 : 0.5
-
-            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
-
-            Rectangle {
-                anchors.centerIn: parent
-                width: parent.width
-                height: parent.height
-                radius: width / 2
-                color: (root.voiceActive || micHover.hovered)
-                    ? (root.theme ? Qt.rgba(root.theme.glowSecondary.r, root.theme.glowSecondary.g, root.theme.glowSecondary.b, 0.32) : Qt.rgba(0.55, 0.75, 0.85, 0.32))
-                    : "transparent"
-
-                Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-            }
-
-            UI.SvgIcon {
-                anchors.centerIn: parent
-                width: modeManager.scale(18)
-                height: modeManager.scale(18)
-                source: root.icons ? root.icons.micSvg : ""
-                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
-                visible: !root.voiceActive
-            }
-
-            Text {
-                anchors.centerIn: parent
-                text: "✕"
-                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
-                font.pixelSize: modeManager.scale(14)
-                font.family: "M PLUS 2"
-                visible: root.voiceActive
-            }
-
-            HoverHandler {
-                id: micHover
-                cursorShape: Qt.PointingHandCursor
-            }
-
-            MouseArea {
-                id: micMouse
-                anchors.fill: parent
-                onClicked: {
-                    root.userActivity()
-                    Theme.YuraCtl.micPressed(root.voiceActive, root.currentConvId)
-                }
-            }
-        }
 
         Item {
             id: sendIcon

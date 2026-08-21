@@ -26,7 +26,6 @@ RowLayout {
     property var timerManager
     property var weatherManager
     property bool aiThinking: false
-    property bool aiListening: false
     property bool aiSpeaking: false
     property bool aiPanelOpen: false
 
@@ -308,9 +307,7 @@ RowLayout {
             anchors.centerIn: parent
             width: scaled(26)
             height: scaled(26)
-            orbColor: root.aiListening
-                ? (root.theme ? root.theme.glowSecondary : Qt.rgba(0.55, 0.75, 0.85, 0.9))
-                : (root.theme ? root.theme.glowTertiary : Qt.rgba(0.95, 0.72, 0.74, 0.9))
+            orbColor: root.theme ? root.theme.glowTertiary : Qt.rgba(0.95, 0.72, 0.74, 0.9)
             streaming: root.aiThinking
             speaking: root.aiSpeaking
             showHalo: true

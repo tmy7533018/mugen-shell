@@ -93,10 +93,6 @@ local binds = {
     { id = "shell.idleInhibit", cat = "shell", desc = "Toggle idle inhibitor",
       keys = mainMod .. " + SHIFT + I", action = script("idle_inhibitor.sh") },
 
-    -- `global`, not a plain bind: only it reports the release to GlobalShortcut.
-    { id = "voice.ptt", cat = "voice", desc = "Push-to-talk (Yura)",
-      keys = mainMod .. " + Z", action = hl.dsp.global("mugen-shell:ptt") },
-
     { id = "win.close", cat = "window", desc = "Close active window",
       keys = mainMod .. " + backspace", action = hl.dsp.window.close() },
     { id = "win.fullscreen", cat = "window", desc = "Fullscreen",

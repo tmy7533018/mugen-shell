@@ -124,14 +124,6 @@ class _CtlHandler(http.server.BaseHTTPRequestHandler):
             daemon.read_aloud.speak(text, str(body.get("voice") or "") or None)
         elif self.path == "/stop":
             daemon.read_aloud.stop()
-        elif self.path == "/turn":
-            daemon.request_turn(bool(body.get("fresh")))
-        elif self.path == "/ptt/start":
-            daemon.request_ptt(True, bool(body.get("fresh")))
-        elif self.path == "/ptt/stop":
-            daemon.request_ptt(False)
-        elif self.path == "/cancel":
-            daemon.request_cancel()
         else:
             self._reply(404, {"error": "unknown endpoint"})
             return

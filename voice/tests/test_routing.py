@@ -12,7 +12,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from yura import lang, messages, settings  # noqa: E402
+from yura import lang, settings  # noqa: E402
 from yura.tts import base, router  # noqa: E402
 
 
@@ -84,21 +84,6 @@ class PersonalityFetch(unittest.TestCase):
 
     def test_missing_personality_is_empty(self):
         self.assertEqual(self._fetch({"config": {}}), "")
-
-
-class MessageLang(_LangFixture):
-    def test_uses_the_configured_language(self):
-        self.configure("ja", {})
-        self.assertEqual(messages.message_lang(), "ja")
-
-    def test_unsupported_language_reads_english(self):
-        self.configure("fr", {})
-        self.assertEqual(messages.message_lang(), "en")
-
-    def test_auto_still_yields_a_language(self):
-        # Unlike a voice, a canned line cannot decline to have a language.
-        self.configure("", {})
-        self.assertEqual(messages.message_lang(), "en")
 
 
 class ConfiguredVoice(_LangFixture):

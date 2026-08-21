@@ -58,10 +58,10 @@ Rectangle {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
     }
 
-    readonly property var groupOrder: ["shell", "window", "workspace", "apps", "voice", "media", "system"]
+    readonly property var groupOrder: ["shell", "window", "workspace", "apps", "media", "system"]
     readonly property var groupLabels: ({
         shell: "Shell Panels", window: "Window Management", workspace: "Workspaces",
-        apps: "Applications", voice: "Voice", media: "Media Keys", system: "System"
+        apps: "Applications", media: "Media Keys", system: "System"
     })
 
     readonly property var systemGroups: {

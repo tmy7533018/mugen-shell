@@ -1,5 +1,4 @@
-"""Yura voice daemon.
+"""Yura's speech daemon.
 
-Pipeline: mic -> VAD-endpointed capture -> whisper.cpp server (STT) ->
-mugen-ai /chat -> TTS -> speakers.
+The UI hands text over the control socket; this turns it into speech.
 """

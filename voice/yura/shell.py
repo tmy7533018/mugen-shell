@@ -31,23 +31,13 @@ def shell_ipc(*args: str) -> None:
     _ipc_async(["qs", "-c", "mugen-shell", "ipc", "call", *args])
 
 
-def shell_ipc_read(*args: str) -> str:
-    try:
-        r = subprocess.run(
-            ["qs", "-c", "mugen-shell", "ipc", "call", *args],
-            capture_output=True, text=True, timeout=3)
-        return r.stdout.strip()
-    except Exception:
-        return ""
-
-
 def yura_ipc(*args: str) -> None:
     # yura-shell is a separate quickshell process, addressed by -p.
     _ipc_async(["qs", "-p", YURA_SHELL_QML, "ipc", "call", "yura", *args])
 
 
 # IPC is fire-and-forget, so neither surface can be asked what it shows — GET /state answers from here.
-_state = {"thinking": False, "listening": False, "speaking": False}
+_state = {"speaking": False}
 _state_lock = threading.Lock()
 
 
@@ -61,25 +51,9 @@ def _record(key: str, on: bool) -> None:
         _state[key] = on
 
 
-def set_thinking(on: bool) -> None:
-    _record("thinking", on)
-    shell_ipc("yura", "set_thinking", "true" if on else "false")
-
-
-def set_listening(on: bool) -> None:
-    _record("listening", on)
-    flag = "true" if on else "false"
-    shell_ipc("yura", "set_listening", flag)
-    yura_ipc("set_listening", flag)
-
-
 def set_speaking(on: bool) -> None:
     # The bar holds its auto-close while the spoken reply is playing.
     _record("speaking", on)
     flag = "true" if on else "false"
     shell_ipc("yura", "set_speaking", flag)
     yura_ipc("set_speaking", flag)
-
-
-def open_panel() -> None:
-    yura_ipc("open")

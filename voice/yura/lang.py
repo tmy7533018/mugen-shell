@@ -1,11 +1,9 @@
-"""Which language the user said to use — never guessed from audio or text.
+"""Which language the user said to use — never guessed from the text.
 
-Whisper's own detection is not trustworthy enough to steer anything: asked to
-auto-detect a Japanese clip it answered English at 0.64 against Japanese 0.011,
-and transcribed accordingly. Guessing from the reply's script fares no better,
-because "OK" and "了解" would land on different voices inside one conversation.
-So the only input is personality.language — the one control the user actually
-chose — and when it says nothing the caller falls back rather than picking.
+Guessing from the reply's script fares badly, because "OK" and "了解" would land
+on different voices inside one conversation. So the only input is
+personality.language — the one control the user actually chose — and when it
+says nothing the caller falls back rather than picking.
 """
 
 import time

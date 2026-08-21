@@ -4,9 +4,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell.Io
 import "../../lib" as Theme
-import "../ui" as UI
 import "../common" as Common
-import "../managers" as Managers
 import "./ai" as Ai
 
 FocusScope {
@@ -19,13 +17,8 @@ FocusScope {
     property var aiBackend
     property bool isStandalone: false
     // Driven over IPC by yurad, never locally.
-    property bool voiceListening: false
     property bool voiceSpeaking: false
-    readonly property bool voiceActive: voiceListening || voiceSpeaking
-    onVoiceListeningChanged: voiceListening ? listenCava.start() : listenCava.stop()
 
-    // Private instance: the volume panel stops the shared one on its own schedule.
-    Managers.CavaManager { id: listenCava; source: "mic" }
 
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://localhost"
     readonly property var _transportArgs: aiBackend ? aiBackend.transportArgs : []
@@ -130,19 +123,6 @@ FocusScope {
         displayingResponse = false
         inputField.text = ""
         // Backend auto-creates a conversation on the first user message.
-    }
-
-    function showVoiceInput(text) {
-        responseDisplay = ""
-        displayingResponse = false
-        inputField.text = text
-    }
-
-    function showVoiceReply(text) {
-        responseDisplay = text
-        inputField.text = mdFlat(responseDisplay)
-        inputField.cursorPosition = 0
-        displayingResponse = true
     }
 
     Connections {
@@ -279,7 +259,7 @@ FocusScope {
                     id: inputField
                     anchors.left: parent.left
                     // Invisible items keep their geometry, so skip the mic slot when voice is off.
-                    anchors.right: micIcon.visible ? listenViz.left : sendIcon.left
+                    anchors.right: sendIcon.left
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.leftMargin: modeManager.scale(20)
                     anchors.rightMargin: modeManager.scale(8)
@@ -419,84 +399,7 @@ FocusScope {
                     }
                 }
 
-                // An animating slot, so the input text yields the space instead of being painted over.
-                Item {
-                    id: listenViz
-                    anchors.right: micIcon.left
-                    anchors.rightMargin: root.voiceListening ? modeManager.scale(4) : 0
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: root.voiceListening ? modeManager.scale(44) : 0
-                    height: parent.height
-                    clip: true
 
-                    Behavior on width { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
-
-                    Common.BarVisualizer {
-                        anchors.centerIn: parent
-                        cavaManager: listenCava
-                        barCount: 8
-                        barIndices: [14, 10, 6, 2, 3, 7, 11, 15]
-                        maxHeightMultipliers: [0.5, 0.7, 0.9, 1.0, 1.0, 0.9, 0.7, 0.5]
-                        barWidth: modeManager.scale(2.5)
-                        barSpacing: modeManager.scale(2.5)
-                        minBarHeight: modeManager.scale(4)
-                        maxBarHeight: modeManager.scale(18)
-                        barColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
-                        baseColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95)
-                    }
-                }
-
-                Item {
-                    id: micIcon
-                    anchors.right: sendIcon.left
-                    anchors.rightMargin: modeManager.scale(4)
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: modeManager.scale(28)
-                    height: modeManager.scale(28)
-                    visible: !root.settingsManager || root.settingsManager.voiceEnabled
-                    opacity: (root.voiceActive || micHover.hovered) ? 1.0 : 0.5
-
-                    Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: width / 2
-                        color: (root.voiceActive || micHover.hovered)
-                            ? (root.theme ? Qt.rgba(root.theme.glowSecondary.r, root.theme.glowSecondary.g, root.theme.glowSecondary.b, 0.32) : Qt.rgba(0.55, 0.75, 0.85, 0.32))
-                            : "transparent"
-
-                        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-                    }
-
-                    UI.SvgIcon {
-                        anchors.centerIn: parent
-                        width: modeManager.scale(15)
-                        height: modeManager.scale(15)
-                        source: root.icons ? root.icons.micSvg : ""
-                        color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
-                        visible: !root.voiceActive
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "✕"
-                        color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
-                        font.pixelSize: modeManager.scale(12)
-                        font.family: "M PLUS 2"
-                        visible: root.voiceActive
-                    }
-
-                    HoverHandler {
-                        id: micHover
-                        cursorShape: Qt.PointingHandCursor
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: Theme.YuraCtl.micPressed(root.voiceActive,
-                                                           root.currentConvId)
-                    }
-                }
 
                 Item {
                     id: sendIcon

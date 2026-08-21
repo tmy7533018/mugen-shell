@@ -130,8 +130,8 @@ PanelWindow {
 
     property alias notificationManager: notificationManager
 
-    // AI only counts down while quiet: no streamed reply, no unsent draft, no voice turn in flight.
-    readonly property bool aiQuiet: !yuraListening && !yuraSpeaking && !yuraFloatThinking
+    // AI only counts down while quiet: no streamed reply, no unsent draft, nothing being spoken.
+    readonly property bool aiQuiet: !yuraSpeaking && !yuraFloatThinking
         && (!aiAssistantLoader.item
             || (!aiAssistantLoader.item.streaming && !aiAssistantLoader.item.hasDraft))
     readonly property bool autoCloseEligible: !modeManager.isMode("normal")
@@ -273,7 +273,6 @@ PanelWindow {
 
     // Float Yura and yurad both mirror their state here over IPC, so auto-close waits for a spoken read-out.
     property bool yuraFloatThinking: false
-    property bool yuraListening: false
     property bool yuraSpeaking: false
     property bool yuraPanelOpen: false
     // A visible conversation is the one a voice turn continues.
@@ -285,11 +284,6 @@ PanelWindow {
             barWindow.yuraFloatThinking = on
             if (on) yuraThinkingFailsafe.restart()
             else yuraThinkingFailsafe.stop()
-        }
-        function set_listening(on: bool): void {
-            barWindow.yuraListening = on
-            if (on) yuraListeningFailsafe.restart()
-            else yuraListeningFailsafe.stop()
         }
         function set_speaking(on: bool): void {
             barWindow.yuraSpeaking = on
@@ -305,13 +299,6 @@ PanelWindow {
             if (barWindow.barHidden || !modeManager.isMode("normal")) return ""
             const r = leftSection.aiOrbScreenRect()
             return Math.round(r.x) + " " + Math.round(r.y) + " " + Math.round(r.size)
-        }
-        // Voice turns run in the daemon, not the bar's chat process, so they must be mirrored in.
-        function voice_input(text: string): void {
-            if (aiAssistantLoader.item) aiAssistantLoader.item.showVoiceInput(text)
-        }
-        function voice_reply(text: string): void {
-            if (aiAssistantLoader.item) aiAssistantLoader.item.showVoiceReply(text)
         }
     }
 
@@ -435,13 +422,6 @@ PanelWindow {
         id: yuraThinkingFailsafe
         interval: 15 * 60 * 1000
         onTriggered: barWindow.yuraFloatThinking = false
-    }
-
-    // Capture is seconds-long; anything past a minute means yurad died.
-    Timer {
-        id: yuraListeningFailsafe
-        interval: 60 * 1000
-        onTriggered: barWindow.yuraListening = false
     }
 
     // A spoken reply runs minutes at most; past that yurad died mid-turn.
@@ -675,7 +655,6 @@ PanelWindow {
             weatherManager: weatherManager
             aiThinking: (aiAssistantLoader.item ? aiAssistantLoader.item.streaming : false)
                 || barWindow.yuraFloatThinking
-            aiListening: barWindow.yuraListening
             aiSpeaking: barWindow.yuraSpeaking
             aiPanelOpen: barWindow.yuraPanelOpen
         }
@@ -794,7 +773,6 @@ PanelWindow {
             icons: aiAssistantLoader.iconsRef
             settingsManager: aiAssistantLoader.settingsManagerRef
             aiBackend: aiAssistantLoader.aiBackendRef
-            voiceListening: barWindow.yuraListening
             voiceSpeaking: barWindow.yuraSpeaking
         }
     }

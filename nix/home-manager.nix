@@ -21,25 +21,15 @@ let
     "/bin"
   ];
 
-  sileroVad = pkgs.callPackage ./voice/silero-vad.nix { };
-
   voicePython = pkgs.python314.withPackages (
     ps:
     [
       ps.sounddevice
       ps.numpy
       ps.requests
-      ps.onnxruntime
       ps.sherpa-onnx
     ]
   );
-
-  # Pinned to a revision rather than resolve/main: main would only fail the
-  # hash later, on some unrelated rebuild.
-  whisperModel = pkgs.fetchurl {
-    url = "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo.bin";
-    hash = "sha256-H8cPd0046xaZk6w5Huo1fvR8iHV+9y7llDh5t+jivGk=";
-  };
 
   # The default non-Japanese voice. Piper rather than Kokoro: Kokoro's Japanese
   # has no G2P here (its jf_* voices garble kanji) and its English measured
@@ -128,7 +118,7 @@ in
     };
 
     voice = {
-      enable = lib.mkEnableOption "the Yura voice input daemon (push-to-talk → STT → chat → TTS)";
+      enable = lib.mkEnableOption "the Yura speech daemon (reads replies aloud on request)";
 
       sourceDir = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -305,7 +295,7 @@ in
 
     systemd.user.services.yura-voice = lib.mkIf cfg.voice.enable {
       Unit = {
-        Description = "Yura voice input daemon (push-to-talk → STT → chat → TTS)";
+        Description = "Yura speech daemon (read-aloud TTS)";
         After = [
           "graphical-session.target"
           "aivisspeech-engine.service"
@@ -317,9 +307,6 @@ in
         WorkingDirectory = voiceDir;
         Environment = [
           "PATH=${unitPath}"
-          "YURA_SILERO_VAD=${sileroVad}"
-          "YURA_WHISPER_BIN=${pkgs.whisper-cpp-vulkan}/bin/whisper-server"
-          "YURA_WHISPER_MODEL=${whisperModel}"
           # Colon-separated search path. A voice dropped in the writable dir
           # shadows a packaged one of the same name.
           "YURA_TTS_MODELS=%h/.local/share/mugen-shell/tts:${piperVoice}"
