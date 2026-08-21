@@ -32,7 +32,7 @@ Yura is the desktop assistant. It can be used from an input row in the bar (`Sup
 
 Yura also runs the desktop. "Set volume to 30" or "start a 5 minute timer" reaches the same panels you would click. It will not do anything dangerous. External [MCP](https://modelcontextprotocol.io) servers are supported as well, with their writes held for approval.
 
-Voice input works from a button or from push-to-talk. Hold `Super + Z`, talk, and a voice model reads the reply back. The voice that ships is Japanese; install a model from [AivisHub](https://hub.aivis-project.com/) and pick it in Settings. [SETUP.en.md](SETUP.en.md#configuring-mugen-ai) has the details.
+Press the speaker icon on a reply and a voice model reads it back. The voice that ships is Japanese; install a model from [AivisHub](https://hub.aivis-project.com/) and pick it in Settings. [SETUP.en.md](SETUP.en.md#configuring-mugen-ai) has the details.
 
 ---
 

@@ -305,13 +305,9 @@ Conversations live in SQLite at `~/.local/state/mugen-ai/history.db`. For termin
 
 ---
 
-## Voice input (optional)
+## Read aloud (optional)
 
-Yura also takes spoken input: hold `Super + Z`, speak, and the reply is read aloud.
-
-```
-mic → silero VAD → whisper.cpp → mugen-ai /chat → TTS (AivisSpeech / VOICEVOX / sherpa-onnx)
-```
+Yura can speak its replies: press the speaker icon on a reply in the panel.
 
 The default stack is Japanese-first but not Japanese-only (see *Other languages* below). It sits on top of a running mugen-ai, and the home-manager module (Paths A and B) packages the whole thing behind one option:
 
@@ -324,9 +320,7 @@ Everything comes from the store, so there is no checkout and no need for `nix-ld
 
 The engine starts on demand (it costs ~2.6 GB resident) and stops after `voice.idleStopMin` minutes without synthesis (default 10, hand-edited in `settings.json`). Set `YURA_TTS_SERVICE=` empty in the unit to run it yourself instead.
 
-Runtime control lives in **Settings → Voice input**: voice picker, speech speed, cue sounds, and the rest. Everything applies from the next utterance; the daemon watches `settings.json`, so nothing needs a restart.
-
-The microphone stays closed until a turn starts, from `Super + Z` held down or from the push-to-talk button in either Yura UI.
+Runtime control lives in **Settings → Voice**: voice picker, speech speed and volume. The daemon watches `settings.json`, so nothing needs a restart.
 
 <details>
 <summary><b>Running Yura's voice in another language</b></summary>
@@ -334,32 +328,12 @@ The microphone stays closed until a turn starts, from `Super + Z` held down or f
 Only the reply voice is engine-specific; everything else is multilingual already:
 
 - **TTS**: local voices run in-process through sherpa-onnx, so there is no `piper` binary to install. Take a model from the [sherpa-onnx TTS models release](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) (Piper/VITS and Kokoro both work) and unpack the whole **model directory** (the `.onnx` next to its `tokens.txt` and `espeak-ng-data/`) into `~/.local/share/mugen-shell/tts/`, or point `YURA_TTS_MODELS` somewhere else. Each directory then appears in the Settings voice picker, and VOICEVOX becomes optional. The Nix path already ships `vits-piper-en_US-lessac-high`.
-- **STT**: the recognition language follows Settings → Yura → Personality → Language. Auto (the default) detects per utterance, a fixed language pins it; whisper covers ~100 languages.
 - **Replies**: set the assistant's language under Settings → Yura → Personality.
 
-**Environment knobs**, set in the unit or a drop-in: `YURA_SILERO_VAD`, `YURA_TTS` (`<engine>:<style-id>`), `YURA_VOICEVOX_SPEAKER`, `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_WHISPER_URL`, `YURA_VOICEVOX_URL`, `YURA_AIVIS_URL`. Anything Settings also exposes wins from `settings.json` once the shell has saved it.
+**Environment knobs**, set in the unit or a drop-in: `YURA_TTS` (`<engine>:<style-id>`), `YURA_VOICEVOX_SPEAKER`, `YURA_VOICE_LANG`, `YURA_VOICE_SPEED`, `YURA_VOICEVOX_URL`, `YURA_AIVIS_URL`. Anything Settings also exposes wins from `settings.json` once the shell has saved it.
 
 </details>
 
-<details>
-<summary><b>Using speakers instead of headphones</b>: echo cancellation</summary>
-
-PipeWire's WebRTC echo cancellation subtracts what the speakers are playing from the mic, so speaking over a reply works. Drop this into `~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` (set `target.object` to your mic's `node.name` from `wpctl inspect`), restart PipeWire, then make the new source the default input with `wpctl set-default <id>`:
-
-```
-context.modules = [
-    { name = libpipewire-module-echo-cancel
-      args = {
-          monitor.mode = true
-          audio.channels = 1
-          capture.props = { node.name = "yura_aec_capture" target.object = "<your-mic-node-name>" node.passive = true }
-          source.props = { node.name = "yura_aec_source" node.description = "Mic (echo-cancelled)" }
-      }
-    }
-]
-```
-
-</details>
 
 ---
 
@@ -376,7 +350,6 @@ context.modules = [
 | `Super + Backspace` | Close the active window |
 | `Super + 1-9` / `Super + 0` | Switch to workspace 1-10 |
 | `Super + hjkl` | Move focus, vim-style |
-| `Super + Z` | Hold to talk to Yura |
 | `Print` / `Super + F12` | Region screenshot, copied to the clipboard |
 
 Media, microphone and brightness keys work as they do anywhere else. Every binding is defined in `system/hypr/configs/keybinds.lua`.
@@ -393,8 +366,6 @@ Media, microphone and brightness keys work as they do anywhere else. Every bindi
 - [playerctl](https://github.com/altdesktop/playerctl): Media player control
 - [grim](https://sr.ht/~emersion/grim/) / [slurp](https://github.com/emersion/slurp): Screenshot tools
 - [cliphist](https://github.com/sentriz/cliphist): Clipboard history
-- [Silero VAD](https://github.com/snakers4/silero-vad): Voice activity detection
-- [whisper.cpp](https://github.com/ggml-org/whisper.cpp): Speech-to-text
 - [VOICEVOX](https://voicevox.hiroshiba.jp/): TTS engine
 - [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine): VOICEVOX-compatible TTS with Style-Bert-VITS2 voices, models from [AivisHub](https://hub.aivis-project.com/)
 - [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx): in-process TTS for local voices

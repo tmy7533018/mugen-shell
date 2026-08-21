@@ -311,13 +311,9 @@ Yura がチャットだけでなく実際にシェル操作までこなせるか
 
 ---
 
-## 音声入力 (オプション)
+## 読み上げ (オプション)
 
-Yura は音声での入出力にも対応しています。`Super + Z` を長押ししながら話しかけると、返事が読み上げられます。
-
-```
-mic → silero VAD → whisper.cpp → mugen-ai /chat → TTS (AivisSpeech / VOICEVOX / sherpa-onnx)
-```
+Yura の返事は、パネルのスピーカーアイコンを押すと読み上げられます。
 
 前提として mugen-ai が動いている必要があります。有効化は home-manager モジュール (Path A・B 共通) の 1 行だけで、必要なものは一式まとめて入ります:
 
@@ -332,44 +328,20 @@ programs.mugen-shell.voice.enable = true;
 
 エンジンは常駐させると約 2.6 GB 使うため、必要になったときだけ起動する仕組みになっています。合成が `voice.idleStopMin` 分 (既定 10 分。`settings.json` を直接編集して変更) 途切れると自動で停止します。自分で管理したい場合は、unit の `YURA_TTS_SERVICE=` を空にしてください。
 
-日常的な調整は **Settings → Voice input** から行えます。声の選択、話速、チャイム音まで一通り揃っています。デーモンが `settings.json` を監視しているので、変更は再起動なしで次の発話から反映されます。
-
-マイクは、ターンが始まるまで開きません。ターンを始めるのは `Super + Z` の長押しか、どちらの Yura UI にもある push-to-talk ボタンです。
+日常的な調整は **Settings → Voice** から行えます。声の選択、話速、音量が揃っています。デーモンが `settings.json` を監視しているので、変更は再起動なしで次の読み上げから反映されます。
 
 <details>
-<summary><b>Yura の音声を他の言語で使う</b></summary>
+<summary><b>Yura の声を他の言語で使う</b></summary>
 
 エンジンに縛られるのは返事の声だけで、それ以外はもともと多言語に対応しています:
 
 - **TTS**: ローカル音声は sherpa-onnx がプロセス内で再生するため、`piper` バイナリのインストールは不要です。[sherpa-onnx の TTS モデル配布](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) からモデルを取得し (Piper/VITS でも Kokoro でも動きます)、`.onnx`・`tokens.txt`・`espeak-ng-data/` を含む**ディレクトリごと** `~/.local/share/mugen-shell/tts/` に展開してください。置き場所は `YURA_TTS_MODELS` で変更できます。展開したディレクトリはそのまま Settings のピッカーに並ぶので、この構成なら VOICEVOX は無くても構いません。Nix 経路には `vits-piper-en_US-lessac-high` が最初から含まれています。
-- **STT**: 認識する言語は Settings → Yura → Personality の Language に従います。Auto (既定) なら発話ごとに whisper が判定し、言語を決め打ちするとそれで固定されます。whisper は約 100 言語をカバーします。
 - **返事の言語**: Settings → Yura → Personality の language で指定します。
 
-**環境変数** (unit か drop-in で設定): `YURA_SILERO_VAD`、`YURA_TTS` (`<engine>:<style-id>`)、`YURA_VOICEVOX_SPEAKER`、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_WHISPER_URL`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。Settings にも同じ項目があるものは、シェルが保存した時点で `settings.json` が優先されます。
+**環境変数** (unit か drop-in で設定): `YURA_TTS` (`<engine>:<style-id>`)、`YURA_VOICEVOX_SPEAKER`、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。Settings にも同じ項目があるものは、シェルが保存した時点で `settings.json` が優先されます。
 
 </details>
 
-<details>
-<summary><b>ヘッドホンじゃなくてスピーカー派?</b>: エコーキャンセル</summary>
-
-PipeWire の WebRTC エコーキャンセルを使うと、スピーカーから出ている音がマイク入力から差し引かれます。これにより、読み上げの最中に話しかけても認識が通ります。
-
-`~/.config/pipewire/pipewire.conf.d/99-yura-echo-cancel.conf` に次を置いてください。`target.object` は、`wpctl inspect` で調べた自分のマイクの `node.name` に書き換えます。PipeWire を再起動したら、`wpctl set-default <id>` で新しいソースを既定の入力にします:
-
-```
-context.modules = [
-    { name = libpipewire-module-echo-cancel
-      args = {
-          monitor.mode = true
-          audio.channels = 1
-          capture.props = { node.name = "yura_aec_capture" target.object = "<your-mic-node-name>" node.passive = true }
-          source.props = { node.name = "yura_aec_source" node.description = "Mic (echo-cancelled)" }
-      }
-    }
-]
-```
-
-</details>
 
 ---
 
@@ -386,7 +358,6 @@ context.modules = [
 | `Super + Backspace` | アクティブなウィンドウを閉じる |
 | `Super + 1-9` / `Super + 0` | ワークスペース 1-10 へ切替 |
 | `Super + hjkl` | フォーカス移動 (vim 風) |
-| `Super + Z` | 長押しで Yura に話しかける |
 | `Print` / `Super + F12` | 範囲スクリーンショット、クリップボードへコピー |
 
 メディアキー、マイク、輝度キーは他の環境と同じように効きます。定義はすべて `system/hypr/configs/keybinds.lua` にあります。
@@ -419,8 +390,6 @@ context.modules = [
 - [playerctl](https://github.com/altdesktop/playerctl): メディアプレイヤー制御
 - [grim](https://sr.ht/~emersion/grim/) / [slurp](https://github.com/emersion/slurp): スクリーンショットツール
 - [cliphist](https://github.com/sentriz/cliphist): クリップボード履歴
-- [Silero VAD](https://github.com/snakers4/silero-vad): 音声区間検出
-- [whisper.cpp](https://github.com/ggml-org/whisper.cpp): 音声認識
 - [VOICEVOX](https://voicevox.hiroshiba.jp/): TTS エンジン
 - [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine): VOICEVOX 互換の Style-Bert-VITS2 系 TTS。モデルは [AivisHub](https://hub.aivis-project.com/) から
 - [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx): ローカル音声をプロセス内で鳴らす TTS

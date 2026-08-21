@@ -34,7 +34,7 @@ Yura はデスクトップのアシスタントです。バーの入力 (`Super 
 
 Yura はデスクトップの操作も可能です。「音量 30 にして」「5 分タイマー計って」と言えば、自分でクリックするのと同じパネルに届きます。危険な操作はしません。外部の [MCP](https://modelcontextprotocol.io) サーバにも対応しており、書き込み系は実行前に確認します。
 
-音声入力はボタンやプッシュトークでできます。`Super + Z` を押しながら話すと、返事は音声モデルが読み上げます。既定の声は日本語です。[AivisHub](https://hub.aivis-project.com/) のモデルをインストールして Settings で選べます。詳細は [SETUP.md](SETUP.md#mugen-ai-の設定) にまとめました。
+返事はスピーカーアイコンを押すと読み上げられます。既定の声は日本語です。[AivisHub](https://hub.aivis-project.com/) のモデルをインストールして Settings で選べます。詳細は [SETUP.md](SETUP.md#mugen-ai-の設定) にまとめました。
 
 ---
 
