@@ -91,7 +91,8 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 
-	db, err := sql.Open("sqlite", path+"?_pragma=journal_mode(WAL)")
+	// The driver defaults busy_timeout to 0, and the notify timer runs every minute.
+	db, err := sql.Open("sqlite", path+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)")
 	if err != nil {
 		return nil, err
 	}
