@@ -120,6 +120,8 @@ Point at the user-level flake (the repo root); the Wayland and compositor stack 
         mugen-shell.homeManagerModules.default
         { home.username = "YOUR_USER"; home.homeDirectory = "/home/YOUR_USER"; }
         ({ ... }: {
+          # Puts the home-manager CLI in your profile, for updates after the first switch
+          programs.home-manager.enable = true;
           programs.mugen-shell.enable = true;
           # Wayland stack already on the OS path, skip the Nix copies
           programs.mugen-shell.includeSystemDeps = false;
@@ -132,9 +134,7 @@ Point at the user-level flake (the repo root); the Wayland and compositor stack 
 }
 ```
 
-`home-manager switch --flake ~/.config/home-manager#YOUR_USER` activates it.
-
-Install the system stack with pacman before the first switch:
+Install the system stack with pacman before the first switch. Some of it comes from the AUR, so install an AUR helper such as `yay` first:
 
 ```bash
 yay -S hyprland quickshell qt6-5compat hypridle hyprpolkitagent zsh kitty firefox libnotify \
@@ -153,6 +153,23 @@ The UI names `M PLUS 2` and `M PLUS 1 Code`, so the Nerd Fonts build (`ttf-mplus
 The audio visualiser's QML module is built by Nix. If quickshell fails to import `Mugen.Audio` with `version 'Qt_6.11' not found`, your Qt6 is older than the one it was built against: update Qt, or build `plugin/` yourself and put its install prefix on `QML2_IMPORT_PATH`.
 
 `includeSystemDeps = true` pulls the user-space tools on that list (Quickshell, hypridle, awww, matugen, kitty, …) into Nix instead; Hyprland itself, the system services, and the fonts stay on pacman either way.
+
+**Activating**
+
+Turn on Nix flakes, which the official installer leaves off. A command-line flag is not enough, because home-manager shells out to `nix` itself:
+
+```bash
+echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
+sudo systemctl restart nix-daemon
+```
+
+There is no `home-manager` command yet on a fresh machine, so run the first activation through `nix run`:
+
+```bash
+nix run home-manager/master -- switch --flake ~/.config/home-manager#YOUR_USER
+```
+
+After that, `home-manager switch --flake ~/.config/home-manager#YOUR_USER` updates it.
 
 **Making the terminal match the desktop**
 

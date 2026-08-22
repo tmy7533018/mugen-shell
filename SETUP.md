@@ -87,7 +87,7 @@ programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
 
 **1. システム側のパッケージを入れる**
 
-home-manager を switch する前に、まずシステム側を揃えます:
+home-manager を switch する前に、まずシステム側を揃えます。リストに AUR のものが混ざっているので、`yay` などの AUR ヘルパを先に入れてください:
 
 ```bash
 yay -S hyprland quickshell qt6-5compat hypridle hyprpolkitagent zsh kitty firefox libnotify \
@@ -129,6 +129,8 @@ UI は `M PLUS 2` と `M PLUS 1 Code` を名指しするので、Nerd Fonts 版 
         mugen-shell.homeManagerModules.default
         { home.username = "YOUR_USER"; home.homeDirectory = "/home/YOUR_USER"; }
         ({ ... }: {
+          # Puts the home-manager CLI in your profile, for updates after the first switch
+          programs.home-manager.enable = true;
           programs.mugen-shell.enable = true;
           # Wayland stack already on the OS path, skip the Nix copies
           programs.mugen-shell.includeSystemDeps = false;
@@ -143,9 +145,20 @@ UI は `M PLUS 2` と `M PLUS 1 Code` を名指しするので、Nerd Fonts 版 
 
 **3. アクティベートする**
 
+Nix の flakes を有効にしておいてください (公式インストーラの既定は無効)。home-manager が内部で `nix` を呼ぶので、コマンドラインのフラグでは足りません:
+
 ```bash
-home-manager switch --flake ~/.config/home-manager#YOUR_USER
+echo 'experimental-features = nix-command flakes' | sudo tee -a /etc/nix/nix.conf
+sudo systemctl restart nix-daemon
 ```
+
+初回は `home-manager` コマンドがまだ無いので、`nix run` で起動します:
+
+```bash
+nix run home-manager/master -- switch --flake ~/.config/home-manager#YOUR_USER
+```
+
+2 回目以降は `home-manager switch --flake ~/.config/home-manager#YOUR_USER` で更新できます。
 
 アクティベートすると、同梱の `system/hypr/` と `matugen/` が `~/.config/` に配置されます。中身は次回以降のアクティベートでも更新されますが、`hypridle.conf` はその場所にまだ無いときだけ作られ、以降は触られません。`colors.lua`・`configs/blur.lua`・`configs/user-overrides.lua`・`configs/keybind-overrides.lua` はアクティベートでは作られません。前の 2 つは matugen と `blur-preset.sh` が動いたときに書かれ、`user-overrides.lua`・`keybind-overrides.lua` は必要になったら自分で作るファイルです。`cava`・`kitty`・`fastfetch` の設定と `starship.toml` は今まで通りその場所にまだ設定が無いときだけコピーされます。
 
