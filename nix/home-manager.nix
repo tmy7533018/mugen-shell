@@ -75,9 +75,9 @@ in
       type = lib.types.bool;
       default = true;
       description = ''
-        Whether to install mugen-shell's runtime dependencies (Hyprland,
-        Quickshell, hypridle, mpvpaper, awww, matugen,
-        playerctl, ...) via Nix.
+        Whether to install mugen-shell's runtime dependencies (Quickshell,
+        hypridle, mpvpaper, awww, matugen, playerctl, ...) via Nix.
+        Hyprland is not one of them: only the NixOS module wires up the session.
 
         Set to <literal>false</literal> if those packages are already
         installed by your OS (e.g. via pacman on Garuda / Arch). The
