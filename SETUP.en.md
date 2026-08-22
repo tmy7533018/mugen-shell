@@ -9,8 +9,8 @@ Everything lives outside the repo, under XDG dirs:
 | Where | What |
 |---|---|
 | `$XDG_CONFIG_HOME/mugen-shell/settings.json` | Persisted user settings |
-| `$XDG_STATE_HOME/mugen-shell/{theme-mode,idle-inhibitor.json}` | Toggleable state |
-| `$XDG_CACHE_HOME/mugen-shell/{colors.json,wallp/,wallpaper-thumbs/}` | Regenerable cache |
+| `$XDG_STATE_HOME/mugen-shell/{theme-mode,idle-inhibitor.json,keybinds.json,launcher.json}` | Toggleable state and exported listings |
+| `$XDG_CACHE_HOME/mugen-shell/{colors.json,wallp/,wallpaper-thumbs/,art/}` | Regenerable cache |
 | `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/,timer-sounds/,tts/}` | User-supplied media |
 | `$XDG_PICTURES_DIR/mugen-screenshots/` | Captured screenshots |
 
@@ -137,20 +137,22 @@ Point at the user-level flake (the repo root); the Wayland and compositor stack 
 Install the system stack with pacman before the first switch:
 
 ```bash
-yay -S hyprland quickshell qt6-5compat hypridle hyprpolkitagent zsh kitty libnotify \
+yay -S hyprland quickshell qt6-5compat hypridle hyprpolkitagent zsh kitty firefox libnotify \
        pipewire pipewire-pulse pavucontrol cava playerctl \
-       networkmanager network-manager-applet bluez bluez-utils \
+       networkmanager bluez bluez-utils \
        fcitx5 fcitx5-mozc fcitx5-im fcitx5-configtool \
        awww mpvpaper ffmpeg matugen-bin socat \
        grim slurp wl-clipboard cliphist imv curl jq xdg-utils brightnessctl fzf \
        thunar \
-       ttf-mplus-nerd bibata-cursor-theme colloid-gtk-theme-git \
+       ttf-mplus-git ttf-firacode-nerd ttf-jetbrains-mono-nerd noto-fonts-emoji \
        python-gobject
 ```
 
+The UI names `M PLUS 2` and `M PLUS 1 Code`, so the Nerd Fonts build (`ttf-mplus-nerd`) is not a substitute.
+
 The audio visualiser's QML module is built by Nix. If quickshell fails to import `Mugen.Audio` with `version 'Qt_6.11' not found`, your Qt6 is older than the one it was built against: update Qt, or build `plugin/` yourself and put its install prefix on `QML2_IMPORT_PATH`.
 
-`includeSystemDeps = true` pulls the user-space tools on that list (Quickshell, hypridle, awww, matugen, kitty, …) into Nix instead; Hyprland itself, the system services, and the themes stay on pacman either way.
+`includeSystemDeps = true` pulls the user-space tools on that list (Quickshell, hypridle, awww, matugen, kitty, …) into Nix instead; Hyprland itself, the system services, and the fonts stay on pacman either way.
 
 **Making the terminal match the desktop**
 
@@ -191,12 +193,13 @@ source = ~/.config/hypr/configs/mugen-shell.conf
 
 Two things to do yourself on Arch:
 
-- **Lock screen PAM file.** Without it the lock screen cannot authenticate, and
+- **Lock screen PAM file.** The lock screen falls back to hyprlock's or
+  swaylock's stack if one exists; with none of them it cannot authenticate and
   `ext-session-lock` holds the session locked. Create one:
   ```bash
   printf '#%%PAM-1.0\nauth include system-auth\n' | sudo tee /etc/pam.d/mugen-lock
   ```
-- **fcitx5 env vars.** The shipped `system/hypr/hyprland.lua` exports `XMODIFIERS` for Hyprland sessions; add it to `/etc/environment` for anything started outside the compositor.
+- **fcitx5 env vars.** The shipped `system/hypr/hyprland.lua` exports `XMODIFIERS=@im=fcitx` for Hyprland sessions; add the same line to `/etc/environment` for anything started outside the compositor.
 
 </details>
 
@@ -206,7 +209,7 @@ Two things to do yourself on Arch:
 
 Everything is configured under **Settings → Yura**: personality, provider status, model, tool categories, allowed apps, panel side. Saving bounces the service for you. **Edit toml** on the same page opens `~/.config/mugen-ai/config.toml` in `$EDITOR` when you would rather write it by hand.
 
-Three defaults worth knowing. **No model ships with this.** The input reads "No model yet" until you install Ollama and pull one (`ollama pull qwen3:4b`, say) or put an API key in `~/.config/mugen-ai/.env`. **Allowed apps starts empty** too, so Yura cannot launch anything until you pick apps there. And when `mugen-ai.service` itself is not running, the bar shows the command to start it.
+Three defaults worth knowing. **No model ships with this.** Yura's panel reads "No model yet" until you install Ollama and pull one (`ollama pull qwen3:4b`, say) or put an API key in `~/.config/mugen-ai/.env`. **Allowed apps starts empty** too, so Yura cannot launch anything until you pick apps there. And when `mugen-ai.service` itself is not running, that panel (`Super + Shift + Y`) shows the command to start it.
 
 A full annotated template lives at `ai/config.toml.example` (or `$(nix build --no-link --print-out-paths github:tmy7533018/mugen-shell#mugen-ai)/share/mugen-ai/config.toml.example` if you installed via Nix).
 
@@ -320,7 +323,7 @@ Everything comes from the store, so there is no checkout and no need for `nix-ld
 
 The engine starts on demand (it costs ~2.6 GB resident) and stops after `voice.idleStopMin` minutes without synthesis (default 10, hand-edited in `settings.json`). Set `YURA_TTS_SERVICE=` empty in the unit to run it yourself instead.
 
-Runtime control lives in **Settings → Voice**: voice picker, speech speed and volume. The daemon watches `settings.json`, so nothing needs a restart.
+Runtime control lives in **Settings → Yura → Voice**: voice picker, speech speed and volume. The daemon watches `settings.json`, so nothing needs a restart.
 
 <details>
 <summary><b>Running Yura's voice in another language</b></summary>

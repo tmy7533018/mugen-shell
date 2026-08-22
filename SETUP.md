@@ -90,18 +90,20 @@ programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
 home-manager を switch する前に、まずシステム側を揃えます:
 
 ```bash
-yay -S hyprland quickshell qt6-5compat hypridle hyprpolkitagent zsh kitty libnotify \
+yay -S hyprland quickshell qt6-5compat hypridle hyprpolkitagent zsh kitty firefox libnotify \
        pipewire pipewire-pulse pavucontrol cava playerctl \
-       networkmanager network-manager-applet bluez bluez-utils \
+       networkmanager bluez bluez-utils \
        fcitx5 fcitx5-mozc fcitx5-im fcitx5-configtool \
        awww mpvpaper ffmpeg matugen-bin socat \
        grim slurp wl-clipboard cliphist imv curl jq xdg-utils brightnessctl fzf \
        thunar \
-       ttf-mplus-nerd bibata-cursor-theme colloid-gtk-theme-git \
+       ttf-mplus-git ttf-firacode-nerd ttf-jetbrains-mono-nerd noto-fonts-emoji \
        python-gobject
 ```
 
-なお `includeSystemDeps = true` にする場合、このうちユーザ空間のツール (Quickshell、hypridle、awww、matugen、kitty など) は Nix 側から入るため pacman では不要になります。ただし Hyprland 本体・システムサービス・テーマ類は、どちらの設定でも pacman で入れてください。
+UI は `M PLUS 2` と `M PLUS 1 Code` を名指しするので、Nerd Fonts 版 (`ttf-mplus-nerd`) では代用できません。
+
+なお `includeSystemDeps = true` にする場合、このうちユーザ空間のツール (Quickshell、hypridle、awww、matugen、kitty など) は Nix 側から入るため pacman では不要になります。ただし Hyprland 本体・システムサービス・フォントは、どちらの設定でも pacman で入れてください。
 
 **2. home-manager の flake を書く**
 
@@ -167,11 +169,11 @@ source = ~/.config/hypr/configs/mugen-shell.conf
 
 **5. Arch で追加で必要な設定 (2 つ)**
 
-- **ロック画面の PAM ファイル。** これが無いとロック画面で認証できず、`ext-session-lock` がセッションを掴んだままになります。先に作っておいてください:
+- **ロック画面の PAM ファイル。** hyprlock か swaylock の PAM が既にあればそちらに落ちますが、無ければロック画面で認証できず、`ext-session-lock` がセッションを掴んだままになります。先に作っておいてください:
   ```bash
   printf '#%%PAM-1.0\nauth include system-auth\n' | sudo tee /etc/pam.d/mugen-lock
   ```
-- **fcitx5 の環境変数。** Hyprland セッション内では、同梱の `system/hypr/hyprland.lua` が `XMODIFIERS` を設定してくれます。コンポジタの外から起動するアプリのために、`/etc/environment` にも同じものを書いておいてください。
+- **fcitx5 の環境変数。** Hyprland セッション内では、同梱の `system/hypr/hyprland.lua` が `XMODIFIERS=@im=fcitx` を設定してくれます。コンポジタの外から起動するアプリのために、`/etc/environment` にも同じ行を書いておいてください。
 
 **ターミナルも mugen-shell の見た目にする (オプション)**
 
@@ -208,9 +210,9 @@ source ~/.config/mugen-shell/mugen-shell.zshrc
 
 **インストール直後につまずきやすいポイントが 3 つあります:**
 
-1. **モデルは同梱されていません。** Ollama を入れてモデルを 1 つ pull する (`ollama pull qwen3:4b` など) か、`~/.config/mugen-ai/.env` に API キーを置くまで、入力欄は "No model yet" のままです。
+1. **モデルは同梱されていません。** Ollama を入れてモデルを 1 つ pull する (`ollama pull qwen3:4b` など) か、`~/.config/mugen-ai/.env` に API キーを置くまで、Yura のパネルは "No model yet" のままです。
 2. **Allowed apps は空の状態から始まります。** ここでアプリを許可するまで、Yura は何も起動できません。
-3. **`mugen-ai.service` が止まっている場合**は、バーに起動用のコマンドが表示されます。
+3. **`mugen-ai.service` が止まっている場合**は、Yura のパネル (`Super + Shift + Y`) に起動用のコマンドが表示されます。
 
 注釈付きのフル版テンプレートは `ai/config.toml.example` にあります (Nix インストールの場合は `$(nix build --no-link --print-out-paths github:tmy7533018/mugen-shell#mugen-ai)/share/mugen-ai/config.toml.example`)。
 
@@ -328,7 +330,7 @@ programs.mugen-shell.voice.enable = true;
 
 エンジンは常駐させると約 2.6 GB 使うため、必要になったときだけ起動する仕組みになっています。合成が `voice.idleStopMin` 分 (既定 10 分。`settings.json` を直接編集して変更) 途切れると自動で停止します。自分で管理したい場合は、unit の `YURA_TTS_SERVICE=` を空にしてください。
 
-日常的な調整は **Settings → Voice** から行えます。声の選択、話速、音量が揃っています。デーモンが `settings.json` を監視しているので、変更は再起動なしで次の読み上げから反映されます。
+日常的な調整は **Settings → Yura → Voice** から行えます。声の選択、話速、音量が揃っています。デーモンが `settings.json` を監視しているので、変更は再起動なしで次の読み上げから反映されます。
 
 <details>
 <summary><b>Yura の声を他の言語で使う</b></summary>
@@ -371,8 +373,8 @@ programs.mugen-shell.voice.enable = true;
 | 場所 | 中身 |
 |---|---|
 | `$XDG_CONFIG_HOME/mugen-shell/settings.json` | 保存されたユーザ設定 |
-| `$XDG_STATE_HOME/mugen-shell/{theme-mode,idle-inhibitor.json}` | トグル状態 |
-| `$XDG_CACHE_HOME/mugen-shell/{colors.json,wallp/,wallpaper-thumbs/}` | 再生成できるキャッシュ |
+| `$XDG_STATE_HOME/mugen-shell/{theme-mode,idle-inhibitor.json,keybinds.json,launcher.json}` | トグル状態と、書き出された一覧 |
+| `$XDG_CACHE_HOME/mugen-shell/{colors.json,wallp/,wallpaper-thumbs/,art/}` | 再生成できるキャッシュ |
 | `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/,timer-sounds/,tts/}` | ユーザが置くメディア |
 | `$XDG_PICTURES_DIR/mugen-screenshots/` | キャプチャしたスクリーンショット |
 
