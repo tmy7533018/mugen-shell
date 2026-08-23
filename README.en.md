@@ -20,7 +20,7 @@ My dotfiles for a Hyprland + Quickshell desktop, packaged so they can be install
 - Several color palettes generated from the wallpaper; the one you pick is applied across the desktop
 - The usual system controls: audio, backlight, WiFi, Bluetooth, IME, battery, and the system tray
 - The lock screen is part of the shell: a grid of the clock, calendar, current track, and weather, with no external locker involved
-- Yura, the desktop assistant, reachable by chat or by voice
+- Yura, the desktop assistant, reachable by chat, with replies it can read aloud
 - Smooth animation throughout, and it is easy to customize
 - A Settings window for changing all sorts of things
 
@@ -28,7 +28,7 @@ My dotfiles for a Hyprland + Quickshell desktop, packaged so they can be install
 
 ## Yura
 
-Yura is the desktop assistant. It can be used from an input row in the bar (`Super + Y`) and from a chat panel anchored to a screen corner (`Super + Shift + Y`), with the conversation history shared between them. The backend is **mugen-ai**, a Go server in [`ai/`](ai/) that talks to local models through [Ollama](https://ollama.com), to Anthropic Claude, to Google Gemini, or to any OpenAI-compatible API. Files can be attached to a message.
+Yura is the desktop assistant. It can be used from an input row in the bar (`Super + Y`) and from a chat panel anchored to a screen corner (`Super + Shift + Y`), with the conversation history shared between them. The backend is **mugen-ai**, a Go server in [`ai/`](ai/) that talks to local models through [Ollama](https://ollama.com), to Anthropic Claude, to Google Gemini, or to any OpenAI-compatible API. Files can be attached to a message from the panel.
 
 Yura also runs the desktop. "Set volume to 30" or "start a 5 minute timer" reaches the same panels you would click. It will not do anything dangerous. External [MCP](https://modelcontextprotocol.io) servers are supported as well, with their writes held for approval.
 
