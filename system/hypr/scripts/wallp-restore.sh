@@ -23,7 +23,7 @@ swww_ready() { awww query >/dev/null 2>&1; }
 
 ensure_swww() {
   swww_ready && return 0
-  setsid nohup awww-daemon --format xrgb >/dev/null 2>&1 &
+  setsid nohup awww-daemon --format xrgb --no-cache >/dev/null 2>&1 &
   for _ in {1..60}; do
     swww_ready && return 0
     sleep 0.05
