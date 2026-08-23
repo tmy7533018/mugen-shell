@@ -88,6 +88,24 @@ Rectangle {
         return value
     }
 
+    // The daemon exits on its own when the setting goes false; nothing restarts it when it comes back.
+    property bool startDaemonOnSave: false
+
+    Connections {
+        target: section.settingsManager
+        function onSettingsChanged() {
+            if (!section.startDaemonOnSave) return
+            section.startDaemonOnSave = false
+            startDaemonProc.running = true
+        }
+    }
+
+    Process {
+        id: startDaemonProc
+        running: false
+        command: ["systemctl", "--user", "start", "yura-voice.service"]
+    }
+
     Process {
         id: voicesProc
         running: false
@@ -143,6 +161,7 @@ Rectangle {
                 checked: section.settingsManager ? section.settingsManager.voiceEnabled : true
                 onToggled: value => {
                     if (!section.settingsManager) return
+                    section.startDaemonOnSave = value
                     section.settingsManager.voiceEnabled = value
                     section.save()
                 }
