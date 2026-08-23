@@ -252,5 +252,18 @@ class UnmanagedEngine(unittest.TestCase):
         self.assertLess(elapsed, 2.0)
 
 
+class CatalogLang(unittest.TestCase):
+    def test_locale_is_read_from_the_zoo_naming(self):
+        self.assertEqual(router._lang("vits-piper-en_US-lessac-high"), "en")
+        self.assertEqual(router._lang("vits-piper-ja_JP-test-medium"), "ja")
+
+    def test_locale_at_either_end_of_the_name(self):
+        self.assertEqual(router._lang("en_GB-alba-medium"), "en")
+        self.assertEqual(router._lang("kokoro-multi-lang-v1_0"), "")
+
+    def test_a_name_without_a_locale_has_no_language(self):
+        self.assertEqual(router._lang("my-own-voice"), "")
+
+
 if __name__ == "__main__":
     unittest.main()

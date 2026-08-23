@@ -5,6 +5,7 @@ one reply is worse than speaking all of it in the less apt one.
 """
 
 import os
+import re
 import threading
 
 import requests
@@ -84,6 +85,17 @@ def _pretty(name: str) -> str:
     return name
 
 
+# The zoo encodes the locale in the directory name: vits-piper-<lang>_<REGION>-<voice>-<quality>.
+_LOCALE = re.compile(r"(?:^|[-_])([a-z]{2})[-_][A-Z]{2}(?:[-_]|$)")
+
+_ENGINE_LANG = {"aivis": "ja", "voicevox": "ja"}
+
+
+def _lang(name: str) -> str:
+    m = _LOCALE.search(name)
+    return m.group(1) if m else ""
+
+
 def catalog() -> list[dict]:
     """Every voice the user could pick, for the Settings picker.
 
@@ -92,7 +104,8 @@ def catalog() -> list[dict]:
     separate probes and a second copy of the naming rules.
     """
     service.prewarm()
-    out = [{"value": f"local:{name}", "label": _pretty(name), "engine": "local"}
+    out = [{"value": f"local:{name}", "label": _pretty(name),
+            "engine": "local", "lang": _lang(name)}
            for name in available()]
     for engine, base_url in BASE_URLS.items():
         if service.managed(engine):
@@ -109,5 +122,6 @@ def catalog() -> list[dict]:
                     "value": f"{engine}:{st['id']}",
                     "label": f"{sp['name']} ({st['name']})",
                     "engine": engine,
+                    "lang": _ENGINE_LANG.get(engine, ""),
                 })
     return out

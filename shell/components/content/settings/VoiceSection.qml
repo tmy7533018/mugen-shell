@@ -66,6 +66,19 @@ Rectangle {
         save()
     }
 
+    // Spoken, not shown: a Japanese engine reading an English line is no audition at all.
+    readonly property var previewLines: ({
+        "ja": "こんにちは。この声で読み上げます。",
+        "en": "Hello. This is how your replies will sound."
+    })
+
+    function preview(voice, lang) {
+        Theme.YuraCtl.post("/speak", {
+            text: section.previewLines[lang] || section.previewLines["en"],
+            voice: voice
+        })
+    }
+
     function voiceLabel() {
         const value = voiceFor(section.editingLang)
         if (value === "") return section.editingLang === "" ? "Automatic" : "Same as Default"
@@ -304,7 +317,8 @@ Rectangle {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: section.preview(voiceRow.modelData.value)
+                        onClicked: section.preview(voiceRow.modelData.value,
+                                                   voiceRow.modelData.lang || "")
                     }
                 }
             }
