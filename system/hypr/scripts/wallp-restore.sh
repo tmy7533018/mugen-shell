@@ -16,18 +16,19 @@ keep-open=yes \
 input-ipc-server=${MPV_SOCKET} \
 screenshot-format=png screenshot-high-bit-depth=no screenshot-png-compression=1"
 
-is_image() { case "${1,,}" in *.png|*.jpg|*.jpeg|*.webp) return 0;; *) return 1;; esac; }
 is_video() { case "${1,,}" in *.mp4|*.webm|*.mkv|*.gif) return 0;; *) return 1;; esac; }
 
-# Substring pgrep/pkill: Nix wraps these daemons and truncates comm, so -x misses.
+# The daemon is up long before it listens, so a running process is not readiness.
+swww_ready() { awww query >/dev/null 2>&1; }
+
 ensure_swww() {
-  if ! pgrep awww-daemon >/dev/null 2>&1; then
-    setsid nohup awww-daemon --format xrgb >/dev/null 2>&1 &
-    for _ in {1..10}; do
-      pgrep awww-daemon >/dev/null 2>&1 && break
-      sleep 0.05
-    done
-  fi
+  swww_ready && return 0
+  setsid nohup awww-daemon --format xrgb >/dev/null 2>&1 &
+  for _ in {1..60}; do
+    swww_ready && return 0
+    sleep 0.05
+  done
+  return 1
 }
 
 [[ -f "$CURRENT_WALLPAPER_FILE" ]] || exit 0
@@ -35,11 +36,12 @@ ensure_swww() {
 TARGET="$(cat "$CURRENT_WALLPAPER_FILE" 2>/dev/null | tr -d '\n')"
 [[ -n "${TARGET:-}" && -e "$TARGET" ]] || exit 0
 
+# Substring pkill: Nix wraps this daemon and truncates comm, so -x misses.
 pkill mpvpaper >/dev/null 2>&1 || true
 
 if is_video "$TARGET"; then
   setsid nohup mpvpaper -o "$MPV_OPTS" '*' "$TARGET" >/dev/null 2>&1 &
 else
   ensure_swww
-  awww img "$TARGET" "${TRANS_OPTS[@]}"
+  awww img --resize crop "$TARGET" "${TRANS_OPTS[@]}"
 fi
