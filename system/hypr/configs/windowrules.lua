@@ -1,6 +1,5 @@
 -- Window and layer rules, dofile'd by hyprland.lua.
 
-hl.window_rule({ name = "quickshell-nofocus", match = { class = "^(quickshell)$" }, no_focus = true })
 hl.layer_rule({ name = "quickshell-blur", match = { namespace = "quickshell" }, blur = true, ignore_alpha = 0 })
 
 hl.window_rule({ name = "suppress-maximize", match = { class = ".*" }, suppress_event = "maximize" })
@@ -19,4 +18,4 @@ hl.window_rule({ name = "mugen-calendar",  match = { title = "^(Mugen Calendar)$
 -- Sized by the window itself; a rule here would override its implicit size.
 hl.window_rule({ name = "mugen-settings",  match = { title = "^(Mugen Settings)$" }, float = true, center = true })
 hl.window_rule({ name = "mugen-yura-settings", match = { title = "^(Yura Settings)$" }, float = true, center = true })
-hl.window_rule({ name = "steam-settings",  match = { class = "^(steam)$", title = "^(Steam設定)$" }, float = true, size = "1050 600", center = true })
+hl.window_rule({ name = "steam-settings",  match = { class = "^(steam)$", title = "^(Steam ?設定|Settings)$" }, float = true, size = "1050 600", center = true })
