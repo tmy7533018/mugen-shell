@@ -16,7 +16,9 @@ local terminal    = appOverrides.terminal or "kitty"
 local fileManager = appOverrides.fileManager or "thunar"
 local browser     = appOverrides.browser or "firefox"
 
-local shellDir = HOME .. "/.config/quickshell/mugen-shell"
+local configHome = os.getenv("XDG_CONFIG_HOME")
+if not configHome or configHome == "" then configHome = HOME .. "/.config" end
+local shellDir = configHome .. "/quickshell/mugen-shell"
 local scripts  = shellDir .. "/scripts"
 
 local function ipc(args)
