@@ -36,6 +36,7 @@ input_path  = '~/.config/matugen/templates/matugen-hitodama'
 output_path = '~/.config/hitodama/colors.conf'
 post_hook   = "pkill -USR1 hitodama"
 
+# Dark ramp always: the shell's light mode is clear glass with white text, which a light accent muddies.
 [templates.quickshell-json]
 input_path = '~/.config/matugen/templates/quickshell-colors.json'
 output_path = '~/.cache/mugen-shell/colors.json'

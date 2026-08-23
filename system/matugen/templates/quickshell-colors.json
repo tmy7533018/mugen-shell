@@ -1,13 +1,13 @@
 {
     "colors": {
         "primary": {
-            "hex": "{{ colors.primary.default.hex }}"
+            "hex": "{{ colors.primary.dark.hex }}"
         },
         "secondary": {
-            "hex": "{{ colors.secondary.default.hex }}"
+            "hex": "{{ colors.secondary.dark.hex }}"
         },
         "tertiary": {
-            "hex": "{{ colors.tertiary.default.hex }}"
+            "hex": "{{ colors.tertiary.dark.hex }}"
         }
     }
 }
