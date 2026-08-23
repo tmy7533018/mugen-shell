@@ -96,7 +96,7 @@ yay -S hyprland quickshell qt6-5compat hypridle hyprpolkitagent zsh kitty firefo
        fcitx5 fcitx5-mozc fcitx5-im fcitx5-configtool \
        awww mpvpaper ffmpeg matugen-bin socat \
        grim slurp wl-clipboard cliphist imv curl jq xdg-utils brightnessctl fzf \
-       thunar \
+       thunar gtk3 \
        ttf-mplus-git ttf-firacode-nerd ttf-jetbrains-mono-nerd noto-fonts-emoji \
        python-gobject
 ```
@@ -353,7 +353,7 @@ programs.mugen-shell.voice.enable = true;
 - **TTS**: ローカル音声は sherpa-onnx がプロセス内で再生するため、`piper` バイナリのインストールは不要です。[sherpa-onnx の TTS モデル配布](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) からモデルを取得し (Piper/VITS でも Kokoro でも動きます)、`.onnx`・`tokens.txt`・`espeak-ng-data/` を含む**ディレクトリごと** `~/.local/share/mugen-shell/tts/` に展開してください。置き場所は `YURA_TTS_MODELS` で変更できます。展開したディレクトリはそのまま Settings のピッカーに並ぶので、この構成なら VOICEVOX は無くても構いません。Nix 経路には `vits-piper-en_US-lessac-high` が最初から含まれています。
 - **返事の言語**: Settings → Yura → Personality の language で指定します。
 
-**環境変数** (unit か drop-in で設定): `YURA_TTS` (`<engine>:<style-id>`)、`YURA_VOICEVOX_SPEAKER`、`YURA_VOICE_LANG`、`YURA_VOICE_SPEED`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。Settings にも同じ項目があるものは、シェルが保存した時点で `settings.json` が優先されます。
+**環境変数** (unit か drop-in で設定): `YURA_TTS` (`<engine>:<style-id>`)、`YURA_VOICEVOX_SPEAKER`、`YURA_VOICE_SPEED`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。Settings にも同じ項目があるものは、シェルが保存した時点で `settings.json` が優先されます。
 
 </details>
 
