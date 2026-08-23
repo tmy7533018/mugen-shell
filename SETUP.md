@@ -160,7 +160,7 @@ nix run home-manager/master -- switch --flake ~/.config/home-manager#YOUR_USER
 
 2 回目以降は `home-manager switch --flake ~/.config/home-manager#YOUR_USER` で更新できます。
 
-アクティベートすると、同梱の `system/hypr/` と `matugen/` が `~/.config/` に配置されます。中身は次回以降のアクティベートでも更新されますが、`hypridle.conf` はその場所にまだ無いときだけ作られ、以降は触られません。`colors.lua`・`configs/blur.lua`・`configs/user-overrides.lua`・`configs/keybind-overrides.lua` はアクティベートでは作られません。前の 2 つは matugen と `blur-preset.sh` が動いたときに書かれ、`user-overrides.lua`・`keybind-overrides.lua` は必要になったら自分で作るファイルです。`cava`・`kitty`・`fastfetch` の設定と `starship.toml` は今まで通りその場所にまだ設定が無いときだけコピーされます。
+アクティベートすると、同梱の `system/hypr/` と `matugen/` が `~/.config/` に配置されます。中身は次回以降のアクティベートでも更新されますが、`hypridle.conf` はその場所にまだ無いときだけ作られ、以降は触られません。`colors.lua`・`configs/blur.lua`・`configs/user-overrides.lua`・`configs/keybind-overrides.lua` はアクティベートでは作られません。前の 2 つは matugen と `blur-preset.sh` が動いたときに書かれ、`user-overrides.lua`・`keybind-overrides.lua` は必要になったら自分で作るファイルです。`cava`・`kitty`・`fastfetch` の設定と `starship.toml`、GTK の配色を matugen に追従させる `gtk-3.0/gtk.css`・`gtk-4.0/gtk.css` は、今まで通りその場所にまだ設定が無いときだけコピーされます。
 
 Hyprland の起動方法 (TTY から `Hyprland` を叩く、sddm にセッションを登録する、など) は自分で用意してください。
 
@@ -320,7 +320,7 @@ Yura がチャットだけでなく実際にシェル操作までこなせるか
 
 ### リスナーアドレス
 
-サーバは TCP ポートを開かず、`$XDG_RUNTIME_DIR/mugen-ai/mugen-ai.sock` の unix ソケットで待ち受けます。そのため、同じマシンの他のユーザからはアクセスできません。場所を変えたい場合は、`~/.config/mugen-ai/.env` に `MUGEN_AI_SOCKET` を書いてサービスを再起動してください。シェルも音声デーモンも同じ変数を参照するので、三者の指す先がずれることはありません。
+サーバは TCP ポートを開かず、`$XDG_RUNTIME_DIR/mugen-ai/mugen-ai.sock` の unix ソケットで待ち受けます。そのため、同じマシンの他のユーザからはアクセスできません。場所を変えたい場合は、`MUGEN_AI_SOCKET` をログインセッションの環境変数として設定してください。サーバ・シェル・音声デーモンの三者がそれぞれ自分の環境から読むので、`~/.config/mugen-ai/.env` に書くとサーバだけが移動し、残り二つが接続できなくなります。
 
 会話とメッセージは SQLite (`~/.local/state/mugen-ai/history.db`) に保存されます。ターミナルから話したい場合は `mugen-ai chat` を使ってください。
 

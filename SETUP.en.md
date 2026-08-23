@@ -194,7 +194,7 @@ source ~/.config/mugen-shell/mugen-shell.zshrc
 
 Wiring Hyprland into your display manager or login session is left to you (`Hyprland` from TTY, sddm session entry, etc.).
 
-Activation places the shipped `system/hypr/` and `matugen/` under `~/.config/`. Their contents are refreshed on every later activation too, except `hypridle.conf`, which is created only once and left alone after that. `colors.lua`, `configs/blur.lua`, `configs/user-overrides.lua` and `configs/keybind-overrides.lua` are not created by activation at all: the first two are written when matugen and `blur-preset.sh` run, and the two override files are yours to create when you need them. `cava`, `kitty`, `fastfetch` and `starship.toml` still copy only when that path does not exist yet, as before. If you already have a Hyprland config, add the autostart to it by hand; without it nothing spawns `quickshell -c mugen-shell`:
+Activation places the shipped `system/hypr/` and `matugen/` under `~/.config/`. Their contents are refreshed on every later activation too, except `hypridle.conf`, which is created only once and left alone after that. `colors.lua`, `configs/blur.lua`, `configs/user-overrides.lua` and `configs/keybind-overrides.lua` are not created by activation at all: the first two are written when matugen and `blur-preset.sh` run, and the two override files are yours to create when you need them. `cava`, `kitty`, `fastfetch`, `starship.toml`, and the `gtk-3.0/gtk.css` and `gtk-4.0/gtk.css` that let GTK follow matugen's colours still copy only when that path does not exist yet, as before. If you already have a Hyprland config, add the autostart to it by hand; without it nothing spawns `quickshell -c mugen-shell`:
 
 ```lua
 dofile(os.getenv("HOME") .. "/.config/hypr/configs/mugen-shell.lua")
@@ -319,7 +319,7 @@ How reliably Yura can *do* things (not just chat) depends on the model's tool-ca
 
 ### Listen address
 
-The server listens on a unix socket at `$XDG_RUNTIME_DIR/mugen-ai/mugen-ai.sock`, not a TCP port, so no other user on the machine can reach it. To move it, set `MUGEN_AI_SOCKET` in `~/.config/mugen-ai/.env` and restart the service. The shell and the voice daemon read the same variable, so the three never disagree.
+The server listens on a unix socket at `$XDG_RUNTIME_DIR/mugen-ai/mugen-ai.sock`, not a TCP port, so no other user on the machine can reach it. To move it, set `MUGEN_AI_SOCKET` as a login-session environment variable. The server, the shell and the voice daemon each read it from their own environment, so putting it in `~/.config/mugen-ai/.env` moves the server alone and leaves the other two unable to connect.
 
 Conversations live in SQLite at `~/.local/state/mugen-ai/history.db`. For terminal use: `mugen-ai chat`.
 
