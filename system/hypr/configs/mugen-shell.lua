@@ -31,9 +31,8 @@ hl.config({
 
 hl.on("hyprland.start", function()
     -- Hand the compositor's address to systemd, then pull up the session
-    -- target: graphical-session.target refuses a manual start, so user
-    -- services bound to it (yura-voice) only run once
-    -- something binds to it on their behalf.
+    -- target: graphical-session.target refuses a manual start, so the services
+    -- bound to it come up only once something else pulls it up.
     hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE")
     hl.exec_cmd("systemctl --user start mugen-shell-session.target")
     hl.exec_cmd("sh -lc 'sleep 1; ~/.config/hypr/scripts/wallp-restore.sh'")
