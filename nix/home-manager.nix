@@ -284,7 +284,7 @@ in
         RuntimeDirectory = "mugen-ai";
         # Leading dash marks the API-key file optional, so the service still
         # starts for users on local Ollama models only.
-        EnvironmentFile = "-%h/.config/mugen-ai/.env";
+        EnvironmentFile = "-${config.xdg.configHome}/mugen-ai/.env";
         Restart = "on-failure";
         RestartSec = 2;
       };
@@ -309,7 +309,7 @@ in
           "PATH=${unitPath}"
           # Colon-separated search path. A voice dropped in the writable dir
           # shadows a packaged one of the same name.
-          "YURA_TTS_MODELS=%h/.local/share/mugen-shell/tts:${piperVoice}"
+          "YURA_TTS_MODELS=${config.xdg.dataHome}/mugen-shell/tts:${piperVoice}"
         ]
         ++ lib.optionals cfg.voice.aivis.enable [
           "YURA_TTS=aivis:"
@@ -406,14 +406,14 @@ in
           done < <(find "$src" -type f -print0)
         }
 
-        install_product_tree ${./../system/hypr} "$HOME/.config/hypr" \
+        install_product_tree ${./../system/hypr} "${config.xdg.configHome}/hypr" \
           hypridle.conf colors.lua configs/blur.lua configs/.blur-current \
           configs/user-overrides.lua configs/keybind-overrides.lua
-        install_product_tree ${./../system/matugen} "$HOME/.config/matugen"
-        install_dir   ${./../system/cava}      "$HOME/.config/cava"
-        install_dir   ${./../system/kitty}     "$HOME/.config/kitty"
-        install_dir   ${./../system/fastfetch} "$HOME/.config/fastfetch"
-        install_file  ${./../system/starship.toml} "$HOME/.config/starship.toml"
+        install_product_tree ${./../system/matugen} "${config.xdg.configHome}/matugen"
+        install_dir   ${./../system/cava}      "${config.xdg.configHome}/cava"
+        install_dir   ${./../system/kitty}     "${config.xdg.configHome}/kitty"
+        install_dir   ${./../system/fastfetch} "${config.xdg.configHome}/fastfetch"
+        install_file  ${./../system/starship.toml} "${config.xdg.configHome}/starship.toml"
       '';
   };
 }

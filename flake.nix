@@ -68,7 +68,7 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.users.mugen = { lib, ... }: {
+            home-manager.users.mugen = { config, lib, ... }: {
               imports = [ self.homeManagerModules.default ];
               programs.mugen-shell = {
                 enable = true;
@@ -86,7 +86,7 @@
                     install -m 644 ${./nixos/assets/desert-sunset.jpg} "$wallpaper"
                   fi
 
-                  overrides="$HOME/.config/hypr/configs/user-overrides.lua"
+                  overrides="${config.xdg.configHome}/hypr/configs/user-overrides.lua"
                   if [[ ! -e "$overrides" ]]; then
                     mkdir -p "$(dirname "$overrides")"
                     install -m 644 ${./nixos/assets/vm-user-overrides.lua} "$overrides"

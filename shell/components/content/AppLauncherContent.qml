@@ -348,7 +348,7 @@ FocusScope {
 
     Process {
         id: iconThemeProcess
-        command: ["bash", "-c", "grep '^gtk-icon-theme-name' ~/.config/gtk-3.0/settings.ini 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo 'hicolor'"]
+        command: ["bash", "-c", "grep '^gtk-icon-theme-name' \"${XDG_CONFIG_HOME:-$HOME/.config}\"/gtk-3.0/settings.ini 2>/dev/null | cut -d'=' -f2 | tr -d ' ' || echo 'hicolor'"]
         running: false
 
         stdout: SplitParser {

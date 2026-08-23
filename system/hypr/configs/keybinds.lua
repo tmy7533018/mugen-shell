@@ -194,7 +194,9 @@ local function jsonString(v)
 end
 
 local function exportBinds()
-    local stateDir = (os.getenv("XDG_STATE_HOME") or (HOME .. "/.local/state")) .. "/mugen-shell"
+    local xdgState = os.getenv("XDG_STATE_HOME")
+    if not xdgState or xdgState == "" then xdgState = HOME .. "/.local/state" end
+    local stateDir = xdgState .. "/mugen-shell"
     pcall(os.execute, "mkdir -p '" .. stateDir .. "'")
 
     local f = io.open(stateDir .. "/keybinds.json", "w")
