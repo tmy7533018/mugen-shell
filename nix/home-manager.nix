@@ -414,6 +414,9 @@ in
         install_dir   ${./../system/kitty}     "${config.xdg.configHome}/kitty"
         install_dir   ${./../system/fastfetch} "${config.xdg.configHome}/fastfetch"
         install_file  ${./../system/starship.toml} "${config.xdg.configHome}/starship.toml"
+        # matugen writes colors.css into both; nothing reads it without this import.
+        install_file  ${./../system/gtk/gtk.css} "${config.xdg.configHome}/gtk-3.0/gtk.css"
+        install_file  ${./../system/gtk/gtk.css} "${config.xdg.configHome}/gtk-4.0/gtk.css"
       '';
   };
 }

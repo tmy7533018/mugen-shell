@@ -310,6 +310,7 @@
             mkdir -p $out/hypr/configs
             cp ${./system/hypr/configs/mugen-shell.conf} $out/hypr/configs/mugen-shell.conf
             cp ${./system/hypr/configs/mugen-shell.lua} $out/hypr/configs/mugen-shell.lua
+            cp ${./system/hypr/configs/blur-presets.json} $out/hypr/configs/blur-presets.json
             cp -r ${./system/hypr/scripts} $out/hypr/scripts
             # Voice daemon runtime, so the service works without a checkout.
             # yura/ is the pipeline itself — yurad.py is only its entry point
