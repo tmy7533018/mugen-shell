@@ -193,6 +193,9 @@ in
           pulseaudio   # provides `pactl`, which the audio panel shells out to
           brightnessctl
           jq             # App Launcher running-apps filter, several shell scripts
+          glib           # `gsettings`, how the theme toggle reaches portal-aware apps
+          gsettings-desktop-schemas  # the org.gnome.desktop.interface schema it writes into
+          gnome-themes-extra  # the Adwaita-dark theme dir; without it GTK3 silently stays light
           xdg-utils      # `xdg-open` for every Settings "Open folder" button
           socat
           curl

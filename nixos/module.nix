@@ -129,6 +129,8 @@ in
       # Hyprland's own portal carries only the screencast interfaces, so a file
       # chooser needs a backend that implements FileChooser.
       xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+      # Without a dconf backend, the theme toggle's gsettings write lands in memory and vanishes.
+      programs.dconf.enable = lib.mkDefault true;
 
       services.pipewire = {
         enable = true;
@@ -170,6 +172,9 @@ in
         pulseaudio    # provides `pactl`, which the audio panel shells out to
         brightnessctl
         jq            # App Launcher running-apps filter, several shell scripts
+        glib          # `gsettings`, how the theme toggle reaches portal-aware apps
+        gsettings-desktop-schemas  # the org.gnome.desktop.interface schema it writes into
+        gnome-themes-extra  # the Adwaita-dark theme dir; without it GTK3 silently stays light
         xdg-utils     # `xdg-open` for Settings → Personality → Edit toml
         socat
         curl
