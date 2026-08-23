@@ -7,7 +7,6 @@ AI_SOCKET = os.environ.get("MUGEN_AI_SOCKET") or os.path.join(
     os.environ.get("XDG_RUNTIME_DIR", "/run/user/%d" % os.getuid()),
     "mugen-ai", "mugen-ai.sock")
 AI_URL = "http://localhost"
-STT_LANG = os.environ.get("YURA_VOICE_LANG", "ja")
 
 _CONFIG_HOME = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
 _DATA_HOME = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
