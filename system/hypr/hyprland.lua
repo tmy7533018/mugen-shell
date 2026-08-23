@@ -25,7 +25,13 @@ hl.workspace_rule({ workspace = "2", persistent = true })
 hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
 -- Prepend flatpak exports to the inherited value instead of replacing it —
 -- clobbering XDG_DATA_DIRS hides every .desktop entry on NixOS.
-hl.env("XDG_DATA_DIRS", HOME .. "/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:" .. (os.getenv("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"))
+local flatpakShare = HOME .. "/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share"
+local dataDirs = os.getenv("XDG_DATA_DIRS") or "/usr/local/share:/usr/share"
+-- hl.env setenv's our own process too, so a reload would prepend a second copy.
+if not dataDirs:find(flatpakShare, 1, true) then
+    dataDirs = flatpakShare .. ":" .. dataDirs
+end
+hl.env("XDG_DATA_DIRS", dataDirs)
 
 -- IME (fcitx5). Drop this line if you don't use an IME. Only XMODIFIERS:
 -- XWayland clients still go through XIM, while Wayland ones use fcitx5's
