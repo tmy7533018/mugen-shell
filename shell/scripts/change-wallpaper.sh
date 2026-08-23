@@ -39,6 +39,7 @@ THUMB_FILE="$THUMB_DIR/current_wallpaper_thumb.png"
 CURRENT_WALLPAPER_FILE="$THUMB_DIR/current_wallpaper_path.txt"
 MPV_SOCKET="$THUMB_DIR/mpvpaper.sock"
 LOCK="$THUMB_DIR/.wallp.lock"
+THEME_MODE_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/mugen-shell/theme-mode"
 
 TRANS_DURATION=1.3
 
@@ -101,8 +102,15 @@ is_video() {
   esac
 }
 
+theme_mode() {
+  local mode=""
+  [[ -f "$THEME_MODE_FILE" ]] && mode="$(tr -d '\n' < "$THEME_MODE_FILE")"
+  if [[ "$mode" == "light" ]]; then printf 'light'; else printf 'dark'; fi
+}
+
 run_matugen() {
-  local args=(matugen image "$1")
+  # Without the mode, changing wallpaper in light mode silently drops every app back to dark.
+  local args=(matugen image "$1" --mode "$(theme_mode)")
   # matugen >= 4 aborts headless when several source colors qualify
   if matugen image --help 2>/dev/null | grep -q -- '--prefer'; then
     args+=(--prefer saturation)
