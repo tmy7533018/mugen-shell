@@ -16,6 +16,7 @@ QtObject {
 
     property string themeMode: "dark"
     property bool themeSaveQueued: false
+    property bool themePropagateQueued: false
 
     function toggleThemeMode() {
         themeMode = (themeMode === "dark") ? "light" : "dark"
@@ -35,6 +36,17 @@ QtObject {
         saveThemeModeProcess.command =
             JsonStore.atomicWriteArgv(Paths.stateDir, themeModeFile, themeMode)
         saveThemeModeProcess.running = true
+    }
+
+    // Only the process that wrote the file propagates; the rest follow through themeModeWatcher.
+    function _propagateThemeMode() {
+        if (propagateThemeModeProcess.running) {
+            themePropagateQueued = true
+            return
+        }
+        propagateThemeModeProcess.command =
+            ["bash", Quickshell.shellDir + "/scripts/apply-theme-mode.sh", themeMode]
+        propagateThemeModeProcess.running = true
     }
     
     function loadThemeMode() {
@@ -116,9 +128,24 @@ QtObject {
         running: false
 
         onRunningChanged: {
-            if (running || !palette.themeSaveQueued) return
-            palette.themeSaveQueued = false
-            palette._writeThemeMode()
+            if (running) return
+            if (palette.themeSaveQueued) {
+                palette.themeSaveQueued = false
+                palette._writeThemeMode()
+                return
+            }
+            palette._propagateThemeMode()
+        }
+    }
+
+    property Process propagateThemeModeProcess: Process {
+        command: []
+        running: false
+
+        onRunningChanged: {
+            if (running || !palette.themePropagateQueued) return
+            palette.themePropagateQueued = false
+            palette._propagateThemeMode()
         }
     }
     
