@@ -8,10 +8,10 @@ if [ ! -f "$STATE_FILE" ]; then
     exit 0
 fi
 
-ENABLED=$(cat "$STATE_FILE" 2>/dev/null | grep -o '"enabled":[^,}]*' | cut -d: -f2 | tr -d ' ' || echo "true")
+INHIBITED=$(grep -o '"enabled":[^,}]*' "$STATE_FILE" 2>/dev/null | cut -d: -f2 | tr -d ' ' || echo "false")
 
-if [ "$ENABLED" = "false" ]; then
+if [ "$INHIBITED" = "true" ]; then
     exit 0
-else
-    systemctl --user start hypridle.service
 fi
+
+systemctl --user start hypridle.service
