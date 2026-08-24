@@ -331,6 +331,10 @@ QtObject {
     property color glowSecondary: colorAnimator.animatedGlowSecondary
     property color glowTertiary: colorAnimator.animatedGlowTertiary
     
+    // The bar / Yura panel / lock face base fill. MugenSurface reads these.
+    readonly property color surfaceBaseDark: Qt.rgba(20 / 255, 22 / 255, 26 / 255, 0.82)
+    readonly property color surfaceBaseLight: Qt.rgba(0.50, 0.48, 0.58, 0.65)
+
     readonly property color darkSurfaceBorder: Qt.rgba(0.70, 0.65, 0.90, 0.3)
     readonly property color darkSurfaceGlass: Qt.rgba(0.08, 0.05, 0.15, 0.32)
     readonly property color darkTextPrimary: Qt.rgba(0.92, 0.92, 0.96, 0.90)
