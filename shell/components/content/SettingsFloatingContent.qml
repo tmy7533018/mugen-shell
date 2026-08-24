@@ -27,7 +27,7 @@ Item {
     }
 
     readonly property var categories: [
-        { id: "appearance", label: "Appearance",   types: ["theme", "moduleBackground", "blur", "animation", "dateFormat", "clock", "weather", "calendarWeekStart", "barLayout"] },
+        { id: "appearance", label: "Appearance",   types: ["theme", "barSurface", "moduleBackground", "blur", "animation", "dateFormat", "clock", "weather", "calendarWeekStart", "barLayout"] },
         { id: "sound",      label: "Sound",        types: ["notificationSound", "timerSound"] },
         { id: "notifications", label: "Notifications", types: ["doNotDisturb", "notificationTimeout"] },
         { id: "timer",      label: "Timer & Lock", types: ["timer", "lockTimer", "idlePower"] },
@@ -41,6 +41,7 @@ Item {
     function sectionFor(type) {
         switch (type) {
             case "theme":             return themeSection
+            case "barSurface":        return barSurfaceSection
             case "blur":              return blurSection
             case "timer":             return timerSection
             case "moduleBackground":  return moduleBackgroundSection
@@ -82,6 +83,11 @@ Item {
     Component { id: themeSection; Settings.ThemeSection {
         theme: root.theme
         modeManager: root.modeManager
+    }}
+    Component { id: barSurfaceSection; Settings.BarSurfaceSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
     }}
     Component { id: blurSection; Settings.BlurSection {
         theme: root.theme

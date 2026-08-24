@@ -16,6 +16,7 @@ Rectangle {
     property color borderColor: (theme && theme.themeMode === "light") ? lightBorderColor : darkBorderColor
 
     property real baseRadius: 24
+    property bool showBorder: true
 
     // Stacked translucent layers trend opaque and swing mid-fade; pinning the pair to baseColor.a keeps the blur behind steady.
     function baseOpacityUnder(backdropOpacity) {
@@ -27,7 +28,7 @@ Rectangle {
 
     color: "transparent"
     radius: baseRadius
-    border.width: 1
+    border.width: showBorder ? 1 : 0
     border.color: borderColor
 
     Behavior on borderColor {

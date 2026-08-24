@@ -52,7 +52,15 @@
     "height": 60,
     "radius": 50,
     "marginH": 10,
-    "marginV": 6
+    "marginV": 6,
+    "surface": {
+      "custom": false,
+      "hue": 0.611111,
+      "saturation": 0.130435,
+      "lightness": 0.090196,
+      "opacity": 0.82,
+      "border": true
+    }
   },
   "workspaces": {
     "count": 5

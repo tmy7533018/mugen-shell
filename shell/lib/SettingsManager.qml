@@ -43,6 +43,14 @@ QtObject {
     property int barRadius: 50
     property int barMarginH: 10
     property int barMarginV: 6
+
+    // Defaults are the exact HSL of MugenSurface's dark base, so enabling custom changes nothing.
+    property bool barSurfaceCustom: false
+    property real barSurfaceHue: 0.611111
+    property real barSurfaceSaturation: 0.130435
+    property real barSurfaceLightness: 0.090196
+    property real barSurfaceOpacity: 0.82
+    property bool barSurfaceBorder: true
     property int workspaceCount: 5
     property string displayMonitor: ""  // Quickshell screen name; "" = first screen
 
@@ -160,7 +168,15 @@ QtObject {
                 "height": barHeight,
                 "radius": barRadius,
                 "marginH": barMarginH,
-                "marginV": barMarginV
+                "marginV": barMarginV,
+                "surface": {
+                    "custom": barSurfaceCustom,
+                    "hue": barSurfaceHue,
+                    "saturation": barSurfaceSaturation,
+                    "lightness": barSurfaceLightness,
+                    "opacity": barSurfaceOpacity,
+                    "border": barSurfaceBorder
+                }
             },
             "workspaces": {
                 "count": workspaceCount
@@ -345,6 +361,15 @@ QtObject {
                 }
                 if (settings.bar.marginV !== undefined) {
                     barMarginV = settings.bar.marginV
+                }
+                if (settings.bar.surface) {
+                    const sf = settings.bar.surface
+                    if (sf.custom !== undefined) barSurfaceCustom = sf.custom
+                    if (sf.hue !== undefined) barSurfaceHue = sf.hue
+                    if (sf.saturation !== undefined) barSurfaceSaturation = sf.saturation
+                    if (sf.lightness !== undefined) barSurfaceLightness = sf.lightness
+                    if (sf.opacity !== undefined) barSurfaceOpacity = sf.opacity
+                    if (sf.border !== undefined) barSurfaceBorder = sf.border
                 }
             }
 

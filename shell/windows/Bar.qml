@@ -492,6 +492,13 @@ PanelWindow {
 
         z: 0
         baseRadius: settingsManager.barRadius
+        showBorder: !settingsManager.barSurfaceCustom || settingsManager.barSurfaceBorder
+        baseColor: settingsManager.barSurfaceCustom
+            ? Qt.hsla(settingsManager.barSurfaceHue,
+                      settingsManager.barSurfaceSaturation,
+                      settingsManager.barSurfaceLightness,
+                      settingsManager.barSurfaceOpacity)
+            : (theme.themeMode === "light" ? surface.lightBase : surface.darkBase)
         moduleBackground: modeManager.currentSurfaceBackground
             ? modeManager.currentSurfaceBackground
             : (modeManager.currentModeInstance && settingsManager.moduleBackdropEnabled
