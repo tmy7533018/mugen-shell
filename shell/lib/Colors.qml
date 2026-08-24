@@ -335,6 +335,22 @@ QtObject {
     readonly property color surfaceBaseDark: Qt.rgba(20 / 255, 22 / 255, 26 / 255, 0.82)
     readonly property color surfaceBaseLight: Qt.rgba(0.50, 0.48, 0.58, 0.65)
 
+    // Window shells set this to the bar's colour; unset leaves the glass tokens alone.
+    property color windowTint: "transparent"
+    readonly property bool hasWindowTint: windowTint.a > 0
+
+    // A low alpha lets the unknown backdrop dominate, so weight the tint against a mid-dark guess.
+    readonly property real _assumedBackdropLuma: 0.35
+    readonly property bool onLightSurface: {
+        if (!hasWindowTint) return false
+        const tint = 0.299 * windowTint.r + 0.587 * windowTint.g + 0.114 * windowTint.b
+        return tint * windowTint.a + _assumedBackdropLuma * (1 - windowTint.a) > 0.5
+    }
+
+    readonly property color onLightTextPrimary: Qt.rgba(0.10, 0.10, 0.14, 0.92)
+    readonly property color onLightTextSecondary: Qt.rgba(0.26, 0.26, 0.33, 0.90)
+    readonly property color onLightTextFaint: Qt.rgba(0.42, 0.42, 0.50, 0.85)
+
     readonly property color darkSurfaceBorder: Qt.rgba(0.70, 0.65, 0.90, 0.3)
     readonly property color darkSurfaceGlass: Qt.rgba(0.08, 0.05, 0.15, 0.32)
     readonly property color darkTextPrimary: Qt.rgba(0.92, 0.92, 0.96, 0.90)
@@ -360,24 +376,32 @@ QtObject {
 
     property color surfaceBorder: themeMode === "light" ? lightSurfaceBorder : darkSurfaceBorder
     property color surfaceGlass: themeMode === "light" ? lightSurfaceGlass : darkSurfaceGlass
-    property color textPrimary: themeMode === "light" ? lightTextPrimary : darkTextPrimary
+    property color textPrimary: onLightSurface ? onLightTextPrimary
+        : (themeMode === "light" ? lightTextPrimary : darkTextPrimary)
     // Text renders darker than icons at the same colour, so bar text uses this to sit level.
     property color textPrimaryBright: Qt.rgba(
         Math.min(1.0, textPrimary.r * 1.05),
         Math.min(1.0, textPrimary.g * 1.05),
         Math.min(1.0, textPrimary.b * 1.05),
         textPrimary.a)
-    property color textSecondary: themeMode === "light" ? lightTextSecondary : darkTextSecondary
-    property color textFaint: themeMode === "light" ? lightTextFaint : darkTextFaint
+    property color textSecondary: onLightSurface ? onLightTextSecondary
+        : (themeMode === "light" ? lightTextSecondary : darkTextSecondary)
+    property color textFaint: onLightSurface ? onLightTextFaint
+        : (themeMode === "light" ? lightTextFaint : darkTextFaint)
     property color chipInactiveBg: themeMode === "light" ? lightChipInactiveBg : darkChipInactiveBg
     property color chipInactiveBorder: themeMode === "light" ? lightChipInactiveBorder : darkChipInactiveBorder
     property color surfaceInsetSubtle: themeMode === "light" ? lightSurfaceInsetSubtle : darkSurfaceInsetSubtle
-    property color surfaceInsetCard: themeMode === "light" ? lightSurfaceInsetCard : darkSurfaceInsetCard
+    property color surfaceInsetCard: hasWindowTint ? windowTint
+        : (themeMode === "light" ? lightSurfaceInsetCard : darkSurfaceInsetCard)
     property color surfaceInsetCardHover: themeMode === "light" ? lightSurfaceInsetCardHover : darkSurfaceInsetCardHover
 
     property color chipActiveBg: colorAnimator.animatedChipActiveBg
     property color chipActiveBorder: colorAnimator.animatedChipActiveBorder
-    property color accent: colorAnimator.animatedAccent
+    // The palette is pinned to the dark ramp, so its pastel accent vanishes on a light surface.
+    property color accent: {
+        const animated = colorAnimator.animatedAccent
+        return onLightSurface ? Qt.darker(animated, 2.4) : animated
+    }
 
     Behavior on surfaceBorder { ColorAnimation { duration: 400; easing.type: Easing.InOutCubic } }
     Behavior on surfaceGlass { ColorAnimation { duration: 400; easing.type: Easing.InOutCubic } }

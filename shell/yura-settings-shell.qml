@@ -14,6 +14,15 @@ ShellRoot {
 
     Theme.Colors {
         id: themeColors
+
+        // This is a window over other apps, not glass over the wallpaper, so it takes the bar's colour.
+        windowTint: settingsManager.barSurfaceCustom
+            ? Qt.hsla(settingsManager.barSurfaceHue,
+                      settingsManager.barSurfaceSaturation,
+                      settingsManager.barSurfaceLightness,
+                      settingsManager.barSurfaceOpacity)
+            : (themeColors.themeMode === "light" ? themeColors.surfaceBaseLight
+                                                : themeColors.surfaceBaseDark)
     }
 
     Theme.SettingsManager {
