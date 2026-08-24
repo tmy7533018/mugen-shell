@@ -327,9 +327,19 @@ QtObject {
         }
     }
     
-    property color glowPrimary: colorAnimator.animatedGlowPrimary
-    property color glowSecondary: colorAnimator.animatedGlowSecondary
-    property color glowTertiary: colorAnimator.animatedGlowTertiary
+    // Same reason as accent: the pastel glow is invisible on a light face.
+    property color glowPrimary: {
+        const animated = colorAnimator.animatedGlowPrimary
+        return onLightSurface ? onLightVariant(animated) : animated
+    }
+    property color glowSecondary: {
+        const animated = colorAnimator.animatedGlowSecondary
+        return onLightSurface ? onLightVariant(animated) : animated
+    }
+    property color glowTertiary: {
+        const animated = colorAnimator.animatedGlowTertiary
+        return onLightSurface ? onLightVariant(animated) : animated
+    }
     
     // The bar / Yura panel / lock face base fill. MugenSurface reads these.
     readonly property color surfaceBaseDark: Qt.rgba(20 / 255, 22 / 255, 26 / 255, 0.82)
@@ -345,6 +355,30 @@ QtObject {
         if (!hasWindowTint) return false
         const tint = 0.299 * windowTint.r + 0.587 * windowTint.g + 0.114 * windowTint.b
         return tint * windowTint.a + _assumedBackdropLuma * (1 - windowTint.a) > 0.5
+    }
+
+    readonly property real surfaceLightness: hasWindowTint ? windowTint.hslLightness : 0
+
+    readonly property real surfaceLuma:
+        0.299 * windowTint.r + 0.587 * windowTint.g + 0.114 * windowTint.b
+
+    // Qt.darker() scales RGB down and muddies a pastel, so keep the hue and darken instead. The target is
+    // perceived luminance, not HSL lightness: yellows stay bright at a lightness that already darkens blues.
+    readonly property real _onLightTargetLuma: Math.max(0.20, surfaceLuma - 0.42)
+    function onLightVariant(c) {
+        const grey = c.hslHue < 0 || c.hslSaturation < 0.08
+        // Full saturation: BlobEffect roughly halves the chroma of whatever colour it is handed.
+        const build = l => grey ? Qt.hsla(0, 0, l, c.a) : Qt.hsla(c.hslHue, 1.0, l, c.a)
+
+        let l = Math.min(c.hslLightness, 0.72)
+        let out = build(l)
+        for (let i = 0; i < 4; i++) {
+            const luma = 0.299 * out.r + 0.587 * out.g + 0.114 * out.b
+            if (luma <= _onLightTargetLuma) break
+            l *= _onLightTargetLuma / luma
+            out = build(l)
+        }
+        return out
     }
 
     readonly property color onLightTextPrimary: Qt.rgba(0.10, 0.10, 0.14, 0.92)
@@ -405,7 +439,7 @@ QtObject {
     // The palette is pinned to the dark ramp, so its pastel accent vanishes on a light surface.
     property color accent: {
         const animated = colorAnimator.animatedAccent
-        return onLightSurface ? Qt.darker(animated, 2.4) : animated
+        return onLightSurface ? onLightVariant(animated) : animated
     }
 
     Behavior on surfaceBorder { ColorAnimation { duration: 400; easing.type: Easing.InOutCubic } }
