@@ -180,7 +180,17 @@ PanelWindow {
         }
     }
 
-    Theme.Colors { id: theme }
+    Theme.Colors {
+        id: theme
+
+        // A module backdrop hides the face entirely, so only judge the colour when none is up.
+        windowTint: (settingsManager.barSurfaceCustom && !surface.moduleBackground)
+            ? Qt.hsla(settingsManager.barSurfaceHue,
+                      settingsManager.barSurfaceSaturation,
+                      settingsManager.barSurfaceLightness,
+                      settingsManager.barSurfaceOpacity)
+            : "transparent"
+    }
 
     readonly property var themeRef: theme
 
@@ -694,6 +704,9 @@ PanelWindow {
         z: 1.5
         settingsManager: settingsManager
         activeColor: theme.glowPrimary
+        // Workspaces' own default assumes a dark face; the dark value here is the one it ships with.
+        emptyColor: theme.onLightSurface ? Qt.rgba(0.20, 0.20, 0.24, 0.95)
+                                        : Qt.rgba(0.85, 0.85, 0.85, 0.95)
         hasWindowsColor: Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.5)
         modeManager: modeManager
 
