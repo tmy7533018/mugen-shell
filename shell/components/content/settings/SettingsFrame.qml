@@ -11,6 +11,12 @@ Item {
     id: frame
 
     property var theme
+
+    // Precomputed here: each reference from inside the delegate is a new unqualified warning.
+    readonly property color _dangerBase: theme ? theme.danger : Qt.rgba(0.95, 0.55, 0.65, 1.0)
+    readonly property color dangerRowBg: Qt.rgba(_dangerBase.r, _dangerBase.g, _dangerBase.b, 0.20)
+    readonly property color dangerLabel: Qt.rgba(_dangerBase.r, _dangerBase.g, _dangerBase.b, 1.0)
+    readonly property color dangerLabelIdle: Qt.rgba(_dangerBase.r, _dangerBase.g, _dangerBase.b, 0.78)
     required property var categories
     property string title: "Settings"
     property string iconSource: Quickshell.shellDir + "/assets/icons/settings.svg"
@@ -204,7 +210,7 @@ Item {
                             property bool danger: categoryRow.modelData.danger === true
                             color: categoryRow.selected
                                 ? (categoryRow.danger
-                                    ? Qt.rgba(0.95, 0.55, 0.65, 0.20)
+                                    ? frame.dangerRowBg
                                     : (frame.theme ? Qt.rgba(frame.theme.accent.r, frame.theme.accent.g, frame.theme.accent.b, 0.20) : Qt.rgba(0.65, 0.55, 0.85, 0.20)))
                                 : (categoryArea.containsMouse
                                     ? Qt.rgba(1, 1, 1, 0.04)
@@ -218,7 +224,7 @@ Item {
                                 anchors.leftMargin: 14
                                 text: categoryRow.modelData.label
                                 color: categoryRow.danger
-                                    ? Qt.rgba(0.95, 0.55, 0.65, categoryRow.selected ? 1.0 : 0.78)
+                                    ? (categoryRow.selected ? frame.dangerLabel : frame.dangerLabelIdle)
                                     : (categoryRow.selected
                                         ? (frame.theme ? frame.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.95))
                                         : (frame.theme ? frame.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.85)))

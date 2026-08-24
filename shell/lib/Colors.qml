@@ -351,6 +351,11 @@ QtObject {
     readonly property color onLightTextSecondary: Qt.rgba(0.26, 0.26, 0.33, 0.90)
     readonly property color onLightTextFaint: Qt.rgba(0.42, 0.42, 0.50, 0.85)
 
+    // Destructive-action red. The dark value is the literal the settings tree used before.
+    readonly property color dangerOnDark: Qt.rgba(0.95, 0.55, 0.65, 1.0)
+    readonly property color dangerOnLight: Qt.rgba(0.62, 0.10, 0.20, 1.0)
+    property color danger: onLightSurface ? dangerOnLight : dangerOnDark
+
     readonly property color darkSurfaceBorder: Qt.rgba(0.70, 0.65, 0.90, 0.3)
     readonly property color darkSurfaceGlass: Qt.rgba(0.08, 0.05, 0.15, 0.32)
     readonly property color darkTextPrimary: Qt.rgba(0.92, 0.92, 0.96, 0.90)

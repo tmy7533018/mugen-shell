@@ -14,7 +14,7 @@ Rectangle {
     color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
     radius: 20
     border.width: 1
-    border.color: Qt.rgba(0.95, 0.55, 0.65, 0.25)
+    border.color: (section.theme ? Qt.rgba(section.theme.danger.r, section.theme.danger.g, section.theme.danger.b, 0.25) : Qt.rgba(0.95, 0.55, 0.65, 0.25))
 
     property bool armed: false
 
@@ -74,7 +74,7 @@ Rectangle {
                     id: resetText
                     anchors.centerIn: parent
                     text: section.armed ? "Confirm reset" : "Reset to defaults"
-                    color: Qt.rgba(0.95, 0.55, 0.65, 1.0)
+                    color: (section.theme ? Qt.rgba(section.theme.danger.r, section.theme.danger.g, section.theme.danger.b, 1.0) : Qt.rgba(0.95, 0.55, 0.65, 1.0))
                     font.pixelSize: 12
                     font.weight: Font.Medium
                     font.family: "M PLUS 2"
