@@ -28,8 +28,11 @@ Common.IconButton {
 
         let shiftedH = (h + hueShift) % 1.0
         let finalV = Math.min(1.0, v + brightnessBoost)
+        const shifted = Qt.hsva(shiftedH, s, finalV, a)
 
-        return Qt.hsva(shiftedH, s, finalV, a)
+        // The hue shift lands in the yellows, which stay pale however far the value drops.
+        // It sits in a row of near-black icons, so it needs to go darker than a decorative fill would.
+        return (theme && theme.onLightSurface) ? theme.onLightVariant(shifted, 0.22) : shifted
     }
     iconSource: {
         if (!idleToggleButton.icons || !idleToggleButton.idleInhibitorManager) return ""

@@ -22,8 +22,12 @@ Item {
 
     readonly property string wtype: (icons && weatherManager) ? icons.weatherType(weatherManager.weatherCode, weatherManager.isDay) : "clouds"
     readonly property var pal: icons ? icons.weatherPalette(wtype) : null
-    readonly property color accentC: pal ? pal.accent : (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 1))
-    readonly property color glowC: pal ? pal.glow : Qt.rgba(0.65, 0.55, 0.85, 0.45)
+    // The weather palette never passes through Colors, so it needs the light-surface correction applied here.
+    readonly property color palAccent: pal ? pal.accent : (theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 1))
+    readonly property color palGlow: pal ? pal.glow : Qt.rgba(0.65, 0.55, 0.85, 0.45)
+    readonly property bool onLight: theme ? theme.onLightSurface : false
+    readonly property color accentC: onLight ? theme.onLightVariant(palAccent) : palAccent
+    readonly property color glowC: onLight ? theme.onLightVariant(palGlow) : palGlow
 
     opacity: ma.containsMouse ? 1.0 : 0.6
     scale: ma.containsMouse ? 1.15 : 1.0

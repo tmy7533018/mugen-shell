@@ -365,7 +365,9 @@ QtObject {
     // Qt.darker() scales RGB down and muddies a pastel, so keep the hue and darken instead. The target is
     // perceived luminance, not HSL lightness: yellows stay bright at a lightness that already darkens blues.
     readonly property real _onLightTargetLuma: Math.max(0.20, surfaceLuma - 0.42)
-    function onLightVariant(c) {
+    // Callers sitting in a row of near-black icons pass a lower target than decorative fills want.
+    function onLightVariant(c, targetLuma) {
+        const target = targetLuma === undefined ? _onLightTargetLuma : targetLuma
         const grey = c.hslHue < 0 || c.hslSaturation < 0.08
         // Full saturation: BlobEffect roughly halves the chroma of whatever colour it is handed.
         const build = l => grey ? Qt.hsla(0, 0, l, c.a) : Qt.hsla(c.hslHue, 1.0, l, c.a)
@@ -374,8 +376,8 @@ QtObject {
         let out = build(l)
         for (let i = 0; i < 4; i++) {
             const luma = 0.299 * out.r + 0.587 * out.g + 0.114 * out.b
-            if (luma <= _onLightTargetLuma) break
-            l *= _onLightTargetLuma / luma
+            if (luma <= target) break
+            l *= target / luma
             out = build(l)
         }
         return out
