@@ -226,6 +226,12 @@ QtObject {
         resetProcess.running = true
     }
 
+    // One unassignable value throws and abandons every section below it, so hand-edited colours fall back instead.
+    function _unitOr(v, fallback) {
+        const n = Number(v)
+        return isFinite(n) ? Math.max(0, Math.min(1, n)) : fallback
+    }
+
     function applySettingsFromJson(jsonString) {
         try {
             let settings = JSON.parse(jsonString)
@@ -365,10 +371,10 @@ QtObject {
                 if (settings.bar.surface) {
                     const sf = settings.bar.surface
                     if (sf.custom !== undefined) barSurfaceCustom = sf.custom
-                    if (sf.hue !== undefined) barSurfaceHue = sf.hue
-                    if (sf.saturation !== undefined) barSurfaceSaturation = sf.saturation
-                    if (sf.lightness !== undefined) barSurfaceLightness = sf.lightness
-                    if (sf.opacity !== undefined) barSurfaceOpacity = sf.opacity
+                    if (sf.hue !== undefined) barSurfaceHue = _unitOr(sf.hue, barSurfaceHue)
+                    if (sf.saturation !== undefined) barSurfaceSaturation = _unitOr(sf.saturation, barSurfaceSaturation)
+                    if (sf.lightness !== undefined) barSurfaceLightness = _unitOr(sf.lightness, barSurfaceLightness)
+                    if (sf.opacity !== undefined) barSurfaceOpacity = _unitOr(sf.opacity, barSurfaceOpacity)
                     if (sf.border !== undefined) barSurfaceBorder = sf.border
                 }
             }
