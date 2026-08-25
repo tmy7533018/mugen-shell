@@ -19,8 +19,11 @@ QtObject {
         clearProcess.running = true
     }
     
+    // cliphist reads the line to drop from stdin; an id argument is accepted and ignored.
     function deleteItem(id) {
-        deleteProcess.command = ["cliphist", "delete", id]
+        deleteProcess.command = ["bash", "-c",
+            "cliphist list | grep -m1 -P \"^$1\\D\" | cliphist delete",
+            "bash", String(id)]
         deleteProcess.running = true
     }
     
