@@ -376,6 +376,8 @@ PanelWindow {
                 radius: Math.round(effective),
                 opacity: Number(surface.opacity.toFixed(2)),
                 themeMode: theme.themeMode === "light" ? "light" : "dark",
+                surfaceColor: String(surface.baseColor),
+                surfaceBorder: surface.showBorder,
                 exitX: Math.round(n.leftMargin), exitY: Math.round(n.topMargin),
                 exitW: nw, exitH: nh, exitRadius: Math.round(nEffective)
             })
@@ -508,7 +510,7 @@ PanelWindow {
                       settingsManager.barSurfaceSaturation,
                       settingsManager.barSurfaceLightness,
                       settingsManager.barSurfaceOpacity)
-            : (theme.themeMode === "light" ? surface.lightBase : surface.darkBase)
+            : surface.defaultBase
         moduleBackground: modeManager.currentSurfaceBackground
             ? modeManager.currentSurfaceBackground
             : (modeManager.currentModeInstance && settingsManager.moduleBackdropEnabled

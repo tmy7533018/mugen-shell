@@ -28,6 +28,8 @@ Item {
     property real sourceHeight: 0
     property real sourceRadius: 0
     property real sourceOpacity: 0.85
+    property color sourceColor: "transparent"
+    property bool sourceBorder: true
 
     property real exitX: 0
     property real exitY: 0
@@ -295,6 +297,10 @@ Item {
 
             // Never `radius`: MugenSurface binds it to baseRadius.
             baseRadius: root.liveRadius
+
+            baseColor: root.morphing && root.sourceColor.a > 0 ? root.sourceColor
+                                                               : face.defaultBase
+            showBorder: !root.morphing || root.sourceBorder
             // The face carries none of the bar's modules, so unlocking cross-fades.
             opacity: (root.startOpacity
                 + (root.faceOpacity - root.startOpacity) * root.morphProgress) * root.exitFade

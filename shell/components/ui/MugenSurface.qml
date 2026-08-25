@@ -12,7 +12,8 @@ Rectangle {
     readonly property color lightBase: theme ? theme.surfaceBaseLight : Qt.rgba(0.50, 0.48, 0.58, 0.65)
     readonly property color lightBorderColor: Qt.rgba(0.50, 0.45, 0.65, 0.40)
 
-    property color baseColor: (theme && theme.themeMode === "light") ? lightBase : darkBase
+    readonly property color defaultBase: (theme && theme.themeMode === "light") ? lightBase : darkBase
+    property color baseColor: defaultBase
     property color borderColor: (theme && theme.themeMode === "light") ? lightBorderColor : darkBorderColor
 
     property real baseRadius: 24

@@ -58,6 +58,8 @@ ShellRoot {
     property real barH: 0
     property real barRadiusPx: 0
     property real barOpacity: 0.85
+    property color barSurfaceColor: "transparent"
+    property bool barSurfaceBorder: true
 
     property real barExitX: 0
     property real barExitY: 0
@@ -251,6 +253,9 @@ ShellRoot {
             barExitH = r.exitH
             barExitRadius = r.exitRadius
             colors.themeMode = r.themeMode === "light" ? "light" : "dark"
+            if (/^#[0-9a-fA-F]{8}$/.test(String(r.surfaceColor)))
+                barSurfaceColor = r.surfaceColor
+            barSurfaceBorder = r.surfaceBorder !== false
             barRectValid = true
         }
         maybeSendHide()
@@ -562,6 +567,8 @@ ShellRoot {
                 sourceHeight: root.barH
                 sourceRadius: root.barRadiusPx
                 sourceOpacity: root.barOpacity
+                sourceColor: root.barSurfaceColor
+                sourceBorder: root.barSurfaceBorder
 
                 exitX: root.barExitX
                 exitY: root.barExitY
