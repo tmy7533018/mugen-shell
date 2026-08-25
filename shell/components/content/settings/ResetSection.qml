@@ -9,12 +9,14 @@ Rectangle {
     required property var modeManager
     required property var settingsManager
 
+    readonly property color danger: theme ? theme.danger : Qt.rgba(0.95, 0.55, 0.65, 1.0)
+
     width: parent ? parent.width : 420
     implicitHeight: layout.implicitHeight + 40
     color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
     radius: 20
     border.width: 1
-    border.color: (section.theme ? Qt.rgba(section.theme.danger.r, section.theme.danger.g, section.theme.danger.b, 0.25) : Qt.rgba(0.95, 0.55, 0.65, 0.25))
+    border.color: Qt.rgba(section.danger.r, section.danger.g, section.danger.b, 0.25)
 
     property bool armed: false
 
@@ -60,12 +62,12 @@ Rectangle {
                 Layout.preferredHeight: 32
                 radius: 16
                 color: section.armed
-                    ? Qt.rgba(0.95, 0.55, 0.65, resetMouseArea.containsMouse ? 0.42 : 0.30)
+                    ? Qt.rgba(section.danger.r, section.danger.g, section.danger.b,
+                              resetMouseArea.containsMouse ? 0.42 : 0.30)
                     : (resetMouseArea.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent")
                 border.width: 1
-                border.color: section.armed
-                    ? Qt.rgba(0.95, 0.55, 0.65, 0.85)
-                    : Qt.rgba(0.95, 0.55, 0.65, 0.45)
+                border.color: Qt.rgba(section.danger.r, section.danger.g, section.danger.b,
+                                      section.armed ? 0.85 : 0.45)
 
                 Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
                 Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
@@ -74,7 +76,7 @@ Rectangle {
                     id: resetText
                     anchors.centerIn: parent
                     text: section.armed ? "Confirm reset" : "Reset to defaults"
-                    color: (section.theme ? Qt.rgba(section.theme.danger.r, section.theme.danger.g, section.theme.danger.b, 1.0) : Qt.rgba(0.95, 0.55, 0.65, 1.0))
+                    color: section.danger
                     font.pixelSize: 12
                     font.weight: Font.Medium
                     font.family: "M PLUS 2"
