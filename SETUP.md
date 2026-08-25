@@ -96,7 +96,7 @@ yay -S hyprland quickshell qt6-5compat hypridle hyprpolkitagent zsh kitty firefo
        fcitx5 fcitx5-mozc fcitx5-im fcitx5-configtool \
        awww mpvpaper ffmpeg matugen-bin socat \
        grim slurp wl-clipboard cliphist imv curl jq xdg-utils brightnessctl fzf \
-       thunar gtk3 \
+       thunar gtk3 gnome-themes-extra dconf \
        ttf-mplus-git ttf-firacode-nerd ttf-jetbrains-mono-nerd noto-fonts-emoji \
        python-gobject
 ```
