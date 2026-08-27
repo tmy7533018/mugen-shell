@@ -253,7 +253,8 @@ ShellRoot {
             barExitH = r.exitH
             barExitRadius = r.exitRadius
             colors.themeMode = r.themeMode === "light" ? "light" : "dark"
-            if (/^#[0-9a-fA-F]{8}$/.test(String(r.surfaceColor)))
+            // Qt drops the alpha pair from String(color) once the colour is opaque.
+            if (/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(String(r.surfaceColor)))
                 barSurfaceColor = r.surfaceColor
             barSurfaceBorder = r.surfaceBorder !== false
             barRectValid = true
