@@ -119,7 +119,8 @@ PanelWindow {
     Connections {
         target: modeManager
         function onCurrentModeChanged() {
-            if (!modeManager.isMode("normal") && modeManager.openedViaIpc) {
+            // Every open, not just IPC: a click focuses the surface but leaves QML focus elsewhere, so Escape dies.
+            if (!modeManager.isMode("normal")) {
                 // PanelWindow has no requestActivate(); focusable + FocusGrab give focus, then push inward.
                 Qt.callLater(() => {
                     escKeyHandler.forceActiveFocus()
