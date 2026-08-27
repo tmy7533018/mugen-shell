@@ -18,12 +18,23 @@ QtObject {
     function clearHistory() {
         clearProcess.running = true
     }
-    
+
+    // Quickshell only reserves one re-run on a busy Process, so a third id would drop the second.
+    property var pendingDeletes: []
+
     // cliphist reads the line to drop from stdin; an id argument is accepted and ignored.
     function deleteItem(id) {
+        pendingDeletes = pendingDeletes.concat([String(id)])
+        if (!deleteProcess.running) _drainDeletes()
+    }
+
+    function _drainDeletes() {
+        if (pendingDeletes.length === 0) return
+        const id = pendingDeletes[0]
+        pendingDeletes = pendingDeletes.slice(1)
         deleteProcess.command = ["bash", "-c",
             "cliphist list | grep -m1 -P \"^$1\\D\" | cliphist delete",
-            "bash", String(id)]
+            "bash", id]
         deleteProcess.running = true
     }
     
@@ -131,6 +142,11 @@ QtObject {
     property Process deleteProcess: Process {
         command: []
         running: false
+
+        function onExited(exitCode) {
+            if (exitCode !== 0) console.warn("clipboard: cliphist delete exited " + exitCode)
+            root._drainDeletes()
+        }
     }
 
     property Process selectProcess: Process {

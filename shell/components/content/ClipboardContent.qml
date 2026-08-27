@@ -27,6 +27,16 @@ FocusScope {
     property var history: clipboardManager ? clipboardManager.history : []
     property int currentIndex: -1
 
+    // cliphist wipe cannot be undone, so the button arms first (same shape as ResetSection).
+    property bool clearArmed: false
+    readonly property color danger: theme ? theme.danger : Qt.rgba(0.95, 0.55, 0.65, 1.0)
+
+    Timer {
+        id: disarmTimer
+        interval: 5000
+        onTriggered: root.clearArmed = false
+    }
+
     // A JS-array model resets the whole view on reload, so park hover and scroll until it lands.
     property bool suppressHover: false
     property real pendingContentY: -1
@@ -50,6 +60,7 @@ FocusScope {
                 focusTimer.restart()
             } else {
                 currentIndex = -1
+                root.clearArmed = false
             }
         }
     }
@@ -195,24 +206,94 @@ FocusScope {
         
         ColumnLayout {
             anchors.centerIn: parent
-            spacing: 16
-            
-            Common.GlowText {
+            spacing: root.modeManager.scale(10)
+
+            RowLayout {
                 Layout.alignment: Qt.AlignHCenter
-                text: "Clipboard"
-                font.pixelSize: 20
-                font.weight: Font.Light
-                font.family: "M PLUS 2"
-                font.letterSpacing: 1.5
-                color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
+                Layout.preferredWidth: root.modeManager.scale(420)
+                spacing: root.modeManager.scale(10)
+
+                Common.GlowText {
+                    text: "Clipboard"
+                    font.pixelSize: root.modeManager.scale(20)
+                    font.weight: Font.Light
+                    font.family: "M PLUS 2"
+                    font.letterSpacing: 1.5
+                    color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                 
-                enableGlow: true
-                glowColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.6) : Qt.rgba(0.65, 0.55, 0.85, 0.6)
-                glowSamples: 20
-                glowRadius: 12
-                glowSpread: 0.5
+                    enableGlow: true
+                    glowColor: theme ? Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.6) : Qt.rgba(0.65, 0.55, 0.85, 0.6)
+                    glowSamples: 20
+                    glowRadius: 12
+                    glowSpread: 0.5
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Rectangle {
+                    id: clearAllButton
+                    Layout.preferredWidth: clearAllButton.animatedWidth
+                    Layout.fillWidth: false
+                    height: 28
+                    radius: clearAllButton.height / 2
+
+                    property real baseWidth: clearText.implicitWidth + 24
+                    property real animatedWidth: root.history.length > 0 ? baseWidth : 0
+                    opacity: root.history.length > 0 ? 1.0 : 0.0
+                    visible: opacity > 0.01
+                    clip: true
+
+                    color: Qt.rgba(root.danger.r, root.danger.g, root.danger.b,
+                                   root.clearArmed ? (clearArea.containsMouse ? 0.55 : 0.45)
+                                                   : (clearArea.containsMouse ? 0.30 : 0.20))
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
+                    }
+
+                    Behavior on animatedWidth {
+                        NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
+                    }
+
+                    Behavior on color {
+                        ColorAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
+                    }
+
+                    Text {
+                        id: clearText
+                        anchors.centerIn: parent
+                        text: root.clearArmed ? "Click again to clear all" : "Clear All"
+                        color: Qt.rgba(root.danger.r, root.danger.g, root.danger.b,
+                                       clearArea.containsMouse ? 1.0 : 0.85)
+                        font.pixelSize: 12
+                        font.weight: Font.Medium
+                        font.family: "M PLUS 2"
+
+                        Behavior on color {
+                            ColorAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
+                        }
+                    }
+
+                    MouseArea {
+                        id: clearArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.modeManager.bump()
+                            if (!root.clearArmed) {
+                                root.clearArmed = true
+                                disarmTimer.restart()
+                                return
+                            }
+                            root.clearArmed = false
+                            disarmTimer.stop()
+                            root.clipboardManager.clearHistory()
+                        }
+                    }
+                }
             }
-            
+
             Item {
                 Layout.preferredWidth: modeManager.scale(420)
                 Layout.preferredHeight: modeManager.scale(320)
