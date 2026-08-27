@@ -57,9 +57,9 @@ PanelWindow {
 
     HyprlandFocusGrab {
         windows: [barWindow]
+        // Clicking the bar does not hand the layer surface keyboard focus, so every open needs the grab.
         // A module open at lock time would leave a grab pulling focus toward an unmapped bar.
-        active: !modeManager.isMode("normal") && modeManager.openedViaIpc
-            && !barWindow.lockHidden
+        active: !modeManager.isMode("normal") && !barWindow.lockHidden
     }
 
     Item {
@@ -212,7 +212,7 @@ PanelWindow {
         onCompleted: {
             // Don't yank focus from another open panel; viaIpc activates the grab so the bar gets it.
             if (modeManager.isMode("normal")) {
-                modeManager.switchMode("timer", true)
+                modeManager.switchMode("timer")
             }
         }
 

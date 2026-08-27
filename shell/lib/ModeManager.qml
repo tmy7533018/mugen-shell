@@ -5,7 +5,6 @@ QtObject {
     id: manager
     
     property string currentMode: "normal"
-    property bool openedViaIpc: false
     property var modes: ({})
     property var settingsManager
 
@@ -55,29 +54,17 @@ QtObject {
         modes = newModes
     }
     
-    function switchMode(newMode, viaIpc) {
+    function switchMode(newMode) {
         // IPC and the MCP panel_open tool both reach here with a caller-supplied name.
         if (knownModes.indexOf(newMode) < 0) {
             console.warn("mode: refusing unknown mode " + newMode)
             return
         }
-        // openedViaIpc before currentMode: listeners read it synchronously to decide focus.
-        if (newMode === currentMode) {
-            openedViaIpc = false
-            currentMode = "normal"
-        } else {
-            openedViaIpc = viaIpc === true
-            currentMode = newMode
-        }
-
-        if (currentMode === "normal") {
-            openedViaIpc = false
-        }
+        currentMode = newMode === currentMode ? "normal" : newMode
     }
     
     function closeAllModes() {
         currentMode = "normal"
-        openedViaIpc = false
     }
     
     function isMode(modeName) {
@@ -161,7 +148,7 @@ QtObject {
                 closeAllModes()
                 return
             }
-            switchMode(modeName, true)
+            switchMode(modeName)
         }
 
         // Non-toggling, unlike safeSwitch, so repeated volume-key presses don't close the panel.
@@ -177,7 +164,7 @@ QtObject {
                 return
             }
             if (isMode(modeName)) return
-            switchMode(modeName, true)
+            switchMode(modeName)
         }
 
         switch(cmd) {

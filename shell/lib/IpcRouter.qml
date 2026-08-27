@@ -120,7 +120,7 @@ Item {
                 return
             }
             // Idempotent open: only called programmatically, so re-opening an active mode must not toggle it shut.
-            if (!ipcRouter.modeManager.isMode(name)) ipcRouter.modeManager.switchMode(name, true)
+            if (!ipcRouter.modeManager.isMode(name)) ipcRouter.modeManager.switchMode(name)
         }
 
         function close(): void {
