@@ -201,7 +201,7 @@ func languageName(code string) string {
 	return ""
 }
 
-// Returns request-local copies so a concurrent /chat can't retarget this turn.
+// Returns request-local copies so a concurrent conversation switch can't retarget this turn.
 func (s *Server) beginChatTurn(req chatRequest) (convID int64, model string, thinking bool, msgs []provider.Message, status int, err error) {
 	s.chatSetupMu.Lock()
 	defer s.chatSetupMu.Unlock()
@@ -602,7 +602,9 @@ func (s *Server) handleListConversations(w http.ResponseWriter, _ *http.Request)
 }
 
 func (s *Server) handleCreateConversation(w http.ResponseWriter, _ *http.Request) {
+	s.chatSetupMu.Lock()
 	id, err := s.history.NewConversation(s.registry.Model(), false)
+	s.chatSetupMu.Unlock()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -686,7 +688,10 @@ func (s *Server) handleDeleteConversation(w http.ResponseWriter, r *http.Request
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	if err := s.history.DeleteConversation(id); err != nil {
+	s.chatSetupMu.Lock()
+	err := s.history.DeleteConversation(id)
+	s.chatSetupMu.Unlock()
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -742,7 +747,10 @@ func (s *Server) handleSelectConversation(w http.ResponseWriter, r *http.Request
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	if err := s.history.Switch(id); err != nil {
+	s.chatSetupMu.Lock()
+	err := s.history.Switch(id)
+	s.chatSetupMu.Unlock()
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -791,7 +799,10 @@ func (s *Server) handleExportConversations(w http.ResponseWriter, _ *http.Reques
 }
 
 func (s *Server) handleClearConversations(w http.ResponseWriter, _ *http.Request) {
-	if err := s.history.DeleteAll(); err != nil {
+	s.chatSetupMu.Lock()
+	err := s.history.DeleteAll()
+	s.chatSetupMu.Unlock()
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
