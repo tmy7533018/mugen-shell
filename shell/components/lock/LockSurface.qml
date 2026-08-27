@@ -298,9 +298,8 @@ Item {
             // Never `radius`: MugenSurface binds it to baseRadius.
             baseRadius: root.liveRadius
 
-            baseColor: root.morphing && root.sourceColor.a > 0 ? root.sourceColor
-                                                               : face.defaultBase
-            showBorder: !root.morphing || root.sourceBorder
+            baseColor: root.sourceColor.a > 0 ? root.sourceColor : face.defaultBase
+            showBorder: root.sourceBorder
             // The face carries none of the bar's modules, so unlocking cross-fades.
             opacity: (root.startOpacity
                 + (root.faceOpacity - root.startOpacity) * root.morphProgress) * root.exitFade
