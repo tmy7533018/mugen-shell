@@ -482,16 +482,21 @@ FocusScope {
                     appGrid.currentIndex = -1
                 }
 
-                onRequestFocusGrid: () => {
-                    if (appGrid.count > 0) {
-                        appGrid.forceActiveFocus()
-                        appGrid.userInteracted = true
-                        appGrid.currentIndex = 0
-                    }
+                // Entering the grid must not clobber a selection the user already moved.
+                onRequestFocusGrid: (backwards) => {
+                    if (appGrid.count === 0) return
+                    appGrid.forceActiveFocus()
+                    appGrid.userInteracted = true
+                    if (appGrid.currentIndex < 0)
+                        appGrid.currentIndex = backwards ? appGrid.count - 1 : 0
                 }
 
-                onRequestLaunchApp: (app) => {
-                    root.launchApp(app)
+                // The grid keeps its highlight while the field has focus, so honour it over the top hit.
+                onRequestLaunchSelected: () => {
+                    const i = appGrid.currentIndex
+                    root.launchApp(i >= 0 && root.filteredApps[i]
+                        ? root.filteredApps[i]
+                        : root.filteredApps[0])
                 }
             }
 
@@ -526,6 +531,12 @@ FocusScope {
 
                 highlight: null
                 highlightFollowsCurrentItem: false
+
+                function isModifierKey(k) {
+                    return k === Qt.Key_Shift || k === Qt.Key_Control || k === Qt.Key_Alt
+                        || k === Qt.Key_Meta || k === Qt.Key_AltGr || k === Qt.Key_CapsLock
+                        || k === Qt.Key_NumLock || k === Qt.Key_ScrollLock
+                }
 
                 Keys.onPressed: (event) => {
                     if (modeManager.isMode("launcher")) {
@@ -608,6 +619,9 @@ FocusScope {
                             }
                         }
                         event.accepted = true
+                    } else if (appGrid.isModifierKey(event.key)) {
+                        // A bare Shift keydown is not typing: handing focus over here sent Shift+Tab to the field.
+                        event.accepted = false
                     } else {
                         if (searchField && searchField.searchFieldItem) {
                             searchField.searchFieldItem.forceActiveFocus()

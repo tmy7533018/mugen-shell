@@ -12,8 +12,8 @@ Rectangle {
     required property var modeManager
     
     signal searchTextChanged(string text)
-    signal requestLaunchApp(var app)
-    signal requestFocusGrid()
+    signal requestLaunchSelected()
+    signal requestFocusGrid(bool backwards)
     
     Layout.preferredWidth: {
         if (root.parent && root.parent.parent) {
@@ -78,17 +78,16 @@ Rectangle {
             }
             
             Keys.onPressed: (event) => {
+                // Backtab too: unhandled it falls through to Qt's focus traversal and bounces focus around.
                 if (event.key === Qt.Key_Tab ||
+                    event.key === Qt.Key_Backtab ||
                     event.key === Qt.Key_Down || 
                     event.key === Qt.Key_Up) {
-                    root.requestFocusGrid()
+                    root.requestFocusGrid(event.key === Qt.Key_Backtab || event.key === Qt.Key_Up)
                     event.accepted = true
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                     if (root.filteredApps.length > 0) {
-                        let app = root.filteredApps[0]
-                        if (app && app.exec) {
-                            root.requestLaunchApp(app)
-                        }
+                        root.requestLaunchSelected()
                         event.accepted = true
                     } else {
                         event.accepted = false
