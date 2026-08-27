@@ -103,6 +103,20 @@ Item {
     readonly property int dismissAnimationMs: 500
     readonly property int dismissFlagClearMs: 950
 
+    // The swiped card is already hidden, so dropping it at once lets displaced close the whole gap.
+    function removeNotificationImmediate(notificationId) {
+        let notifIdStr = String(notificationId)
+        if (root.removingNotifications[notifIdStr] !== undefined) return
+
+        let newRemoving = Object.assign({}, root.removingNotifications)
+        newRemoving[notifIdStr] = Date.now()
+        root.removingNotifications = newRemoving
+
+        root.pendingDismissals[notifIdStr] = { at: Date.now(), dispatched: true }
+        dismissSweeper.start()
+        root.notificationManager.removeNotification(isNaN(notifIdStr) ? notifIdStr : Number(notifIdStr))
+    }
+
     function removeNotification(notificationId) {
         let notifIdStr = String(notificationId)
 
@@ -642,6 +656,11 @@ Item {
                         
                         onRemoveRequested: (notificationId) => {
                             root.removeNotification(notificationId)
+                            root.resetAutoCloseTimer()
+                        }
+
+                        onSwipeRemoved: (notificationId) => {
+                            root.removeNotificationImmediate(notificationId)
                             root.resetAutoCloseTimer()
                         }
                         

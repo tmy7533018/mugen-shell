@@ -127,15 +127,10 @@ QtObject {
         }
     }
     
+    // No reload here: replacing the model mid-collapse resets the view and the rows below jump.
     property Process deleteProcess: Process {
         command: []
         running: false
-        
-        onExited: (exitCode) => {
-            if (exitCode === 0) {
-                root.loadHistory()
-            }
-        }
     }
 
     property Process selectProcess: Process {

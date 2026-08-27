@@ -16,6 +16,7 @@ Rectangle {
     property int index
 
     signal removeRequested(var notificationId)
+    signal swipeRemoved(var notificationId)
     signal actionRequested(var notif)
     
     width: parent ? parent.width : 0
@@ -59,6 +60,12 @@ Rectangle {
     
     property bool shouldCollapseHeight: false
 
+    readonly property real swipeThreshold: width * 0.25
+    readonly property real swipeProgress: width > 0 ? Math.min(1, Math.abs(x) / width) : 0
+
+    // Written, not bound: the view's add transition animates opacity and would sever a binding for good.
+    onXChanged: opacity = 1 - swipeProgress * 0.85
+
     // Delayed so the fade-out is visible before the height collapse eats it
     Timer {
         id: collapseHeightTimer
@@ -99,10 +106,33 @@ Rectangle {
         running: notificationItem.isRemoving
         alwaysRunToEnd: true
         NumberAnimation {
-            from: 1.0
             to: 0.0
             duration: Theme.Motion.standard
             easing.type: Easing.InCubic
+        }
+    }
+
+    NumberAnimation {
+        id: swipeSpringBack
+        target: notificationItem
+        property: "x"
+        to: 0
+        duration: Theme.Motion.standard
+        easing.type: Easing.OutCubic
+    }
+
+    NumberAnimation {
+        id: swipeFlyOut
+        target: notificationItem
+        property: "x"
+        duration: Theme.Motion.fast
+        easing.type: Easing.OutCubic
+        onStopped: {
+            // The view snaps a delegate's x back to 0 on relayout, so hide before anything triggers one.
+            notificationItem.visible = false
+            if (notificationItem.ListView.view)
+                notificationItem.ListView.view.currentIndex = -1
+            notificationItem.swipeRemoved(notificationItem.modelData.id)
         }
     }
     
@@ -338,13 +368,41 @@ Rectangle {
         cursorShape: Qt.PointingHandCursor
         z: 2
 
+        drag.target: notificationItem
+        drag.axis: Drag.XAxis
+        drag.minimumX: -notificationItem.width
+        drag.maximumX: notificationItem.width
+
+        property bool swiped: false
+
         onEntered: {
+            // Rows sliding under a stationary cursor get synthetic hover; expanding them mid-removal fights the collapse.
+            if (Object.keys(notificationItem.removingNotifications).length > 0) return
             if (notificationItem.ListView.view) {
                 notificationItem.ListView.view.currentIndex = notificationItem.index
             }
         }
 
+        onPressed: {
+            swiped = false
+            swipeSpringBack.stop()
+        }
+
+        onPositionChanged: if (drag.active) swiped = true
+
+        onReleased: {
+            if (!swiped) return
+            if (Math.abs(notificationItem.x) < notificationItem.swipeThreshold) {
+                swipeSpringBack.start()
+            } else {
+                swipeFlyOut.to = notificationItem.x < 0 ? -notificationItem.width
+                                                        : notificationItem.width
+                swipeFlyOut.start()
+            }
+        }
+
         onClicked: function(mouse) {
+            if (swiped) return
             if (mouse.button === Qt.LeftButton) {
                 actionRequested(modelData)
             } else if (mouse.button === Qt.RightButton) {
