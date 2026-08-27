@@ -49,7 +49,8 @@ Rectangle {
         }
     }
     
-    property bool isRemoving: removingNotifications[String(modelData.id)] !== undefined
+    property bool isRemoving: modelData
+        && removingNotifications[String(modelData.id)] !== undefined
     property int removalIndex: {
         if (!isRemoving) return 0
         for (let i = 0; i < notifications.length; i++) {
@@ -132,7 +133,8 @@ Rectangle {
             notificationItem.visible = false
             if (notificationItem.ListView.view)
                 notificationItem.ListView.view.currentIndex = -1
-            notificationItem.swipeRemoved(notificationItem.modelData.id)
+            if (notificationItem.modelData)
+                notificationItem.swipeRemoved(notificationItem.modelData.id)
         }
     }
     
@@ -220,7 +222,7 @@ Rectangle {
             Text {
                 Layout.fillWidth: true
                 textFormat: Text.PlainText
-                text: modelData.title
+                text: notificationItem.modelData ? notificationItem.modelData.title : ""
                 color: (theme ? theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.90))
                 font.pixelSize: 14
                 font.weight: Font.Medium
@@ -232,7 +234,7 @@ Rectangle {
 
             Text {
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
-                text: modelData.time
+                text: notificationItem.modelData ? notificationItem.modelData.time : ""
                 color: Qt.rgba(0.72, 0.72, 0.82, 0.60)
                 font.pixelSize: 11
                 font.weight: Font.Light
@@ -242,7 +244,7 @@ Rectangle {
         
         Text {
             textFormat: Text.PlainText
-            text: modelData.message
+            text: notificationItem.modelData ? notificationItem.modelData.message : ""
             color: Qt.rgba(0.80, 0.80, 0.85, 0.75)
             font.pixelSize: 12
             font.weight: Font.Light
