@@ -343,7 +343,7 @@ in
         };
       };
 
-    systemd.user.services.mugen-event-notifier = {
+    systemd.user.services.mugen-event-notifier = lib.mkIf cfg.ai.enable {
       Unit = {
         Description = "mugen-shell calendar event notifications";
       };
@@ -354,7 +354,7 @@ in
       };
     };
 
-    systemd.user.timers.mugen-event-notifier = {
+    systemd.user.timers.mugen-event-notifier = lib.mkIf cfg.ai.enable {
       Unit = {
         Description = "Trigger mugen-shell calendar event notifications every minute";
       };
