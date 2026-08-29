@@ -104,10 +104,11 @@ in
     (lib.mkIf cfg.includeSystemDeps {
       programs.hyprland.enable = true;
 
-      # Both ship their shell integration outside the share subdirs NixOS links
-      # by default, so the packaged .zshrc cannot find them without this.
+      # NixOS links /share/zsh only with programs.zsh, which the SETUP recipe does not require.
       environment.pathsToLink = lib.optionals cfg.zsh.enable [
         "/share/zsh-syntax-highlighting"
+        "/share/zsh-autosuggestions"
+        "/share/zsh-history-substring-search"
         "/share/fzf"
       ];
 
