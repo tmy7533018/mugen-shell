@@ -8,7 +8,7 @@ hl.window_rule({ name = "fix-xwayland-drag", match = { xwayland = true, class = 
 hl.window_rule({ name = "pavucontrol",     match = { class = "^(org\\.pulseaudio\\.pavucontrol)$" }, float = true, size = "(monitor_w*0.5) (monitor_h*0.6)", center = true })
 hl.window_rule({ name = "save-dialog",     match = { title = "^(Save As|Save a File|Pick Files)$" },  float = true, size = "(monitor_w*0.5) (monitor_h*0.6)", center = true })
 hl.window_rule({ name = "open-files",      match = { initial_title = "^(Open Files)$" },               float = true, size = "(monitor_w*0.5) (monitor_h*0.5)", center = true })
-hl.window_rule({ name = "jp-file-dialog",  match = { title = "^(.*ファイル.*)$" },                       float = true, size = "(monitor_w*0.5) (monitor_h*0.5)", center = true })
+hl.window_rule({ name = "jp-file-dialog",  match = { title = "^(.*ファイル.*(開く|保存|選択|エクスポート|インポート|アップロード))$" }, float = true, size = "(monitor_w*0.5) (monitor_h*0.5)", center = true })
 
 hl.window_rule({ name = "thunar-float",    match = { class = "^(thunar)$" }, float = true, size = "1050 600", center = true })
 hl.window_rule({ name = "imv-float",       match = { class = "^(imv)$" },    float = true, size = "1050 600", center = true })
