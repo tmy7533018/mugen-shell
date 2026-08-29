@@ -55,11 +55,13 @@ PanelWindow {
     focusable: !modeManager.isMode("normal")
     color: "transparent"
 
+    readonly property bool modeWantsKeyboard: !modeManager.isMode("notification-popup")
+
     HyprlandFocusGrab {
         windows: [barWindow]
-        // Clicking the bar does not hand the layer surface keyboard focus, so every open needs the grab.
+        // Clicking the bar does not hand the layer surface keyboard focus, so a panel that takes keys needs the grab.
         // A module open at lock time would leave a grab pulling focus toward an unmapped bar.
-        active: !modeManager.isMode("normal") && !barWindow.lockHidden
+        active: !modeManager.isMode("normal") && barWindow.modeWantsKeyboard && !barWindow.lockHidden
     }
 
     Item {
@@ -120,7 +122,7 @@ PanelWindow {
         target: modeManager
         function onCurrentModeChanged() {
             // Every open, not just IPC: a click focuses the surface but leaves QML focus elsewhere, so Escape dies.
-            if (!modeManager.isMode("normal")) {
+            if (!modeManager.isMode("normal") && barWindow.modeWantsKeyboard) {
                 // PanelWindow has no requestActivate(); focusable + FocusGrab give focus, then push inward.
                 Qt.callLater(() => {
                     escKeyHandler.forceActiveFocus()
@@ -210,7 +212,7 @@ PanelWindow {
         id: timerManager
 
         onCompleted: {
-            // Don't yank focus from another open panel; viaIpc activates the grab so the bar gets it.
+            // Don't yank focus from another open panel.
             if (modeManager.isMode("normal")) {
                 modeManager.switchMode("timer")
             }
