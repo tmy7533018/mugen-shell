@@ -143,7 +143,7 @@ QtObject {
         command: []
         running: false
 
-        function onExited(exitCode) {
+        onExited: (exitCode) => {
             if (exitCode !== 0) console.warn("clipboard: cliphist delete exited " + exitCode)
             root._drainDeletes()
         }
