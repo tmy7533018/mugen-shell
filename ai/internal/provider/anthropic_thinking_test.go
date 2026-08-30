@@ -290,3 +290,46 @@ func TestEffortRejectionFallsBackToNoThinking(t *testing.T) {
 		t.Errorf("retry must drop output_config: %+v", output)
 	}
 }
+
+// Carried only on the final chunk, the reasoning would render after the answer
+// it was supposed to precede.
+func TestThinkingStreamsAheadOfTheAnswer(t *testing.T) {
+	sse := strings.Join([]string{
+		`data: {"type":"content_block_start","index":0,"content_block":{"type":"thinking"}}`,
+		`data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"weigh it "}}`,
+		`data: {"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"carefully"}}`,
+		`data: {"type":"content_block_stop","index":0}`,
+		`data: {"type":"content_block_start","index":1,"content_block":{"type":"text"}}`,
+		`data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"54"}}`,
+		`data: {"type":"message_stop"}`,
+		"",
+	}, "\n")
+	srv := stubAnthropic(t, sse, nil)
+	defer srv.Close()
+
+	var order []string
+	var reasoning strings.Builder
+	err := testAnthropic(srv.URL).Chat(context.Background(), "claude-x",
+		[]Message{{Role: "user", Content: "what is the volume"}},
+		ChatOptions{Thinking: true},
+		func(c ChatChunk) error {
+			if c.ThinkingDelta != "" {
+				reasoning.WriteString(c.ThinkingDelta)
+				order = append(order, "thinking")
+			}
+			if c.Content != "" {
+				order = append(order, "content")
+			}
+			return nil
+		})
+	if err != nil {
+		t.Fatalf("chat: %v", err)
+	}
+
+	if reasoning.String() != "weigh it carefully" {
+		t.Errorf("streamed reasoning = %q", reasoning.String())
+	}
+	if len(order) != 3 || order[0] != "thinking" || order[2] != "content" {
+		t.Errorf("order = %v, want reasoning before the answer", order)
+	}
+}

@@ -136,6 +136,21 @@ func (h *History) SetConvThinking(thinking bool) error {
 	return nil
 }
 
+// SetConvModel rebinds the current conversation to a different model.
+func (h *History) SetConvModel(model string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.convID == 0 {
+		h.convModel = model
+		return nil
+	}
+	if err := h.store.UpdateConversationModel(h.convID, model); err != nil {
+		return err
+	}
+	h.convModel = model
+	return nil
+}
+
 func (h *History) Switch(id int64) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -189,7 +204,7 @@ func (h *History) AddWithAttachments(role, content, model string, thinking bool,
 			_ = h.store.UpdateConversationTitle(h.convID, store.DeriveTitle(content))
 		}
 	}
-	if err := h.store.AppendMessage(h.convID, role, content, paths); err != nil {
+	if err := h.store.AppendMessage(h.convID, role, content, paths, ""); err != nil {
 		return err
 	}
 	h.messages = append(h.messages, provider.Message{
@@ -213,13 +228,13 @@ func (h *History) RemoveLast() {
 }
 
 // AddAssistantTo targets a conversation explicitly so a long streaming turn lands where it started.
-func (h *History) AddAssistantTo(convID int64, content string) error {
+func (h *History) AddAssistantTo(convID int64, content, toolCalls string) error {
 	if convID == 0 {
 		return nil
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if err := h.store.AppendMessage(convID, "assistant", content, nil); err != nil {
+	if err := h.store.AppendMessage(convID, "assistant", content, nil, toolCalls); err != nil {
 		return err
 	}
 	if convID == h.convID {
@@ -341,31 +356,51 @@ func (h *History) DeleteAll() error {
 	return h.store.ClearCurrentConversationID()
 }
 
-func (h *History) truncateLocked() {
-	if h.max > 0 && len(h.messages) > h.max {
-		h.messages = h.messages[len(h.messages)-h.max:]
+// Every stage drops from the front, so the window sent to the model is a suffix.
+func dropCount(msgs []provider.Message, max, maxTokens int) int {
+	drop := 0
+	if max > 0 && len(msgs) > max {
+		drop = len(msgs) - max
 	}
-	if h.maxTokens > 0 {
+	if maxTokens > 0 {
 		total := 0
-		for i := range h.messages {
-			total += messageTokens(h.messages[i])
+		for i := drop; i < len(msgs); i++ {
+			total += messageTokens(msgs[i])
 		}
 		// Keep the trailing exchange so a single oversized message can't empty the conversation.
-		drop := 0
-		for total > h.maxTokens && drop < len(h.messages)-2 {
-			total -= messageTokens(h.messages[drop])
+		for total > maxTokens && drop < len(msgs)-2 {
+			total -= messageTokens(msgs[drop])
 			drop++
-		}
-		if drop > 0 {
-			h.messages = h.messages[drop:]
 		}
 	}
 	// Anthropic rejects a list that opens with an assistant message.
-	lead := 0
-	for lead < len(h.messages)-1 && h.messages[lead].Role != "user" {
-		lead++
+	for drop < len(msgs)-1 && msgs[drop].Role != "user" {
+		drop++
 	}
-	if lead > 0 {
-		h.messages = h.messages[lead:]
+	return drop
+}
+
+// ContextDropped counts the stored messages that fall outside that window.
+func (h *History) ContextDropped(convID int64) (int, error) {
+	if convID == 0 {
+		return 0, nil
+	}
+	stored, err := h.store.ListMessages(convID)
+	if err != nil {
+		return 0, err
+	}
+	msgs := make([]provider.Message, 0, len(stored))
+	for _, m := range stored {
+		att := attach.LoadBestEffort(m.Attachments)
+		msgs = append(msgs, provider.Message{Role: m.Role, Content: att.Prompt(m.Content), Images: att.Images})
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return dropCount(msgs, h.max, h.maxTokens), nil
+}
+
+func (h *History) truncateLocked() {
+	if drop := dropCount(h.messages, h.max, h.maxTokens); drop > 0 {
+		h.messages = h.messages[drop:]
 	}
 }

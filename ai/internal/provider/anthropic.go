@@ -310,8 +310,11 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 					p.JSONBuf.WriteString(evt.Delta.PartialJSON)
 				}
 			}
-			if evt.Delta.Type == "thinking_delta" {
+			if evt.Delta.Type == "thinking_delta" && evt.Delta.Thinking != "" {
 				thinkingBuf.WriteString(evt.Delta.Thinking)
+				if err := fn(ChatChunk{ThinkingDelta: evt.Delta.Thinking}); err != nil {
+					return err
+				}
 			}
 			if evt.Delta.Type == "signature_delta" {
 				thinkingSignature = evt.Delta.Signature

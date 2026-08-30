@@ -135,7 +135,7 @@ func TestAttachmentsDroppedWhenFileIsGone(t *testing.T) {
 		t.Fatalf("new conversation: %v", err)
 	}
 	missing := filepath.Join(t.TempDir(), "deleted.png")
-	if err := s.AppendMessage(convID, "user", "look", []string{missing}); err != nil {
+	if err := s.AppendMessage(convID, "user", "look", []string{missing}, ""); err != nil {
 		t.Fatalf("append: %v", err)
 	}
 
@@ -260,5 +260,32 @@ func TestTruncateFromOtherConversationIsScoped(t *testing.T) {
 	still, _ := s.ListMessages(keep)
 	if len(still) != len(keepMsgs) {
 		t.Fatalf("other conversation was touched: %d -> %d", len(keepMsgs), len(still))
+	}
+}
+
+// The boundary the panel draws is only honest if it is the same arithmetic the
+// truncation itself runs.
+func TestDropCountMatchesTruncation(t *testing.T) {
+	big := ""
+	for i := 0; i < 40; i++ {
+		big += "word "
+	}
+	msgs := []provider.Message{
+		{Role: "user", Content: big},
+		{Role: "assistant", Content: big},
+		{Role: "user", Content: big},
+		{Role: "assistant", Content: "ok"},
+	}
+
+	h := &History{maxTokens: 20}
+	h.messages = append([]provider.Message(nil), msgs...)
+	want := dropCount(msgs, h.max, h.maxTokens)
+	h.truncateLocked()
+
+	if got := len(msgs) - len(h.messages); got != want {
+		t.Fatalf("dropCount said %d, truncation dropped %d", want, got)
+	}
+	if want == 0 {
+		t.Fatal("the fixture must actually overflow the budget")
 	}
 }

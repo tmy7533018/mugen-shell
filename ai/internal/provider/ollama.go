@@ -208,6 +208,7 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 	defer stall.Stop()
 
 	var toolCalls []ToolCall
+	var thinkingBuf strings.Builder
 	finished := false
 	for scanner.Scan() {
 		stall.Reset(o.stallTimeout)
@@ -218,6 +219,7 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 		var raw struct {
 			Message struct {
 				Content   string           `json:"content"`
+				Thinking  string           `json:"thinking"`
 				ToolCalls []ollamaToolCall `json:"tool_calls,omitempty"`
 			} `json:"message"`
 			Done bool `json:"done"`
@@ -235,9 +237,12 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 			})
 		}
 
-		chunk := ChatChunk{Content: raw.Message.Content, Done: raw.Done}
+		thinkingBuf.WriteString(raw.Message.Thinking)
+
+		chunk := ChatChunk{Content: raw.Message.Content, ThinkingDelta: raw.Message.Thinking, Done: raw.Done}
 		if raw.Done {
 			chunk.ToolCalls = toolCalls
+			chunk.Thinking = thinkingBuf.String()
 		}
 		if err := fn(chunk); err != nil {
 			return err

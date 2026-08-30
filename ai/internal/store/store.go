@@ -36,6 +36,8 @@ type Message struct {
 	Content string `json:"content"`
 	// Absolute paths; the bytes are read per request, never copied in here.
 	Attachments []string `json:"attachments,omitempty"`
+	// The turn's tool calls, in the same shape the stream sent them.
+	ToolCalls json.RawMessage `json:"tool_calls,omitempty"`
 }
 
 // Memory is one durable fact about the user. The full list is injected into
@@ -128,6 +130,9 @@ func (s *Store) migrate() error {
 		return err
 	}
 	if err := s.ensureColumn("messages", "attachments", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+	if err := s.ensureColumn("messages", "tool_calls", "TEXT NOT NULL DEFAULT ''"); err != nil {
 		return err
 	}
 	return nil
@@ -265,6 +270,11 @@ func (s *Store) UpdateConversationThinking(id int64, thinking bool) error {
 	return err
 }
 
+func (s *Store) UpdateConversationModel(id int64, model string) error {
+	_, err := s.db.Exec(`UPDATE conversations SET model = ? WHERE id = ?`, model, id)
+	return err
+}
+
 func (s *Store) UpdateConversationTitle(id int64, title string) error {
 	_, err := s.db.Exec(`UPDATE conversations SET title = ? WHERE id = ?`, title, id)
 	return err
@@ -328,7 +338,7 @@ func (s *Store) SizeBytes() int64 {
 	return info.Size()
 }
 
-func (s *Store) AppendMessage(convID int64, role, content string, attachments []string) error {
+func (s *Store) AppendMessage(convID int64, role, content string, attachments []string, toolCalls string) error {
 	encoded, err := encodeAttachments(attachments)
 	if err != nil {
 		return err
@@ -340,8 +350,8 @@ func (s *Store) AppendMessage(convID int64, role, content string, attachments []
 	defer tx.Rollback()
 	now := nowUnix()
 	if _, err := tx.Exec(
-		`INSERT INTO messages (conversation_id, role, content, attachments, created_at) VALUES (?, ?, ?, ?, ?)`,
-		convID, role, content, encoded, now,
+		`INSERT INTO messages (conversation_id, role, content, attachments, tool_calls, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		convID, role, content, encoded, toolCalls, now,
 	); err != nil {
 		return err
 	}
@@ -353,7 +363,7 @@ func (s *Store) AppendMessage(convID int64, role, content string, attachments []
 
 func (s *Store) ListMessages(convID int64) ([]Message, error) {
 	rows, err := s.db.Query(
-		`SELECT id, role, content, attachments FROM messages WHERE conversation_id = ? ORDER BY created_at ASC, id ASC`,
+		`SELECT id, role, content, attachments, tool_calls FROM messages WHERE conversation_id = ? ORDER BY created_at ASC, id ASC`,
 		convID,
 	)
 	if err != nil {
@@ -363,11 +373,14 @@ func (s *Store) ListMessages(convID int64) ([]Message, error) {
 	var out []Message
 	for rows.Next() {
 		var m Message
-		var attachments string
-		if err := rows.Scan(&m.ID, &m.Role, &m.Content, &attachments); err != nil {
+		var attachments, toolCalls string
+		if err := rows.Scan(&m.ID, &m.Role, &m.Content, &attachments, &toolCalls); err != nil {
 			return nil, err
 		}
 		m.Attachments = decodeAttachments(attachments)
+		if toolCalls != "" {
+			m.ToolCalls = json.RawMessage(toolCalls)
+		}
 		out = append(out, m)
 	}
 	return out, rows.Err()

@@ -54,6 +54,9 @@ type ChatChunk struct {
 	Done      bool
 	Error     string
 
+	// Streamed as it arrives: reasoning precedes the answer and must render there.
+	ThinkingDelta string
+
 	// Set on the final chunk only, for replay alongside ToolCalls.
 	Thinking          string
 	ThinkingSignature string

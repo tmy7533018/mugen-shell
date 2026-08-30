@@ -161,8 +161,7 @@ type chatRequest struct {
 	ConversationID int64  `json:"conversation_id"`
 	// Absolute paths; the bytes are read here rather than sent.
 	Attachments []string `json:"attachments,omitempty"`
-	// Used only when ConversationID == 0; existing conversations always run
-	// on the model bound to their row.
+	// Rebinds the conversation's row when it differs from the bound model.
 	Model string `json:"model,omitempty"`
 	// Pointer so absent and explicit-false stay distinguishable.
 	Thinking *bool `json:"thinking,omitempty"`
@@ -211,8 +210,11 @@ func (s *Server) beginChatTurn(req chatRequest) (convID int64, model string, thi
 	}
 
 	model = s.history.ConvModel()
-	if model == "" {
+	if req.Model != "" && req.Model != model {
 		model = req.Model
+		if err = s.history.SetConvModel(model); err != nil {
+			return 0, "", false, nil, http.StatusInternalServerError, err
+		}
 	}
 	if model == "" {
 		model = s.registry.Model()
@@ -344,6 +346,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var fullResponse string
+	var turnToolCalls []provider.ToolCall
 	// Once content has streamed or a tool fired, the user message can no longer be dropped.
 	var sideEffected bool
 
@@ -356,7 +359,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			if text := strings.TrimRight(fullResponse, "\n"); text != "" {
 				marked = text + "\n\n" + interruptedMarker
 			}
-			_ = s.history.AddAssistantTo(convID, marked)
+			_ = s.history.AddAssistantTo(convID, marked, encodeToolCalls(turnToolCalls))
 			s.events.broadcast("conversations", nil)
 			s.events.broadcast("messages", map[string]any{"conversation_id": convID})
 		} else {
@@ -374,6 +377,10 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		var iterThinking, iterThinkingSig string
 
 		err := s.registry.ChatWith(r.Context(), model, msgs, opts, func(chunk provider.ChatChunk) error {
+			// Deliberately not sideEffected: reasoning alone is not a reply worth persisting.
+			if chunk.ThinkingDelta != "" {
+				sendEvent(map[string]any{"thinking": chunk.ThinkingDelta})
+			}
 			if chunk.Content != "" {
 				iterContent += chunk.Content
 				fullResponse += chunk.Content
@@ -395,7 +402,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 
 		if len(iterToolCalls) == 0 {
 			if fullResponse != "" {
-				_ = s.history.AddAssistantTo(convID, fullResponse)
+				_ = s.history.AddAssistantTo(convID, fullResponse, encodeToolCalls(turnToolCalls))
 				s.events.broadcast("conversations", nil)
 				s.events.broadcast("messages", map[string]any{"conversation_id": convID})
 				if isFirstExchange {
@@ -414,6 +421,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			ThinkingSignature: iterThinkingSig,
 		})
 
+		turnToolCalls = append(turnToolCalls, iterToolCalls...)
 		sendEvent(map[string]any{"tool_calls": iterToolCalls})
 
 		for _, tc := range iterToolCalls {
@@ -496,6 +504,17 @@ func firstN(s string, n int) string {
 	return string(rs[:n]) + "…"
 }
 
+func encodeToolCalls(calls []provider.ToolCall) string {
+	if len(calls) == 0 {
+		return ""
+	}
+	b, err := json.Marshal(calls)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
 // A timeout or disconnect counts as a denial, so an irreversible tool never runs unattended.
 func (s *Server) awaitConfirm(ctx context.Context, tc provider.ToolCall, send func(map[string]any)) bool {
 	id, ch := s.confirms.register()
@@ -506,6 +525,7 @@ func (s *Server) awaitConfirm(ctx context.Context, tc provider.ToolCall, send fu
 			"confirm_id": id,
 			"name":       tc.Name,
 			"arguments":  tc.Arguments,
+			"expires_at": time.Now().Add(confirmTimeout).UnixMilli(),
 		},
 	})
 
@@ -637,14 +657,20 @@ func (s *Server) handleCurrentConversation(w http.ResponseWriter, _ *http.Reques
 	if msgs == nil {
 		msgs = []store.Message{}
 	}
+	dropped, err := s.history.ContextDropped(conv.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	writeJSON(w, map[string]any{
-		"id":         conv.ID,
-		"title":      conv.Title,
-		"model":      conv.Model,
-		"thinking":   conv.Thinking,
-		"created_at": conv.CreatedAt,
-		"updated_at": conv.UpdatedAt,
-		"messages":   msgs,
+		"id":              conv.ID,
+		"title":           conv.Title,
+		"model":           conv.Model,
+		"thinking":        conv.Thinking,
+		"created_at":      conv.CreatedAt,
+		"updated_at":      conv.UpdatedAt,
+		"context_dropped": dropped,
+		"messages":        msgs,
 	})
 }
 
@@ -671,14 +697,20 @@ func (s *Server) handleGetConversation(w http.ResponseWriter, r *http.Request) {
 	if msgs == nil {
 		msgs = []store.Message{}
 	}
+	dropped, err := s.history.ContextDropped(conv.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	writeJSON(w, map[string]any{
-		"id":         conv.ID,
-		"title":      conv.Title,
-		"model":      conv.Model,
-		"thinking":   conv.Thinking,
-		"created_at": conv.CreatedAt,
-		"updated_at": conv.UpdatedAt,
-		"messages":   msgs,
+		"id":              conv.ID,
+		"title":           conv.Title,
+		"model":           conv.Model,
+		"thinking":        conv.Thinking,
+		"created_at":      conv.CreatedAt,
+		"updated_at":      conv.UpdatedAt,
+		"context_dropped": dropped,
+		"messages":        msgs,
 	})
 }
 
