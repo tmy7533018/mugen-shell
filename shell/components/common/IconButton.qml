@@ -29,6 +29,8 @@ Item {
     
     signal clicked()
     signal rightClicked()
+
+    readonly property alias hovered: mouseArea.containsMouse
     
     implicitWidth: iconSize
     implicitHeight: iconSize

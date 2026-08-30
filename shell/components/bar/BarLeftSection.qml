@@ -18,7 +18,6 @@ RowLayout {
     property var typo
     property var icons
     property var modeManager
-    property var screenshotManager
     property var audioManager
     property var musicPlayerManager
     property var cavaManager
@@ -270,7 +269,6 @@ RowLayout {
         theme: root.theme
         icons: root.icons
         modeManager: root.modeManager
-        screenshotManager: root.screenshotManager
     }
     
     Separator {}

@@ -82,6 +82,7 @@ QtObject {
     readonly property var knownModes: [
         "normal", "ai", "bluetooth", "brightness", "clipboard", "launcher", "music",
         "notification", "notification-popup", "powermenu", "screenshot-gallery",
+        "screenshot-menu",
         "timer", "volume", "wallpaper", "weather", "wifi"
     ]
 

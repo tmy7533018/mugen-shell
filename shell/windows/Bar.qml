@@ -668,7 +668,6 @@ PanelWindow {
             typo: typo
             icons: icons
             modeManager: modeManager
-            screenshotManager: screenshotManager
             audioManager: audioManager
             musicPlayerManager: musicPlayerManager
             cavaManager: cavaManager
@@ -980,6 +979,23 @@ PanelWindow {
             modeManager: screenshotGalleryLoader.modeManagerRef
             screenshotManager: screenshotGalleryLoader.screenshotManagerRef
             theme: screenshotGalleryLoader.themeRef
+        }
+    }
+
+    Loader {
+        id: screenshotMenuLoader
+        anchors.fill: parent
+        z: 2
+        property var modeManagerRef: modeManager
+        property var themeRef: theme
+        property var screenshotManagerRef: screenshotManager
+        active: modeManagerRef.isMode("screenshot-menu")
+        sourceComponent: Content.ScreenshotMenuContent {
+            anchors.fill: parent
+            visible: screenshotMenuLoader.modeManagerRef.isMode("screenshot-menu")
+            modeManager: screenshotMenuLoader.modeManagerRef
+            screenshotManager: screenshotMenuLoader.screenshotManagerRef
+            theme: screenshotMenuLoader.themeRef
         }
     }
 
