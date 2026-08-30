@@ -466,12 +466,13 @@ FocusScope {
             anchors.fill: parent
             spacing: 16
 
-            UI.AppSearchField {
+            UI.SearchField {
                 id: searchField
                 theme: root.theme
                 typo: root.typo
                 icons: root.icons
-                filteredApps: root.filteredApps
+                resultCount: root.filteredApps.length
+                placeholder: "Search apps..."
                 modeManager: root.modeManager
 
                 onSearchTextChanged: (text) => {
@@ -483,7 +484,7 @@ FocusScope {
                 }
 
                 // Entering the grid must not clobber a selection the user already moved.
-                onRequestFocusGrid: (backwards) => {
+                onRequestFocusResults: (backwards) => {
                     if (appGrid.count === 0) return
                     appGrid.forceActiveFocus()
                     appGrid.userInteracted = true
@@ -492,7 +493,7 @@ FocusScope {
                 }
 
                 // The grid keeps its highlight while the field has focus, so honour it over the top hit.
-                onRequestLaunchSelected: () => {
+                onRequestActivateSelected: () => {
                     const i = appGrid.currentIndex
                     root.launchApp(i >= 0 && root.filteredApps[i]
                         ? root.filteredApps[i]

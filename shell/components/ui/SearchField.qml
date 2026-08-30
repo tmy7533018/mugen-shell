@@ -6,14 +6,15 @@ Rectangle {
     id: root
     
     required property var theme
-    required property var typo
+    property var typo: null
     required property var icons
-    required property var filteredApps
+    required property int resultCount
+    property string placeholder: "Search..."
     required property var modeManager
     
     signal searchTextChanged(string text)
-    signal requestLaunchSelected()
-    signal requestFocusGrid(bool backwards)
+    signal requestActivateSelected()
+    signal requestFocusResults(bool backwards)
     
     Layout.preferredWidth: {
         if (root.parent && root.parent.parent) {
@@ -66,7 +67,7 @@ Rectangle {
             
             Text {
                 anchors.fill: parent
-                text: "Search apps..."
+                text: root.placeholder
                 color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
                 font: searchField.font
                 visible: searchField.text.length === 0 && !searchField.activeFocus
@@ -83,11 +84,11 @@ Rectangle {
                     event.key === Qt.Key_Backtab ||
                     event.key === Qt.Key_Down || 
                     event.key === Qt.Key_Up) {
-                    root.requestFocusGrid(event.key === Qt.Key_Backtab || event.key === Qt.Key_Up)
+                    root.requestFocusResults(event.key === Qt.Key_Backtab || event.key === Qt.Key_Up)
                     event.accepted = true
                 } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                    if (root.filteredApps.length > 0) {
-                        root.requestLaunchSelected()
+                    if (root.resultCount > 0) {
+                        root.requestActivateSelected()
                         event.accepted = true
                     } else {
                         event.accepted = false

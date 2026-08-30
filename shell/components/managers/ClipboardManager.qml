@@ -1,5 +1,7 @@
 import QtQuick
+import Quickshell
 import Quickshell.Io
+import "../../lib" as Theme
 
 QtObject {
     id: root
@@ -7,12 +9,77 @@ QtObject {
     property var history: []
     
     property bool isLoading: false
+    property string searchQuery: ""
+    readonly property string thumbDir: Theme.Paths.cacheDir + "/clipboard-thumbs"
+    property var thumbTokens: ({})
+
+    // cliphist prints an image as a placeholder line; the bytes come from `cliphist decode`.
+    readonly property var imageEntry: /^\[\[\s*binary data\s+(.*?)\s*\]\]$/
+
+    function thumbnailFor(id) {
+        return thumbTokens[String(id)] === undefined
+            ? ""
+            : "file://" + thumbDir + "/" + id + ".png"
+    }
+
+    function syncThumbnails(ids) {
+        if (thumbSyncProcess.running) return
+        thumbSyncProcess.command = [
+            "bash",
+            Quickshell.shellDir + "/scripts/sync-clipboard-thumbs.sh",
+            thumbDir
+        ].concat(ids)
+        thumbSyncProcess.pending = {}
+        thumbSyncProcess.running = true
+    }
+
+    property Process thumbSyncProcess: Process {
+        id: thumbSync
+
+        command: []
+        running: false
+        property var pending: ({})
+
+        stdout: SplitParser {
+            onRead: data => {
+                let line = data.trim()
+                let sep = line.indexOf('\t')
+                if (sep > 0) thumbSync.pending[line.substring(sep + 1)] = true
+            }
+        }
+
+        onRunningChanged: {
+            if (!thumbSync.running) root.thumbTokens = thumbSync.pending
+        }
+    }
+    property bool reloadQueued: false
 
     function loadHistory() {
-        if (isLoading) return
-        
+        if (isLoading) {
+            reloadQueued = true
+            return
+        }
+
         isLoading = true
+        historyProcess.command = historyCommand()
         historyProcess.running = true
+    }
+
+    // Filtering inside cliphist keeps the window over the whole history, not over the last 50.
+    function historyCommand() {
+        let query = searchQuery.trim()
+        if (query.length === 0)
+            return ["bash", "-c", "cliphist list | head -n " + maxItems]
+        return ["bash", "-c",
+            "cliphist list | grep -i -F -- \"$1\" | head -n " + maxItems,
+            "bash", query]
+    }
+
+    onSearchQueryChanged: searchDebounce.restart()
+
+    property Timer searchDebounce: Timer {
+        interval: 120
+        onTriggered: root.loadHistory()
     }
     
     function clearHistory() {
@@ -46,7 +113,7 @@ QtObject {
     property int maxItems: 50
 
     property Process historyProcess: Process {
-        command: ["bash", "-c", "cliphist list | head -n " + root.maxItems]
+        command: []
         running: false
         property var lines: []
         
@@ -100,9 +167,12 @@ QtObject {
                         }
                     }
                     
-                    let preview = content
+                    let binary = root.imageEntry.exec(content)
+                    let isImage = binary !== null && /\b(png|jpe?g|gif|webp|bmp)\b/i.test(binary[1])
+
+                    let preview = isImage ? binary[1] : content
                     if (preview.length > 100) {
-                        preview = content.substring(0, 97) + "..."
+                        preview = preview.substring(0, 97) + "..."
                     }
                     
                     newHistory.push({
@@ -110,15 +180,22 @@ QtObject {
                         type: type,
                         content: content,
                         preview: preview,
+                        isImage: isImage,
                         timestamp: Date.now() - i * 1000
                     })
                 }
                 
                 root.history = newHistory
+                root.syncThumbnails(newHistory.filter(n => n.isImage).map(n => String(n.id)))
             } else {
                 root.history = []
             }
             historyProcess.lines = []
+
+            if (root.reloadQueued) {
+                root.reloadQueued = false
+                root.loadHistory()
+            }
         }
         
         stderr: SplitParser {

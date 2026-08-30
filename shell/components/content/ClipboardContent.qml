@@ -17,7 +17,7 @@ FocusScope {
     property var icons
     
     readonly property var requiredBarSize: ({
-        "height": modeManager.scale(420),
+        "height": modeManager.scale(480),
         "leftMargin": modeManager.scale(700),
         "rightMargin": modeManager.scale(700),
         "topMargin": modeManager.normalBarSize.topMargin,
@@ -61,6 +61,7 @@ FocusScope {
             } else {
                 currentIndex = -1
                 root.clearArmed = false
+                searchField.text = ""
             }
         }
     }
@@ -72,8 +73,8 @@ FocusScope {
         running: false
         repeat: false
         onTriggered: {
-            if (clipboardLayer) {
-                clipboardLayer.forceActiveFocus()
+            if (searchField.searchFieldItem) {
+                searchField.searchFieldItem.forceActiveFocus()
             }
         }
     }
@@ -294,6 +295,36 @@ FocusScope {
                 }
             }
 
+            UI.SearchField {
+                id: searchField
+                Layout.preferredWidth: root.modeManager.scale(420)
+                Layout.alignment: Qt.AlignHCenter
+                theme: root.theme
+                icons: root.icons
+                placeholder: "Search clipboard..."
+                resultCount: root.history.length
+                modeManager: root.modeManager
+
+                onSearchTextChanged: (text) => {
+                    root.clipboardManager.searchQuery = text
+                    root.currentIndex = -1
+                    root.modeManager.bump()
+                }
+
+                onRequestFocusResults: (backwards) => {
+                    if (root.history.length === 0) return
+                    clipboardLayer.forceActiveFocus()
+                    root.currentIndex = backwards ? root.history.length - 1 : 0
+                    clipboardList.positionViewAtIndex(root.currentIndex, ListView.Contain)
+                }
+
+                onRequestActivateSelected: () => {
+                    const i = root.currentIndex >= 0 ? root.currentIndex : 0
+                    root.clipboardManager.selectItem(root.history[i].id)
+                    root.modeManager.closeAllModes()
+                }
+            }
+
             Item {
                 Layout.preferredWidth: modeManager.scale(420)
                 Layout.preferredHeight: modeManager.scale(320)
@@ -412,6 +443,10 @@ FocusScope {
                             }
                         }
 
+                        readonly property string thumbnail: delegateRoot.modelData && delegateRoot.modelData.isImage
+                            ? root.clipboardManager.thumbnailFor(delegateRoot.modelData.id)
+                            : ""
+
                         readonly property bool isCurrent: root.currentIndex === index
                         readonly property bool isActive: isCurrent
                             || (itemMouseArea.containsMouse && !root.suppressHover)
@@ -456,20 +491,48 @@ FocusScope {
                                 anchors.rightMargin: modeManager.scale(20)
                                 spacing: 12
                             
+                                Item {
+                                    Layout.preferredWidth: modeManager.scale(44)
+                                    Layout.preferredHeight: modeManager.scale(34)
+                                    visible: delegateRoot.thumbnail !== ""
+
+                                    Image {
+                                        id: thumbImage
+                                        anchors.fill: parent
+                                        source: delegateRoot.thumbnail
+                                        fillMode: Image.PreserveAspectCrop
+                                        sourceSize.width: modeManager.scale(88)
+                                        asynchronous: true
+                                        smooth: true
+                                        visible: false
+                                    }
+
+                                    OpacityMask {
+                                        anchors.fill: thumbImage
+                                        source: thumbImage
+                                        visible: thumbImage.status === Image.Ready
+                                        maskSource: Rectangle {
+                                            width: thumbImage.width
+                                            height: thumbImage.height
+                                            radius: modeManager.scale(8)
+                                        }
+                                    }
+                                }
+
                                 UI.SvgIcon {
                                     width: 20
                                     height: 20
                                     source: icons ? icons.iconData.clipboard.value : ""
                                     color: theme ? theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                                     opacity: 0.8
-                                    visible: icons && icons.iconData.clipboard.type === "svg"
+                                    visible: delegateRoot.thumbnail === "" && icons && icons.iconData.clipboard.type === "svg"
                                 }
                             
                                 Text {
                                     text: "📋"
                                     font.pixelSize: 20
                                     opacity: 0.8
-                                    visible: !icons || icons.iconData.clipboard.type !== "svg"
+                                    visible: delegateRoot.thumbnail === "" && (!icons || icons.iconData.clipboard.type !== "svg")
                                 }
                             
                                 Text {
