@@ -63,18 +63,15 @@ QtObject {
                lower.endsWith('.mkv') || lower.endsWith('.gif')
     }
 
-    function thumbnailPathFor(videoPath) {
-        return thumbDir + "/" + videoPath.split('/').pop() + ".png"
+    function thumbnailPathFor(path) {
+        return thumbDir + "/" + path.split('/').pop() + ".png"
     }
 
-    // Empty until a video's thumbnail exists, so the delegate can hold a placeholder.
+    // A video has nothing to show until its thumbnail renders; an image can stand in for itself.
     function thumbnailSource(path) {
-        if (!isVideoFile(path))
-            return "file://" + path
-
         let token = thumbTokens[path]
         if (token === undefined)
-            return ""
+            return isVideoFile(path) ? "" : "file://" + path
 
         let url = "file://" + thumbnailPathFor(path)
         return token > 0 ? url + "#" + token : url
@@ -110,12 +107,11 @@ QtObject {
         if (thumbSyncProcess.running)
             return
 
-        let videos = (wallpapers || []).filter(isVideoFile)
         thumbSyncProcess.command = [
             "bash",
             Quickshell.shellDir + "/scripts/sync-wallpaper-thumbs.sh",
             thumbDir
-        ].concat(videos)
+        ].concat(wallpapers || [])
         thumbSyncProcess.running = true
     }
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Usage: sync-wallpaper-thumbs.sh <thumb-dir> [video...]
+# Usage: sync-wallpaper-thumbs.sh <thumb-dir> [file...]
 # Prints "ok<TAB><path>" or "new<TAB><path>" — Qt only reloads an image whose URL changed.
 set -uo pipefail
 
 THUMB_DIR="${1:-}"
-[[ -z "$THUMB_DIR" ]] && { echo "Usage: $0 <thumb-dir> [video...]" >&2; exit 1; }
+[[ -z "$THUMB_DIR" ]] && { echo "Usage: $0 <thumb-dir> [file...]" >&2; exit 1; }
 shift
 
 mkdir -p "$THUMB_DIR"
@@ -36,11 +36,22 @@ for src; do
   # Without this a file ffmpeg cannot decode would be retried on every poll.
   [[ -f "$fail" && ! "$src" -nt "$fail" ]] && continue
 
-  # Seeking to 2s yields no frame on clips shorter than that, so fall back to the first frame.
-  if ffmpeg -y -v error -ss 2 -i "$src" -vf "$SCALE" -frames:v 1 "$out" >/dev/null 2>&1 && [[ -s "$out" ]]; then
-    rm -f "$fail"
-    printf 'new\t%s\n' "$src"
-  elif ffmpeg -y -v error -i "$src" -vf "$SCALE" -frames:v 1 "$out" >/dev/null 2>&1 && [[ -s "$out" ]]; then
+  ok=0
+  # Seeking only makes sense for video, and on a still it just costs a wasted ffmpeg run.
+  case "${src,,}" in
+  *.mp4|*.webm|*.mkv|*.gif)
+    # A clip shorter than 2s yields no frame there, so the first-frame pass below catches it.
+    ffmpeg -y -v error -ss 2 -i "$src" -vf "$SCALE" -frames:v 1 "$out" >/dev/null 2>&1 &&
+      [[ -s "$out" ]] && ok=1
+    ;;
+  esac
+
+  if [[ $ok -eq 0 ]]; then
+    ffmpeg -y -v error -i "$src" -vf "$SCALE" -frames:v 1 "$out" >/dev/null 2>&1 &&
+      [[ -s "$out" ]] && ok=1
+  fi
+
+  if [[ $ok -eq 1 ]]; then
     rm -f "$fail"
     printf 'new\t%s\n' "$src"
   else
