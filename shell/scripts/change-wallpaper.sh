@@ -102,6 +102,12 @@ is_video() {
   esac
 }
 
+if ! is_image "$WALLPAPER_ABS" && ! is_video "$WALLPAPER_ABS"; then
+  echo "Unsupported file format: $WALLPAPER_ABS" >&2
+  notify_failure "Unsupported file format: ${WALLPAPER_ABS##*/}"
+  exit 1
+fi
+
 theme_mode() {
   local mode=""
   [[ -f "$THEME_MODE_FILE" ]] && mode="$(tr -d '\n' < "$THEME_MODE_FILE")"
@@ -336,10 +342,5 @@ elif is_video "$WALLPAPER_ABS"; then
   echo "mpvpaper failed to start, check $THUMB_DIR/mpvpaper.log" >&2
   debug_log "mpvpaper: FAILED to start"
   cat "$THUMB_DIR/mpvpaper.log" >> "$DEBUG_LOG" 2>/dev/null || true
-  exit 1
-
-else
-  echo "Unsupported file format: $WALLPAPER_ABS" >&2
-  notify_failure "Unsupported file format: ${WALLPAPER_ABS##*/}"
   exit 1
 fi
