@@ -37,7 +37,11 @@ ShellRoot {
         function open()   { yuraState.open() }
         function close()  { yuraState.close() }
         // Called by the bar spotlight orb with its screen position, so the panel orb can fly in.
-        function toggleFrom(x: int, y: int, size: int) { yuraState.toggleFrom(x, y, size) }
+        function toggleFrom(x: int, y: int, size: int, conv_id: int) {
+            yuraState.toggleFrom(x, y, size)
+            // toggleFrom is a toggle, so a conversation must not follow the closing half.
+            if (conv_id > 0 && yuraState.expanded) chatPanel.showConversation(conv_id)
+        }
         // Called by the voice daemon.
         function show_conversation(id: int) { chatPanel.showConversation(id) }
         function set_speaking(on: bool) { chatPanel.setVoiceSpeaking(on) }

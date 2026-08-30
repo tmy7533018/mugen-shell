@@ -55,6 +55,8 @@ FocusScope {
     property bool userScrolled: false
     property int speakingIndex: -1
     property string currentModel: ""
+    // Messages before this index were dropped from the window sent to the model.
+    property int contextDropped: 0
     // Tracked separately so an old chat can show its bound model without clobbering the default.
     property string defaultModel: ""
     property var availableModels: []
@@ -612,11 +614,8 @@ FocusScope {
             currentModel: root.currentModel
             availableModels: root.availableModels
             isOpen: root.modelDropdownOpen
-            // An active chat is bound to its model; only the next conversation's default is editable.
-            editable: root.currentConvId === 0
 
             onToggled: {
-                if (!editable) return
                 root.modelDropdownOpen = !root.modelDropdownOpen
             }
             onModelChosen: name => {
@@ -1735,29 +1734,14 @@ FocusScope {
                 if (!sameConv) root.revealActive = false
                 root.currentConvId = obj.id || 0
                 let msgs = obj.messages || []
-                // Persisted history keeps only role/content, so carry tool-call chips over by order.
-                let prevTools = []
-                if (sameConv) {
-                    for (let i = 0; i < root.messages.length; i++) {
-                        let pm = root.messages[i]
-                        if (pm.role === "assistant") {
-                            prevTools.push((pm.toolCalls && pm.toolCalls.length > 0) ? pm.toolCalls : null)
-                        }
-                    }
-                }
-                let ai = 0
-                root.messages = msgs.map(m => {
-                    if (m.role === "assistant") {
-                        let tc = prevTools[ai++]
-                        if (tc) return { id: m.id, role: m.role, content: m.content, toolCalls: tc }
-                    }
-                    return {
-                        id: m.id,
-                        role: m.role,
-                        content: m.content,
-                        attachments: m.attachments || []
-                    }
-                })
+                root.messages = msgs.map(m => ({
+                    id: m.id,
+                    role: m.role,
+                    content: m.content,
+                    attachments: m.attachments || [],
+                    toolCalls: m.tool_calls || []
+                }))
+                root.contextDropped = obj.context_dropped || 0
                 if (root.currentConvId !== 0 && obj.model) {
                     root.currentModel = obj.model
                 }

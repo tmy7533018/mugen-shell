@@ -236,7 +236,8 @@ FocusScope {
                         const p = orbSlot.mapToItem(null, 0, 0)
                         modeManager.closeAllModes()
                         Theme.Hypr.exec("qs -p " + Quickshell.shellDir + "/yura-shell.qml ipc call yura toggleFrom "
-                            + Math.round(p.x) + " " + Math.round(p.y) + " " + Math.round(orbSlot.width))
+                            + Math.round(p.x) + " " + Math.round(p.y) + " " + Math.round(orbSlot.width)
+                            + " " + root.currentConvId)
                     }
                 }
             }

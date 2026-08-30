@@ -18,8 +18,12 @@ PanelWindow {
     required property var aiBackend
     required property var settingsManager
 
+    property int pendingConversation: 0
+
+    // The content loader is asynchronous, so the first hand-off lands before there is an item.
     function showConversation(convId) {
         if (contentLoader.item) contentLoader.item.showConversation(convId)
+        else pendingConversation = convId
     }
 
     property bool voiceSpeaking: false
@@ -314,7 +318,14 @@ PanelWindow {
 
             property bool everLoaded: false
             active: yuraState.expanded || everLoaded
-            onLoaded: everLoaded = true
+            onLoaded: {
+                everLoaded = true
+                if (chatWindow.pendingConversation > 0) {
+                    const convId = chatWindow.pendingConversation
+                    chatWindow.pendingConversation = 0
+                    chatWindow.showConversation(convId)
+                }
+            }
 
             sourceComponent: Content.AiAssistantFloatingContent {
                 id: aiContent
