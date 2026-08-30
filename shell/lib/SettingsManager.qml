@@ -26,6 +26,7 @@ QtObject {
     property string notificationSound: "None"  // filename in assets/sounds/, or "None"
     property bool notificationsEnabled: true  // DnD = !notificationsEnabled
     property int notificationPopupTimeout: 5000  // ms, 0 = never auto-close
+    property bool notificationSuppressOnFullscreen: false
     property string launcherTerminal: "kitty"  // command used to launch Terminal=true apps
     property string timerSound: "None"  // filename in assets/sounds/, or "None"
     property int lockTimerMinutes: 10  // hypridle screen-lock idle timeout
@@ -134,6 +135,7 @@ QtObject {
             "notification": {
                 "sound": notificationSound,
                 "enabled": notificationsEnabled,
+                "suppressOnFullscreen": notificationSuppressOnFullscreen,
                 "popupTimeout": notificationPopupTimeout
             },
             "launcher": {
@@ -306,6 +308,9 @@ QtObject {
                     }
                     if (settings.notification.enabled !== undefined) {
                         notificationsEnabled = settings.notification.enabled
+                    }
+                    if (settings.notification.suppressOnFullscreen !== undefined) {
+                        notificationSuppressOnFullscreen = settings.notification.suppressOnFullscreen
                     }
                     if (settings.notification.popupTimeout !== undefined) {
                         notificationPopupTimeout = settings.notification.popupTimeout

@@ -9,6 +9,7 @@ Item {
     required property var modeManager
     required property var notificationManager
     property var settingsManager
+    property bool fullscreenActive: false
     property var theme
     property var icons
     
@@ -46,6 +47,11 @@ Item {
         target: notificationManager
         function onNotificationReceived(notification) {
             if (!notificationManager.notificationsEnabled) {
+                return
+            }
+            // Held back from the screen only; the notification is already in the list.
+            if (root.fullscreenActive && root.settingsManager
+                    && root.settingsManager.notificationSuppressOnFullscreen) {
                 return
             }
 

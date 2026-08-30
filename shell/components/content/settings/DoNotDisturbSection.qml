@@ -10,7 +10,7 @@ Rectangle {
     required property var settingsManager
 
     width: parent ? parent.width : 420
-    height: 64
+    height: 104
     color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
     radius: 20
     border.width: 1
@@ -20,30 +20,63 @@ Rectangle {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
     }
 
-    RowLayout {
+    ColumnLayout {
         anchors.fill: parent
         anchors.margins: 12
-        spacing: 12
+        spacing: 8
 
-        Text {
+        RowLayout {
             Layout.fillWidth: true
-            text: "Do Not Disturb"
-            color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-            font.pixelSize: 12
-            font.family: "M PLUS 2"
-            font.weight: Font.Normal
-            font.letterSpacing: 0.5
+            spacing: 12
+
+            Text {
+                Layout.fillWidth: true
+                text: "Do Not Disturb"
+                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                font.pixelSize: 12
+                font.family: "M PLUS 2"
+                font.weight: Font.Normal
+                font.letterSpacing: 0.5
+            }
+
+            Common.Switch {
+                checked: section.settingsManager ? !section.settingsManager.notificationsEnabled : false
+                theme: section.theme
+
+                onToggled: value => {
+                    if (section.settingsManager) {
+                        section.settingsManager.notificationsEnabled = !value
+                        section.settingsManager.saveSettings()
+                        section.bump()
+                    }
+                }
+            }
         }
 
-        Common.Switch {
-            checked: section.settingsManager ? !section.settingsManager.notificationsEnabled : false
-            theme: section.theme
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
 
-            onToggled: value => {
-                if (section.settingsManager) {
-                    section.settingsManager.notificationsEnabled = !value
-                    section.settingsManager.saveSettings()
-                    section.bump()
+            Text {
+                Layout.fillWidth: true
+                text: "Hide Popups in Fullscreen"
+                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                font.pixelSize: 12
+                font.family: "M PLUS 2"
+                font.weight: Font.Normal
+                font.letterSpacing: 0.5
+            }
+
+            Common.Switch {
+                checked: section.settingsManager ? section.settingsManager.notificationSuppressOnFullscreen : false
+                theme: section.theme
+
+                onToggled: value => {
+                    if (section.settingsManager) {
+                        section.settingsManager.notificationSuppressOnFullscreen = value
+                        section.settingsManager.saveSettings()
+                        section.bump()
+                    }
                 }
             }
         }

@@ -18,6 +18,7 @@
   "notification": {
     "sound": "None",
     "enabled": true,
+    "suppressOnFullscreen": false,
     "popupTimeout": 5000
   },
   "launcher": {

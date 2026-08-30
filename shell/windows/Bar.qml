@@ -1010,6 +1010,7 @@ PanelWindow {
         modeManager: modeManager
         notificationManager: notificationManager
         settingsManager: settingsManager
+        fullscreenActive: barWindow.fullscreenActive
         theme: theme
         icons: icons
     }
