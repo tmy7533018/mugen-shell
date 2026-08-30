@@ -664,6 +664,13 @@ Item {
                             root.resetAutoCloseTimer()
                         }
                         
+                        onActionInvoked: (notificationId, action) => {
+                            if (root.notificationManager.invokeAction(notificationId, action)) {
+                                root.removeNotification(notificationId)
+                            }
+                            root.resetAutoCloseTimer()
+                        }
+
                         onActionRequested: (notif) => {
                             if (notif.desktopEntry && notif.desktopEntry.length > 0) {
                                 launchAppProcess.command = ["mugen-ai", "hypr", "focus-or-launch", notif.desktopEntry]

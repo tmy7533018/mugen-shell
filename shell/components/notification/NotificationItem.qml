@@ -18,6 +18,7 @@ Rectangle {
     signal removeRequested(var notificationId)
     signal swipeRemoved(var notificationId)
     signal actionRequested(var notif)
+    signal actionInvoked(var notificationId, var action)
     
     width: parent ? parent.width : 0
     height: shouldCollapseHeight ? 0 : (isExpanded && !notificationItem.isRemoving ? contentColumn.implicitHeight + 24 : 65)
@@ -262,6 +263,18 @@ Rectangle {
             visible: notificationItem.isExpanded
 
             Item { Layout.fillWidth: true }
+
+            Repeater {
+                model: notificationItem.modelData ? notificationItem.modelData.actions : []
+
+                delegate: NotificationPill {
+                    required property var modelData
+
+                    theme: notificationItem.theme
+                    label: modelData.text
+                    onClicked: notificationItem.actionInvoked(notificationItem.modelData.id, modelData)
+                }
+            }
 
             Rectangle {
                 id: openBtn

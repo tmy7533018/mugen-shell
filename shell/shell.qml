@@ -42,6 +42,8 @@ ShellRoot {
         target: notifySrv
 
         function onNotification(n) {
+            // Untracked, the object is freed as soon as this returns, taking its actions with it.
+            n.tracked = true
             barWindow.notificationManager.addNotification(n)
         }
     }
