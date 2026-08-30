@@ -226,7 +226,7 @@ QtObject {
         resetProcess.running = true
     }
 
-    // One unassignable value throws and abandons every section below it, so hand-edited colours fall back instead.
+    // An unassignable value throws and abandons the rest of its section, so hand-edited colours fall back instead.
     function _unitOr(v, fallback) {
         const n = Number(v)
         return isFinite(n) ? Math.max(0, Math.min(1, n)) : fallback
@@ -240,213 +240,289 @@ QtObject {
 
             _applyingExternal = true
 
-            if (settings.autoCloseTimer) {
-                if (settings.autoCloseTimer.interval !== undefined) {
-                    autoCloseTimerInterval = settings.autoCloseTimer.interval
+            try {
+                if (settings.autoCloseTimer) {
+                    if (settings.autoCloseTimer.interval !== undefined) {
+                        autoCloseTimerInterval = settings.autoCloseTimer.interval
+                    }
+                    // Legacy key: enabled=false meant interval 0.
+                    if (settings.autoCloseTimer.enabled === false) {
+                        autoCloseTimerInterval = 0
+                    }
                 }
-                // Legacy key: enabled=false meant interval 0.
-                if (settings.autoCloseTimer.enabled === false) {
-                    autoCloseTimerInterval = 0
-                }
+            } catch (e) {
+                console.error("Failed to apply settings.autoCloseTimer:", e)
             }
 
-            if (settings.barBackground) {
-                if (settings.barBackground.enabled !== undefined) {
-                    moduleBackdropEnabled = settings.barBackground.enabled
-                } else if (settings.barBackground.gradientEnabled !== undefined) {
-                    // Pre-839a636 key: same on/off, renamed when the flat gradient was dropped.
-                    moduleBackdropEnabled = settings.barBackground.gradientEnabled
+            try {
+                if (settings.barBackground) {
+                    if (settings.barBackground.enabled !== undefined) {
+                        moduleBackdropEnabled = settings.barBackground.enabled
+                    } else if (settings.barBackground.gradientEnabled !== undefined) {
+                        // Pre-839a636 key: same on/off, renamed when the flat gradient was dropped.
+                        moduleBackdropEnabled = settings.barBackground.gradientEnabled
+                    }
+                    if (settings.barBackground.palette !== undefined) {
+                        moduleBackdropPalette = settings.barBackground.palette
+                    }
+                    if (settings.barBackground.spread !== undefined) {
+                        moduleBackdropSpread = settings.barBackground.spread
+                    }
                 }
-                if (settings.barBackground.palette !== undefined) {
-                    moduleBackdropPalette = settings.barBackground.palette
-                }
-                if (settings.barBackground.spread !== undefined) {
-                    moduleBackdropSpread = settings.barBackground.spread
-                }
+            } catch (e) {
+                console.error("Failed to apply settings.barBackground:", e)
             }
 
-            if (settings.batteryIndicator) {
-                if (settings.batteryIndicator.enabled !== undefined) {
-                    batteryIndicatorEnabled = settings.batteryIndicator.enabled
+            try {
+                if (settings.batteryIndicator) {
+                    if (settings.batteryIndicator.enabled !== undefined) {
+                        batteryIndicatorEnabled = settings.batteryIndicator.enabled
+                    }
                 }
+            } catch (e) {
+                console.error("Failed to apply settings.batteryIndicator:", e)
             }
 
-            if (settings.animations) {
-                if (settings.animations.speed !== undefined) {
-                    animationSpeed = settings.animations.speed
+            try {
+                if (settings.animations) {
+                    if (settings.animations.speed !== undefined) {
+                        animationSpeed = settings.animations.speed
+                    }
+                    if (settings.animations.durationMultiplier !== undefined) {
+                        animationDurationMultiplier = settings.animations.durationMultiplier
+                    }
+                    if (settings.animations.reduceMotion !== undefined) {
+                        reduceMotion = settings.animations.reduceMotion
+                    }
                 }
-                if (settings.animations.durationMultiplier !== undefined) {
-                    animationDurationMultiplier = settings.animations.durationMultiplier
-                }
-                if (settings.animations.reduceMotion !== undefined) {
-                    reduceMotion = settings.animations.reduceMotion
-                }
+            } catch (e) {
+                console.error("Failed to apply settings.animations:", e)
             }
 
-            if (settings.notification) {
-                if (settings.notification.sound !== undefined) {
-                    notificationSound = settings.notification.sound
+            try {
+                if (settings.notification) {
+                    if (settings.notification.sound !== undefined) {
+                        notificationSound = settings.notification.sound
+                    }
+                    if (settings.notification.enabled !== undefined) {
+                        notificationsEnabled = settings.notification.enabled
+                    }
+                    if (settings.notification.popupTimeout !== undefined) {
+                        notificationPopupTimeout = settings.notification.popupTimeout
+                    }
                 }
-                if (settings.notification.enabled !== undefined) {
-                    notificationsEnabled = settings.notification.enabled
-                }
-                if (settings.notification.popupTimeout !== undefined) {
-                    notificationPopupTimeout = settings.notification.popupTimeout
-                }
+            } catch (e) {
+                console.error("Failed to apply settings.notification:", e)
             }
 
-            if (settings.launcher) {
-                if (settings.launcher.terminal !== undefined) {
-                    launcherTerminal = settings.launcher.terminal
+            try {
+                if (settings.launcher) {
+                    if (settings.launcher.terminal !== undefined) {
+                        launcherTerminal = settings.launcher.terminal
+                    }
                 }
+            } catch (e) {
+                console.error("Failed to apply settings.launcher:", e)
             }
 
-            if (settings.timer) {
-                if (settings.timer.sound !== undefined) {
-                    timerSound = settings.timer.sound
+            try {
+                if (settings.timer) {
+                    if (settings.timer.sound !== undefined) {
+                        timerSound = settings.timer.sound
+                    }
                 }
+            } catch (e) {
+                console.error("Failed to apply settings.timer:", e)
             }
 
-            if (settings.lockTimer) {
-                if (settings.lockTimer.minutes !== undefined) {
-                    lockTimerMinutes = settings.lockTimer.minutes
+            try {
+                if (settings.lockTimer) {
+                    if (settings.lockTimer.minutes !== undefined) {
+                        lockTimerMinutes = settings.lockTimer.minutes
+                    }
                 }
+            } catch (e) {
+                console.error("Failed to apply settings.lockTimer:", e)
             }
 
-            if (settings.idle) {
-                if (settings.idle.suspendMinutes !== undefined) {
-                    idleSuspendMinutes = settings.idle.suspendMinutes
+            try {
+                if (settings.idle) {
+                    if (settings.idle.suspendMinutes !== undefined) {
+                        idleSuspendMinutes = settings.idle.suspendMinutes
+                    }
+                    if (settings.idle.dpmsMinutes !== undefined) {
+                        idleDpmsMinutes = settings.idle.dpmsMinutes
+                    }
                 }
-                if (settings.idle.dpmsMinutes !== undefined) {
-                    idleDpmsMinutes = settings.idle.dpmsMinutes
-                }
+            } catch (e) {
+                console.error("Failed to apply settings.idle:", e)
             }
 
-            if (settings.date) {
-                if (settings.date.format !== undefined) {
-                    dateFormat = settings.date.format
+            try {
+                if (settings.date) {
+                    if (settings.date.format !== undefined) {
+                        dateFormat = settings.date.format
+                    }
                 }
+            } catch (e) {
+                console.error("Failed to apply settings.date:", e)
             }
 
-            if (settings.clock) {
-                if (settings.clock.show24Hour !== undefined) {
-                    clockShow24Hour = settings.clock.show24Hour
+            try {
+                if (settings.clock) {
+                    if (settings.clock.show24Hour !== undefined) {
+                        clockShow24Hour = settings.clock.show24Hour
+                    }
+                    if (settings.clock.showSeconds !== undefined) {
+                        clockShowSeconds = settings.clock.showSeconds
+                    }
                 }
-                if (settings.clock.showSeconds !== undefined) {
-                    clockShowSeconds = settings.clock.showSeconds
-                }
+            } catch (e) {
+                console.error("Failed to apply settings.clock:", e)
             }
 
-            if (settings.weather) {
-                if (settings.weather.enabled !== undefined) {
-                    weatherEnabled = settings.weather.enabled
+            try {
+                if (settings.weather) {
+                    if (settings.weather.enabled !== undefined) {
+                        weatherEnabled = settings.weather.enabled
+                    }
+                    if (settings.weather.location !== undefined) {
+                        weatherLocation = settings.weather.location
+                    }
+                    if (settings.weather.unit !== undefined) {
+                        weatherUnit = settings.weather.unit
+                    }
                 }
-                if (settings.weather.location !== undefined) {
-                    weatherLocation = settings.weather.location
-                }
-                if (settings.weather.unit !== undefined) {
-                    weatherUnit = settings.weather.unit
-                }
+            } catch (e) {
+                console.error("Failed to apply settings.weather:", e)
             }
 
-            if (settings.calendar) {
-                if (settings.calendar.weekStart !== undefined) {
-                    calendarWeekStart = settings.calendar.weekStart
+            try {
+                if (settings.calendar) {
+                    if (settings.calendar.weekStart !== undefined) {
+                        calendarWeekStart = settings.calendar.weekStart
+                    }
                 }
+            } catch (e) {
+                console.error("Failed to apply settings.calendar:", e)
             }
 
-            if (settings.bar) {
-                if (settings.bar.height !== undefined) {
-                    barHeight = settings.bar.height
+            try {
+                if (settings.bar) {
+                    if (settings.bar.height !== undefined) {
+                        barHeight = settings.bar.height
+                    }
+                    if (settings.bar.radius !== undefined) {
+                        barRadius = settings.bar.radius
+                    }
+                    if (settings.bar.marginH !== undefined) {
+                        barMarginH = settings.bar.marginH
+                    }
+                    if (settings.bar.marginV !== undefined) {
+                        barMarginV = settings.bar.marginV
+                    }
+                    if (settings.bar.surface) {
+                        const sf = settings.bar.surface
+                        if (sf.custom !== undefined) barSurfaceCustom = sf.custom
+                        if (sf.hue !== undefined) barSurfaceHue = _unitOr(sf.hue, barSurfaceHue)
+                        if (sf.saturation !== undefined) barSurfaceSaturation = _unitOr(sf.saturation, barSurfaceSaturation)
+                        if (sf.lightness !== undefined) barSurfaceLightness = _unitOr(sf.lightness, barSurfaceLightness)
+                        if (sf.opacity !== undefined) barSurfaceOpacity = _unitOr(sf.opacity, barSurfaceOpacity)
+                        if (sf.border !== undefined) barSurfaceBorder = sf.border
+                    }
                 }
-                if (settings.bar.radius !== undefined) {
-                    barRadius = settings.bar.radius
-                }
-                if (settings.bar.marginH !== undefined) {
-                    barMarginH = settings.bar.marginH
-                }
-                if (settings.bar.marginV !== undefined) {
-                    barMarginV = settings.bar.marginV
-                }
-                if (settings.bar.surface) {
-                    const sf = settings.bar.surface
-                    if (sf.custom !== undefined) barSurfaceCustom = sf.custom
-                    if (sf.hue !== undefined) barSurfaceHue = _unitOr(sf.hue, barSurfaceHue)
-                    if (sf.saturation !== undefined) barSurfaceSaturation = _unitOr(sf.saturation, barSurfaceSaturation)
-                    if (sf.lightness !== undefined) barSurfaceLightness = _unitOr(sf.lightness, barSurfaceLightness)
-                    if (sf.opacity !== undefined) barSurfaceOpacity = _unitOr(sf.opacity, barSurfaceOpacity)
-                    if (sf.border !== undefined) barSurfaceBorder = sf.border
-                }
+            } catch (e) {
+                console.error("Failed to apply settings.bar:", e)
             }
 
-            if (settings.workspaces) {
-                if (settings.workspaces.count !== undefined) {
-                    workspaceCount = settings.workspaces.count
+            try {
+                if (settings.workspaces) {
+                    if (settings.workspaces.count !== undefined) {
+                        workspaceCount = settings.workspaces.count
+                    }
                 }
+            } catch (e) {
+                console.error("Failed to apply settings.workspaces:", e)
             }
 
-            if (settings.display) {
-                if (settings.display.monitor !== undefined) {
-                    displayMonitor = settings.display.monitor
+            try {
+                if (settings.display) {
+                    if (settings.display.monitor !== undefined) {
+                        displayMonitor = settings.display.monitor
+                    }
                 }
+            } catch (e) {
+                console.error("Failed to apply settings.display:", e)
             }
 
-            if (settings.ai) {
-                if (settings.ai.barModel !== undefined) {
-                    barAiModel = settings.ai.barModel
+            try {
+                if (settings.ai) {
+                    if (settings.ai.barModel !== undefined) {
+                        barAiModel = settings.ai.barModel
+                    }
+                    if (settings.ai.barThinking !== undefined) {
+                        barThinking = settings.ai.barThinking
+                    }
                 }
-                if (settings.ai.barThinking !== undefined) {
-                    barThinking = settings.ai.barThinking
-                }
+            } catch (e) {
+                console.error("Failed to apply settings.ai:", e)
             }
 
-            if (settings.yura) {
-                if (settings.yura.panelSide !== undefined) {
-                    yuraPanelSide = settings.yura.panelSide
+            try {
+                if (settings.yura) {
+                    if (settings.yura.panelSide !== undefined) {
+                        yuraPanelSide = settings.yura.panelSide
+                    }
+                    if (settings.yura.panelWidth !== undefined) {
+                        yuraPanelWidth = settings.yura.panelWidth
+                    }
+                    if (settings.yura.panelHeight !== undefined) {
+                        yuraPanelHeight = settings.yura.panelHeight
+                    }
+                    if (settings.yura.sidebarCollapsed !== undefined) {
+                        yuraSidebarCollapsed = settings.yura.sidebarCollapsed
+                    }
+                    if (settings.yura.idleBreath !== undefined) {
+                        yuraIdleBreath = settings.yura.idleBreath
+                    }
+                    if (settings.yura.autoCollapseMin !== undefined) {
+                        yuraAutoCollapseMin = settings.yura.autoCollapseMin
+                    }
+                    if (settings.yura.typingSpeed !== undefined) {
+                        yuraTypingSpeed = settings.yura.typingSpeed
+                    }
                 }
-                if (settings.yura.panelWidth !== undefined) {
-                    yuraPanelWidth = settings.yura.panelWidth
-                }
-                if (settings.yura.panelHeight !== undefined) {
-                    yuraPanelHeight = settings.yura.panelHeight
-                }
-                if (settings.yura.sidebarCollapsed !== undefined) {
-                    yuraSidebarCollapsed = settings.yura.sidebarCollapsed
-                }
-                if (settings.yura.idleBreath !== undefined) {
-                    yuraIdleBreath = settings.yura.idleBreath
-                }
-                if (settings.yura.autoCollapseMin !== undefined) {
-                    yuraAutoCollapseMin = settings.yura.autoCollapseMin
-                }
-                if (settings.yura.typingSpeed !== undefined) {
-                    yuraTypingSpeed = settings.yura.typingSpeed
-                }
+            } catch (e) {
+                console.error("Failed to apply settings.yura:", e)
             }
 
-            if (settings.voice) {
-                if (settings.voice.enabled !== undefined) {
-                    voiceEnabled = settings.voice.enabled
+            try {
+                if (settings.voice) {
+                    if (settings.voice.enabled !== undefined) {
+                        voiceEnabled = settings.voice.enabled
+                    }
+                    if (settings.voice.speed !== undefined) {
+                        voiceSpeed = settings.voice.speed
+                    }
+                    if (settings.voice.tts !== undefined) {
+                        voiceTts = settings.voice.tts
+                    } else if (settings.voice.speaker !== undefined) {
+                        voiceTts = "voicevox:" + settings.voice.speaker
+                    }
+                    if (settings.voice.ttsByLang !== undefined
+                            && typeof settings.voice.ttsByLang === "object"
+                            && settings.voice.ttsByLang !== null) {
+                        voiceTtsByLang = settings.voice.ttsByLang
+                    }
+                    if (settings.voice.editingLang !== undefined) {
+                        voiceEditingLang = settings.voice.editingLang
+                    }
+                    if (settings.voice.volume !== undefined) {
+                        voiceVolume = settings.voice.volume
+                    }
                 }
-                if (settings.voice.speed !== undefined) {
-                    voiceSpeed = settings.voice.speed
-                }
-                if (settings.voice.tts !== undefined) {
-                    voiceTts = settings.voice.tts
-                } else if (settings.voice.speaker !== undefined) {
-                    voiceTts = "voicevox:" + settings.voice.speaker
-                }
-                if (settings.voice.ttsByLang !== undefined
-                        && typeof settings.voice.ttsByLang === "object"
-                        && settings.voice.ttsByLang !== null) {
-                    voiceTtsByLang = settings.voice.ttsByLang
-                }
-                if (settings.voice.editingLang !== undefined) {
-                    voiceEditingLang = settings.voice.editingLang
-                }
-                if (settings.voice.volume !== undefined) {
-                    voiceVolume = settings.voice.volume
-                }
+            } catch (e) {
+                console.error("Failed to apply settings.voice:", e)
             }
 
             updateAnimationMultiplier()
