@@ -391,6 +391,11 @@ in
         install_product_tree() {
           local src="$1" dst="$2"; shift 2
           local f rel mode skip
+          # dev/link-configs.sh points this at the checkout, where a refresh would revert tracked files.
+          if [[ -L "$dst" ]]; then
+            echo "mugen-shell: $dst is a symlink, skipping product refresh" >&2
+            return
+          fi
           # Trailing names are seeded once: the machine or the user owns them afterwards.
           while IFS= read -r -d "" f; do
             rel="''${f#"$src"/}"
