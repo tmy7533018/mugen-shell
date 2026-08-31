@@ -200,12 +200,7 @@ FocusScope {
             error: null,
             pending: true
         }))
-        copy[copy.length - 1] = {
-            id: last.id,
-            role: last.role,
-            content: last.content,
-            toolCalls: existing.concat(added)
-        }
+        copy[copy.length - 1] = Object.assign({}, last, { toolCalls: existing.concat(added) })
         messages = copy
     }
 
@@ -225,12 +220,7 @@ FocusScope {
                 pending: false
             }
         })
-        copy[copy.length - 1] = {
-            id: last.id,
-            role: last.role,
-            content: last.content,
-            toolCalls: updated
-        }
+        copy[copy.length - 1] = Object.assign({}, last, { toolCalls: updated })
         messages = copy
     }
 
