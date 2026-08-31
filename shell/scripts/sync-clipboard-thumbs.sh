@@ -19,23 +19,30 @@ done
 for f in "$THUMB_DIR"/*; do
   [[ -f "$f" ]] || continue
   b="${f##*/}"
-  [[ -n "${keep[$b]:-}" ]] || rm -f "$f"
+  [[ -n "${keep[${b%.failed}]:-}" ]] || rm -f "$f"
 done
 
 command -v ffmpeg >/dev/null 2>&1 || exit 0
 
 for id; do
   out="$THUMB_DIR/$id.png"
+  fail="$out.failed"
+
   # A cliphist id never points at different bytes, so a decoded thumbnail cannot go stale.
   if [[ -s "$out" ]]; then
     printf 'ok\t%s\n' "$id"
     continue
   fi
 
+  # Without this an entry ffmpeg cannot decode is retried every time the panel opens.
+  [[ -f "$fail" ]] && continue
+
   if cliphist decode "$id" | ffmpeg -y -v error -i pipe: -vf "$SCALE" -frames:v 1 "$out" >/dev/null 2>&1 &&
       [[ -s "$out" ]]; then
+    rm -f "$fail"
     printf 'new\t%s\n' "$id"
   else
     rm -f "$out"
+    touch "$fail"
   fi
 done

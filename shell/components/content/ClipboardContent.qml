@@ -55,6 +55,7 @@ FocusScope {
         target: modeManager
         function onCurrentModeChanged() {
             if (modeManager.isMode("clipboard")) {
+                clipboardManager.searchQuery = ""
                 clipboardManager.loadHistory()
                 currentIndex = -1
                 focusTimer.restart()
@@ -604,6 +605,7 @@ FocusScope {
         if (modeManager) {
             modeManager.registerMode("clipboard", root)
             if (modeManager.isMode("clipboard")) {
+                clipboardManager.searchQuery = ""
                 clipboardManager.loadHistory()
                 currentIndex = -1
                 modeManager.bump()
