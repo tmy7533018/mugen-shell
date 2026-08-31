@@ -12,6 +12,7 @@ Row {
     property bool speaking: false
     property bool canRetry: false
     property bool canEdit: false
+    property string timestamp: ""
 
     signal copyRequested()
     signal speakToggled()
@@ -119,5 +120,16 @@ Row {
         glyph: "✎"
         glyphSize: root.modeManager.scale(14)
         onTriggered: root.editRequested()
+    }
+
+    Text {
+        anchors.verticalCenter: parent.verticalCenter
+        visible: root.timestamp !== ""
+        leftPadding: root.modeManager.scale(4)
+        text: root.timestamp
+        color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.7)
+        font.pixelSize: root.modeManager.scale(10)
+        font.family: "M PLUS 2"
+        font.letterSpacing: 0.3
     }
 }

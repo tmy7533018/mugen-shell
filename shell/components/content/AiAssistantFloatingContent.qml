@@ -147,7 +147,12 @@ FocusScope {
 
     function appendMessage(role, content, attachments) {
         let copy = messages.slice()
-        copy.push({ role: role, content: content, attachments: attachments || [] })
+        copy.push({
+            role: role,
+            content: content,
+            attachments: attachments || [],
+            createdAt: Math.floor(Date.now() / 1000)
+        })
         messages = copy
     }
 
@@ -856,6 +861,13 @@ FocusScope {
                     && isAssistant
                     && modelData.content === ""
                 readonly property bool showInlineOrb: isAssistant && isLatest
+                readonly property int createdAt: modelData.createdAt || 0
+                readonly property string stamp: {
+                    if (delegateRoot.createdAt <= 0) return ""
+                    let d = new Date(delegateRoot.createdAt * 1000)
+                    let sameDay = d.toDateString() === new Date().toDateString()
+                    return Qt.formatDateTime(d, sameDay ? "HH:mm" : "MMM d HH:mm")
+                }
                 readonly property string reasoning: modelData.thinking || ""
                 readonly property real reasoningMs: modelData.thinkingMs || 0
                 property bool reasoningOpen: false
@@ -1138,6 +1150,7 @@ FocusScope {
                                 && delegateRoot.hasServerId
                             canEdit: !delegateRoot.isAssistant && !root.busy
                                 && delegateRoot.hasServerId && !delegateRoot.isEditing
+                            timestamp: delegateRoot.stamp
                             // Stays put while it reads, so the stop button survives the pointer leaving.
                             opacity: (msgHover.hovered || msgActions.speaking) ? 1.0 : 0.0
                             visible: opacity > 0
@@ -1886,7 +1899,8 @@ FocusScope {
                     role: m.role,
                     content: m.content,
                     attachments: m.attachments || [],
-                    toolCalls: m.tool_calls || []
+                    toolCalls: m.tool_calls || [],
+                    createdAt: m.created_at || 0
                 }))
                 root.contextDropped = obj.context_dropped || 0
                 if (root.currentConvId !== 0 && obj.model) {

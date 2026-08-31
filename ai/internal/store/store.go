@@ -38,6 +38,7 @@ type Message struct {
 	Attachments []string `json:"attachments,omitempty"`
 	// The turn's tool calls, in the same shape the stream sent them.
 	ToolCalls json.RawMessage `json:"tool_calls,omitempty"`
+	CreatedAt int64           `json:"created_at"`
 }
 
 // Memory is one durable fact about the user. The full list is injected into
@@ -363,7 +364,7 @@ func (s *Store) AppendMessage(convID int64, role, content string, attachments []
 
 func (s *Store) ListMessages(convID int64) ([]Message, error) {
 	rows, err := s.db.Query(
-		`SELECT id, role, content, attachments, tool_calls FROM messages WHERE conversation_id = ? ORDER BY created_at ASC, id ASC`,
+		`SELECT id, role, content, attachments, tool_calls, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at ASC, id ASC`,
 		convID,
 	)
 	if err != nil {
@@ -374,7 +375,7 @@ func (s *Store) ListMessages(convID int64) ([]Message, error) {
 	for rows.Next() {
 		var m Message
 		var attachments, toolCalls string
-		if err := rows.Scan(&m.ID, &m.Role, &m.Content, &attachments, &toolCalls); err != nil {
+		if err := rows.Scan(&m.ID, &m.Role, &m.Content, &attachments, &toolCalls, &m.CreatedAt); err != nil {
 			return nil, err
 		}
 		m.Attachments = decodeAttachments(attachments)
