@@ -989,12 +989,14 @@ PanelWindow {
         property var modeManagerRef: modeManager
         property var themeRef: theme
         property var screenshotManagerRef: screenshotManager
+        property var iconsRef: icons
         active: modeManagerRef.isMode("screenshot-menu")
         sourceComponent: Content.ScreenshotMenuContent {
             anchors.fill: parent
             visible: screenshotMenuLoader.modeManagerRef.isMode("screenshot-menu")
             modeManager: screenshotMenuLoader.modeManagerRef
             screenshotManager: screenshotMenuLoader.screenshotManagerRef
+            icons: screenshotMenuLoader.iconsRef
             theme: screenshotMenuLoader.themeRef
         }
     }

@@ -16,8 +16,8 @@ while [[ -e "$output_path" ]]; do
   n=$((n + 1))
 done
 
-# The menu that launched this is still on screen for a frame, and grim would catch it.
-settle() { sleep 0.2; }
+# The bar takes ~180ms to collapse after the menu closes, and grim would catch it mid-way.
+settle() { sleep 0.35; }
 
 case "$MODE" in
 region)

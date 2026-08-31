@@ -11,6 +11,10 @@ QtObject {
     readonly property string basePath: Quickshell.shellDir + "/assets/icons"
 
     readonly property string circleSvg: basePath + "/circle.svg"
+    readonly property string captureRegionSvg: basePath + "/capture-region.svg"
+    readonly property string captureWindowSvg: basePath + "/capture-window.svg"
+    readonly property string captureScreenSvg: basePath + "/capture-screen.svg"
+    readonly property string captureGallerySvg: basePath + "/capture-gallery.svg"
     readonly property string lockSvg: basePath + "/lock.svg"
     readonly property string logoutSvg: basePath + "/logout.svg"
     readonly property string sleepSvg: basePath + "/sleep.svg"

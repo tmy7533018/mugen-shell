@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
-import Quickshell.Io
+import "../ui" as UI
 import "../../lib" as Theme
 
 FocusScope {
@@ -9,90 +8,136 @@ FocusScope {
 
     required property var modeManager
     required property var screenshotManager
+    required property var icons
     property var theme
 
     readonly property var requiredBarSize: ({
-        "height": modeManager.scale(96),
+        "height": modeManager.scale(120),
         "leftMargin": modeManager.scale(700),
         "rightMargin": modeManager.scale(700),
         "topMargin": modeManager.normalBarSize.topMargin,
         "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
 
-    readonly property string screenshotScript: Quickshell.shellDir + "/scripts/take-screenshot.sh"
-
-    readonly property var entries: [
-        { label: "Region", mode: "region" },
-        { label: "Window", mode: "window" },
-        { label: "Full Screen", mode: "screen" },
-        { label: "Gallery", mode: "" }
-    ]
-
     property int currentIndex: -1
 
-    // Resolved here so each pill crosses the delegate scope once instead of many times.
-    readonly property color pillText: theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-    readonly property color pillAccent: theme ? theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1)
-    readonly property color pillFill: Qt.rgba(pillAccent.r, pillAccent.g, pillAccent.b, 0.18)
-    readonly property color pillBorderOn: Qt.rgba(pillAccent.r, pillAccent.g, pillAccent.b, 0.65)
-    readonly property color pillBorderOff: Qt.rgba(pillAccent.r, pillAccent.g, pillAccent.b, 0.28)
-
     function choose(mode) {
-        modeManager.closeAllModes()
         if (mode === "") {
             modeManager.switchMode("screenshot-gallery")
             return
         }
-        if (!captureProcess.running) {
-            captureProcess.command = Theme.Hypr.execArgv(root.screenshotScript + " " + mode)
-            captureProcess.running = true
-        }
+        screenshotManager.capture(mode)
+        modeManager.closeAllModes()
     }
 
-    Component.onCompleted: modeManager.registerMode("screenshot-menu", root)
+    function enter() {
+        currentIndex = -1
+        focusTimer.restart()
+        modeManager.bump()
+    }
+
+    // The loader activates because the mode changed, so the signal below is already past on open.
+    Component.onCompleted: {
+        modeManager.registerMode("screenshot-menu", root)
+        if (modeManager.isMode("screenshot-menu")) enter()
+    }
 
     Connections {
         target: root.modeManager
         function onCurrentModeChanged() {
-            if (root.modeManager.isMode("screenshot-menu")) {
-                root.currentIndex = -1
-                focusTimer.restart()
-            }
+            if (root.modeManager.isMode("screenshot-menu")) root.enter()
         }
     }
 
     Timer {
         id: focusTimer
         interval: 500
-        onTriggered: pillRow.forceActiveFocus()
+        onTriggered: buttonsRow.forceActiveFocus()
     }
 
-    Process {
-        id: captureProcess
-        command: []
-        running: false
+    MouseArea {
+        anchors.fill: parent
+        z: 1.5
+        enabled: root.modeManager.isMode("screenshot-menu")
+        visible: enabled
+        hoverEnabled: true
 
-        onRunningChanged: {
-            if (!captureProcess.running && root.screenshotManager) root.screenshotManager.refresh()
-        }
+        onClicked: root.modeManager.closeAllModes()
+        onPositionChanged: root.modeManager.bump()
+    }
+
+    // Above the closing layer so a click on the panel itself only keeps it awake.
+    MouseArea {
+        anchors.fill: parent
+        anchors.topMargin: root.requiredBarSize.topMargin
+        anchors.bottomMargin: root.requiredBarSize.bottomMargin
+        anchors.leftMargin: root.requiredBarSize.leftMargin
+        anchors.rightMargin: root.requiredBarSize.rightMargin
+        z: 1.8
+        enabled: root.modeManager.isMode("screenshot-menu")
+        visible: enabled
+        hoverEnabled: true
+
+        onClicked: root.modeManager.bump()
+        onPositionChanged: root.modeManager.bump()
     }
 
     RowLayout {
-        id: pillRow
+        id: buttonsRow
         anchors.centerIn: parent
-        spacing: root.modeManager.scale(12)
+        z: 2
+        spacing: root.modeManager.scale(16)
         focus: root.modeManager.isMode("screenshot-menu")
+
+        opacity: 0
+        visible: opacity > 0.01
+
+        states: [
+            State {
+                name: "visible"
+                when: root.modeManager.isMode("screenshot-menu")
+                PropertyChanges { target: buttonsRow; opacity: 1.0 }
+            }
+        ]
+
+        transitions: [
+            Transition {
+                from: "visible"
+                to: ""
+                NumberAnimation {
+                    property: "opacity"
+                    duration: Theme.Motion.standard
+                    easing.type: Easing.OutCubic
+                }
+            },
+            Transition {
+                from: ""
+                to: "visible"
+                SequentialAnimation {
+                    // The bar is still growing; the content would otherwise appear mid-morph.
+                    PauseAnimation { duration: Theme.Motion.standard }
+                    NumberAnimation {
+                        property: "opacity"
+                        duration: Theme.Motion.gentle
+                        easing.type: Easing.InOutCubic
+                    }
+                }
+            }
+        ]
 
         Keys.onPressed: (event) => {
             root.modeManager.bump()
             if (event.key === Qt.Key_Escape) {
                 root.modeManager.closeAllModes()
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                if (root.currentIndex >= 0) root.choose(root.entries[root.currentIndex].mode)
-            } else if (event.key === Qt.Key_Right || event.key === Qt.Key_Tab) {
-                root.currentIndex = (root.currentIndex + 1) % root.entries.length
-            } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Backtab) {
-                root.currentIndex = root.currentIndex <= 0 ? root.entries.length - 1 : root.currentIndex - 1
+                if (root.currentIndex === 0) regionButton.clicked()
+                else if (root.currentIndex === 1) windowButton.clicked()
+                else if (root.currentIndex === 2) screenButton.clicked()
+                else if (root.currentIndex === 3) galleryButton.clicked()
+            } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L || event.key === Qt.Key_Tab) {
+                root.currentIndex = root.currentIndex < 3 ? root.currentIndex + 1 : 0
+            } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.key === Qt.Key_Backtab) {
+                root.currentIndex = root.currentIndex <= 0 ? 3 : root.currentIndex - 1
             } else {
                 event.accepted = false
                 return
@@ -100,51 +145,44 @@ FocusScope {
             event.accepted = true
         }
 
-        Repeater {
-            model: root.entries
+        UI.PowerButton {
+            id: regionButton
+            modeManager: root.modeManager
+            label: "Region"
+            iconSource: root.icons ? root.icons.captureRegionSvg : ""
+            color: Qt.rgba(0.45, 0.65, 0.90, 1.0)
+            isFocused: root.currentIndex === 0
+            onClicked: root.choose("region")
+        }
 
-            delegate: Rectangle {
-                id: pill
+        UI.PowerButton {
+            id: windowButton
+            modeManager: root.modeManager
+            label: "Window"
+            iconSource: root.icons ? root.icons.captureWindowSvg : ""
+            color: Qt.rgba(0.65, 0.55, 0.85, 1.0)
+            isFocused: root.currentIndex === 1
+            onClicked: root.choose("window")
+        }
 
-                required property var modelData
-                required property int index
+        UI.PowerButton {
+            id: screenButton
+            modeManager: root.modeManager
+            label: "Full Screen"
+            iconSource: root.icons ? root.icons.captureScreenSvg : ""
+            color: Qt.rgba(0.55, 0.75, 0.85, 1.0)
+            isFocused: root.currentIndex === 2
+            onClicked: root.choose("screen")
+        }
 
-                readonly property bool active: pillArea.containsMouse || root.currentIndex === pill.index
-
-                Layout.preferredWidth: pillLabel.implicitWidth + root.modeManager.scale(32)
-                Layout.preferredHeight: root.modeManager.scale(40)
-                radius: height / 2
-                color: pill.active ? root.pillFill : "transparent"
-                border.width: 1
-                border.color: pill.active ? root.pillBorderOn : root.pillBorderOff
-                scale: pill.active ? 1.05 : 1.0
-
-                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-                Behavior on border.color { ColorAnimation { duration: Theme.Motion.micro } }
-                Behavior on scale { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
-
-                Text {
-                    id: pillLabel
-                    anchors.centerIn: parent
-                    text: pill.modelData.label
-                    color: pill.active ? root.pillAccent : root.pillText
-                    font.pixelSize: root.modeManager.scale(13)
-                    font.weight: Font.Medium
-                    font.family: "M PLUS 2"
-                    font.letterSpacing: 0.4
-
-                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-                }
-
-                MouseArea {
-                    id: pillArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onEntered: root.currentIndex = pill.index
-                    onClicked: root.choose(pill.modelData.mode)
-                }
-            }
+        UI.PowerButton {
+            id: galleryButton
+            modeManager: root.modeManager
+            label: "Gallery"
+            iconSource: root.icons ? root.icons.captureGallerySvg : ""
+            color: Qt.rgba(0.88, 0.74, 0.48, 1.0)
+            isFocused: root.currentIndex === 3
+            onClicked: root.choose("")
         }
     }
 }

@@ -10,7 +10,7 @@ Item {
     
     property string icon: "⚡"
     property string iconSource: ""
-    property string label: "Button"  // unused, kept for compatibility
+    property string label: ""
     property color color: Qt.rgba(0.65, 0.55, 0.85, 1.0)
     property color iconBaseColor: Qt.rgba(1, 1, 1, 0.6)
     property color iconHoverColor: Qt.rgba(1, 1, 1, 0.95)
