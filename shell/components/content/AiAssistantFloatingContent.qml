@@ -153,14 +153,37 @@ FocusScope {
 
     function updateLastMessage(content) {
         if (messages.length === 0) return
+        freezeThinking()
         let copy = messages.slice()
         let last = copy[copy.length - 1]
-        copy[copy.length - 1] = {
-            id: last.id,
-            role: last.role,
+        copy[copy.length - 1] = Object.assign({}, last, {
             content: last.content + content,
             toolCalls: last.toolCalls || []
-        }
+        })
+        messages = copy
+    }
+
+    property real thinkingStartedAt: 0
+
+    function appendThinking(delta) {
+        if (messages.length === 0) return
+        if (thinkingStartedAt === 0) thinkingStartedAt = Date.now()
+        let copy = messages.slice()
+        let last = copy[copy.length - 1]
+        copy[copy.length - 1] = Object.assign({}, last, {
+            thinking: (last.thinking || "") + delta
+        })
+        messages = copy
+    }
+
+    // Reasoning stops the moment the answer starts, so the elapsed time is frozen there.
+    function freezeThinking() {
+        if (thinkingStartedAt === 0 || messages.length === 0) return
+        let elapsed = Date.now() - thinkingStartedAt
+        thinkingStartedAt = 0
+        let copy = messages.slice()
+        let last = copy[copy.length - 1]
+        copy[copy.length - 1] = Object.assign({}, last, { thinkingMs: elapsed })
         messages = copy
     }
 
@@ -843,6 +866,14 @@ FocusScope {
                     && isAssistant
                     && modelData.content === ""
                 readonly property bool showInlineOrb: isAssistant && isLatest
+                readonly property string reasoning: modelData.thinking || ""
+                readonly property real reasoningMs: modelData.thinkingMs || 0
+                property bool reasoningOpen: false
+                readonly property string reasoningLabel: reasoningMs > 0
+                    ? "Thought for " + (reasoningMs / 1000).toFixed(1) + "s"
+                    : "Thinking\u2026"
+                readonly property bool startsContext: root.contextDropped > 0
+                    && index === root.contextDropped
                 readonly property var toolCalls: modelData.toolCalls || []
                 readonly property var attachments: modelData.attachments || []
                 readonly property string displayContent: (isAssistant && isLatest && root.revealActive)
@@ -858,6 +889,41 @@ FocusScope {
                     id: msgCol
                     width: parent.width
                     spacing: modeManager.scale(6)
+
+                    Item {
+                        id: contextBoundary
+                        visible: delegateRoot.startsContext
+                        width: parent.width
+                        height: visible ? boundaryRow.implicitHeight + modeManager.scale(12) : 0
+
+                        RowLayout {
+                            id: boundaryRow
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: modeManager.scale(10)
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 1
+                                color: Qt.rgba(0.55, 0.55, 0.75, 0.16)
+                            }
+
+                            Text {
+                                text: "older messages are outside the context window"
+                                color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.6)
+                                font.pixelSize: modeManager.scale(10)
+                                font.family: "M PLUS 2"
+                                font.letterSpacing: 0.5
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 1
+                                color: Qt.rgba(0.55, 0.55, 0.75, 0.16)
+                            }
+                        }
+                    }
 
                     Item {
                         id: bubbleAttachments
@@ -959,6 +1025,56 @@ FocusScope {
                                         event.accepted = true
                                     }
                                 }
+                            }
+                        }
+                    }
+
+                    Item {
+                        id: reasoningBlock
+                        width: parent.width
+                        visible: delegateRoot.reasoning !== ""
+                        height: visible ? reasoningCol.implicitHeight : 0
+
+                        Column {
+                            id: reasoningCol
+                            width: parent.width
+                            spacing: modeManager.scale(4)
+
+                            Row {
+                                id: reasoningHeader
+                                spacing: modeManager.scale(6)
+
+                                Text {
+                                    text: delegateRoot.reasoningOpen ? "\u25be" : "\u25b8"
+                                    color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.6)
+                                    font.pixelSize: modeManager.scale(10)
+                                }
+
+                                Text {
+                                    text: delegateRoot.reasoningLabel
+                                    color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.6)
+                                    font.pixelSize: modeManager.scale(10)
+                                    font.family: "M PLUS 2"
+                                    font.italic: true
+                                    font.letterSpacing: 0.4
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: delegateRoot.reasoningOpen = !delegateRoot.reasoningOpen
+                                }
+                            }
+
+                            Text {
+                                width: parent.width
+                                visible: delegateRoot.reasoningOpen
+                                text: delegateRoot.reasoning
+                                textFormat: Text.PlainText
+                                color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.6)
+                                font.pixelSize: modeManager.scale(11)
+                                font.family: "M PLUS 2"
+                                wrapMode: Text.Wrap
                             }
                         }
                     }
@@ -1366,6 +1482,42 @@ FocusScope {
         readonly property string toolName: sep > 0 ? fullName.substring(sep + 2) : fullName
         readonly property var argKeys: pc.arguments ? Object.keys(pc.arguments) : []
 
+        // The backend denies on timeout, so the card has to show that it is running out.
+        readonly property real expiresAt: pc.expires_at || 0
+        property real openedAt: 0
+        property real nowMs: 0
+
+        readonly property real remainingFraction: {
+            let span = expiresAt - openedAt
+            if (expiresAt <= 0 || span <= 0) return 0
+            return Math.max(0, Math.min(1, (expiresAt - nowMs) / span))
+        }
+
+        onVisibleChanged: {
+            if (!visible) return
+            openedAt = Date.now()
+            nowMs = openedAt
+        }
+
+        Timer {
+            interval: 250
+            repeat: true
+            running: confirmCard.visible && confirmCard.expiresAt > 0
+            onTriggered: confirmCard.nowMs = Date.now()
+        }
+
+        Rectangle {
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: confirmCard.radius
+            anchors.bottomMargin: modeManager.scale(2)
+            height: modeManager.scale(2)
+            radius: height / 2
+            visible: confirmCard.expiresAt > 0
+            width: confirmCard.remainingFraction * (confirmCard.width - confirmCard.radius * 2)
+            color: Qt.rgba(0.95, 0.74, 0.42, 0.75)
+        }
+
         ColumnLayout {
             id: confirmCol
             anchors.left: parent.left
@@ -1634,6 +1786,10 @@ FocusScope {
                         root.pendingConfirm = obj.tool_confirm
                         return
                     }
+                    if (obj.thinking) {
+                        root.appendThinking(obj.thinking)
+                        return
+                    }
                     if (obj.content) {
                         root.updateLastMessage(obj.content)
                     }
@@ -1644,6 +1800,7 @@ FocusScope {
 
         onExited: (exitCode) => {
             root.streaming = false
+            root.freezeThinking()
             // A timeout or error can end the stream with a card still up for an abandoned prompt.
             root.pendingConfirm = null
             // A stop is a SIGTERM, so curl's non-zero exit says nothing about the connection.
