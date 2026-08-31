@@ -23,6 +23,7 @@ FocusScope {
     }
 
     signal newChatRequested()
+    signal settingsRequested()
     signal conversationSelected(int convId)
     signal conversationDeleteRequested(int convId)
     signal toggleRequested()
@@ -314,6 +315,56 @@ FocusScope {
                         }
                     }
                 }
+            }
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: root.modeManager.scale(32)
+            radius: root.modeManager.scale(10)
+            color: settingsMouse.containsMouse
+                ? Qt.rgba(0.55, 0.55, 0.75, 0.10)
+                : "transparent"
+
+            Behavior on color { ColorAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: root.modeManager.scale(12)
+                anchors.rightMargin: root.modeManager.scale(12)
+                spacing: root.modeManager.scale(8)
+
+                UI.SvgIcon {
+                    Layout.preferredWidth: root.modeManager.scale(13)
+                    Layout.preferredHeight: root.modeManager.scale(13)
+                    source: root.icons ? root.icons.settingsSvg : ""
+                    color: settingsMouse.containsMouse
+                        ? (root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
+                        : (root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.7))
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: "Settings"
+                    color: settingsMouse.containsMouse
+                        ? (root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
+                        : (root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.7))
+                    font.pixelSize: root.modeManager.scale(12)
+                    font.family: "M PLUS 2"
+                    font.letterSpacing: 0.3
+                    elide: Text.ElideRight
+
+                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
+                }
+            }
+
+            MouseArea {
+                id: settingsMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.settingsRequested()
             }
         }
     }

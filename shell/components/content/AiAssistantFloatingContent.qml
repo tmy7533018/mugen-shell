@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Dialogs
 import Qt5Compat.GraphicalEffects
+import Quickshell
 import Quickshell.Io
 import "../../lib" as Theme
 import "../ui" as UI
@@ -569,6 +570,7 @@ FocusScope {
         Behavior on width { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.InOutCubic } }
 
         onNewChatRequested: root.newChat()
+        onSettingsRequested: yuraSettingsProcess.running = true
         onConversationSelected: id => root.selectConversation(id)
         onConversationDeleteRequested: id => root.deleteConversation(id)
         onToggleRequested: root.sidebarCollapsed = !root.sidebarCollapsed
@@ -1960,6 +1962,12 @@ FocusScope {
         property string text: ""
         running: false
         command: ["wl-copy", text]
+    }
+
+    Process {
+        id: yuraSettingsProcess
+        running: false
+        command: ["bash", Quickshell.shellDir + "/scripts/toggle-yura-settings.sh"]
     }
 
     Process {
