@@ -14,6 +14,13 @@ FocusScope {
 
     property var conversations: []
     property int currentId: 0
+    property string filter: ""
+
+    readonly property var visibleConversations: {
+        let needle = filter.trim().toLowerCase()
+        if (needle === "") return conversations
+        return conversations.filter(c => (c.title || "").toLowerCase().indexOf(needle) !== -1)
+    }
 
     signal newChatRequested()
     signal conversationSelected(int convId)
@@ -145,10 +152,62 @@ FocusScope {
             }
         }
 
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.preferredHeight: modeManager.scale(30)
+            radius: modeManager.scale(10)
+            visible: root.conversations.length > 0
+            color: Qt.rgba(0.55, 0.55, 0.75, 0.08)
+            border.color: filterInput.activeFocus
+                ? (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.45) : Qt.rgba(0.65, 0.55, 0.85, 0.45))
+                : Qt.rgba(0.55, 0.55, 0.75, 0.15)
+            border.width: 1
+
+            Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: modeManager.scale(12)
+                anchors.rightMargin: modeManager.scale(12)
+                spacing: modeManager.scale(8)
+
+                UI.SvgIcon {
+                    Layout.preferredWidth: modeManager.scale(12)
+                    Layout.preferredHeight: modeManager.scale(12)
+                    source: root.icons ? root.icons.iconData.search.value : ""
+                    color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.6)
+                    visible: root.icons && root.icons.iconData.search.type === "svg"
+                }
+
+                TextInput {
+                    id: filterInput
+                    Layout.fillWidth: true
+                    color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                    font.pixelSize: modeManager.scale(12)
+                    font.family: "M PLUS 2"
+                    selectByMouse: true
+                    clip: true
+
+                    onTextChanged: root.filter = text
+                    Keys.onEscapePressed: text = ""
+
+                    Text {
+                        anchors.fill: parent
+                        verticalAlignment: Text.AlignVCenter
+                        text: "Filter"
+                        color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.6)
+                        font: filterInput.font
+                        visible: filterInput.text.length === 0
+                        opacity: 0.6
+                    }
+                }
+            }
+        }
+
         Text {
             Layout.topMargin: modeManager.scale(6)
             Layout.leftMargin: modeManager.scale(4)
-            text: "Recent"
+            text: root.visibleConversations.length > 0 ? "Recent" : "No matches"
             color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.6)
             font.pixelSize: modeManager.scale(10)
             font.family: "M PLUS 2"
@@ -162,7 +221,7 @@ FocusScope {
             Layout.fillHeight: true
             clip: true
             spacing: modeManager.scale(2)
-            model: root.conversations
+            model: root.visibleConversations
             interactive: contentHeight > height
 
             delegate: Item {
