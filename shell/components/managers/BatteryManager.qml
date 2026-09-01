@@ -10,6 +10,30 @@ QtObject {
     property string state: "Unknown"
     readonly property bool isCharging: state === "Charging" || state === "Full"
 
+    readonly property var warnThresholds: [20, 10, 5]
+    // The threshold already warned at, so a 10s poll does not repeat it. 0 re-arms.
+    property int warnedAt: 0
+
+    function _applyWarnings() {
+        if (!present || isCharging) {
+            warnedAt = 0
+            return
+        }
+        if (warnedAt > 0 && percentage > warnedAt) warnedAt = 0
+        let hit = 0
+        for (const t of warnThresholds) if (percentage <= t) hit = t
+        if (hit === 0 || (warnedAt !== 0 && hit >= warnedAt)) return
+        warnedAt = hit
+        if (warnProcess.running) return
+        warnProcess.command = [
+            "notify-send", "-a", "mugen-shell",
+            "-u", hit <= 5 ? "critical" : "normal",
+            hit <= 5 ? "Battery critically low" : "Battery low",
+            percentage + "% remaining"
+        ]
+        warnProcess.running = true
+    }
+
     function refresh() {
         if (!detectProcess.running) {
             detectProcess.running = true
@@ -38,6 +62,7 @@ QtObject {
             detectProcess.output = ""
             if (path.length === 0) {
                 batteryManager.present = false
+                batteryManager.warnedAt = 0
                 return
             }
             batteryManager.present = true
@@ -64,6 +89,12 @@ QtObject {
                 if (!isNaN(pct)) batteryManager.percentage = pct
                 batteryManager.state = lines[1].trim()
             }
+            batteryManager._applyWarnings()
         }
+    }
+
+    property Process warnProcess: Process {
+        command: []
+        running: false
     }
 }
