@@ -11,8 +11,8 @@ Rectangle {
 
     // 0 = disabled for both.
     readonly property var rows: [
-        { key: "idleSuspendMinutes", label: "Suspend After", from: 0, to: 120 },
-        { key: "idleDpmsMinutes", label: "Screen Off After", from: 0, to: 60 }
+        { key: "idleSuspendMinutes", label: "Sleep after", from: 0, to: 120 },
+        { key: "idleDpmsMinutes", label: "Screen off after", from: 0, to: 60 }
     ]
 
     width: parent ? parent.width : 420
@@ -30,7 +30,7 @@ Rectangle {
         id: rowsColumn
         anchors.fill: parent
         anchors.margins: 12
-        spacing: 10
+        spacing: 0
 
         Repeater {
             model: section.rows
@@ -40,7 +40,7 @@ Rectangle {
                 required property var modelData
 
                 Layout.fillWidth: true
-                Layout.preferredHeight: 24
+                Layout.preferredHeight: 40
                 spacing: 12
 
                 Text {
@@ -60,7 +60,7 @@ Rectangle {
                     to: modelData.to
                     stepSize: 1
                     value: section.settingsManager ? section.settingsManager[modelData.key] : modelData.from
-                    display: value === 0 ? "off" : (Math.round(value) + "m")
+                    display: value === 0 ? "Off" : (Math.round(value) + "m")
 
                     onMoved: nv => {
                         if (section.settingsManager) section.settingsManager[modelData.key] = Math.round(nv)

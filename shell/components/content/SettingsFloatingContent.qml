@@ -30,7 +30,7 @@ Item {
         { id: "appearance", label: "Appearance",   types: ["theme", "barSurface", "moduleBackground", "blur", "animation", "dateFormat", "clock", "weather", "calendarWeekStart", "barLayout"] },
         { id: "sound",      label: "Sound",        types: ["notificationSound", "timerSound"] },
         { id: "notifications", label: "Notifications", types: ["doNotDisturb", "notificationTimeout"] },
-        { id: "timer",      label: "Timer & Lock", types: ["timer", "lockTimer", "idlePower"] },
+        { id: "timer",      label: "Idle & Lock",  types: ["timer", "lockTimer", "idlePower"] },
         { id: "system",     label: "System",       types: ["battery", "workspaces", "launcherTerminal", "displayMonitor"] },
         { id: "keybinds",   label: "Keyboard",     types: ["keybinds"] },
         { id: "yura",       label: "Yura →",       action: "yura-settings" },
