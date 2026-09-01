@@ -17,9 +17,9 @@
       # The home-manager module defaults to `pkgs.mugen-shell`, which only
       # resolves once this overlay is applied.
       overlay = final: prev: {
-        mugen-ai = self.packages.${prev.system}.mugen-ai;
-        mugen-audio = self.packages.${prev.system}.mugen-audio;
-        mugen-shell = self.packages.${prev.system}.mugen-shell;
+        mugen-ai = self.packages.${prev.stdenv.hostPlatform.system}.mugen-ai;
+        mugen-audio = self.packages.${prev.stdenv.hostPlatform.system}.mugen-audio;
+        mugen-shell = self.packages.${prev.stdenv.hostPlatform.system}.mugen-shell;
       };
 
       nixosModule =
