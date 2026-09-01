@@ -120,7 +120,7 @@ Item {
     Component { id: notificationSoundSection; Settings.SoundSection {
         theme: root.theme
         modeManager: root.modeManager
-        label: "Notification Sound"
+        label: "Notification sound"
         currentSound: root.settingsManager ? root.settingsManager.notificationSound : "None"
         sounds: root.notificationSounds
         folderPath: root.soundsDir
@@ -129,7 +129,7 @@ Item {
     Component { id: timerSoundSection; Settings.SoundSection {
         theme: root.theme
         modeManager: root.modeManager
-        label: "Timer Sound"
+        label: "Timer sound"
         currentSound: root.settingsManager ? root.settingsManager.timerSound : "None"
         sounds: root.timerSounds
         folderPath: root.timerSoundsDir

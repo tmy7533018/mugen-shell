@@ -75,7 +75,7 @@ Rectangle {
     }
 
     readonly property var referenceCategories: [
-        { id: "launcher", label: "App Launcher", sections: [
+        { id: "launcher", label: "App launcher", sections: [
             { name: "App Launcher", rows: [
                 { keys: "Type", desc: "Search apps" },
                 { keys: "←→↑↓ / hjkl", desc: "Navigate grid" },
@@ -84,7 +84,7 @@ Rectangle {
                 { keys: "Right-click / Menu", desc: "Context menu" }
             ]}
         ]},
-        { id: "playback", label: "Playback & Volume", sections: [
+        { id: "playback", label: "Playback & volume", sections: [
             { name: "Music Player", rows: [
                 { keys: "Space", desc: "Play / Pause" },
                 { keys: "←", desc: "Previous track" },
@@ -118,7 +118,7 @@ Rectangle {
                 { keys: "R", desc: "Scan" }
             ]}
         ]},
-        { id: "panels", label: "Other Panels", sections: [
+        { id: "panels", label: "Other panels", sections: [
             { name: "Notifications", rows: [
                 { keys: "↑↓ / jk", desc: "Navigate notifications" },
                 { keys: "Home / End", desc: "First / Last" },
@@ -184,7 +184,7 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                text: "Keyboard Shortcuts"
+                text: "Keyboard shortcuts"
                 color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                 font.pixelSize: 12
                 font.family: "M PLUS 2"

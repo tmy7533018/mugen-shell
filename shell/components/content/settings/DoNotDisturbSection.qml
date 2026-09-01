@@ -31,7 +31,7 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                text: "Do Not Disturb"
+                text: "Do not disturb"
                 color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                 font.pixelSize: 12
                 font.family: "M PLUS 2"
@@ -59,7 +59,7 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                text: "Hide Popups in Fullscreen"
+                text: "Hide popups in fullscreen"
                 color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                 font.pixelSize: 12
                 font.family: "M PLUS 2"

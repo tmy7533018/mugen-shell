@@ -27,7 +27,7 @@ Rectangle {
 
     readonly property var voiceOptions: section.editingLang === ""
         ? section.voices
-        : [{ label: "Same as Default", value: "" }, ...section.voices]
+        : [{ label: "Same as default", value: "" }, ...section.voices]
 
     // "" edits voice.tts (used when no override matches); a language code edits voice.ttsByLang[code].
     readonly property var langOptions: ["", "ja", "en"]

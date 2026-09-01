@@ -31,7 +31,7 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                text: "24-Hour Clock"
+                text: "24-hour clock"
                 color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                 font.pixelSize: 12
                 font.family: "M PLUS 2"
@@ -59,7 +59,7 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                text: "Show Seconds"
+                text: "Show seconds"
                 color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                 font.pixelSize: 12
                 font.family: "M PLUS 2"
