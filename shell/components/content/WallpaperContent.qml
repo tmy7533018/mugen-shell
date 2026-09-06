@@ -1,25 +1,39 @@
 import QtQuick
 import QtQuick.Layouts
-import Qt5Compat.GraphicalEffects
+import Quickshell
 import Quickshell.Io
 import "../common" as Common
+import "../ui" as UI
 import "../../lib" as Theme
 
 FocusScope {
     id: root
 
+    Theme.Typography { id: typography }
+
     required property var modeManager
     required property var wallpaperManager
     property var theme
     property var icons
+    property bool expanded: false
 
     readonly property var requiredBarSize: ({
-        "height": modeManager.scale(240),
-        "leftMargin": modeManager.scale(550),
-        "rightMargin": modeManager.scale(550),
+        "height": modeManager.scale(root.expanded ? 560 : 240),
+        "leftMargin": modeManager.scale(root.expanded ? 340 : 550),
+        "rightMargin": modeManager.scale(root.expanded ? 340 : 550),
         "topMargin": modeManager.normalBarSize.topMargin,
         "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
+
+    onExpandedChanged: root.restoreSelection()
+
+    Connections {
+        target: wallpaperManager
+        function onSearchQueryChanged() {
+            if (wallpaperManager.searchQuery.length > 0)
+                root.expanded = true
+        }
+    }
 
     function setWallpaper(path) {
         wallpaperManager.setWallpaper(path)
@@ -31,6 +45,9 @@ FocusScope {
             modeManager.registerMode("wallpaper", root)
             wallpaperManager.pickerOpen = modeManager.isMode("wallpaper")
             if (modeManager.isMode("wallpaper")) {
+                root.expanded = false
+                wallpaperManager.searchQuery = ""
+                searchField.text = ""
                 root.anchorPath = ""
                 wallpaperManager.loadWallpapers()
                 focusTimer.restart()
@@ -43,6 +60,9 @@ FocusScope {
         function onCurrentModeChanged() {
             wallpaperManager.pickerOpen = modeManager.isMode("wallpaper")
             if (modeManager.isMode("wallpaper")) {
+                root.expanded = false
+                wallpaperManager.searchQuery = ""
+                searchField.text = ""
                 root.anchorPath = ""
                 wallpaperManager.loadWallpapers()
                 focusTimer.restart()
@@ -82,7 +102,7 @@ FocusScope {
         }
     }
 
-    readonly property var listModel: ["__add__"].concat(wallpaperManager.wallpapers || [])
+    readonly property var listModel: ["__add__"].concat(wallpaperManager.visibleWallpapers || [])
 
     function openWallpaperFolder() {
         openWallpaperDirProcess.running = false
@@ -99,24 +119,70 @@ FocusScope {
     // Kept as a path, not an index, so the selection survives a file appearing or disappearing.
     property string anchorPath: ""
 
+    function activeView() {
+        return root.expanded ? gridView : listView
+    }
+
     function moveTo(index) {
-        listView.currentIndex = index
+        let view = root.activeView()
+        view.currentIndex = index
+        if (view === gridView)
+            gridView.positionViewAtIndex(index, GridView.Visible)
         root.anchorPath = index >= 1 ? (root.listModel[index] || "") : ""
+    }
+
+    function activateCurrent() {
+        let view = root.activeView()
+        if (view.currentIndex === 0) {
+            root.openWallpaperFolder()
+        } else if (view.currentIndex >= 1) {
+            let path = root.listModel[view.currentIndex]
+            if (path)
+                root.setWallpaper(path)
+        }
+    }
+
+    function focusResults(backwards) {
+        let view = root.activeView()
+        if (backwards && view.count > 0)
+            root.moveTo(view.count - 1)
+        view.forceActiveFocus()
+    }
+
+    function isPrintable(text) {
+        if (!text || text.length === 0)
+            return false
+        let c = text.charCodeAt(0)
+        return c >= 0x20 && c !== 0x7f
+    }
+
+    function forwardPrintableToSearch(event) {
+        if (!root.isPrintable(event.text) || (event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)))
+            return false
+        // The field only exists while expanded, so it has to be shown before it can take focus.
+        root.expanded = true
+        searchField.searchFieldItem.forceActiveFocus()
+        searchField.text += event.text
+        return true
     }
 
     function restoreSelection() {
         Qt.callLater(function() {
-            if (!listView)
+            let view = root.activeView()
+            if (!view)
                 return
 
             let index = root.listModel.indexOf(root.anchorPath)
             if (index < 1)
                 index = root.listModel.indexOf(wallpaperManager.currentWallpaperPath)
             if (index < 1)
-                index = wallpaperManager.wallpapers.length > 0 ? 1 : 0
+                index = root.listModel.length > 1 ? 1 : 0
 
-            listView.currentIndex = index
-            listView.positionViewAtIndex(index, ListView.Center)
+            view.currentIndex = index
+            if (view === listView)
+                listView.positionViewAtIndex(index, ListView.Center)
+            else
+                gridView.positionViewAtIndex(index, GridView.Visible)
         })
     }
 
@@ -134,12 +200,26 @@ FocusScope {
     Item {
         id: wallpaperLayer
         anchors.fill: parent
-        anchors.leftMargin: modeManager.scale(560)
-        anchors.rightMargin: modeManager.scale(560)
+        anchors.leftMargin: root.requiredBarSize.leftMargin + modeManager.scale(10)
+        anchors.rightMargin: root.requiredBarSize.rightMargin + modeManager.scale(10)
         anchors.topMargin: modeManager.scale(20)
         anchors.bottomMargin: modeManager.scale(20)
         visible: modeManager.isMode("wallpaper")
         z: 10
+
+        Behavior on anchors.leftMargin {
+            NumberAnimation {
+                duration: modeManager.settingsManager && modeManager.settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * (modeManager.settingsManager ? modeManager.settingsManager.animationDurationMultiplier : 1)
+                easing.type: Easing.OutExpo
+            }
+        }
+
+        Behavior on anchors.rightMargin {
+            NumberAnimation {
+                duration: modeManager.settingsManager && modeManager.settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * (modeManager.settingsManager ? modeManager.settingsManager.animationDurationMultiplier : 1)
+                easing.type: Easing.OutExpo
+            }
+        }
 
         focus: modeManager.isMode("wallpaper")
 
@@ -177,7 +257,10 @@ FocusScope {
             }
         ]
 
-        Keys.forwardTo: [listView]
+        // Forwarding runs before this item's own handlers, so the typing field has to opt out here.
+        Keys.forwardTo: searchField.searchFieldItem.activeFocus
+            ? []
+            : [root.expanded ? gridView : listView]
 
         Keys.onPressed: (event) => {
             if (modeManager.isMode("wallpaper")) {
@@ -193,25 +276,95 @@ FocusScope {
             anchors.fill: parent
             spacing: 8
 
-            Common.GlowText {
-                Layout.alignment: Qt.AlignHCenter
-                text: "select wallpaper"
-                color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
-                font.pixelSize: modeManager.scale(20)
-                font.family: "M PLUS 2"
-                font.weight: Font.Light
-                font.letterSpacing: 1.5
-                enableGlow: true
-                glowColor: root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.6) : Qt.rgba(0.65, 0.55, 0.85, 0.6)
-                glowSamples: 20
-                glowRadius: modeManager.scale(12)
-                glowSpread: 0.5
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: modeManager.scale(root.expanded ? 38 : 32)
+
+                Common.GlowText {
+                    anchors.centerIn: parent
+                    text: "select wallpaper"
+                    color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
+                    font.pixelSize: modeManager.scale(20)
+                    font.family: "M PLUS 2"
+                    font.weight: Font.Light
+                    font.letterSpacing: 1.5
+                    enableGlow: true
+                    glowColor: root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.6) : Qt.rgba(0.65, 0.55, 0.85, 0.6)
+                    glowSamples: 20
+                    glowRadius: modeManager.scale(12)
+                    glowSpread: 0.5
+                }
+
+                RowLayout {
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: modeManager.scale(12)
+
+                    UI.SearchField {
+                        visible: root.expanded
+                        id: searchField
+                        theme: root.theme
+                        icons: root.icons
+                        typo: typography
+                        modeManager: root.modeManager
+                        placeholder: "Search wallpapers"
+                        resultCount: wallpaperManager.visibleWallpapers.length
+                        Layout.preferredWidth: modeManager.scale(260)
+                        Layout.preferredHeight: modeManager.scale(38)
+                        onSearchTextChanged: text => wallpaperManager.searchQuery = text
+                        onRequestActivateSelected: root.activateCurrent()
+                        onRequestFocusResults: backwards => root.focusResults(backwards)
+                    }
+
+                    Rectangle {
+                        id: moreChip
+                        Layout.preferredHeight: modeManager.scale(30)
+                        Layout.preferredWidth: moreRow.implicitWidth + modeManager.scale(24)
+                        Layout.alignment: Qt.AlignVCenter
+                        radius: height / 2
+                        color: "transparent"
+                        border.width: 1
+                        border.color: root.theme ? root.theme.surfaceBorder : Qt.rgba(0.70, 0.65, 0.90, 0.3)
+
+                        RowLayout {
+                            id: moreRow
+                            anchors.centerIn: parent
+                            spacing: modeManager.scale(6)
+
+                            Text {
+                                text: root.expanded ? "less" : "more"
+                                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                                font.pixelSize: modeManager.scale(11)
+                                font.family: "M PLUS 2"
+                            }
+
+                            UI.SvgIcon {
+                                Layout.preferredWidth: modeManager.scale(12)
+                                Layout.preferredHeight: modeManager.scale(12)
+                                source: Quickshell.shellDir + "/assets/icons/chevron-down.svg"
+                                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
+                                rotation: root.expanded ? 180 : 0
+
+                                Behavior on rotation {
+                                    NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.expanded = !root.expanded
+                        }
+                    }
+                }
             }
 
             ListView {
                 id: listView
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                visible: !root.expanded
 
                 model: root.listModel
                 orientation: ListView.Horizontal
@@ -225,7 +378,7 @@ FocusScope {
                 preferredHighlightEnd: width / 2 + modeManager.scale(120)
                 snapMode: ListView.SnapToItem
 
-                focus: true
+                focus: !root.expanded
 
                 Keys.onPressed: (event) => {
                     if (event.key === Qt.Key_Escape) {
@@ -280,6 +433,13 @@ FocusScope {
                         root.moveTo(count - 1)
                         root.resetAutoCloseTimer()
                         event.accepted = true
+                    } else if (event.key === Qt.Key_Down) {
+                        root.expanded = true
+                        gridView.forceActiveFocus()
+                        root.resetAutoCloseTimer()
+                        event.accepted = true
+                    } else if (root.forwardPrintableToSearch(event)) {
+                        event.accepted = true
                     } else {
                         event.accepted = false
                     }
@@ -323,11 +483,9 @@ FocusScope {
                     property bool isAddCell: modelData === "__add__"
                     property string wallpaperPath: isAddCell ? "" : modelData
 
-                    Rectangle {
+                    WallpaperTile {
                         anchors.fill: parent
                         anchors.margins: modeManager.scale(8)
-                        color: "transparent"
-                        radius: modeManager.scale(18)
 
                         scale: cellRoot.isCurrent ? 1.0 : 0.75
                         opacity: cellRoot.isCurrent ? 1.0 : 0.7
@@ -335,112 +493,148 @@ FocusScope {
                         Behavior on scale { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
                         Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
 
-                        Rectangle {
-                            anchors.fill: parent
-                            anchors.margins: modeManager.scale(4)
-                            color: root.theme ? root.theme.surfaceGlass : Qt.rgba(0.15, 0.15, 0.20, 0.5)
-                            radius: modeManager.scale(18)
-                            border.width: cellRoot.isAddCell ? modeManager.scale(2) : 0
-                            border.color: root.theme
-                                ? Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.45)
-                                : Qt.rgba(0.65, 0.55, 0.85, 0.45)
-                            visible: cellRoot.isAddCell || thumb.status !== Image.Ready
+                        theme: root.theme
+                        modeManager: root.modeManager
+                        wallpaperManager: root.wallpaperManager
+                        path: cellRoot.wallpaperPath
+                        selected: cellRoot.isCurrent
+                        isAddCell: cellRoot.isAddCell
+                        isVideo: !cellRoot.isAddCell && wallpaperManager.isVideoFile(cellRoot.wallpaperPath)
 
-                            Canvas {
-                                id: plusCanvas
-                                anchors.centerIn: parent
-                                width: modeManager.scale(56)
-                                height: modeManager.scale(56)
-                                visible: cellRoot.isAddCell
-
-                                property color strokeColor: root.theme
-                                    ? root.theme.accent
-                                    : Qt.rgba(0.65, 0.55, 0.85, 1.0)
-
-                                onStrokeColorChanged: requestPaint()
-                                onWidthChanged: requestPaint()
-                                Component.onCompleted: requestPaint()
-
-                                onPaint: {
-                                    let ctx = getContext("2d")
-                                    ctx.reset()
-                                    let cx = width / 2
-                                    let cy = height / 2
-                                    let arm = width * 0.42
-                                    ctx.lineWidth = width * 0.07
-                                    ctx.lineCap = "round"
-                                    ctx.strokeStyle = strokeColor
-                                    ctx.beginPath()
-                                    ctx.moveTo(cx - arm, cy)
-                                    ctx.lineTo(cx + arm, cy)
-                                    ctx.moveTo(cx, cy - arm)
-                                    ctx.lineTo(cx, cy + arm)
-                                    ctx.stroke()
-                                }
+                        onActivated: {
+                            root.moveTo(index)
+                            // setWallpaper() tears down this delegate, so bump before it runs.
+                            root.resetAutoCloseTimer()
+                            if (cellRoot.isAddCell) {
+                                root.openWallpaperFolder()
+                            } else {
+                                root.setWallpaper(cellRoot.wallpaperPath)
                             }
                         }
+                    }
+                }
+            }
 
-                        Image {
-                            id: thumb
-                            anchors.fill: parent
-                            anchors.margins: modeManager.scale(4)
-                            source: cellRoot.isAddCell ? "" : wallpaperManager.thumbnailSource(cellRoot.wallpaperPath)
-                            fillMode: Image.PreserveAspectCrop
-                            asynchronous: true
-                            smooth: true
-                            cache: false
-                            visible: false
+            GridView {
+                id: gridView
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                visible: root.expanded
+
+                model: root.listModel
+                cellWidth: modeManager.scale(240)
+                cellHeight: modeManager.scale(142)
+                clip: true
+
+                onCountChanged: {
+                    if (modeManager.isMode("wallpaper")) {
+                        root.restoreSelection()
+                    }
+                }
+
+                Keys.onPressed: (event) => {
+                    let colsPerRow = Math.max(1, Math.floor(gridView.width / gridView.cellWidth))
+
+                    if (event.key === Qt.Key_Escape) {
+                        modeManager.closeAllModes()
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        root.activateCurrent()
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_Left) {
+                        if (currentIndex > 0) {
+                            root.moveTo(currentIndex - 1)
+                            root.resetAutoCloseTimer()
+                            event.accepted = true
+                        } else {
+                            event.accepted = false
                         }
-
-                        OpacityMask {
-                            anchors.fill: thumb
-                            source: thumb
-                            visible: !cellRoot.isAddCell && thumb.status === Image.Ready
-                            maskSource: Rectangle {
-                                width: thumb.width
-                                height: thumb.height
-                                radius: modeManager.scale(18)
-                            }
+                    } else if (event.key === Qt.Key_Right) {
+                        if (currentIndex < count - 1) {
+                            root.moveTo(currentIndex + 1)
+                            root.resetAutoCloseTimer()
+                            event.accepted = true
+                        } else {
+                            event.accepted = false
                         }
-
-                        Rectangle {
-                            anchors.top: parent.top
-                            anchors.right: parent.right
-                            anchors.margins: modeManager.scale(10)
-                            width: modeManager.scale(24)
-                            height: modeManager.scale(24)
-                            radius: modeManager.scale(12)
-                            color: Qt.rgba(0, 0, 0, 0.7)
-                            visible: !cellRoot.isAddCell && wallpaperManager.isVideoFile(cellRoot.wallpaperPath)
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "▶"
-                                color: "white"
-                                font.pixelSize: modeManager.scale(10)
-                            }
+                    } else if (event.key === Qt.Key_Up) {
+                        if (currentIndex < colsPerRow) {
+                            root.expanded = false
+                            root.resetAutoCloseTimer()
+                        } else {
+                            root.moveTo(currentIndex - colsPerRow)
+                            root.resetAutoCloseTimer()
                         }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            color: "transparent"
-                            border.width: cellRoot.isCurrent && !cellRoot.isAddCell ? modeManager.scale(2) : 0
-                            border.color: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
-                            radius: modeManager.scale(18)
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_Down) {
+                        if (currentIndex < count - colsPerRow) {
+                            root.moveTo(currentIndex + colsPerRow)
+                            root.resetAutoCloseTimer()
+                            event.accepted = true
+                        } else {
+                            event.accepted = false
                         }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                root.moveTo(index)
-                                // setWallpaper() tears down this delegate, so bump before it runs.
+                    } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                        if (event.modifiers & Qt.ShiftModifier || event.key === Qt.Key_Backtab) {
+                            if (currentIndex > 0) {
+                                root.moveTo(currentIndex - 1)
                                 root.resetAutoCloseTimer()
-                                if (cellRoot.isAddCell) {
-                                    root.openWallpaperFolder()
-                                } else {
-                                    root.setWallpaper(cellRoot.wallpaperPath)
-                                }
+                                event.accepted = true
+                            } else {
+                                event.accepted = false
+                            }
+                        } else {
+                            if (currentIndex < count - 1) {
+                                root.moveTo(currentIndex + 1)
+                                root.resetAutoCloseTimer()
+                                event.accepted = true
+                            } else {
+                                event.accepted = false
+                            }
+                        }
+                    } else if (event.key === Qt.Key_Home) {
+                        root.moveTo(0)
+                        root.resetAutoCloseTimer()
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_End) {
+                        root.moveTo(count - 1)
+                        root.resetAutoCloseTimer()
+                        event.accepted = true
+                    } else if (root.forwardPrintableToSearch(event)) {
+                        event.accepted = true
+                    } else {
+                        event.accepted = false
+                    }
+                }
+
+                delegate: Item {
+                    id: gridCellRoot
+                    width: gridView.cellWidth
+                    height: gridView.cellHeight
+
+                    property bool isCurrent: GridView.isCurrentItem
+                    property bool isAddCell: modelData === "__add__"
+                    property string wallpaperPath: isAddCell ? "" : modelData
+
+                    WallpaperTile {
+                        anchors.fill: parent
+                        anchors.margins: modeManager.scale(8)
+
+                        theme: root.theme
+                        modeManager: root.modeManager
+                        wallpaperManager: root.wallpaperManager
+                        path: gridCellRoot.wallpaperPath
+                        selected: gridCellRoot.isCurrent
+                        isAddCell: gridCellRoot.isAddCell
+                        isVideo: !gridCellRoot.isAddCell && wallpaperManager.isVideoFile(gridCellRoot.wallpaperPath)
+
+                        onActivated: {
+                            root.moveTo(index)
+                            root.resetAutoCloseTimer()
+                            if (gridCellRoot.isAddCell) {
+                                root.openWallpaperFolder()
+                            } else {
+                                root.setWallpaper(gridCellRoot.wallpaperPath)
                             }
                         }
                     }
@@ -453,7 +647,9 @@ FocusScope {
                     ? "loading..."
                     : (wallpaperManager.wallpapers.length === 0
                         ? "no wallpapers yet, press + to open the folder"
-                        : wallpaperManager.wallpapers.length + " wallpapers")
+                        : (wallpaperManager.searchQuery.length > 0
+                            ? wallpaperManager.visibleWallpapers.length + " of " + wallpaperManager.wallpapers.length + " wallpapers"
+                            : wallpaperManager.wallpapers.length + " wallpapers"))
                 color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
                 font.pixelSize: modeManager.scale(10)
                 font.family: "M PLUS 2"
