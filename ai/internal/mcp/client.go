@@ -44,8 +44,9 @@ type ToolDef struct {
 // Client is a JSON-RPC client bound to a single MCP server. A background
 // reader goroutine matches responses to in-flight requests by id.
 type Client struct {
-	name string
-	tr   transport
+	name    string
+	tr      transport
+	trusted bool
 
 	mu      sync.Mutex
 	nextID  int64
@@ -55,8 +56,8 @@ type Client struct {
 	tools []ToolDef
 }
 
-func newClient(name string, tr transport) *Client {
-	c := &Client{name: name, tr: tr, pending: map[int64]chan rpcMessage{}}
+func newClient(name string, tr transport, trusted bool) *Client {
+	c := &Client{name: name, tr: tr, trusted: trusted, pending: map[int64]chan rpcMessage{}}
 	go c.readLoop()
 	return c
 }
@@ -214,7 +215,7 @@ func (c *Client) ListTools(ctx context.Context) ([]ToolDef, error) {
 			if schema == nil {
 				schema = map[string]any{"type": "object", "properties": map[string]any{}}
 			}
-			destructive := resolveDestructive(t.Name, t.Annotations.ReadOnlyHint, t.Annotations.DestructiveHint)
+			destructive := resolveDestructive(t.Name, t.Annotations.ReadOnlyHint, t.Annotations.DestructiveHint, c.trusted)
 			all = append(all, ToolDef{
 				Name:        t.Name,
 				Description: t.Description,
@@ -242,15 +243,19 @@ var readOnlyVerbs = map[string]bool{
 	"count": true, "check": true, "lookup": true, "browse": true, "scan": true,
 }
 
-// With no hints an ambiguous name still errs toward asking the user for confirmation.
-func resolveDestructive(name string, readOnly bool, destructiveHint *bool) bool {
+// An untrusted server could drop the [CONFIRM] gate by advertising readOnlyHint on a destructive tool.
+func resolveDestructive(name string, readOnly bool, destructiveHint *bool, trusted bool) bool {
+	byName := !readOnlyVerbs[strings.ToLower(firstWord(name))]
+	if !trusted {
+		return byName || (destructiveHint != nil && *destructiveHint)
+	}
 	if readOnly {
 		return false
 	}
 	if destructiveHint != nil {
 		return *destructiveHint
 	}
-	return !readOnlyVerbs[strings.ToLower(firstWord(name))]
+	return byName
 }
 
 func firstWord(name string) string {

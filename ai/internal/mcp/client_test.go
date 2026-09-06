@@ -99,7 +99,7 @@ func TestClientInitialize(t *testing.T) {
 		}
 		return rpcMessage{}, false // notifications/initialized expects no reply
 	})
-	c := newClient("test", tr)
+	c := newClient("test", tr, false)
 	defer c.Close()
 
 	if err := c.Initialize(testCtx(t)); err != nil {
@@ -137,7 +137,7 @@ func TestClientListToolsPagination(t *testing.T) {
 			},
 		}), true
 	})
-	c := newClient("test", tr)
+	c := newClient("test", tr, false)
 	defer c.Close()
 
 	got, err := c.ListTools(testCtx(t))
@@ -179,7 +179,7 @@ func TestClientCallTool(t *testing.T) {
 			},
 		}), true
 	})
-	c := newClient("test", tr)
+	c := newClient("test", tr, false)
 	defer c.Close()
 	ctx := testCtx(t)
 
@@ -207,24 +207,31 @@ func TestResolveDestructive(t *testing.T) {
 		toolName    string
 		readOnly    bool
 		destructive *bool
+		trusted     bool
 		want        bool
 	}{
-		{"readOnlyHint wins over name", "delete_thing", true, nil, false},
-		{"readOnlyHint wins over destructiveHint", "x", true, &yes, false},
-		{"explicit destructiveHint true", "search_x", false, &yes, true},
-		{"explicit destructiveHint false", "create_x", false, &no, false},
-		{"unannotated read verb", "read_graph", false, nil, false},
-		{"unannotated search verb", "search_nodes", false, nil, false},
-		{"unannotated camelCase read", "getUserProfile", false, nil, false},
-		{"unannotated write verb", "create_entities", false, nil, true},
-		{"unannotated delete verb", "delete_entities", false, nil, true},
-		{"unannotated ambiguous name", "open_nodes", false, nil, true},
-		{"reader is not the read verb", "reader_load", false, nil, true},
+		{"trusted: readOnlyHint wins over name", "delete_thing", true, nil, true, false},
+		{"trusted: readOnlyHint wins over destructiveHint", "x", true, &yes, true, false},
+		{"trusted: explicit destructiveHint true", "search_x", false, &yes, true, true},
+		{"trusted: explicit destructiveHint false", "create_x", false, &no, true, false},
+		{"trusted: unannotated read verb", "read_graph", false, nil, true, false},
+		{"trusted: unannotated search verb", "search_nodes", false, nil, true, false},
+		{"trusted: unannotated camelCase read", "getUserProfile", false, nil, true, false},
+		{"trusted: unannotated write verb", "create_entities", false, nil, true, true},
+		{"trusted: unannotated delete verb", "delete_entities", false, nil, true, true},
+		{"trusted: unannotated ambiguous name", "open_nodes", false, nil, true, true},
+		{"trusted: reader is not the read verb", "reader_load", false, nil, true, true},
+		{"untrusted: readOnlyHint cannot clear a destructive name", "delete_thing", true, nil, false, true},
+		{"untrusted: readOnlyHint cannot clear an explicit destructiveHint", "x", true, &yes, false, true},
+		{"untrusted: destructiveHint true raises a safe-looking name", "get_thing", false, &yes, false, true},
+		{"untrusted: destructiveHint false cannot clear a destructive name", "delete_thing", false, &no, false, true},
+		{"untrusted: unannotated read verb stays safe", "read_graph", false, nil, false, false},
+		{"untrusted: unannotated delete verb stays gated", "delete_entities", false, nil, false, true},
 	}
 	for _, tc := range cases {
-		if got := resolveDestructive(tc.toolName, tc.readOnly, tc.destructive); got != tc.want {
-			t.Errorf("%s: resolveDestructive(%q, %v, %v) = %v, want %v",
-				tc.desc, tc.toolName, tc.readOnly, tc.destructive, got, tc.want)
+		if got := resolveDestructive(tc.toolName, tc.readOnly, tc.destructive, tc.trusted); got != tc.want {
+			t.Errorf("%s: resolveDestructive(%q, %v, %v, trusted=%v) = %v, want %v",
+				tc.desc, tc.toolName, tc.readOnly, tc.destructive, tc.trusted, got, tc.want)
 		}
 	}
 }
@@ -233,7 +240,7 @@ func TestClientConnectionLost(t *testing.T) {
 	tr := newScriptedTransport(func(rpcMessage) (rpcMessage, bool) {
 		return rpcMessage{}, false // never answers
 	})
-	c := newClient("test", tr)
+	c := newClient("test", tr, false)
 
 	// Dropping the transport mid-call must unblock the request, not hang.
 	go func() {

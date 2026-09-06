@@ -170,7 +170,7 @@ func TestClientClosedAfterHTTPBreak(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c := newClient("test", tr)
+	c := newClient("test", tr, false)
 	defer c.Close()
 
 	if _, err := c.CallTool(context.Background(), "anything", nil); err == nil {

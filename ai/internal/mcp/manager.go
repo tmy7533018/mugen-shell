@@ -20,6 +20,8 @@ type ServerConfig struct {
 	Env      map[string]string
 	URL      string
 	Disabled bool
+	// Trusted servers keep skipping the destructive-tool confirm gate; see resolveDestructive.
+	Trusted bool
 }
 
 // ServerStatus is the post-startup outcome for one configured server,
@@ -92,7 +94,7 @@ func dial(ctx context.Context, name string, sc ServerConfig) (*Client, error) {
 			return nil, fmt.Errorf("spawn failed: %w", err)
 		}
 	}
-	client := newClient(name, tr)
+	client := newClient(name, tr, sc.Trusted)
 
 	hctx, cancel := context.WithTimeout(ctx, handshakeTimeout)
 	defer cancel()

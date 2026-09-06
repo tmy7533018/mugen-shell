@@ -143,8 +143,9 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 	toolReg.AttachWeather(cfg.Weather.Place)
 
 	// Connect never fails outright, so the returned Manager is always safe to attach and Close.
-	mcpMgr := mcp.Connect(context.Background(), mcpServerConfigs(cfg.MCP))
-	toolReg.AttachMCP(mcpMgr, trustedMCPServers(cfg.MCP))
+	trustedServers := trustedMCPServers(cfg.MCP)
+	mcpMgr := mcp.Connect(context.Background(), mcpServerConfigs(cfg.MCP, trustedServers))
+	toolReg.AttachMCP(mcpMgr, trustedServers)
 
 	// Warmed lazily so cloud-only users never spawn a doomed embed call against a stopped Ollama.
 	var filter *toolfilter.Filter
@@ -187,7 +188,7 @@ func trustedMCPServers(c config.MCP) map[string]bool {
 }
 
 // Adapts to the mcp package's own ServerConfig so it needn't import internal/config.
-func mcpServerConfigs(c config.MCP) map[string]mcp.ServerConfig {
+func mcpServerConfigs(c config.MCP, trusted map[string]bool) map[string]mcp.ServerConfig {
 	if len(c.Servers) == 0 {
 		return nil
 	}
@@ -199,6 +200,7 @@ func mcpServerConfigs(c config.MCP) map[string]mcp.ServerConfig {
 			Env:      expandEnv(s.Env),
 			URL:      s.URL,
 			Disabled: s.Disabled,
+			Trusted:  trusted[name],
 		}
 	}
 	return out
