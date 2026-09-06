@@ -9,9 +9,10 @@ Everything lives outside the repo, under XDG dirs:
 | Where | What |
 |---|---|
 | `$XDG_CONFIG_HOME/mugen-shell/settings.json` | Persisted user settings |
-| `$XDG_STATE_HOME/mugen-shell/{theme-mode,idle-inhibitor.json,keybinds.json,launcher.json}` | Toggleable state and exported listings |
-| `$XDG_CACHE_HOME/mugen-shell/{colors.json,wallp/,wallpaper-thumbs/,art/}` | Regenerable cache |
+| `$XDG_STATE_HOME/mugen-shell/{theme-mode,idle-inhibitor.json,keybinds.json,launcher.json,notifications.json,timer.json,notified.json}` | Toggleable state and exported listings |
+| `$XDG_CACHE_HOME/mugen-shell/{colors.json,weather.json,apps_v4.json,apps_v4.sha256,wallp/,wallpaper-thumbs/,clipboard-thumbs/,art/}` | Regenerable cache |
 | `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/,timer-sounds/,tts/}` | User-supplied media |
+| `$XDG_DATA_HOME/mugen-shell/calendar.db` | Calendar SQLite database |
 | `$XDG_PICTURES_DIR/mugen-screenshots/` | Captured screenshots |
 
 Audio files dropped into `sounds/` and `timer-sounds/` above show up in the Settings dropdowns for notification and timer sounds.
@@ -42,13 +43,14 @@ NixOS users just need the repo root flake:
     nixosConfigurations.mybox = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
+        ./configuration.nix  # the config nixos-generate-config already made
         mugen-shell.nixosModules.default
         home-manager.nixosModules.home-manager
         ({ ... }: {
           # System layer
           programs.mugen-shell.enable = true;
 
-          # Required — home-manager won't see the mugen-shell overlay without it
+          # Required: home-manager won't see the mugen-shell overlay without it
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.users.YOUR_USER = {
@@ -64,7 +66,7 @@ NixOS users just need the repo root flake:
 }
 ```
 
-Then `nixos-rebuild switch --flake /etc/nixos#mybox`.
+Then `nixos-rebuild switch --flake "/etc/nixos#mybox"`.
 
 **Making the terminal match the desktop**
 
@@ -125,7 +127,7 @@ Point at the user-level flake (the repo root); the Wayland and compositor stack 
           programs.mugen-shell.enable = true;
           # Wayland stack already on the OS path, skip the Nix copies
           programs.mugen-shell.includeSystemDeps = false;
-          # Opt out of the AI backend with: programs.mugen-shell.ai.enable = false;
+          # Stop the mugen-ai service with: programs.mugen-shell.ai.enable = false;
           home.stateVersion = "26.05";
         })
       ];
@@ -140,17 +142,18 @@ Install the system stack with pacman before the first switch. Some of it comes f
 yay -S hyprland quickshell qt6-5compat hypridle hyprpolkitagent zsh kitty firefox libnotify \
        pipewire pipewire-pulse pavucontrol cava playerctl \
        networkmanager bluez bluez-utils \
-       fcitx5 fcitx5-mozc fcitx5-im fcitx5-configtool \
+       fcitx5 fcitx5-mozc fcitx5-gtk fcitx5-qt fcitx5-configtool \
        awww mpvpaper ffmpeg matugen-bin socat \
        grim slurp wl-clipboard cliphist imv curl jq xdg-utils brightnessctl fzf \
-       thunar gtk3 \
+       thunar gtk3 gnome-themes-extra dconf gsettings-desktop-schemas \
+       xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \
        ttf-mplus-git ttf-firacode-nerd ttf-jetbrains-mono-nerd noto-fonts-emoji \
        python-gobject
 ```
 
 The UI names `M PLUS 2` and `M PLUS 1 Code`, so the Nerd Fonts build (`ttf-mplus-nerd`) is not a substitute.
 
-The audio visualiser's QML module is built by Nix. If quickshell fails to import `Mugen.Audio` with `version 'Qt_6.11' not found`, your Qt6 is older than the one it was built against: update Qt, or build `plugin/` yourself and put its install prefix on `QML2_IMPORT_PATH`.
+The audio visualiser's QML module is built by Nix. If quickshell fails to import `Mugen.Audio` with `version 'Qt_6.11' not found`, your Qt6 is older than the one it was built against: update Qt.
 
 `includeSystemDeps = true` pulls the user-space tools on that list (Quickshell, hypridle, awww, matugen, kitty, …) into Nix instead; Hyprland itself, the system services, and the fonts stay on pacman either way.
 
@@ -166,10 +169,10 @@ sudo systemctl restart nix-daemon
 There is no `home-manager` command yet on a fresh machine, so run the first activation through `nix run`:
 
 ```bash
-nix run home-manager/master -- switch --flake ~/.config/home-manager#YOUR_USER
+nix run home-manager/master -- switch --flake ~/".config/home-manager#YOUR_USER"
 ```
 
-After that, `home-manager switch --flake ~/.config/home-manager#YOUR_USER` updates it.
+After that, `home-manager switch --flake ~/".config/home-manager#YOUR_USER"` updates it.
 
 **Making the terminal match the desktop**
 
@@ -193,6 +196,8 @@ source ~/.config/mugen-shell/mugen-shell.zshrc
 ```
 
 Wiring Hyprland into your display manager or login session is left to you (`Hyprland` from TTY, sddm session entry, etc.).
+
+`QML2_IMPORT_PATH` has to be in Hyprland's environment or the shell will not start. home-manager writes it into `hm-session-vars.sh`, so a TTY login shell picks it up on its own; from a display manager, source that file in the session (`echo $QML2_IMPORT_PATH` tells you whether it is there).
 
 Activation places the shipped `system/hypr/` and `matugen/` under `~/.config/`. Their contents are refreshed on every later activation too, except `hypridle.conf`, which is created only once and left alone after that. `colors.lua`, `configs/blur.lua`, `configs/user-overrides.lua` and `configs/keybind-overrides.lua` are not created by activation at all: the first two are written when matugen and `blur-preset.sh` run, and the two override files are yours to create when you need them. `cava`, `kitty`, `fastfetch`, `starship.toml`, and the `gtk-3.0/gtk.css` and `gtk-4.0/gtk.css` that let GTK follow matugen's colours still copy only when that path does not exist yet, as before. If you already have a Hyprland config, add the autostart to it by hand; without it nothing spawns `quickshell -c mugen-shell`:
 
@@ -224,11 +229,11 @@ Two things to do yourself on Arch:
 
 ## Configuring mugen-ai
 
-Everything is configured under **Settings → Yura**: personality, provider status, model, tool categories, allowed apps, panel side. Saving bounces the service for you. **Edit toml** on the same page opens `~/.config/mugen-ai/config.toml` in `$EDITOR` when you would rather write it by hand.
+Everything is configured under **Settings → Yura**: personality, provider status, model, tool categories, allowed apps, panel side. Saving bounces the service for you. **Edit toml** on the same page opens `~/.config/mugen-ai/`, so you can edit `config.toml` there by hand.
 
 Three defaults worth knowing. **No model ships with this.** Yura's panel reads "No model yet" until you install Ollama and pull one (`ollama pull qwen3:4b`, say) or put an API key in `~/.config/mugen-ai/.env`. **Allowed apps starts empty** too, so Yura cannot launch anything until you pick apps there. And when `mugen-ai.service` itself is not running, that panel (`Super + Shift + Y`) shows the command to start it.
 
-A full annotated template lives at `ai/config.toml.example` (or `$(nix build --no-link --print-out-paths github:tmy7533018/mugen-shell#mugen-ai)/share/mugen-ai/config.toml.example` if you installed via Nix).
+A full annotated template lives at `ai/config.toml.example` (or `$(nix build --no-link --print-out-paths "github:tmy7533018/mugen-shell#mugen-ai")/share/mugen-ai/config.toml.example` if you installed via Nix).
 
 <details>
 <summary>A minimal <code>~/.config/mugen-ai/config.toml</code></summary>
@@ -266,7 +271,7 @@ disabled_categories = []
 ```
 
 - `[provider.ollama]`: pointed at `http://localhost:11434` out of the box, but **no install path ships Ollama itself**, so install it and pull a model yourself. Override `host` only if your daemon lives elsewhere.
-- `[provider.google]` needs `GEMINI_API_KEY`; `[provider.anthropic]` needs `ANTHROPIC_API_KEY`. `models` is optional for both — omitted, each provider falls back to a single default model. To pin one, check that provider's own docs for a current model ID.
+- `[provider.google]` needs `GEMINI_API_KEY`; `[provider.anthropic]` needs `ANTHROPIC_API_KEY`. `models` is optional for both. Omit it and each provider falls back to a single default model. To pin one, check that provider's own docs for a current model ID.
 - `[provider.openai]`: any OpenAI-compatible provider. Active once `OPENAI_API_KEY` is set or `base_url` points at a local server. Leave `models` empty to query the backend's `/v1/models`.
 - `[tools.app_launch].allowed_commands`: matched on binary basename. Off-`$PATH` binaries resolve through their `.desktop` entry, and Flatpak apps match by display name once `flatpak` itself is listed.
 - `[tools].disabled_categories`: an MCP server name works here too, which disables that whole server.
@@ -299,7 +304,7 @@ Tools are merged under a `<name>__<tool>` prefix, so keep the server name short,
 
 ### Provider API keys
 
-Copy `ai/.env.example` (Nix install: `$(nix build --no-link --print-out-paths github:tmy7533018/mugen-shell#mugen-ai)/share/mugen-ai/.env.example`) to `~/.config/mugen-ai/.env` and fill in the keys you have, or append directly:
+Copy `ai/.env.example` (Nix install: `$(nix build --no-link --print-out-paths "github:tmy7533018/mugen-shell#mugen-ai")/share/mugen-ai/.env.example`) to `~/.config/mugen-ai/.env` and fill in the keys you have, or append directly:
 
 ```sh
 cat >> ~/.config/mugen-ai/.env <<'EOF'
@@ -311,7 +316,7 @@ chmod 600 ~/.config/mugen-ai/.env
 systemctl --user restart mugen-ai.service
 ```
 
-Only keys with a non-empty value enable their provider.
+Only keys with a non-empty value enable their provider. `GOOGLE_API_KEY` is read too when `GEMINI_API_KEY` is empty.
 
 ### Choosing a model for shell control
 
@@ -329,7 +334,7 @@ Conversations live in SQLite at `~/.local/state/mugen-ai/history.db`. For termin
 
 Yura can speak its replies: press the speaker icon on a reply in the panel.
 
-The default stack is Japanese-first but not Japanese-only (see *Other languages* below). It sits on top of a running mugen-ai, and the home-manager module (Paths A and B) packages the whole thing behind one option:
+The default stack is Japanese-first but not Japanese-only (see *Running Yura's voice in another language* below). It sits on top of a running mugen-ai, and the home-manager module (Paths A and B) packages the whole thing behind one option:
 
 ```nix
 programs.mugen-shell.voice.enable = true;
@@ -348,7 +353,7 @@ Runtime control lives in **Settings → Yura → Voice**: voice picker, speech s
 Only the reply voice is engine-specific; everything else is multilingual already:
 
 - **TTS**: local voices run in-process through sherpa-onnx, so there is no `piper` binary to install. Take a model from the [sherpa-onnx TTS models release](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) (Piper/VITS and Kokoro both work) and unpack the whole **model directory** (the `.onnx` next to its `tokens.txt` and `espeak-ng-data/`) into `~/.local/share/mugen-shell/tts/`, or point `YURA_TTS_MODELS` somewhere else. Each directory then appears in the Settings voice picker, and VOICEVOX becomes optional. The Nix path already ships `vits-piper-en_US-lessac-high`.
-- **Replies**: set the assistant's language under Settings → Yura → Personality.
+- **Replies**: set the assistant's language under Settings → Yura → Model → Personality.
 
 **Environment knobs**, set in the unit or a drop-in: `YURA_TTS` (`<engine>:<style-id>`), `YURA_VOICEVOX_SPEAKER`, `YURA_VOICE_SPEED`, `YURA_VOICEVOX_URL`, `YURA_AIVIS_URL`. Anything Settings also exposes wins from `settings.json` once the shell has saved it.
 

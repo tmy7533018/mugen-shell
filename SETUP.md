@@ -6,8 +6,8 @@
 
 インストール経路は 2 つあります。どちらも **Hyprland 0.55 以上**が前提です。自分の環境に合う方を開いてください。
 
-- **Path A: NixOS** — リポジトリの flake を読み込むだけ
-- **Path B: Arch など NixOS 以外の Linux + Nix** — home-manager (ユーザ単位) + distro のパッケージ
+- **Path A (NixOS)**: リポジトリの flake を読み込むだけ
+- **Path B (Arch など NixOS 以外の Linux + Nix)**: home-manager (ユーザ単位) + distro のパッケージ
 
 <details>
 <summary><b>Path A: NixOS</b></summary>
@@ -29,13 +29,14 @@
     nixosConfigurations.mybox = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
+        ./configuration.nix  # nixos-generate-config が作った既存の設定
         mugen-shell.nixosModules.default
         home-manager.nixosModules.home-manager
         ({ ... }: {
           # System layer
           programs.mugen-shell.enable = true;
 
-          # Required — home-manager won't see the mugen-shell overlay without it
+          # Required: home-manager won't see the mugen-shell overlay without it
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
           home-manager.users.YOUR_USER = {
@@ -51,7 +52,7 @@
 }
 ```
 
-書けたら `nixos-rebuild switch --flake /etc/nixos#mybox` を実行してください。
+書けたら `nixos-rebuild switch --flake "/etc/nixos#mybox"` を実行してください。
 
 **ターミナルも mugen-shell の見た目にする (オプション)**
 
@@ -93,10 +94,11 @@ home-manager を switch する前に、まずシステム側を揃えます。�
 yay -S hyprland quickshell qt6-5compat hypridle hyprpolkitagent zsh kitty firefox libnotify \
        pipewire pipewire-pulse pavucontrol cava playerctl \
        networkmanager bluez bluez-utils \
-       fcitx5 fcitx5-mozc fcitx5-im fcitx5-configtool \
+       fcitx5 fcitx5-mozc fcitx5-gtk fcitx5-qt fcitx5-configtool \
        awww mpvpaper ffmpeg matugen-bin socat \
        grim slurp wl-clipboard cliphist imv curl jq xdg-utils brightnessctl fzf \
-       thunar gtk3 gnome-themes-extra dconf \
+       thunar gtk3 gnome-themes-extra dconf gsettings-desktop-schemas \
+       xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \
        ttf-mplus-git ttf-firacode-nerd ttf-jetbrains-mono-nerd noto-fonts-emoji \
        python-gobject
 ```
@@ -134,7 +136,7 @@ UI は `M PLUS 2` と `M PLUS 1 Code` を名指しするので、Nerd Fonts 版 
           programs.mugen-shell.enable = true;
           # Wayland stack already on the OS path, skip the Nix copies
           programs.mugen-shell.includeSystemDeps = false;
-          # Opt out of the AI backend with: programs.mugen-shell.ai.enable = false;
+          # Stop the mugen-ai service with: programs.mugen-shell.ai.enable = false;
           home.stateVersion = "26.05";
         })
       ];
@@ -155,14 +157,16 @@ sudo systemctl restart nix-daemon
 初回は `home-manager` コマンドがまだ無いので、`nix run` で起動します:
 
 ```bash
-nix run home-manager/master -- switch --flake ~/.config/home-manager#YOUR_USER
+nix run home-manager/master -- switch --flake ~/".config/home-manager#YOUR_USER"
 ```
 
-2 回目以降は `home-manager switch --flake ~/.config/home-manager#YOUR_USER` で更新できます。
+2 回目以降は `home-manager switch --flake ~/".config/home-manager#YOUR_USER"` で更新できます。
 
 アクティベートすると、同梱の `system/hypr/` と `matugen/` が `~/.config/` に配置されます。中身は次回以降のアクティベートでも更新されますが、`hypridle.conf` はその場所にまだ無いときだけ作られ、以降は触られません。`colors.lua`・`configs/blur.lua`・`configs/user-overrides.lua`・`configs/keybind-overrides.lua` はアクティベートでは作られません。前の 2 つは matugen と `blur-preset.sh` が動いたときに書かれ、`user-overrides.lua`・`keybind-overrides.lua` は必要になったら自分で作るファイルです。`cava`・`kitty`・`fastfetch` の設定と `starship.toml`、GTK の配色を matugen に追従させる `gtk-3.0/gtk.css`・`gtk-4.0/gtk.css` は、今まで通りその場所にまだ設定が無いときだけコピーされます。
 
 Hyprland の起動方法 (TTY から `Hyprland` を叩く、sddm にセッションを登録する、など) は自分で用意してください。
+
+このとき `QML2_IMPORT_PATH` が Hyprland の環境に入っている必要があります。無いとシェルが起動しません。home-manager が `hm-session-vars.sh` に書き出すので TTY のログインシェル経由なら自動で入りますが、ディスプレイマネージャから起動する場合はセッション側でそのファイルを読んでください (`echo $QML2_IMPORT_PATH` で確認できます)。
 
 **4. 自前の Hyprland 設定を使っている場合: autostart を足す**
 
@@ -211,7 +215,7 @@ source ~/.config/mugen-shell/mugen-shell.zshrc
 
 **トラブルシューティング: `version 'Qt_6.11' not found`**
 
-オーディオビジュアライザの QML モジュールは Nix 側でビルドされます。quickshell が `Mugen.Audio` の import に失敗してこのエラーを出す場合、distro の Qt6 がビルド時のものより古いのが原因です。Qt を更新するか、`plugin/` を自分でビルドしてインストール先を `QML2_IMPORT_PATH` に足してください。
+オーディオビジュアライザの QML モジュールは Nix 側でビルドされます。quickshell が `Mugen.Audio` の import に失敗してこのエラーを出す場合、distro の Qt6 がビルド時のものより古いのが原因です。Qt を更新してください。
 
 </details>
 
@@ -219,7 +223,7 @@ source ~/.config/mugen-shell/mugen-shell.zshrc
 
 ## mugen-ai の設定
 
-設定は **Settings → Yura** にまとまっています。personality、プロバイダの状態、モデル、tool categories、allowed apps、パネルの左右位置まで、すべてここから変更できます。保存すると、必要なサービスの再起動も自動で行われます。手で編集したい場合は、同じ画面の **Edit toml** から `~/.config/mugen-ai/config.toml` を `$EDITOR` で開けます。
+設定は **Settings → Yura** にまとまっています。personality、プロバイダの状態、モデル、tool categories、allowed apps、パネルの左右位置まで、すべてここから変更できます。保存すると、必要なサービスの再起動も自動で行われます。手で編集したい場合は、同じ画面の **Edit toml** で `~/.config/mugen-ai/` が開くので、そこの `config.toml` を編集してください。
 
 **インストール直後につまずきやすいポイントが 3 つあります:**
 
@@ -227,7 +231,7 @@ source ~/.config/mugen-shell/mugen-shell.zshrc
 2. **Allowed apps は空の状態から始まります。** ここでアプリを許可するまで、Yura は何も起動できません。
 3. **`mugen-ai.service` が止まっている場合**は、Yura のパネル (`Super + Shift + Y`) に起動用のコマンドが表示されます。
 
-注釈付きのフル版テンプレートは `ai/config.toml.example` にあります (Nix インストールの場合は `$(nix build --no-link --print-out-paths github:tmy7533018/mugen-shell#mugen-ai)/share/mugen-ai/config.toml.example`)。
+注釈付きのフル版テンプレートは `ai/config.toml.example` にあります (Nix インストールの場合は `$(nix build --no-link --print-out-paths "github:tmy7533018/mugen-shell#mugen-ai")/share/mugen-ai/config.toml.example`)。
 
 <details>
 <summary>最小構成の <code>~/.config/mugen-ai/config.toml</code></summary>
@@ -300,7 +304,7 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 
 ### プロバイダ API キー
 
-`ai/.env.example` (Nix インストールの場合は `$(nix build --no-link --print-out-paths github:tmy7533018/mugen-shell#mugen-ai)/share/mugen-ai/.env.example`) を `~/.config/mugen-ai/.env` にコピーして手持ちのキーを埋めるか、次のように直接追記してください:
+`ai/.env.example` (Nix インストールの場合は `$(nix build --no-link --print-out-paths "github:tmy7533018/mugen-shell#mugen-ai")/share/mugen-ai/.env.example`) を `~/.config/mugen-ai/.env` にコピーして手持ちのキーを埋めるか、次のように直接追記してください:
 
 ```sh
 cat >> ~/.config/mugen-ai/.env <<'EOF'
@@ -351,7 +355,7 @@ programs.mugen-shell.voice.enable = true;
 エンジンに縛られるのは返事の声だけで、それ以外はもともと多言語に対応しています:
 
 - **TTS**: ローカル音声は sherpa-onnx がプロセス内で再生するため、`piper` バイナリのインストールは不要です。[sherpa-onnx の TTS モデル配布](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) からモデルを取得し (Piper/VITS でも Kokoro でも動きます)、`.onnx`・`tokens.txt`・`espeak-ng-data/` を含む**ディレクトリごと** `~/.local/share/mugen-shell/tts/` に展開してください。置き場所は `YURA_TTS_MODELS` で変更できます。展開したディレクトリはそのまま Settings のピッカーに並ぶので、この構成なら VOICEVOX は無くても構いません。Nix 経路には `vits-piper-en_US-lessac-high` が最初から含まれています。
-- **返事の言語**: Settings → Yura → Personality の language で指定します。
+- **返事の言語**: Settings → Yura → Model の Personality にある language で指定します。
 
 **環境変数** (unit か drop-in で設定): `YURA_TTS` (`<engine>:<style-id>`)、`YURA_VOICEVOX_SPEAKER`、`YURA_VOICE_SPEED`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。Settings にも同じ項目があるものは、シェルが保存した時点で `settings.json` が優先されます。
 
@@ -386,9 +390,10 @@ programs.mugen-shell.voice.enable = true;
 | 場所 | 中身 |
 |---|---|
 | `$XDG_CONFIG_HOME/mugen-shell/settings.json` | 保存されたユーザ設定 |
-| `$XDG_STATE_HOME/mugen-shell/{theme-mode,idle-inhibitor.json,keybinds.json,launcher.json}` | トグル状態と、書き出された一覧 |
-| `$XDG_CACHE_HOME/mugen-shell/{colors.json,wallp/,wallpaper-thumbs/,art/}` | 再生成できるキャッシュ |
+| `$XDG_STATE_HOME/mugen-shell/{theme-mode,idle-inhibitor.json,keybinds.json,launcher.json,notifications.json,timer.json,notified.json}` | トグル状態と、書き出された一覧 |
+| `$XDG_CACHE_HOME/mugen-shell/{colors.json,weather.json,apps_v4.json,apps_v4.sha256,wallp/,wallpaper-thumbs/,clipboard-thumbs/,art/}` | 再生成できるキャッシュ |
 | `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/,timer-sounds/,tts/}` | ユーザが置くメディア |
+| `$XDG_DATA_HOME/mugen-shell/calendar.db` | カレンダーの SQLite DB |
 | `$XDG_PICTURES_DIR/mugen-screenshots/` | キャプチャしたスクリーンショット |
 
 通知音とタイマー音は、上の `sounds/` と `timer-sounds/` に音声ファイルを置くと Settings のドロップダウンに並びます。
