@@ -28,7 +28,7 @@ type Tool struct {
 	function string
 	argOrder []string
 
-	// Exec'd instead of `qs ipc call`, for tools that read stdout — an IpcHandler can't return it.
+	// Exec'd instead of `qs ipc call`, for tools whose data comes from a process rather than the shell.
 	cmdTemplate []string
 
 	// readonly runs under an RLock; anything mutating shell state takes the exclusive lock.

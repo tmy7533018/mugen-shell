@@ -112,15 +112,16 @@ Item {
     IpcHandler {
         target: "panel"
 
-        function open(name: string): void {
+        function open(name: string): string {
             let script = ipcRouter._detachedScripts.hasOwnProperty(name)
                 ? ipcRouter._detachedScripts[name] : ""
             if (script) {
                 Lib.Hypr.exec(Quickshell.shellDir + "/scripts/" + script)
-                return
+                return name
             }
             // Idempotent open: only called programmatically, so re-opening an active mode must not toggle it shut.
             if (!ipcRouter.modeManager.isMode(name)) ipcRouter.modeManager.switchMode(name)
+            return ipcRouter.modeManager.isMode(name) ? name : "unknown panel: " + name
         }
 
         function close(): void {
