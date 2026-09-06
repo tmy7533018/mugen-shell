@@ -28,6 +28,22 @@ QtObject {
     // Video path -> generation counter, which rides in the URL so Qt reloads a regenerated file.
     property var thumbTokens: ({})
 
+    // path -> { h, c, l }; the thumb script measures it, so an unmeasured file simply has no entry.
+    property var colors: ({})
+
+    function applyColor(path, h, c, l) {
+        let hue = parseInt(h)
+        let chroma = parseFloat(c)
+        let lightness = parseFloat(l)
+        let prev = colors[path]
+        if (prev && prev.h === hue && prev.c === chroma && prev.l === lightness)
+            return
+
+        let next = Object.assign({}, colors)
+        next[path] = { "h": hue, "c": chroma, "l": lightness }
+        colors = next
+    }
+
     property Process mkdirProcess: Process {
         running: false
         command: []
@@ -101,6 +117,19 @@ QtObject {
 
         if (changed)
             thumbTokens = next
+
+        let nextColors = {}
+        let colorsChanged = false
+
+        for (let key in colors) {
+            if (list.indexOf(key) !== -1)
+                nextColors[key] = colors[key]
+            else
+                colorsChanged = true
+        }
+
+        if (colorsChanged)
+            colors = nextColors
     }
 
     function syncThumbnails() {
@@ -131,10 +160,18 @@ QtObject {
 
         stdout: SplitParser {
             onRead: data => {
-                let line = data.trim()
-                let sep = line.indexOf('\t')
-                if (sep > 0)
-                    wallpaperManager.applyThumbState(line.substring(0, sep), line.substring(sep + 1))
+                let parts = data.trim().split('\t')
+                if (parts.length < 2)
+                    return
+
+                // A path may itself contain tabs, so the colour columns are taken from the end.
+                let state = parts.shift()
+                let color = parts.length >= 4 ? parts.splice(-3, 3) : null
+                let path = parts.join('\t')
+
+                wallpaperManager.applyThumbState(state, path)
+                if (color)
+                    wallpaperManager.applyColor(path, color[0], color[1], color[2])
             }
         }
 
@@ -205,6 +242,50 @@ QtObject {
         onFileChanged: {
             currentWallpaperProcess.running = true
         }
+    }
+
+    readonly property real neutralChroma: 0.10
+    readonly property real darkLightness: 0.12
+
+    // Hue is meaningless below these thresholds, so those files sort after the hue run instead of into it.
+    function colorRank(path) {
+        let c = colors[path]
+        if (!c) return 3
+        if (c.l < darkLightness) return 2
+        if (c.c < neutralChroma) return 1
+        return 0
+    }
+
+    readonly property var orderedWallpapers: {
+        let list = (wallpapers || []).slice()
+        let self = wallpaperManager
+        list.sort((a, b) => {
+            let ra = self.colorRank(a)
+            let rb = self.colorRank(b)
+            if (ra !== rb) return ra - rb
+            if (ra === 0 && self.colors[a].h !== self.colors[b].h)
+                return self.colors[a].h - self.colors[b].h
+            return self.displayName(a).localeCompare(self.displayName(b))
+        })
+        return list
+    }
+
+    function displayName(path) {
+        let name = path.split('/').pop()
+        name = name.replace(/\.(mp4|webm|mkv|gif|png|jpe?g|webp)$/i, "")
+        name = name.replace(/[-_.]?(moewalls[-_]com|1920x1080|4k[-_]live|hd[-_]live)/gi, "")
+        name = name.replace(/[-_]wall$/i, "")
+        return name.replace(/[-_]+/g, " ").trim()
+    }
+
+    property string searchQuery: ""
+
+    readonly property var visibleWallpapers: {
+        let query = searchQuery.trim().toLowerCase()
+        if (query.length === 0)
+            return orderedWallpapers
+        let self = wallpaperManager
+        return orderedWallpapers.filter(p => self.displayName(p).toLowerCase().indexOf(query) !== -1)
     }
 
     Component.onCompleted: {

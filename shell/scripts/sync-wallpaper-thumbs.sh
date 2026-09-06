@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Usage: sync-wallpaper-thumbs.sh <thumb-dir> [file...]
-# Prints "ok<TAB><path>" or "new<TAB><path>" — Qt only reloads an image whose URL changed.
+# Prints "<state><TAB><path>[<TAB>hue<TAB>chroma<TAB>lightness]" — Qt only reloads an image whose URL changed.
 set -uo pipefail
 
 THUMB_DIR="${1:-}"
@@ -11,6 +11,41 @@ mkdir -p "$THUMB_DIR"
 
 SCALE="scale=360:-1:force_original_aspect_ratio=decrease"
 
+# flags=area averages the frame; the default resample leaves noise that pins chroma at 1.0 near white.
+hsl_of() {
+  local rgb
+  rgb=$(ffmpeg -v error -i "$1" -vf scale=1:1:flags=area -f rawvideo -pix_fmt rgb24 - 2>/dev/null |
+        od -An -tu1 | tr -s ' \n' ' ')
+  [[ -z "${rgb// /}" ]] && return 1
+  awk -v v="$rgb" 'BEGIN {
+    n = split(v, c, " ")
+    if (n < 3) exit 1
+    r = c[1] / 255; g = c[2] / 255; b = c[3] / 255
+    max = (r > g ? (r > b ? r : b) : (g > b ? g : b))
+    min = (r < g ? (r < b ? r : b) : (g < b ? g : b))
+    l = (max + min) / 2
+    d = max - min
+    if (d == 0) { h = 0 }
+    else {
+      if (max == r)      h = (g - b) / d + (g < b ? 6 : 0)
+      else if (max == g) h = (b - r) / d + 2
+      else               h = (r - g) / d + 4
+      h *= 60
+    }
+    hi = int(h + 0.5) % 360
+    printf "%d %.4f %.4f\n", hi, d, l
+  }'
+}
+
+emit() {
+  local state=$1 src=$2 out=$3
+  if [[ -s "$out.color" ]]; then
+    printf '%s\t%s\t%s\n' "$state" "$src" "$(tr ' ' '\t' < "$out.color")"
+  else
+    printf '%s\t%s\n' "$state" "$src"
+  fi
+}
+
 declare -A keep=()
 for src; do
   keep["${src##*/}.png"]=1
@@ -19,7 +54,9 @@ done
 for f in "$THUMB_DIR"/*; do
   [[ -f "$f" ]] || continue
   b="${f##*/}"
-  [[ -n "${keep[${b%.failed}]:-}" ]] || rm -f "$f"
+  base="${b%.failed}"
+  base="${base%.color}"
+  [[ -n "${keep[$base]:-}" ]] || rm -f "$f"
 done
 
 command -v ffmpeg >/dev/null 2>&1 || exit 0
@@ -29,7 +66,8 @@ for src; do
   fail="$out.failed"
 
   if [[ -f "$out" && ! "$src" -nt "$out" ]]; then
-    printf 'ok\t%s\n' "$src"
+    [[ -s "$out.color" ]] || { hsl_of "$out" > "$out.color" 2>/dev/null || rm -f "$out.color"; }
+    emit ok "$src" "$out"
     continue
   fi
 
@@ -53,9 +91,10 @@ for src; do
 
   if [[ $ok -eq 1 ]]; then
     rm -f "$fail"
-    printf 'new\t%s\n' "$src"
+    hsl_of "$out" > "$out.color" 2>/dev/null || rm -f "$out.color"
+    emit new "$src" "$out"
   else
-    rm -f "$out"
+    rm -f "$out" "$out.color"
     touch "$fail"
   fi
 done
