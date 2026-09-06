@@ -552,7 +552,7 @@ func builtin() []Tool {
 		},
 		{
 			Name:        "panel_open",
-			Description: "Open a mugen-shell panel. Inline: launcher (the app launcher), volume, wifi, bluetooth, brightness, ai, timer, clipboard, notification, wallpaper, power, music. Detached (toggle): settings, calendar, shortcuts.",
+			Description: "Open a mugen-shell panel. Inline: launcher (the app launcher), volume, wifi, bluetooth, brightness, ai, timer, clipboard, notification, wallpaper, powermenu, music, screenshot-gallery, screenshot-menu, weather. Detached (toggle): settings, calendar.",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{

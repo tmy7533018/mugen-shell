@@ -118,34 +118,9 @@ QtObject {
         let cmd = parts[0]
         if (!cmd || cmd.length === 0) return
 
-        // A corrupted IPC string would otherwise wedge the bar in a dead mode.
-        const known = {
-            "normal": true,
-            "launcher": true,
-            "wallpaper": true,
-            "music": true,
-            "notification": true,
-            "notification-popup": true,
-            "powermenu": true,
-            "volume": true,
-            "wifi": true,
-            "bluetooth": true,
-            "screenshot-gallery": true,
-            "clipboard": true,
-            "ai": true,
-            "timer": true,
-            "brightness": true,
-            "weather": true
-        }
-
         function safeSwitch(modeName) {
             if (!modeName || modeName.length === 0) return
             if (modeName === "normal") {
-                closeAllModes()
-                return
-            }
-            if (!known[modeName]) {
-                console.warn("Unknown mode from IPC:", modeName)
                 closeAllModes()
                 return
             }
@@ -156,11 +131,6 @@ QtObject {
         function safeOpen(modeName) {
             if (!modeName || modeName.length === 0) return
             if (modeName === "normal") {
-                closeAllModes()
-                return
-            }
-            if (!known[modeName]) {
-                console.warn("Unknown mode from IPC:", modeName)
                 closeAllModes()
                 return
             }

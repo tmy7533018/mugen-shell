@@ -21,6 +21,7 @@ Available modes:
   wifi                Open WiFi panel
   bluetooth           Open Bluetooth panel
   screenshot-gallery  Open screenshot gallery
+  screenshot-menu     Open screenshot menu
   timer               Open countdown timer
   brightness          Open brightness panel
   weather             Open weather forecast
