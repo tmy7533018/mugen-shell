@@ -84,6 +84,12 @@ QtObject {
     // saveSettings merges over this, so keys this build doesn't model survive our save.
     property var _rawSettings: ({})
 
+    // A replace-semantics save against an empty _rawSettings would wipe the file, so gate it on the load.
+    property bool _settingsLoaded: false
+
+    // Subtrees saveSettings() replaces wholesale instead of merging, so a deleted key stays deleted.
+    readonly property var _replacedPaths: ["voice.ttsByLang"]
+
     signal settingsChanged()
 
     Component.onCompleted: {
@@ -99,12 +105,16 @@ QtObject {
         return v !== null && typeof v === "object" && !Array.isArray(v)
     }
 
-    function _deepMerge(base, override) {
+    function _deepMerge(base, override, path) {
         let out = _isPlainObject(base) ? JSON.parse(JSON.stringify(base)) : {}
         for (let k in override) {
             if (!override.hasOwnProperty(k)) continue
-            if (_isPlainObject(override[k]) && _isPlainObject(out[k])) {
-                out[k] = _deepMerge(out[k], override[k])
+            const at = path ? path + "." + k : k
+            if (_isPlainObject(override[k]) && _isPlainObject(out[k])
+                    && _replacedPaths.indexOf(at) < 0) {
+                out[k] = _deepMerge(out[k], override[k], at)
+            } else if (_isPlainObject(override[k])) {
+                out[k] = JSON.parse(JSON.stringify(override[k]))
             } else {
                 out[k] = override[k]
             }
@@ -114,6 +124,7 @@ QtObject {
 
     function saveSettings() {
         if (_applyingExternal) return
+        if (!_settingsLoaded) return
 
         let modeled = {
             "autoCloseTimer": {
@@ -532,6 +543,8 @@ QtObject {
 
             updateAnimationMultiplier()
 
+            _settingsLoaded = true
+
             if (!_displayMonitorLatched) {
                 initialDisplayMonitor = displayMonitor
                 _displayMonitorLatched = true
@@ -542,6 +555,8 @@ QtObject {
             settingsChanged()
         } catch (e) {
             _applyingExternal = false
+            // Unparseable on disk: nothing to preserve, so let saves through and overwrite it.
+            _settingsLoaded = true
             console.error("Failed to parse settings JSON:", e)
         }
     }
