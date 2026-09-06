@@ -121,7 +121,7 @@ var calendarDeleteCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			return emit(map[string]any{"deleted": n, "ok": true})
+			return emit(map[string]any{"deleted": n, "ok": n > 0})
 		})
 	},
 	SilenceUsage: true,
@@ -140,7 +140,7 @@ var calendarUpdateCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			return emit(map[string]any{"updated": n, "ok": true})
+			return emit(map[string]any{"updated": n, "ok": n > 0})
 		})
 	},
 	SilenceUsage: true,

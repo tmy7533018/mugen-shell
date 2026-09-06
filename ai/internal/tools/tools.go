@@ -851,7 +851,7 @@ func builtin() []Tool {
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
-					"id": map[string]any{"type": "integer", "description": "Event id (from calendar_list_*)."},
+					"id": map[string]any{"type": "string", "description": "Event id (from calendar_list_*)."},
 				},
 				"required": []string{"id"},
 			},
