@@ -211,13 +211,16 @@ func (r *Registry) Audit(name string, args map[string]any, result string, err er
 	r.auditor.Log(name, args, result, err)
 }
 
-// CategoryOf returns the category prefix of a tool name, everything before the
-// first underscore.
+// CategoryOf returns a tool's category: the server name for an MCP tool ("server__tool"), else the
+// prefix before the first underscore. Lowercased to match Registry.New's disabled-set keys.
 func CategoryOf(toolName string) string {
-	if i := strings.Index(toolName, "_"); i > 0 {
-		return toolName[:i]
+	if i := strings.Index(toolName, "__"); i > 0 {
+		return strings.ToLower(toolName[:i])
 	}
-	return toolName
+	if i := strings.Index(toolName, "_"); i > 0 {
+		return strings.ToLower(toolName[:i])
+	}
+	return strings.ToLower(toolName)
 }
 
 const shellMetachars = ";|&$`<>(){}[]\\!*?\"'\n\r"
