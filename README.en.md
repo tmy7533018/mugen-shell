@@ -15,14 +15,14 @@ My dotfiles for a Hyprland + Quickshell desktop, packaged so they can be install
 
 ## Features
 
-- Panels for the everyday things: calendar, timer, music, clipboard, notifications, app launcher, and screenshots
+- Panels for the everyday things: calendar, timer, weather, music, clipboard, notifications, app launcher, and screenshots
 - Wallpapers can be images or video, and they change through a smooth transition
-- Several color palettes generated from the wallpaper; the one you pick is applied across the desktop
+- Colors generated from the wallpaper are applied across the desktop, GTK apps and Hyprland included; the bar and panel surfaces take one of five palettes you pick. The light/dark switch carries across the desktop too
 - The usual system controls: audio, backlight, WiFi, Bluetooth, IME, battery, and the system tray
 - The lock screen is part of the shell: a grid of the clock, calendar, current track, and weather, with no external locker involved
-- Yura, the desktop assistant, reachable by chat, with replies it can read aloud
+- Yura, the desktop assistant, reachable by chat, with replies it can read aloud (optional)
 - Smooth animation throughout, and it is easy to customize
-- A Settings window for changing all sorts of things
+- A Settings window for changing all sorts of things: the bar's height, corner radius, and the color of its surface included
 
 ---
 
@@ -32,19 +32,19 @@ Yura is the desktop assistant. It can be used from an input row in the bar (`Sup
 
 Yura also runs the desktop. "Set volume to 30" or "start a 5 minute timer" reaches the same panels you would click. It will not do anything dangerous. External [MCP](https://modelcontextprotocol.io) servers are supported as well, with their writes held for approval.
 
-Press the speaker icon on a reply and a voice model reads it back. The voice that ships is Japanese; install a model from [AivisHub](https://hub.aivis-project.com/) and pick it in Settings. [SETUP.en.md](SETUP.en.md#configuring-mugen-ai) has the details.
+Press the speaker icon on a reply and a voice model reads it back (optional). The default voice is Japanese; install a model from [AivisHub](https://hub.aivis-project.com/) and pick it in Settings. [SETUP.en.md](SETUP.en.md#configuring-mugen-ai) has the details.
 
 ---
 
 ## Installation
 
-Try it without installing anything. The demo VM autologins into Hyprland, with `mugen` / `mugen` as the credentials:
+Try it without installing anything (Yura needs a model of your own before it will answer). The demo VM autologins into Hyprland, with `mugen` / `mugen` as the credentials:
 
 ```sh
-nix build github:tmy7533018/mugen-shell#nixosConfigurations.vm.config.system.build.vm && ./result/bin/run-mugen-vm-vm
+nix build "github:tmy7533018/mugen-shell#nixosConfigurations.vm.config.system.build.vm" && ./result/bin/run-mugen-vm-vm
 ```
 
-Every configuration option is documented in [SETUP.en.md](SETUP.en.md).
+Setup is documented in [SETUP.en.md](SETUP.en.md).
 
 ---
 
