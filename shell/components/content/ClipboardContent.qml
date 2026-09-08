@@ -304,7 +304,6 @@ FocusScope {
                 icons: root.icons
                 placeholder: "Search clipboard..."
                 resultCount: root.history.length
-                modeManager: root.modeManager
 
                 onSearchTextChanged: (text) => {
                     root.clipboardManager.searchQuery = text

@@ -468,17 +468,21 @@ FocusScope {
 
             UI.SearchField {
                 id: searchField
+                Layout.preferredWidth: {
+                    let cols = Math.floor(parent.width / 100)
+                    return cols > 0 ? cols * 100 : 100
+                }
+                Layout.alignment: Qt.AlignHCenter
                 theme: root.theme
                 typo: root.typo
                 icons: root.icons
                 resultCount: root.filteredApps.length
                 placeholder: "Search apps..."
-                modeManager: root.modeManager
 
                 onSearchTextChanged: (text) => {
                     root.searchText = text
                     filterDebounceTimer.restart()
-                    modeManager.bump()
+                    root.modeManager.bump()
                     appGrid.userInteracted = false
                     appGrid.currentIndex = -1
                 }

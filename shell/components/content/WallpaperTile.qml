@@ -70,7 +70,9 @@ Rectangle {
         fillMode: Image.PreserveAspectCrop
         asynchronous: true
         smooth: true
-        cache: false
+        // thumbnailSource() appends a #token that changes on regeneration, so the URL cache cannot go stale.
+        cache: true
+        sourceSize.width: root.modeManager.scale(360)
         visible: false
     }
 

@@ -1,4 +1,6 @@
 import QtQuick
+import QtQuick.Layouts
+import "../ui" as UI
 import "../../lib" as Theme
 
 Rectangle {
@@ -7,11 +9,17 @@ Rectangle {
     property var theme
     property string label: ""
     property bool selected: false
+    property int chipHeight: 22
+    property int hPadding: 16
+    property int fontSize: 10
+    property string iconSource: ""
+    property real iconRotation: 0
+    readonly property int iconSize: Math.round(chipHeight * 0.40)
     signal clicked()
 
-    width: chipText.implicitWidth + 16
-    height: 22
-    radius: 11
+    width: chipRow.implicitWidth + hPadding
+    height: chipHeight
+    radius: height / 2
     color: selected
         ? (theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.45) : Qt.rgba(0.65, 0.55, 0.85, 0.45))
         : (chipMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(1, 1, 1, 0.04))
@@ -22,13 +30,31 @@ Rectangle {
 
     Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
 
-    Text {
-        id: chipText
+    RowLayout {
+        id: chipRow
         anchors.centerIn: parent
-        text: chip.label
-        color: chip.theme ? chip.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-        font.pixelSize: 10
-        font.family: "M PLUS 2"
+        spacing: chip.iconSource === "" ? 0 : Math.round(chip.hPadding * 0.4)
+
+        Text {
+            id: chipText
+            text: chip.label
+            color: chip.theme ? chip.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+            font.pixelSize: chip.fontSize
+            font.family: "M PLUS 2"
+        }
+
+        UI.SvgIcon {
+            Layout.preferredWidth: chip.iconSize
+            Layout.preferredHeight: chip.iconSize
+            visible: chip.iconSource !== ""
+            source: chip.iconSource
+            color: chip.theme ? chip.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+            rotation: chip.iconRotation
+
+            Behavior on rotation {
+                NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
+            }
+        }
     }
 
     MouseArea {

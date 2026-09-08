@@ -10,36 +10,34 @@ Rectangle {
     required property var icons
     required property int resultCount
     property string placeholder: "Search..."
-    required property var modeManager
+    property int fieldHeight: 50
+    property int borderWidth: 2
+
+    readonly property int iconSize: Math.round(fieldHeight * 0.40)
+    readonly property int hPadding: Math.round(fieldHeight * 0.32)
+    readonly property int gap: Math.round(fieldHeight * 0.24)
+    readonly property int textSize: Math.round(fieldHeight * 0.32)
     
     signal searchTextChanged(string text)
     signal requestActivateSelected()
     signal requestFocusResults(bool backwards)
     
-    Layout.preferredWidth: {
-        if (root.parent && root.parent.parent) {
-            let cols = Math.floor(root.parent.parent.width / 100)
-            return cols > 0 ? cols * 100 : 100
-        }
-        return 100
-    }
-    Layout.preferredHeight: 50
-    Layout.alignment: Qt.AlignHCenter
+    implicitHeight: root.fieldHeight
     color: "transparent"
     border.color: root.theme ? root.theme.surfaceBorder : Qt.rgba(0.70, 0.65, 0.90, 0.3)
-    border.width: 2
+    border.width: root.borderWidth
     radius: height / 2
     z: 20
     
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 16
-        anchors.rightMargin: 16
-        spacing: 12
+        anchors.leftMargin: root.hPadding
+        anchors.rightMargin: root.hPadding
+        spacing: root.gap
         
         UI.SvgIcon {
-            width: 20
-            height: 20
+            width: root.iconSize
+            height: root.iconSize
             source: root.icons ? root.icons.iconData.search.value : ""
             color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
             opacity: 0.7
@@ -48,7 +46,7 @@ Rectangle {
         
         Text {
             text: root.icons && root.icons.iconData.search.type === "text" ? "🔍" : ""
-            font.pixelSize: 20
+            font.pixelSize: root.iconSize
             opacity: 0.7
             visible: !root.icons || root.icons.iconData.search.type === "text"
         }
@@ -58,7 +56,7 @@ Rectangle {
             Layout.fillWidth: true
             
             color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-            font.pixelSize: root.typo ? root.typo.sizeLarge : 16
+            font.pixelSize: root.textSize
             font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
             
             selectByMouse: true

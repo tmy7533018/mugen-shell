@@ -17,10 +17,18 @@ FocusScope {
     property var icons
     property bool expanded: false
 
+    readonly property int expandedMargin: 340
+    readonly property int collapsedMargin: 550
+    readonly property int layerInset: 10
+
+    // Pinning the grid to this keeps its column count fixed while the panel widens.
+    readonly property int expandedContentWidth:
+        root.width - 2 * (modeManager.scale(root.expandedMargin) + modeManager.scale(root.layerInset))
+
     readonly property var requiredBarSize: ({
         "height": modeManager.scale(root.expanded ? 560 : 240),
-        "leftMargin": modeManager.scale(root.expanded ? 340 : 550),
-        "rightMargin": modeManager.scale(root.expanded ? 340 : 550),
+        "leftMargin": modeManager.scale(root.expanded ? root.expandedMargin : root.collapsedMargin),
+        "rightMargin": modeManager.scale(root.expanded ? root.expandedMargin : root.collapsedMargin),
         "topMargin": modeManager.normalBarSize.topMargin,
         "bottomMargin": modeManager.normalBarSize.bottomMargin
     })
@@ -200,8 +208,8 @@ FocusScope {
     Item {
         id: wallpaperLayer
         anchors.fill: parent
-        anchors.leftMargin: root.requiredBarSize.leftMargin + modeManager.scale(10)
-        anchors.rightMargin: root.requiredBarSize.rightMargin + modeManager.scale(10)
+        anchors.leftMargin: root.requiredBarSize.leftMargin + modeManager.scale(root.layerInset)
+        anchors.rightMargin: root.requiredBarSize.rightMargin + modeManager.scale(root.layerInset)
         anchors.topMargin: modeManager.scale(20)
         anchors.bottomMargin: modeManager.scale(20)
         visible: modeManager.isMode("wallpaper")
@@ -278,7 +286,7 @@ FocusScope {
 
             Item {
                 Layout.fillWidth: true
-                Layout.preferredHeight: modeManager.scale(root.expanded ? 38 : 32)
+                Layout.preferredHeight: modeManager.scale(38)
 
                 Common.GlowText {
                     anchors.centerIn: parent
@@ -301,340 +309,327 @@ FocusScope {
                     spacing: modeManager.scale(12)
 
                     UI.SearchField {
-                        visible: root.expanded
                         id: searchField
+                        enabled: root.expanded
+                        opacity: root.expanded ? 1 : 0
                         theme: root.theme
                         icons: root.icons
                         typo: typography
-                        modeManager: root.modeManager
                         placeholder: "Search wallpapers"
                         resultCount: wallpaperManager.visibleWallpapers.length
-                        Layout.preferredWidth: modeManager.scale(260)
-                        Layout.preferredHeight: modeManager.scale(38)
+                        Layout.preferredWidth: root.expanded ? modeManager.scale(260) : 0
+                        Layout.alignment: Qt.AlignVCenter
+                        fieldHeight: modeManager.scale(34)
+
+                        Behavior on opacity {
+                            NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
+                        }
+
+                        Behavior on Layout.preferredWidth {
+                            NumberAnimation { duration: Theme.Motion.sweep; easing.type: Easing.OutExpo }
+                        }
                         onSearchTextChanged: text => wallpaperManager.searchQuery = text
                         onRequestActivateSelected: root.activateCurrent()
                         onRequestFocusResults: backwards => root.focusResults(backwards)
                     }
 
-                    Rectangle {
-                        id: moreChip
-                        Layout.preferredHeight: modeManager.scale(30)
-                        Layout.preferredWidth: moreRow.implicitWidth + modeManager.scale(24)
+                    Common.Chip {
+                        theme: root.theme
+                        label: root.expanded ? "less" : "more"
+                        chipHeight: modeManager.scale(34)
+                        hPadding: modeManager.scale(24)
+                        fontSize: modeManager.scale(11)
+                        iconSource: Quickshell.shellDir + "/assets/icons/chevron-down.svg"
+                        iconRotation: root.expanded ? 180 : 0
                         Layout.alignment: Qt.AlignVCenter
-                        radius: height / 2
-                        color: "transparent"
-                        border.width: 1
-                        border.color: root.theme ? root.theme.surfaceBorder : Qt.rgba(0.70, 0.65, 0.90, 0.3)
+                        onClicked: root.expanded = !root.expanded
+                    }
+                }
+            }
 
-                        RowLayout {
-                            id: moreRow
-                            anchors.centerIn: parent
-                            spacing: modeManager.scale(6)
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
 
-                            Text {
-                                text: root.expanded ? "less" : "more"
-                                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
-                                font.pixelSize: modeManager.scale(11)
-                                font.family: "M PLUS 2"
+                ListView {
+                    id: listView
+                    anchors.fill: parent
+                    visible: !root.expanded
+
+                    model: root.listModel
+                    orientation: ListView.Horizontal
+                    spacing: modeManager.scale(16)
+                    clip: true
+
+                    highlightFollowsCurrentItem: true
+                    highlightMoveDuration: 300
+                    highlightRangeMode: ListView.StrictlyEnforceRange
+                    preferredHighlightBegin: width / 2 - modeManager.scale(120)
+                    preferredHighlightEnd: width / 2 + modeManager.scale(120)
+                    snapMode: ListView.SnapToItem
+
+                    focus: !root.expanded
+
+                    Keys.onPressed: (event) => {
+                        if (event.key === Qt.Key_Escape) {
+                            modeManager.closeAllModes()
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                            if (currentIndex === 0) {
+                                root.openWallpaperFolder()
+                            } else if (currentIndex >= 1) {
+                                root.setWallpaper(root.listModel[currentIndex])
                             }
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Left) {
+                            if (currentIndex > 0) {
+                                root.moveTo(currentIndex - 1)
+                                root.resetAutoCloseTimer()
+                                event.accepted = true
+                            } else {
+                                event.accepted = false
+                            }
+                        } else if (event.key === Qt.Key_Right) {
+                            if (currentIndex < count - 1) {
+                                root.moveTo(currentIndex + 1)
+                                root.resetAutoCloseTimer()
+                                event.accepted = true
+                            } else {
+                                event.accepted = false
+                            }
+                        } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                            if (event.modifiers & Qt.ShiftModifier || event.key === Qt.Key_Backtab) {
+                                if (currentIndex > 0) {
+                                    root.moveTo(currentIndex - 1)
+                                    root.resetAutoCloseTimer()
+                                    event.accepted = true
+                                } else {
+                                    event.accepted = false
+                                }
+                            } else {
+                                if (currentIndex < count - 1) {
+                                    root.moveTo(currentIndex + 1)
+                                    root.resetAutoCloseTimer()
+                                    event.accepted = true
+                                } else {
+                                    event.accepted = false
+                                }
+                            }
+                        } else if (event.key === Qt.Key_Home) {
+                            root.moveTo(0)
+                            root.resetAutoCloseTimer()
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_End) {
+                            root.moveTo(count - 1)
+                            root.resetAutoCloseTimer()
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Down) {
+                            root.expanded = true
+                            gridView.forceActiveFocus()
+                            root.resetAutoCloseTimer()
+                            event.accepted = true
+                        } else if (root.forwardPrintableToSearch(event)) {
+                            event.accepted = true
+                        } else {
+                            event.accepted = false
+                        }
+                    }
 
-                            UI.SvgIcon {
-                                Layout.preferredWidth: modeManager.scale(12)
-                                Layout.preferredHeight: modeManager.scale(12)
-                                source: Quickshell.shellDir + "/assets/icons/chevron-down.svg"
-                                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
-                                rotation: root.expanded ? 180 : 0
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.NoButton
+                        z: -1
 
-                                Behavior on rotation {
-                                    NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
+                        onWheel: (wheel) => {
+                            if (wheel.angleDelta.y > 0) {
+                                if (listView.currentIndex > 0) {
+                                    root.moveTo(listView.currentIndex - 1)
+                                }
+                            } else if (wheel.angleDelta.y < 0) {
+                                if (listView.currentIndex < listView.count - 1) {
+                                    root.moveTo(listView.currentIndex + 1)
+                                }
+                            }
+                            root.resetAutoCloseTimer()
+                        }
+
+                        onPositionChanged: {
+                            root.resetAutoCloseTimer()
+                        }
+                    }
+
+                    onCountChanged: {
+                        if (modeManager.isMode("wallpaper")) {
+                            root.restoreSelection()
+                        }
+                    }
+
+                    delegate: Item {
+                        id: cellRoot
+                        width: modeManager.scale(240)
+                        height: listView.height
+
+                        property bool isCurrent: ListView.isCurrentItem
+                        property bool isAddCell: modelData === "__add__"
+                        property string wallpaperPath: isAddCell ? "" : modelData
+
+                        WallpaperTile {
+                            anchors.fill: parent
+                            anchors.margins: modeManager.scale(8)
+
+                            scale: cellRoot.isCurrent ? 1.0 : 0.75
+                            opacity: cellRoot.isCurrent ? 1.0 : 0.7
+
+                            Behavior on scale { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
+                            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
+
+                            theme: root.theme
+                            modeManager: root.modeManager
+                            wallpaperManager: root.wallpaperManager
+                            path: cellRoot.wallpaperPath
+                            selected: cellRoot.isCurrent
+                            isAddCell: cellRoot.isAddCell
+                            isVideo: !cellRoot.isAddCell && wallpaperManager.isVideoFile(cellRoot.wallpaperPath)
+
+                            onActivated: {
+                                root.moveTo(index)
+                                // setWallpaper() tears down this delegate, so bump before it runs.
+                                root.resetAutoCloseTimer()
+                                if (cellRoot.isAddCell) {
+                                    root.openWallpaperFolder()
+                                } else {
+                                    root.setWallpaper(cellRoot.wallpaperPath)
                                 }
                             }
                         }
+                    }
+                }
 
-                        MouseArea {
+                GridView {
+                    id: gridView
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    // Centred on the bar, not the panel: the panel's width rounds to whole pixels and re-centring against it jitters.
+                    x: (root.width - width) / 2 - wallpaperLayer.anchors.leftMargin
+                    width: root.expandedContentWidth
+                    visible: root.expanded
+
+                    model: root.listModel
+                    cellWidth: modeManager.scale(240)
+                    cellHeight: modeManager.scale(142)
+                    clip: true
+
+                    onCountChanged: {
+                        if (modeManager.isMode("wallpaper")) {
+                            root.restoreSelection()
+                        }
+                    }
+
+                    Keys.onPressed: (event) => {
+                        let colsPerRow = Math.max(1, Math.floor(gridView.width / gridView.cellWidth))
+
+                        if (event.key === Qt.Key_Escape) {
+                            modeManager.closeAllModes()
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                            root.activateCurrent()
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Left) {
+                            if (currentIndex > 0) {
+                                root.moveTo(currentIndex - 1)
+                                root.resetAutoCloseTimer()
+                                event.accepted = true
+                            } else {
+                                event.accepted = false
+                            }
+                        } else if (event.key === Qt.Key_Right) {
+                            if (currentIndex < count - 1) {
+                                root.moveTo(currentIndex + 1)
+                                root.resetAutoCloseTimer()
+                                event.accepted = true
+                            } else {
+                                event.accepted = false
+                            }
+                        } else if (event.key === Qt.Key_Up) {
+                            if (currentIndex < colsPerRow) {
+                                root.expanded = false
+                                root.resetAutoCloseTimer()
+                            } else {
+                                root.moveTo(currentIndex - colsPerRow)
+                                root.resetAutoCloseTimer()
+                            }
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Down) {
+                            if (currentIndex < count - colsPerRow) {
+                                root.moveTo(currentIndex + colsPerRow)
+                                root.resetAutoCloseTimer()
+                                event.accepted = true
+                            } else {
+                                event.accepted = false
+                            }
+                        } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                            if (event.modifiers & Qt.ShiftModifier || event.key === Qt.Key_Backtab) {
+                                if (currentIndex > 0) {
+                                    root.moveTo(currentIndex - 1)
+                                    root.resetAutoCloseTimer()
+                                    event.accepted = true
+                                } else {
+                                    event.accepted = false
+                                }
+                            } else {
+                                if (currentIndex < count - 1) {
+                                    root.moveTo(currentIndex + 1)
+                                    root.resetAutoCloseTimer()
+                                    event.accepted = true
+                                } else {
+                                    event.accepted = false
+                                }
+                            }
+                        } else if (event.key === Qt.Key_Home) {
+                            root.moveTo(0)
+                            root.resetAutoCloseTimer()
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_End) {
+                            root.moveTo(count - 1)
+                            root.resetAutoCloseTimer()
+                            event.accepted = true
+                        } else if (root.forwardPrintableToSearch(event)) {
+                            event.accepted = true
+                        } else {
+                            event.accepted = false
+                        }
+                    }
+
+                    delegate: Item {
+                        id: gridCellRoot
+                        width: gridView.cellWidth
+                        height: gridView.cellHeight
+
+                        property bool isCurrent: GridView.isCurrentItem
+                        property bool isAddCell: modelData === "__add__"
+                        property string wallpaperPath: isAddCell ? "" : modelData
+
+                        WallpaperTile {
                             anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.expanded = !root.expanded
-                        }
-                    }
-                }
-            }
+                            anchors.margins: modeManager.scale(8)
 
-            ListView {
-                id: listView
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                visible: !root.expanded
+                            theme: root.theme
+                            modeManager: root.modeManager
+                            wallpaperManager: root.wallpaperManager
+                            path: gridCellRoot.wallpaperPath
+                            selected: gridCellRoot.isCurrent
+                            isAddCell: gridCellRoot.isAddCell
+                            isVideo: !gridCellRoot.isAddCell && wallpaperManager.isVideoFile(gridCellRoot.wallpaperPath)
 
-                model: root.listModel
-                orientation: ListView.Horizontal
-                spacing: modeManager.scale(16)
-                clip: true
-
-                highlightFollowsCurrentItem: true
-                highlightMoveDuration: 300
-                highlightRangeMode: ListView.StrictlyEnforceRange
-                preferredHighlightBegin: width / 2 - modeManager.scale(120)
-                preferredHighlightEnd: width / 2 + modeManager.scale(120)
-                snapMode: ListView.SnapToItem
-
-                focus: !root.expanded
-
-                Keys.onPressed: (event) => {
-                    if (event.key === Qt.Key_Escape) {
-                        modeManager.closeAllModes()
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        if (currentIndex === 0) {
-                            root.openWallpaperFolder()
-                        } else if (currentIndex >= 1) {
-                            root.setWallpaper(root.listModel[currentIndex])
-                        }
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Left) {
-                        if (currentIndex > 0) {
-                            root.moveTo(currentIndex - 1)
-                            root.resetAutoCloseTimer()
-                            event.accepted = true
-                        } else {
-                            event.accepted = false
-                        }
-                    } else if (event.key === Qt.Key_Right) {
-                        if (currentIndex < count - 1) {
-                            root.moveTo(currentIndex + 1)
-                            root.resetAutoCloseTimer()
-                            event.accepted = true
-                        } else {
-                            event.accepted = false
-                        }
-                    } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
-                        if (event.modifiers & Qt.ShiftModifier || event.key === Qt.Key_Backtab) {
-                            if (currentIndex > 0) {
-                                root.moveTo(currentIndex - 1)
+                            onActivated: {
+                                root.moveTo(index)
                                 root.resetAutoCloseTimer()
-                                event.accepted = true
-                            } else {
-                                event.accepted = false
-                            }
-                        } else {
-                            if (currentIndex < count - 1) {
-                                root.moveTo(currentIndex + 1)
-                                root.resetAutoCloseTimer()
-                                event.accepted = true
-                            } else {
-                                event.accepted = false
-                            }
-                        }
-                    } else if (event.key === Qt.Key_Home) {
-                        root.moveTo(0)
-                        root.resetAutoCloseTimer()
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_End) {
-                        root.moveTo(count - 1)
-                        root.resetAutoCloseTimer()
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Down) {
-                        root.expanded = true
-                        gridView.forceActiveFocus()
-                        root.resetAutoCloseTimer()
-                        event.accepted = true
-                    } else if (root.forwardPrintableToSearch(event)) {
-                        event.accepted = true
-                    } else {
-                        event.accepted = false
-                    }
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    acceptedButtons: Qt.NoButton
-                    z: -1
-
-                    onWheel: (wheel) => {
-                        if (wheel.angleDelta.y > 0) {
-                            if (listView.currentIndex > 0) {
-                                root.moveTo(listView.currentIndex - 1)
-                            }
-                        } else if (wheel.angleDelta.y < 0) {
-                            if (listView.currentIndex < listView.count - 1) {
-                                root.moveTo(listView.currentIndex + 1)
-                            }
-                        }
-                        root.resetAutoCloseTimer()
-                    }
-
-                    onPositionChanged: {
-                        root.resetAutoCloseTimer()
-                    }
-                }
-
-                onCountChanged: {
-                    if (modeManager.isMode("wallpaper")) {
-                        root.restoreSelection()
-                    }
-                }
-
-                delegate: Item {
-                    id: cellRoot
-                    width: modeManager.scale(240)
-                    height: listView.height
-
-                    property bool isCurrent: ListView.isCurrentItem
-                    property bool isAddCell: modelData === "__add__"
-                    property string wallpaperPath: isAddCell ? "" : modelData
-
-                    WallpaperTile {
-                        anchors.fill: parent
-                        anchors.margins: modeManager.scale(8)
-
-                        scale: cellRoot.isCurrent ? 1.0 : 0.75
-                        opacity: cellRoot.isCurrent ? 1.0 : 0.7
-
-                        Behavior on scale { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
-                        Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
-
-                        theme: root.theme
-                        modeManager: root.modeManager
-                        wallpaperManager: root.wallpaperManager
-                        path: cellRoot.wallpaperPath
-                        selected: cellRoot.isCurrent
-                        isAddCell: cellRoot.isAddCell
-                        isVideo: !cellRoot.isAddCell && wallpaperManager.isVideoFile(cellRoot.wallpaperPath)
-
-                        onActivated: {
-                            root.moveTo(index)
-                            // setWallpaper() tears down this delegate, so bump before it runs.
-                            root.resetAutoCloseTimer()
-                            if (cellRoot.isAddCell) {
-                                root.openWallpaperFolder()
-                            } else {
-                                root.setWallpaper(cellRoot.wallpaperPath)
-                            }
-                        }
-                    }
-                }
-            }
-
-            GridView {
-                id: gridView
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                visible: root.expanded
-
-                model: root.listModel
-                cellWidth: modeManager.scale(240)
-                cellHeight: modeManager.scale(142)
-                clip: true
-
-                onCountChanged: {
-                    if (modeManager.isMode("wallpaper")) {
-                        root.restoreSelection()
-                    }
-                }
-
-                Keys.onPressed: (event) => {
-                    let colsPerRow = Math.max(1, Math.floor(gridView.width / gridView.cellWidth))
-
-                    if (event.key === Qt.Key_Escape) {
-                        modeManager.closeAllModes()
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        root.activateCurrent()
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Left) {
-                        if (currentIndex > 0) {
-                            root.moveTo(currentIndex - 1)
-                            root.resetAutoCloseTimer()
-                            event.accepted = true
-                        } else {
-                            event.accepted = false
-                        }
-                    } else if (event.key === Qt.Key_Right) {
-                        if (currentIndex < count - 1) {
-                            root.moveTo(currentIndex + 1)
-                            root.resetAutoCloseTimer()
-                            event.accepted = true
-                        } else {
-                            event.accepted = false
-                        }
-                    } else if (event.key === Qt.Key_Up) {
-                        if (currentIndex < colsPerRow) {
-                            root.expanded = false
-                            root.resetAutoCloseTimer()
-                        } else {
-                            root.moveTo(currentIndex - colsPerRow)
-                            root.resetAutoCloseTimer()
-                        }
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Down) {
-                        if (currentIndex < count - colsPerRow) {
-                            root.moveTo(currentIndex + colsPerRow)
-                            root.resetAutoCloseTimer()
-                            event.accepted = true
-                        } else {
-                            event.accepted = false
-                        }
-                    } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
-                        if (event.modifiers & Qt.ShiftModifier || event.key === Qt.Key_Backtab) {
-                            if (currentIndex > 0) {
-                                root.moveTo(currentIndex - 1)
-                                root.resetAutoCloseTimer()
-                                event.accepted = true
-                            } else {
-                                event.accepted = false
-                            }
-                        } else {
-                            if (currentIndex < count - 1) {
-                                root.moveTo(currentIndex + 1)
-                                root.resetAutoCloseTimer()
-                                event.accepted = true
-                            } else {
-                                event.accepted = false
-                            }
-                        }
-                    } else if (event.key === Qt.Key_Home) {
-                        root.moveTo(0)
-                        root.resetAutoCloseTimer()
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_End) {
-                        root.moveTo(count - 1)
-                        root.resetAutoCloseTimer()
-                        event.accepted = true
-                    } else if (root.forwardPrintableToSearch(event)) {
-                        event.accepted = true
-                    } else {
-                        event.accepted = false
-                    }
-                }
-
-                delegate: Item {
-                    id: gridCellRoot
-                    width: gridView.cellWidth
-                    height: gridView.cellHeight
-
-                    property bool isCurrent: GridView.isCurrentItem
-                    property bool isAddCell: modelData === "__add__"
-                    property string wallpaperPath: isAddCell ? "" : modelData
-
-                    WallpaperTile {
-                        anchors.fill: parent
-                        anchors.margins: modeManager.scale(8)
-
-                        theme: root.theme
-                        modeManager: root.modeManager
-                        wallpaperManager: root.wallpaperManager
-                        path: gridCellRoot.wallpaperPath
-                        selected: gridCellRoot.isCurrent
-                        isAddCell: gridCellRoot.isAddCell
-                        isVideo: !gridCellRoot.isAddCell && wallpaperManager.isVideoFile(gridCellRoot.wallpaperPath)
-
-                        onActivated: {
-                            root.moveTo(index)
-                            root.resetAutoCloseTimer()
-                            if (gridCellRoot.isAddCell) {
-                                root.openWallpaperFolder()
-                            } else {
-                                root.setWallpaper(gridCellRoot.wallpaperPath)
+                                if (gridCellRoot.isAddCell) {
+                                    root.openWallpaperFolder()
+                                } else {
+                                    root.setWallpaper(gridCellRoot.wallpaperPath)
+                                }
                             }
                         }
                     }
