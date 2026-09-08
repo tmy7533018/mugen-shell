@@ -29,6 +29,7 @@ Rectangle {
         id: pillText
         anchors.centerIn: parent
         text: pill.label
+        textFormat: Text.PlainText
         color: pill.theme ? pill.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1)
         font.pixelSize: 11
         font.weight: Font.Medium

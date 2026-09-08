@@ -65,6 +65,7 @@ Rectangle {
             Text {
                 text: section.isLoadingPresets ? "Loading…"
                     : (section.currentPreset || "Select preset")
+                textFormat: Text.PlainText
                 color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
                 font.pixelSize: 12
                 font.family: "M PLUS 2"
@@ -116,6 +117,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.leftMargin: 12
                 text: modelData
+                textFormat: Text.PlainText
                 color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
                 font.pixelSize: 12
                 font.family: "M PLUS 2"

@@ -70,6 +70,7 @@ Rectangle {
             }
         } else {
             targetHeight = 50
+            if (passwordInput) passwordInput.text = ""
         }
     }
 
