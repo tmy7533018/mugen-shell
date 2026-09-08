@@ -159,10 +159,17 @@ PanelWindow {
         }
     }
 
+    // Input follows the animated body, not the stepped window, so the gap left while shrinking
+    // stays click-through instead of swallowing presses meant for the app underneath.
+    mask: Region { item: barBody }
+
+    // Grow before the animation starts, shrink after it ends: either way the surface never
+    // resizes mid-animation, which is what drops a quarter of the frames.
     Behavior on implicitHeight {
-        NumberAnimation {
-            duration: Theme.Motion.sweep
-            easing.type: Easing.OutExpo
+        enabled: barWindow.implicitHeight > modeManager.currentBarSize.height
+        SequentialAnimation {
+            PauseAnimation { duration: Theme.Motion.sweep }
+            PropertyAction { }
         }
     }
 
@@ -494,541 +501,558 @@ PanelWindow {
         settingsManager: settingsManager
     }
 
-    UI.MugenSurface {
-        id: surface
-
-        anchors.fill: parent
-        anchors.topMargin: modeManager.currentBarSize.topMargin
-        anchors.bottomMargin: modeManager.currentBarSize.bottomMargin
-        anchors.leftMargin: modeManager.currentBarSize.leftMargin
-        anchors.rightMargin: modeManager.currentBarSize.rightMargin
-
-        z: 0
-        baseRadius: settingsManager.barRadius
-        showBorder: !settingsManager.barSurfaceCustom || settingsManager.barSurfaceBorder
-        baseColor: settingsManager.barSurfaceCustom
-            ? Qt.hsla(settingsManager.barSurfaceHue,
-                      settingsManager.barSurfaceSaturation,
-                      settingsManager.barSurfaceLightness,
-                      settingsManager.barSurfaceOpacity)
-            : surface.defaultBase
-        moduleBackground: modeManager.currentSurfaceBackground
-            ? modeManager.currentSurfaceBackground
-            : (modeManager.currentModeInstance && settingsManager.moduleBackdropEnabled
-                ? barWindow.defaultModuleBackground
-                : null)
-        moduleContext: modeManager.currentModeInstance
-        backdropSpread: settingsManager.moduleBackdropSpread
-
-        theme: theme
-
-        Behavior on anchors.bottomMargin {
-            NumberAnimation {
-                duration: Theme.Motion.sweep
-                easing.type: Easing.OutExpo
-            }
-        }
-
-        Behavior on anchors.leftMargin {
-            NumberAnimation {
-                duration: Theme.Motion.sweep
-                easing.type: Easing.OutExpo
-            }
-        }
-
-        Behavior on anchors.rightMargin {
-            NumberAnimation {
-                duration: Theme.Motion.sweep
-                easing.type: Easing.OutExpo
-            }
-        }
-
-    opacity: barWindow.implicitHeight > modeManager.normalBarSize.height ? 0.95 : 0.85
-
-        Behavior on opacity {
-            NumberAnimation {
-                duration: Theme.Motion.standard
-                easing.type: Easing.OutCubic
-            }
-        }
-    }
-
+    // The window is the layer-shell surface, and resizing it costs a frame, so the visible
+    // geometry animates here while the window only steps.
     Item {
-        id: contentClipContainer
-        anchors.fill: parent
-        anchors.topMargin: modeManager.currentBarSize.topMargin
-        anchors.bottomMargin: modeManager.currentBarSize.bottomMargin
-        anchors.leftMargin: modeManager.currentBarSize.leftMargin
-        anchors.rightMargin: modeManager.currentBarSize.rightMargin
-        clip: true
-        z: 1
+        id: barBody
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        height: modeManager.currentBarSize.height
 
-        Behavior on anchors.topMargin {
+        Behavior on height {
             NumberAnimation {
                 duration: Theme.Motion.sweep
                 easing.type: Easing.OutExpo
             }
         }
 
-        Behavior on anchors.bottomMargin {
-            NumberAnimation {
-                duration: Theme.Motion.sweep
-                easing.type: Easing.OutExpo
-            }
-        }
+        UI.MugenSurface {
+            id: surface
 
-        Behavior on anchors.leftMargin {
-            NumberAnimation {
-                duration: Theme.Motion.sweep
-                easing.type: Easing.OutExpo
-            }
-        }
+            anchors.fill: parent
+            anchors.topMargin: modeManager.currentBarSize.topMargin
+            anchors.bottomMargin: modeManager.currentBarSize.bottomMargin
+            anchors.leftMargin: modeManager.currentBarSize.leftMargin
+            anchors.rightMargin: modeManager.currentBarSize.rightMargin
 
-        Behavior on anchors.rightMargin {
-            NumberAnimation {
-                duration: Theme.Motion.sweep
-                easing.type: Easing.OutExpo
-            }
-        }
+            z: 0
+            baseRadius: settingsManager.barRadius
+            showBorder: !settingsManager.barSurfaceCustom || settingsManager.barSurfaceBorder
+            baseColor: settingsManager.barSurfaceCustom
+                ? Qt.hsla(settingsManager.barSurfaceHue,
+                          settingsManager.barSurfaceSaturation,
+                          settingsManager.barSurfaceLightness,
+                          settingsManager.barSurfaceOpacity)
+                : surface.defaultBase
+            moduleBackground: modeManager.currentSurfaceBackground
+                ? modeManager.currentSurfaceBackground
+                : (modeManager.currentModeInstance && settingsManager.moduleBackdropEnabled
+                    ? barWindow.defaultModuleBackground
+                    : null)
+            moduleContext: modeManager.currentModeInstance
+            backdropSpread: settingsManager.moduleBackdropSpread
 
-    RowLayout {
-        id: contentRow
-        anchors.fill: parent
-        anchors.leftMargin: 32
-        anchors.rightMargin: 32
-        spacing: 20
-        Layout.alignment: Qt.AlignVCenter
+            theme: theme
 
-        property bool isFirstShow: true
-
-        opacity: 0
-        // Never bind visible here — it severs the binding and leaves the bar permanently empty.
-        enabled: modeManager.isMode("normal")
-
-        Component.onCompleted: {
-            initialShowTimer.start();
-        }
-
-        Timer {
-            id: initialShowTimer
-            interval: 100
-            running: false
-            onTriggered: {
-            }
-        }
-
-        states: [
-            State {
-                name: "visible"
-                when: modeManager.isMode("normal")
-                PropertyChanges { target: contentRow; opacity: 1.0 }
-            }
-        ]
-
-        transitions: [
-            Transition {
-                from: "visible"
-                to: ""
-                SequentialAnimation {
-                    NumberAnimation {
-                        property: "opacity"
-                        duration: Theme.Motion.dur(70)
-                        easing.type: Easing.OutCubic
-                    }
+            Behavior on anchors.bottomMargin {
+                NumberAnimation {
+                    duration: Theme.Motion.sweep
+                    easing.type: Easing.OutExpo
                 }
-            },
-            Transition {
-                from: ""
-                to: "visible"
-                SequentialAnimation {
-                    PauseAnimation {
-                        duration: contentRow.isFirstShow ? 0 : Theme.Motion.gentle
+            }
+
+            Behavior on anchors.leftMargin {
+                NumberAnimation {
+                    duration: Theme.Motion.sweep
+                    easing.type: Easing.OutExpo
+                }
+            }
+
+            Behavior on anchors.rightMargin {
+                NumberAnimation {
+                    duration: Theme.Motion.sweep
+                    easing.type: Easing.OutExpo
+                }
+            }
+
+            opacity: barBody.height > modeManager.normalBarSize.height ? 0.95 : 0.85
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Theme.Motion.standard
+                    easing.type: Easing.OutCubic
+                }
+            }
+        }
+
+        Item {
+            id: contentClipContainer
+            anchors.fill: parent
+            anchors.topMargin: modeManager.currentBarSize.topMargin
+            anchors.bottomMargin: modeManager.currentBarSize.bottomMargin
+            anchors.leftMargin: modeManager.currentBarSize.leftMargin
+            anchors.rightMargin: modeManager.currentBarSize.rightMargin
+            clip: true
+            z: 1
+
+            Behavior on anchors.topMargin {
+                NumberAnimation {
+                    duration: Theme.Motion.sweep
+                    easing.type: Easing.OutExpo
+                }
+            }
+
+            Behavior on anchors.bottomMargin {
+                NumberAnimation {
+                    duration: Theme.Motion.sweep
+                    easing.type: Easing.OutExpo
+                }
+            }
+
+            Behavior on anchors.leftMargin {
+                NumberAnimation {
+                    duration: Theme.Motion.sweep
+                    easing.type: Easing.OutExpo
+                }
+            }
+
+            Behavior on anchors.rightMargin {
+                NumberAnimation {
+                    duration: Theme.Motion.sweep
+                    easing.type: Easing.OutExpo
+                }
+            }
+
+        RowLayout {
+            id: contentRow
+            anchors.fill: parent
+            anchors.leftMargin: 32
+            anchors.rightMargin: 32
+            spacing: 20
+            Layout.alignment: Qt.AlignVCenter
+
+            property bool isFirstShow: true
+
+            opacity: 0
+            // Never bind visible here — it severs the binding and leaves the bar permanently empty.
+            enabled: modeManager.isMode("normal")
+
+            Component.onCompleted: {
+                initialShowTimer.start();
+            }
+
+            Timer {
+                id: initialShowTimer
+                interval: 100
+                running: false
+                onTriggered: {
+                }
+            }
+
+            states: [
+                State {
+                    name: "visible"
+                    when: modeManager.isMode("normal")
+                    PropertyChanges { target: contentRow; opacity: 1.0 }
+                }
+            ]
+
+            transitions: [
+                Transition {
+                    from: "visible"
+                    to: ""
+                    SequentialAnimation {
+                        NumberAnimation {
+                            property: "opacity"
+                            duration: Theme.Motion.dur(70)
+                            easing.type: Easing.OutCubic
+                        }
                     }
-                    NumberAnimation {
-                        property: "opacity"
-                        duration: contentRow.isFirstShow ? 0 : Theme.Motion.gentle
-                        easing.type: Easing.InOutCubic
-                    }
-                    ScriptAction {
-                        script: {
-                            if (contentRow.isFirstShow) {
-                                contentRow.isFirstShow = false
+                },
+                Transition {
+                    from: ""
+                    to: "visible"
+                    SequentialAnimation {
+                        PauseAnimation {
+                            duration: contentRow.isFirstShow ? 0 : Theme.Motion.gentle
+                        }
+                        NumberAnimation {
+                            property: "opacity"
+                            duration: contentRow.isFirstShow ? 0 : Theme.Motion.gentle
+                            easing.type: Easing.InOutCubic
+                        }
+                        ScriptAction {
+                            script: {
+                                if (contentRow.isFirstShow) {
+                                    contentRow.isFirstShow = false
+                                }
                             }
                         }
                     }
                 }
-            }
-        ]
+            ]
 
-        BarComponents.BarLeftSection {
-            id: leftSection
-            theme: theme
-            typo: typo
-            icons: icons
-            modeManager: modeManager
-            audioManager: audioManager
-            musicPlayerManager: musicPlayerManager
-            cavaManager: cavaManager
-            settingsManager: settingsManager
-            timerManager: timerManager
-            weatherManager: weatherManager
-            aiThinking: (aiAssistantLoader.item ? aiAssistantLoader.item.streaming : false)
-                || barWindow.yuraFloatThinking
-            aiSpeaking: barWindow.yuraSpeaking
-            aiPanelOpen: barWindow.yuraPanelOpen
+            BarComponents.BarLeftSection {
+                id: leftSection
+                theme: theme
+                typo: typo
+                icons: icons
+                modeManager: modeManager
+                audioManager: audioManager
+                musicPlayerManager: musicPlayerManager
+                cavaManager: cavaManager
+                settingsManager: settingsManager
+                timerManager: timerManager
+                weatherManager: weatherManager
+                aiThinking: (aiAssistantLoader.item ? aiAssistantLoader.item.streaming : false)
+                    || barWindow.yuraFloatThinking
+                aiSpeaking: barWindow.yuraSpeaking
+                aiPanelOpen: barWindow.yuraPanelOpen
+            }
+
+            Item { Layout.fillWidth: true }
+
+            BarComponents.BarRightSection {
+                id: rightSection
+                theme: theme
+                typo: typo
+                icons: icons
+                modeManager: modeManager
+                notificationManager: notificationManager
+                wifiManager: wifiManager
+                bluetoothManager: bluetoothManager
+                airplaneManager: airplaneManager
+                batteryManager: batteryManager
+                imeStatus: imeStatus
+                idleInhibitorManager: idleInhibitorManager
+                brightnessManager: brightnessManager
+                settingsManager: settingsManager
+            }
+            }
         }
 
-        Item { Layout.fillWidth: true }
+        UI.Workspaces {
+            id: workspaces
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            z: 1.5
+            settingsManager: settingsManager
+            activeColor: theme.glowPrimary
+            // Workspaces' own default assumes a dark face; the dark value here is the one it ships with.
+            emptyColor: theme.onLightSurface ? Qt.rgba(0.20, 0.20, 0.24, 0.95)
+                                            : Qt.rgba(0.85, 0.85, 0.85, 0.95)
+            hasWindowsColor: Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.5)
+            modeManager: modeManager
 
-        BarComponents.BarRightSection {
-            id: rightSection
-            theme: theme
-            typo: typo
-            icons: icons
+            opacity: contentRow.opacity
+            visible: opacity > 0.01
+        }
+
+        Loader {
+            id: powerMenuLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var iconsRef: icons
+            property var themeRef: theme
+            active: modeManagerRef.isMode("powermenu")
+            sourceComponent: Content.PowerMenuContent {
+                anchors.fill: parent
+                visible: powerMenuLoader.modeManagerRef.isMode("powermenu")
+                modeManager: powerMenuLoader.modeManagerRef
+                icons: powerMenuLoader.iconsRef
+                theme: powerMenuLoader.themeRef
+            }
+        }
+
+        Loader {
+            id: timerLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var timerManagerRef: timerManager
+            active: modeManagerRef.isMode("timer")
+            sourceComponent: Content.TimerContent {
+                anchors.fill: parent
+                visible: timerLoader.modeManagerRef.isMode("timer")
+                modeManager: timerLoader.modeManagerRef
+                theme: timerLoader.themeRef
+                timerManager: timerLoader.timerManagerRef
+            }
+        }
+
+        Loader {
+            id: musicPlayerLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var musicManagerRef: musicPlayerManager
+            property var cavaManagerRef: cavaManager
+            active: modeManagerRef.isMode("music")
+            sourceComponent: Content.MusicPlayerContent {
+                anchors.fill: parent
+                visible: musicPlayerLoader.modeManagerRef.isMode("music")
+                modeManager: musicPlayerLoader.modeManagerRef
+                musicManager: musicPlayerLoader.musicManagerRef
+                cavaManager: musicPlayerLoader.cavaManagerRef
+                theme: musicPlayerLoader.themeRef
+                icons: musicPlayerLoader.iconsRef
+            }
+        }
+
+        Loader {
+            id: aiAssistantLoader
+            anchors.fill: parent
+            z: 2
+
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var settingsManagerRef: settingsManager
+            property var aiBackendRef: aiBackend
+
+            // AI stays resident after first open so chat state survives close-reopen; others unload.
+            property bool everLoaded: false
+            active: modeManagerRef.isMode("ai") || everLoaded
+            onLoaded: everLoaded = true
+
+            sourceComponent: Content.AiAssistantContent {
+                anchors.fill: parent
+                visible: aiAssistantLoader.modeManagerRef.isMode("ai")
+                modeManager: aiAssistantLoader.modeManagerRef
+                theme: aiAssistantLoader.themeRef
+                icons: aiAssistantLoader.iconsRef
+                settingsManager: aiAssistantLoader.settingsManagerRef
+                aiBackend: aiAssistantLoader.aiBackendRef
+                voiceSpeaking: barWindow.yuraSpeaking
+            }
+        }
+
+        Loader {
+            id: appLauncherLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var typoRef: typo
+            property var settingsManagerRef: settingsManager
+            active: modeManagerRef.isMode("launcher")
+            sourceComponent: Content.AppLauncherContent {
+                anchors.fill: parent
+                visible: appLauncherLoader.modeManagerRef.isMode("launcher")
+                modeManager: appLauncherLoader.modeManagerRef
+                theme: appLauncherLoader.themeRef
+                icons: appLauncherLoader.iconsRef
+                typo: appLauncherLoader.typoRef
+                settingsManager: appLauncherLoader.settingsManagerRef
+            }
+        }
+
+        Loader {
+            id: volumeLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var typoRef: typo
+            property var audioManagerRef: audioManager
+            property var cavaManagerRef: cavaManager
+            property var micCavaManagerRef: micCavaManager
+            property var musicPlayerManagerRef: musicPlayerManager
+            active: modeManagerRef.isMode("volume")
+            sourceComponent: Content.VolumeContent {
+                anchors.fill: parent
+                visible: volumeLoader.modeManagerRef.isMode("volume")
+                modeManager: volumeLoader.modeManagerRef
+                audioManager: volumeLoader.audioManagerRef
+                cavaManager: volumeLoader.cavaManagerRef
+                micCavaManager: volumeLoader.micCavaManagerRef
+                musicPlayerManager: volumeLoader.musicPlayerManagerRef
+                theme: volumeLoader.themeRef
+                typo: volumeLoader.typoRef
+            }
+        }
+
+        Loader {
+            id: brightnessLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var typoRef: typo
+            property var brightnessManagerRef: brightnessManager
+            active: modeManagerRef.isMode("brightness")
+            sourceComponent: Content.BrightnessContent {
+                anchors.fill: parent
+                visible: brightnessLoader.modeManagerRef.isMode("brightness")
+                modeManager: brightnessLoader.modeManagerRef
+                brightnessManager: brightnessLoader.brightnessManagerRef
+                theme: brightnessLoader.themeRef
+                typo: brightnessLoader.typoRef
+            }
+        }
+
+        Loader {
+            id: notificationLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var notificationManagerRef: notificationManager
+            property var settingsManagerRef: settingsManager
+            active: modeManagerRef.isMode("notification")
+            sourceComponent: Content.NotificationContent {
+                anchors.fill: parent
+                visible: notificationLoader.modeManagerRef.isMode("notification")
+                modeManager: notificationLoader.modeManagerRef
+                notificationManager: notificationLoader.notificationManagerRef
+                theme: notificationLoader.themeRef
+                icons: notificationLoader.iconsRef
+                settingsManager: notificationLoader.settingsManagerRef
+            }
+        }
+
+        Loader {
+            id: wifiLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var wifiManagerRef: wifiManager
+            active: modeManagerRef.isMode("wifi")
+            sourceComponent: Content.WiFiContent {
+                anchors.fill: parent
+                visible: wifiLoader.modeManagerRef.isMode("wifi")
+                modeManager: wifiLoader.modeManagerRef
+                wifiManager: wifiLoader.wifiManagerRef
+                theme: wifiLoader.themeRef
+                icons: wifiLoader.iconsRef
+            }
+        }
+
+        Loader {
+            id: bluetoothLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var bluetoothManagerRef: bluetoothManager
+            active: modeManagerRef.isMode("bluetooth")
+            sourceComponent: Content.BluetoothContent {
+                anchors.fill: parent
+                visible: bluetoothLoader.modeManagerRef.isMode("bluetooth")
+                modeManager: bluetoothLoader.modeManagerRef
+                bluetoothManager: bluetoothLoader.bluetoothManagerRef
+                theme: bluetoothLoader.themeRef
+                icons: bluetoothLoader.iconsRef
+            }
+        }
+
+        Loader {
+            id: weatherLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var weatherManagerRef: weatherManager
+            property var settingsManagerRef: settingsManager
+            active: modeManagerRef.isMode("weather")
+            sourceComponent: Content.WeatherContent {
+                anchors.fill: parent
+                visible: weatherLoader.modeManagerRef.isMode("weather")
+                modeManager: weatherLoader.modeManagerRef
+                weatherManager: weatherLoader.weatherManagerRef
+                theme: weatherLoader.themeRef
+                icons: weatherLoader.iconsRef
+                reduceMotion: weatherLoader.settingsManagerRef ? weatherLoader.settingsManagerRef.reduceMotion : false
+            }
+        }
+
+        Loader {
+            id: wallpaperLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var wallpaperManagerRef: wallpaperManager
+            active: modeManagerRef.isMode("wallpaper")
+            sourceComponent: Content.WallpaperContent {
+                anchors.fill: parent
+                visible: wallpaperLoader.modeManagerRef.isMode("wallpaper")
+                modeManager: wallpaperLoader.modeManagerRef
+                wallpaperManager: wallpaperLoader.wallpaperManagerRef
+                theme: wallpaperLoader.themeRef
+                icons: wallpaperLoader.iconsRef
+            }
+        }
+
+        Loader {
+            id: screenshotGalleryLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var screenshotManagerRef: screenshotManager
+            active: modeManagerRef.isMode("screenshot-gallery")
+            sourceComponent: Content.ScreenshotGalleryContent {
+                anchors.fill: parent
+                visible: screenshotGalleryLoader.modeManagerRef.isMode("screenshot-gallery")
+                modeManager: screenshotGalleryLoader.modeManagerRef
+                screenshotManager: screenshotGalleryLoader.screenshotManagerRef
+                theme: screenshotGalleryLoader.themeRef
+            }
+        }
+
+        Loader {
+            id: screenshotMenuLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var screenshotManagerRef: screenshotManager
+            property var iconsRef: icons
+            active: modeManagerRef.isMode("screenshot-menu")
+            sourceComponent: Content.ScreenshotMenuContent {
+                anchors.fill: parent
+                visible: screenshotMenuLoader.modeManagerRef.isMode("screenshot-menu")
+                modeManager: screenshotMenuLoader.modeManagerRef
+                screenshotManager: screenshotMenuLoader.screenshotManagerRef
+                icons: screenshotMenuLoader.iconsRef
+                theme: screenshotMenuLoader.themeRef
+            }
+        }
+
+        Loader {
+            id: clipboardLoader
+            anchors.fill: parent
+            z: 2
+            property var modeManagerRef: modeManager
+            property var themeRef: theme
+            property var iconsRef: icons
+            property var clipboardManagerRef: clipboardManager
+            active: modeManagerRef.isMode("clipboard")
+            sourceComponent: Content.ClipboardContent {
+                anchors.fill: parent
+                visible: clipboardLoader.modeManagerRef.isMode("clipboard")
+                modeManager: clipboardLoader.modeManagerRef
+                clipboardManager: clipboardLoader.clipboardManagerRef
+                theme: clipboardLoader.themeRef
+                icons: clipboardLoader.iconsRef
+            }
+        }
+
+        Content.NotificationPopupContent {
+            id: notificationPopupContent
+            anchors.fill: parent
+            z: 3
+            visible: modeManager.isMode("notification-popup")
             modeManager: modeManager
             notificationManager: notificationManager
-            wifiManager: wifiManager
-            bluetoothManager: bluetoothManager
-            airplaneManager: airplaneManager
-            batteryManager: batteryManager
-            imeStatus: imeStatus
-            idleInhibitorManager: idleInhibitorManager
-            brightnessManager: brightnessManager
             settingsManager: settingsManager
+            fullscreenActive: barWindow.fullscreenActive
+            theme: theme
+            icons: icons
         }
-        }
-    }
-
-    UI.Workspaces {
-        id: workspaces
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        z: 1.5
-        settingsManager: settingsManager
-        activeColor: theme.glowPrimary
-        // Workspaces' own default assumes a dark face; the dark value here is the one it ships with.
-        emptyColor: theme.onLightSurface ? Qt.rgba(0.20, 0.20, 0.24, 0.95)
-                                        : Qt.rgba(0.85, 0.85, 0.85, 0.95)
-        hasWindowsColor: Qt.rgba(theme.glowPrimary.r, theme.glowPrimary.g, theme.glowPrimary.b, 0.5)
-        modeManager: modeManager
-
-        opacity: contentRow.opacity
-        visible: opacity > 0.01
-    }
-
-    Loader {
-        id: powerMenuLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var iconsRef: icons
-        property var themeRef: theme
-        active: modeManagerRef.isMode("powermenu")
-        sourceComponent: Content.PowerMenuContent {
-            anchors.fill: parent
-            visible: powerMenuLoader.modeManagerRef.isMode("powermenu")
-            modeManager: powerMenuLoader.modeManagerRef
-            icons: powerMenuLoader.iconsRef
-            theme: powerMenuLoader.themeRef
-        }
-    }
-
-    Loader {
-        id: timerLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var timerManagerRef: timerManager
-        active: modeManagerRef.isMode("timer")
-        sourceComponent: Content.TimerContent {
-            anchors.fill: parent
-            visible: timerLoader.modeManagerRef.isMode("timer")
-            modeManager: timerLoader.modeManagerRef
-            theme: timerLoader.themeRef
-            timerManager: timerLoader.timerManagerRef
-        }
-    }
-
-    Loader {
-        id: musicPlayerLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var musicManagerRef: musicPlayerManager
-        property var cavaManagerRef: cavaManager
-        active: modeManagerRef.isMode("music")
-        sourceComponent: Content.MusicPlayerContent {
-            anchors.fill: parent
-            visible: musicPlayerLoader.modeManagerRef.isMode("music")
-            modeManager: musicPlayerLoader.modeManagerRef
-            musicManager: musicPlayerLoader.musicManagerRef
-            cavaManager: musicPlayerLoader.cavaManagerRef
-            theme: musicPlayerLoader.themeRef
-            icons: musicPlayerLoader.iconsRef
-        }
-    }
-
-    Loader {
-        id: aiAssistantLoader
-        anchors.fill: parent
-        z: 2
-
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var settingsManagerRef: settingsManager
-        property var aiBackendRef: aiBackend
-
-        // AI stays resident after first open so chat state survives close-reopen; others unload.
-        property bool everLoaded: false
-        active: modeManagerRef.isMode("ai") || everLoaded
-        onLoaded: everLoaded = true
-
-        sourceComponent: Content.AiAssistantContent {
-            anchors.fill: parent
-            visible: aiAssistantLoader.modeManagerRef.isMode("ai")
-            modeManager: aiAssistantLoader.modeManagerRef
-            theme: aiAssistantLoader.themeRef
-            icons: aiAssistantLoader.iconsRef
-            settingsManager: aiAssistantLoader.settingsManagerRef
-            aiBackend: aiAssistantLoader.aiBackendRef
-            voiceSpeaking: barWindow.yuraSpeaking
-        }
-    }
-
-    Loader {
-        id: appLauncherLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var typoRef: typo
-        property var settingsManagerRef: settingsManager
-        active: modeManagerRef.isMode("launcher")
-        sourceComponent: Content.AppLauncherContent {
-            anchors.fill: parent
-            visible: appLauncherLoader.modeManagerRef.isMode("launcher")
-            modeManager: appLauncherLoader.modeManagerRef
-            theme: appLauncherLoader.themeRef
-            icons: appLauncherLoader.iconsRef
-            typo: appLauncherLoader.typoRef
-            settingsManager: appLauncherLoader.settingsManagerRef
-        }
-    }
-
-    Loader {
-        id: volumeLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var typoRef: typo
-        property var audioManagerRef: audioManager
-        property var cavaManagerRef: cavaManager
-        property var micCavaManagerRef: micCavaManager
-        property var musicPlayerManagerRef: musicPlayerManager
-        active: modeManagerRef.isMode("volume")
-        sourceComponent: Content.VolumeContent {
-            anchors.fill: parent
-            visible: volumeLoader.modeManagerRef.isMode("volume")
-            modeManager: volumeLoader.modeManagerRef
-            audioManager: volumeLoader.audioManagerRef
-            cavaManager: volumeLoader.cavaManagerRef
-            micCavaManager: volumeLoader.micCavaManagerRef
-            musicPlayerManager: volumeLoader.musicPlayerManagerRef
-            theme: volumeLoader.themeRef
-            typo: volumeLoader.typoRef
-        }
-    }
-
-    Loader {
-        id: brightnessLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var typoRef: typo
-        property var brightnessManagerRef: brightnessManager
-        active: modeManagerRef.isMode("brightness")
-        sourceComponent: Content.BrightnessContent {
-            anchors.fill: parent
-            visible: brightnessLoader.modeManagerRef.isMode("brightness")
-            modeManager: brightnessLoader.modeManagerRef
-            brightnessManager: brightnessLoader.brightnessManagerRef
-            theme: brightnessLoader.themeRef
-            typo: brightnessLoader.typoRef
-        }
-    }
-
-    Loader {
-        id: notificationLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var notificationManagerRef: notificationManager
-        property var settingsManagerRef: settingsManager
-        active: modeManagerRef.isMode("notification")
-        sourceComponent: Content.NotificationContent {
-            anchors.fill: parent
-            visible: notificationLoader.modeManagerRef.isMode("notification")
-            modeManager: notificationLoader.modeManagerRef
-            notificationManager: notificationLoader.notificationManagerRef
-            theme: notificationLoader.themeRef
-            icons: notificationLoader.iconsRef
-            settingsManager: notificationLoader.settingsManagerRef
-        }
-    }
-
-    Loader {
-        id: wifiLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var wifiManagerRef: wifiManager
-        active: modeManagerRef.isMode("wifi")
-        sourceComponent: Content.WiFiContent {
-            anchors.fill: parent
-            visible: wifiLoader.modeManagerRef.isMode("wifi")
-            modeManager: wifiLoader.modeManagerRef
-            wifiManager: wifiLoader.wifiManagerRef
-            theme: wifiLoader.themeRef
-            icons: wifiLoader.iconsRef
-        }
-    }
-
-    Loader {
-        id: bluetoothLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var bluetoothManagerRef: bluetoothManager
-        active: modeManagerRef.isMode("bluetooth")
-        sourceComponent: Content.BluetoothContent {
-            anchors.fill: parent
-            visible: bluetoothLoader.modeManagerRef.isMode("bluetooth")
-            modeManager: bluetoothLoader.modeManagerRef
-            bluetoothManager: bluetoothLoader.bluetoothManagerRef
-            theme: bluetoothLoader.themeRef
-            icons: bluetoothLoader.iconsRef
-        }
-    }
-
-    Loader {
-        id: weatherLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var weatherManagerRef: weatherManager
-        property var settingsManagerRef: settingsManager
-        active: modeManagerRef.isMode("weather")
-        sourceComponent: Content.WeatherContent {
-            anchors.fill: parent
-            visible: weatherLoader.modeManagerRef.isMode("weather")
-            modeManager: weatherLoader.modeManagerRef
-            weatherManager: weatherLoader.weatherManagerRef
-            theme: weatherLoader.themeRef
-            icons: weatherLoader.iconsRef
-            reduceMotion: weatherLoader.settingsManagerRef ? weatherLoader.settingsManagerRef.reduceMotion : false
-        }
-    }
-
-    Loader {
-        id: wallpaperLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var wallpaperManagerRef: wallpaperManager
-        active: modeManagerRef.isMode("wallpaper")
-        sourceComponent: Content.WallpaperContent {
-            anchors.fill: parent
-            visible: wallpaperLoader.modeManagerRef.isMode("wallpaper")
-            modeManager: wallpaperLoader.modeManagerRef
-            wallpaperManager: wallpaperLoader.wallpaperManagerRef
-            theme: wallpaperLoader.themeRef
-            icons: wallpaperLoader.iconsRef
-        }
-    }
-
-    Loader {
-        id: screenshotGalleryLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var screenshotManagerRef: screenshotManager
-        active: modeManagerRef.isMode("screenshot-gallery")
-        sourceComponent: Content.ScreenshotGalleryContent {
-            anchors.fill: parent
-            visible: screenshotGalleryLoader.modeManagerRef.isMode("screenshot-gallery")
-            modeManager: screenshotGalleryLoader.modeManagerRef
-            screenshotManager: screenshotGalleryLoader.screenshotManagerRef
-            theme: screenshotGalleryLoader.themeRef
-        }
-    }
-
-    Loader {
-        id: screenshotMenuLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var screenshotManagerRef: screenshotManager
-        property var iconsRef: icons
-        active: modeManagerRef.isMode("screenshot-menu")
-        sourceComponent: Content.ScreenshotMenuContent {
-            anchors.fill: parent
-            visible: screenshotMenuLoader.modeManagerRef.isMode("screenshot-menu")
-            modeManager: screenshotMenuLoader.modeManagerRef
-            screenshotManager: screenshotMenuLoader.screenshotManagerRef
-            icons: screenshotMenuLoader.iconsRef
-            theme: screenshotMenuLoader.themeRef
-        }
-    }
-
-    Loader {
-        id: clipboardLoader
-        anchors.fill: parent
-        z: 2
-        property var modeManagerRef: modeManager
-        property var themeRef: theme
-        property var iconsRef: icons
-        property var clipboardManagerRef: clipboardManager
-        active: modeManagerRef.isMode("clipboard")
-        sourceComponent: Content.ClipboardContent {
-            anchors.fill: parent
-            visible: clipboardLoader.modeManagerRef.isMode("clipboard")
-            modeManager: clipboardLoader.modeManagerRef
-            clipboardManager: clipboardLoader.clipboardManagerRef
-            theme: clipboardLoader.themeRef
-            icons: clipboardLoader.iconsRef
-        }
-    }
-
-    Content.NotificationPopupContent {
-        id: notificationPopupContent
-        anchors.fill: parent
-        z: 3
-        visible: modeManager.isMode("notification-popup")
-        modeManager: modeManager
-        notificationManager: notificationManager
-        settingsManager: settingsManager
-        fullscreenActive: barWindow.fullscreenActive
-        theme: theme
-        icons: icons
     }
 
     Component.onCompleted: {
