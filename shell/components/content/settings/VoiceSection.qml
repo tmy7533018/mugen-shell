@@ -95,6 +95,8 @@ Rectangle {
         target: section.settingsManager
         function onSettingsChanged() {
             if (!section.startDaemonOnSave) return
+            // An external reload also fires this; consuming it then starts a daemon that reads false and exits.
+            if (!section.settingsManager.voiceEnabled) return
             section.startDaemonOnSave = false
             startDaemonProc.running = true
         }
@@ -104,6 +106,26 @@ Rectangle {
         id: startDaemonProc
         running: false
         command: ["systemctl", "--user", "start", "yura-voice.service"]
+        onRunningChanged: {
+            if (running) return
+            voicesReloadTimer.tries = 0
+            voicesReloadTimer.start()
+        }
+    }
+
+    Timer {
+        id: voicesReloadTimer
+        // The daemon does not answer the moment systemctl returns.
+        interval: 1500
+        repeat: true
+        property int tries: 0
+        onTriggered: {
+            if (tries++ >= 4) {
+                stop()
+                return
+            }
+            voicesProc.running = true
+        }
     }
 
     Process {
@@ -121,6 +143,7 @@ Rectangle {
             if (exitCode !== 0) return
             try {
                 section.voices = JSON.parse(voicesProc.buf).voices || []
+                voicesReloadTimer.stop()
             } catch (e) {}
         }
     }

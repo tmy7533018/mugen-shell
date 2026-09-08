@@ -98,7 +98,8 @@ QtObject {
     }
 
     function loadSettings() {
-        readSettingsProcess.command = ["cat", userSettingsFile]
+        readSettingsProcess.command = ["bash", "-c",
+            'if [ -e "$1" ]; then exec cat "$1"; fi; exit 42', "bash", userSettingsFile]
         readSettingsProcess.running = true
     }
 
@@ -608,12 +609,12 @@ QtObject {
             if (exitCode === 0 && readSettingsProcess.output.trim().length > 0) {
                 settingsManager._loadRetries = 0
                 applySettingsFromJson(readSettingsProcess.output)
-            } else if (exitCode !== 0) {
-                // File genuinely missing: first run, seed it from defaults.
+            } else if (exitCode === 42) {
+                // Only the probe's own code means absent; any other failure may be transient.
                 readDefaultSettingsProcess.seed = true
                 readDefaultSettingsProcess.running = true
             } else if (settingsManager._loadRetries < 3) {
-                // An empty read almost certainly raced a writer, so retry rather than overwrite.
+                // An empty read raced a writer and a non-42 failure may be transient; either way, retry.
                 settingsManager._loadRetries++
                 retryLoadTimer.restart()
             } else {

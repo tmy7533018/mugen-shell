@@ -189,10 +189,12 @@ Item {
     
     property bool isClearingAll: false
     property int clearAllCurrentIndex: 0
+    property double clearAllStartedAt: 0
     
     function clearAllNotifications() {
         if (notificationListModel.count === 0) return
         
+        clearAllStartedAt = Date.now()
         isClearingAll = true
         clearAllCurrentIndex = 0
         clearAllSequentialTimer.start()
@@ -223,12 +225,13 @@ Item {
         interval: 500
         onTriggered: {
             notificationListModel.clear()
-            notificationManager.clearAll()
             removingNotifications = {}
             pendingDismissals = {}
             dismissSweeper.stop()
+            // Cleared before the sweep so survivors reach the model through onNotificationsChanged.
             isClearingAll = false
             clearAllCurrentIndex = 0
+            notificationManager.clearArrivedBefore(root.clearAllStartedAt)
         }
     }
     

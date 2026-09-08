@@ -139,7 +139,10 @@ QtObject {
                     // cliphist list format: "ID├──┤CONTENT" or "ID\tCONTENT" or "ID\tTYPE\tCONTENT"
                     let id, type, content
                     
-                    if (line.includes('├──┤')) {
+                    // The id is a leading integer, so whichever delimiter appears first is the real one.
+                    let sepAt = line.indexOf('├──┤')
+                    let tabAt = line.indexOf('\t')
+                    if (sepAt >= 0 && (tabAt < 0 || sepAt < tabAt)) {
                         let parts = line.split('├──┤')
                         if (parts.length >= 2) {
                             id = parts[0].trim()

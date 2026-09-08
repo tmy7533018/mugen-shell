@@ -11,18 +11,25 @@ mkdir -p "$THUMB_DIR"
 
 SCALE="scale=360:-1:force_original_aspect_ratio=decrease"
 
-declare -A keep=()
-for id; do
-  keep["$id.png"]=1
-done
+# Prune against everything cliphist still holds; the argument list is only the window the panel shows.
+declare -A live=()
+while read -r line; do
+  id="${line%%[!0-9]*}"
+  [[ -n "$id" ]] && live["$id.png"]=1
+done < <(cliphist list 2>/dev/null)
 
-for f in "$THUMB_DIR"/*; do
-  [[ -f "$f" ]] || continue
-  b="${f##*/}"
-  [[ -n "${keep[${b%.failed}]:-}" ]] || rm -f "$f"
-done
+if (( ${#live[@]} > 0 )); then
+  for f in "$THUMB_DIR"/*; do
+    [[ -f "$f" ]] || continue
+    b="${f##*/}"
+    [[ -n "${live[${b%.failed}]:-}" ]] || rm -f "$f"
+  done
+fi
 
-command -v ffmpeg >/dev/null 2>&1 || exit 0
+command -v ffmpeg >/dev/null 2>&1 || {
+  echo "$0: ffmpeg not found; clipboard image thumbnails are unavailable" >&2
+  exit 0
+}
 
 for id; do
   out="$THUMB_DIR/$id.png"

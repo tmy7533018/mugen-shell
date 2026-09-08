@@ -425,4 +425,9 @@ Item {
             modeManager.registerMode("music", root)
         }
     }
+
+    // A drag that dies with the panel never reaches onReleased, and the manager stops updating.
+    Component.onDestruction: {
+        if (musicManager) musicManager.seekingSuspended = false
+    }
 }

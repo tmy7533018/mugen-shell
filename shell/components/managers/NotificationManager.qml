@@ -143,19 +143,34 @@ QtObject {
         }
     }
     
+    // Server ids restart near 1 each session, so a restored entry can share one with a live notification.
     function removeNotification(notifId) {
-        release(notifications.find(n => n.id === notifId))
-        notifications = notifications.filter(n => n.id !== notifId)
+        let i = notifications.findIndex(n => n.id === notifId)
+        if (i < 0) return
+        release(notifications[i])
+        let next = notifications.slice(0)
+        next.splice(i, 1)
+        notifications = next
         if (unreadCount > 0) unreadCount--
         save()
     }
     
     function clearAll() {
+        clearArrivedBefore(Date.now())
+    }
+
+    // The panel animates the sweep for ~500ms, and anything arriving in that window must survive it.
+    function clearArrivedBefore(cutoff) {
+        let kept = []
         for (let i = 0; i < notifications.length; i++) {
+            if (notifications[i].timestamp > cutoff) {
+                kept.push(notifications[i])
+                continue
+            }
             release(notifications[i])
         }
-        notifications = []
-        unreadCount = 0
+        notifications = kept
+        unreadCount = kept.length
         save()
     }
     

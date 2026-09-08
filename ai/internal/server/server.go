@@ -401,11 +401,12 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if len(iterToolCalls) == 0 {
-			if fullResponse != "" {
+			// Tool calls already had their side effects, so an empty final answer still needs a row.
+			if fullResponse != "" || len(turnToolCalls) > 0 {
 				_ = s.history.AddAssistantTo(convID, fullResponse, encodeToolCalls(turnToolCalls))
 				s.events.broadcast("conversations", nil)
 				s.events.broadcast("messages", map[string]any{"conversation_id": convID})
-				if isFirstExchange {
+				if isFirstExchange && fullResponse != "" {
 					go s.generateTitle(convID, model, req.Message, fullResponse)
 				}
 			}
