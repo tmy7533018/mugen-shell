@@ -209,14 +209,14 @@ FocusScope {
 
         Behavior on anchors.leftMargin {
             NumberAnimation {
-                duration: modeManager.settingsManager && modeManager.settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * (modeManager.settingsManager ? modeManager.settingsManager.animationDurationMultiplier : 1)
+                duration: Theme.Motion.sweep
                 easing.type: Easing.OutExpo
             }
         }
 
         Behavior on anchors.rightMargin {
             NumberAnimation {
-                duration: modeManager.settingsManager && modeManager.settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * (modeManager.settingsManager ? modeManager.settingsManager.animationDurationMultiplier : 1)
+                duration: Theme.Motion.sweep
                 easing.type: Easing.OutExpo
             }
         }

@@ -4,14 +4,21 @@ import QtQuick
 // Transitions must draw from this scale. Looping ambience (orb breathing,
 // cava pulses) is identity, not transition, and keeps its own literal timings.
 QtObject {
+    property var settings: null
+    readonly property real speed: settings && isFinite(settings.animationDurationMultiplier) ? settings.animationDurationMultiplier : 1.0
+
     readonly property int instant: 0
-    readonly property int micro: 150      // color / opacity ticks: hover tint, focus borders
-    readonly property int fast: 200       // hover scale, chip toggles, small reveals
-    readonly property int standard: 300   // fades, expands, most state changes
-    readonly property int gentle: 400     // content transitions, crossfades that feel unhurried
-    readonly property int slow: 600       // large element movement: panels growing, big fades
-    readonly property int drift: 850      // full panel slides across the screen
-    readonly property int sweep: 1000     // whole-bar reshapes (mode switches)
+    readonly property int micro: Math.round(150 * speed)      // color / opacity ticks: hover tint, focus borders
+    readonly property int fast: Math.round(200 * speed)       // hover scale, chip toggles, small reveals
+    readonly property int standard: Math.round(300 * speed)   // fades, expands, most state changes
+    readonly property int gentle: Math.round(400 * speed)     // content transitions, crossfades that feel unhurried
+    readonly property int slow: Math.round(600 * speed)       // large element movement: panels growing, big fades
+    readonly property int drift: Math.round(850 * speed)      // full panel slides across the screen
+    readonly property int sweep: Math.round(1000 * speed)     // whole-bar reshapes (mode switches)
+
+    function dur(ms) {
+        return Math.round(ms * speed)
+    }
 
     readonly property int easeOut: Easing.OutCubic      // settle out of a change; the default voice
     readonly property int easeMove: Easing.InOutCubic   // A → B where both ends are visible

@@ -161,7 +161,7 @@ PanelWindow {
 
     Behavior on implicitHeight {
         NumberAnimation {
-            duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
+            duration: Theme.Motion.sweep
             easing.type: Easing.OutExpo
         }
     }
@@ -335,8 +335,7 @@ PanelWindow {
         target: barWindow
         property: "lockOpacity"
         to: 0
-        duration: settingsManager.animationDurationMultiplier === 0
-            ? 0 : Theme.Motion.micro * settingsManager.animationDurationMultiplier
+        duration: Theme.Motion.micro
         easing.type: Easing.OutCubic
         onFinished: modeManager.closeAllModes()
     }
@@ -346,8 +345,7 @@ PanelWindow {
         target: barWindow
         property: "lockOpacity"
         to: 1
-        duration: settingsManager.animationDurationMultiplier === 0
-            ? 0 : Theme.Motion.standard * settingsManager.animationDurationMultiplier
+        duration: Theme.Motion.standard
         easing.type: Easing.OutCubic
     }
 
@@ -526,30 +524,30 @@ PanelWindow {
 
         Behavior on anchors.bottomMargin {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
+                duration: Theme.Motion.sweep
                 easing.type: Easing.OutExpo
             }
         }
 
         Behavior on anchors.leftMargin {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
+                duration: Theme.Motion.sweep
                 easing.type: Easing.OutExpo
             }
         }
 
         Behavior on anchors.rightMargin {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
+                duration: Theme.Motion.sweep
                 easing.type: Easing.OutExpo
             }
         }
 
-        opacity: barWindow.implicitHeight > modeManager.normalBarSize.height ? 0.95 : 0.85
+    opacity: barWindow.implicitHeight > modeManager.normalBarSize.height ? 0.95 : 0.85
 
         Behavior on opacity {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.standard * settingsManager.animationDurationMultiplier
+                duration: Theme.Motion.standard
                 easing.type: Easing.OutCubic
             }
         }
@@ -567,28 +565,28 @@ PanelWindow {
 
         Behavior on anchors.topMargin {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
+                duration: Theme.Motion.sweep
                 easing.type: Easing.OutExpo
             }
         }
 
         Behavior on anchors.bottomMargin {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
+                duration: Theme.Motion.sweep
                 easing.type: Easing.OutExpo
             }
         }
 
         Behavior on anchors.leftMargin {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
+                duration: Theme.Motion.sweep
                 easing.type: Easing.OutExpo
             }
         }
 
         Behavior on anchors.rightMargin {
             NumberAnimation {
-                duration: settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.sweep * settingsManager.animationDurationMultiplier
+                duration: Theme.Motion.sweep
                 easing.type: Easing.OutExpo
             }
         }
@@ -634,7 +632,7 @@ PanelWindow {
                 SequentialAnimation {
                     NumberAnimation {
                         property: "opacity"
-                        duration: settingsManager.animationDurationMultiplier === 0 ? 0 : 70 * settingsManager.animationDurationMultiplier
+                        duration: Theme.Motion.dur(70)
                         easing.type: Easing.OutCubic
                     }
                 }
@@ -644,11 +642,11 @@ PanelWindow {
                 to: "visible"
                 SequentialAnimation {
                     PauseAnimation {
-                        duration: contentRow.isFirstShow ? 0 : (settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.gentle * settingsManager.animationDurationMultiplier)
+                        duration: contentRow.isFirstShow ? 0 : Theme.Motion.gentle
                     }
                     NumberAnimation {
                         property: "opacity"
-                        duration: contentRow.isFirstShow ? 0 : (settingsManager.animationDurationMultiplier === 0 ? 0 : Theme.Motion.gentle * settingsManager.animationDurationMultiplier)
+                        duration: contentRow.isFirstShow ? 0 : Theme.Motion.gentle
                         easing.type: Easing.InOutCubic
                     }
                     ScriptAction {

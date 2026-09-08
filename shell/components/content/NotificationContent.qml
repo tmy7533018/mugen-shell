@@ -727,7 +727,7 @@ Item {
                             NumberAnimation {
                                 from: 6
                                 to: 0
-                                duration: Theme.Motion.drift
+                                duration: 850
                                 easing.type: Easing.InOutSine
                             }
                         }
@@ -762,7 +762,7 @@ Item {
                                 NumberAnimation {
                                     from: 0.9
                                     to: 0.6
-                                    duration: Theme.Motion.drift
+                                    duration: 850
                                     easing.type: Easing.InOutSine
                                 }
                             }

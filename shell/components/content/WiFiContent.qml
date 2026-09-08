@@ -643,7 +643,7 @@ Item {
                                     NumberAnimation {
                                         from: 1.0
                                         to: 0.3
-                                        duration: Theme.Motion.slow
+                                        duration: 600
                                         easing.type: Easing.InOutSine
                                     }
                                     PauseAnimation { duration: (2 - index) * 200 }

@@ -56,7 +56,7 @@ Item {
             id: heartbeatAnimation
             loops: Animation.Infinite
             running: button.isActive
-            
+
             NumberAnimation {
                 to: 1.15
                 duration: 400
@@ -64,21 +64,21 @@ Item {
             }
             NumberAnimation {
                 to: 1.0
-                duration: Theme.Motion.gentle
+                duration: 400
                 easing.type: Easing.InCubic
             }
-            PauseAnimation { duration: Theme.Motion.fast }
+            PauseAnimation { duration: 200 }
             NumberAnimation {
                 to: 1.15
-                duration: Theme.Motion.gentle
+                duration: 400
                 easing.type: Easing.OutCubic
             }
             NumberAnimation {
                 to: 1.0
-                duration: Theme.Motion.gentle
+                duration: 400
                 easing.type: Easing.InCubic
             }
-            PauseAnimation { duration: Theme.Motion.drift }
+            PauseAnimation { duration: 850 }
         }
         
         Common.BlobEffect {

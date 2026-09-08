@@ -103,9 +103,7 @@ ShellRoot {
     readonly property int unlockGrace: morphDuration === 0 ? 0 : 260
 
     readonly property int morphDuration:
-        settingsManager.reduceMotion || settingsManager.animationDurationMultiplier === 0
-            ? 0
-            : Math.round(Theme.Motion.sweep * settingsManager.animationDurationMultiplier)
+        settingsManager.reduceMotion ? 0 : Theme.Motion.sweep
 
     property string timeText: ""
     property date today: new Date()
@@ -402,10 +400,7 @@ ShellRoot {
         onTriggered: root.beginEntry()
     }
 
-    readonly property int barFadeInMs:
-        settingsManager.animationDurationMultiplier === 0
-            ? 0
-            : Math.round(Theme.Motion.standard * settingsManager.animationDurationMultiplier)
+    readonly property int barFadeInMs: Theme.Motion.standard
 
     Timer {
         id: barRestoreTimer

@@ -93,6 +93,7 @@ QtObject {
     signal settingsChanged()
 
     Component.onCompleted: {
+        Motion.settings = settingsManager
         loadSettings()
     }
 
