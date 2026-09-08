@@ -109,17 +109,24 @@ ShellRoot {
     property date today: new Date()
 
     property var calendarEvents: []
+    property string pendingCalendarDay: ""
     property string calendarDay: ""
 
     // The lock can outlast midnight, so the grid reloads off the clock tick.
     function reloadCalendar() {
         const key = Qt.formatDate(today, "yyyy-MM-dd")
-        if (key === calendarDay) return
-        calendarDay = key
+        if (key === calendarDay || calendarProcess.running) return
+        pendingCalendarDay = key
 
         calendarProcess.command =
             Theme.CalendarCli.rangeArgv(today.getFullYear(), today.getMonth())
         calendarProcess.running = true
+    }
+
+    function applyCalendar(parsed) {
+        calendarEvents = Array.isArray(parsed.events) ? parsed.events : []
+        // Latched only on a real answer; the clock tick is what retries a failed fetch.
+        calendarDay = pendingCalendarDay
     }
 
     readonly property string weatherHighLow: {
@@ -263,7 +270,7 @@ ShellRoot {
     function maybeSendHide() {
         if (hideSent || !barPresent || surfacesReady < 1) return
         hideSent = true
-        barHideProcess.command = ["qs", "-c", "mugen-shell", "ipc", "call",
+        barHideProcess.command = ["bash", Quickshell.shellDir + "/scripts/qs-ipc.sh",
                                   "bar", "hide", String(Quickshell.processId)]
         barHideProcess.running = true
         hideDeadline.restart()
@@ -272,7 +279,7 @@ ShellRoot {
     function sendBarRestore() {
         if (!hideSent || restoreSent) return
         restoreSent = true
-        Quickshell.execDetached(["qs", "-c", "mugen-shell", "ipc", "call",
+        Quickshell.execDetached(["bash", Quickshell.shellDir + "/scripts/qs-ipc.sh",
                                  "bar", "restore"])
     }
 
@@ -350,7 +357,7 @@ ShellRoot {
 
     Process {
         id: barRectProcess
-        command: ["qs", "-c", "mugen-shell", "ipc", "call", "bar", "rect"]
+        command: ["bash", Quickshell.shellDir + "/scripts/qs-ipc.sh", "bar", "rect"]
 
         stdout: StdioCollector {
             onStreamFinished: root.applyBarRect(this.text)
@@ -373,8 +380,7 @@ ShellRoot {
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    const parsed = JSON.parse(this.text || "{}")
-                    root.calendarEvents = Array.isArray(parsed.events) ? parsed.events : []
+                    root.applyCalendar(JSON.parse(this.text))
                 } catch (e) {
                     root.calendarEvents = []
                 }

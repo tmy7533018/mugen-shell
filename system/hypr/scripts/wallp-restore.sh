@@ -39,6 +39,12 @@ TARGET="$(cat "$CURRENT_WALLPAPER_FILE" 2>/dev/null | tr -d '\n')"
 # Substring pkill: Nix wraps this daemon and truncates comm, so -x misses.
 pkill mpvpaper >/dev/null 2>&1 || true
 
+# Spawning before the old process is gone races its socket unlink and flashes black.
+for _ in {1..10}; do
+  pgrep mpvpaper >/dev/null 2>&1 || break
+  sleep 0.1
+done
+
 if is_video "$TARGET"; then
   setsid nohup mpvpaper -o "$MPV_OPTS" '*' "$TARGET" >/dev/null 2>&1 &
 else

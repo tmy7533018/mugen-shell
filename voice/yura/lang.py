@@ -21,16 +21,17 @@ def _personality_lang() -> str:
     global _cache
     now = time.time()
     if now - _cache[0] > 60:
-        lang = ""
+        lang = _cache[1]
         try:
             r = ai.get(f"{AI_URL}/config", timeout=3)
             body = r.json()
             # The endpoint nests the file under "config"; reading the top level silently yielded "".
             cfg = body.get("config") or body
-            lang = str(cfg.get("personality", {}).get("language") or "")
-        except requests.RequestException:
+            lang = str(cfg.get("personality", {}).get("language") or "").strip().lower()
+        # Keeping the last good value: overwriting with "" would change the voice for a minute.
+        except (requests.RequestException, ValueError, AttributeError):
             pass
-        _cache = (now, lang.strip().lower())
+        _cache = (now, lang)
     return _cache[1]
 
 

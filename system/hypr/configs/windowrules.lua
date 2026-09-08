@@ -18,4 +18,4 @@ hl.window_rule({ name = "mugen-calendar",  match = { title = "^(Mugen Calendar)$
 -- Sized by the window itself; a rule here would override its implicit size.
 hl.window_rule({ name = "mugen-settings",  match = { title = "^(Mugen Settings)$" }, float = true, center = true })
 hl.window_rule({ name = "mugen-yura-settings", match = { title = "^(Yura Settings)$" }, float = true, center = true })
-hl.window_rule({ name = "steam-settings",  match = { class = "^(steam)$", title = "^(Steam ?設定|Settings)$" }, float = true, size = "1050 600", center = true })
+hl.window_rule({ name = "steam-settings",  match = { class = "^(steam)$", title = "^(Steam ?(設定|Settings))$" }, float = true, size = "1050 600", center = true })
