@@ -59,7 +59,10 @@ for f in "$THUMB_DIR"/*; do
   [[ -n "${keep[$base]:-}" ]] || rm -f "$f"
 done
 
-command -v ffmpeg >/dev/null 2>&1 || exit 0
+command -v ffmpeg >/dev/null 2>&1 || {
+  echo "$0: ffmpeg not found; wallpaper thumbnails and colours are unavailable" >&2
+  exit 0
+}
 
 for src; do
   out="$THUMB_DIR/${src##*/}.png"

@@ -241,6 +241,7 @@ FocusScope {
                             fillMode: Image.PreserveAspectCrop
                             smooth: true
                             asynchronous: true
+                            sourceSize.width: 300
                             opacity: status === Image.Ready ? 1.0 : 0.0
                             
                             Behavior on opacity {
