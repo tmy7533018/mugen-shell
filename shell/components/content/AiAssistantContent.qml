@@ -78,7 +78,7 @@ FocusScope {
     }
 
     function sendMessage(text) {
-        if (!text || streaming) return
+        if (!text || streaming || chatProcess.running) return
         if (!aiAvailable || !hasModel) return
         responseDisplay = ""
         displayingResponse = false

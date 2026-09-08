@@ -70,10 +70,19 @@ PanelWindow {
         }
     }
 
+    function hideWhenLanded() {
+        // Hiding while the orb is still flying home eats it mid-air; the round trip can outlast the timer.
+        if (flying) {
+            chatHideTimer.restart()
+            return
+        }
+        visible = false
+    }
+
     Timer {
         id: chatHideTimer
         interval: 1300
-        onTriggered: chatWindow.visible = false
+        onTriggered: chatWindow.hideWhenLanded()
     }
 
     anchors {
@@ -129,13 +138,13 @@ PanelWindow {
 
     // A fresh yura-shell can't be mid-stream, so clear a glow left by a process that died streaming.
     Component.onCompleted: {
-        Theme.Hypr.exec("qs -c mugen-shell ipc call yura set_thinking false")
+        Theme.Hypr.exec("bash " + Quickshell.shellDir + "/scripts/qs-ipc.sh yura set_thinking false")
         chatWindow.setBarPanelOpen(false)
         chatWindow.noteActivity()
     }
 
     function setBarPanelOpen(on) {
-        Theme.Hypr.exec("qs -c mugen-shell ipc call yura set_panel_open " + (on ? "true" : "false"))
+        Theme.Hypr.exec("bash " + Quickshell.shellDir + "/scripts/qs-ipc.sh yura set_panel_open " + (on ? "true" : "false"))
     }
 
     property string orbHomePurpose: ""
@@ -147,7 +156,7 @@ PanelWindow {
 
     Process {
         id: orbHomeProcess
-        command: ["sh", "-c", "qs -c mugen-shell ipc call yura orb_home"]
+        command: ["bash", Quickshell.shellDir + "/scripts/qs-ipc.sh", "yura", "orb_home"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const state = chatWindow.yuraState
@@ -612,7 +621,7 @@ PanelWindow {
         target: contentLoader.item
         ignoreUnknownSignals: true
         function onStreamingChanged() {
-            Theme.Hypr.exec("qs -c mugen-shell ipc call yura set_thinking "
+            Theme.Hypr.exec("bash " + Quickshell.shellDir + "/scripts/qs-ipc.sh yura set_thinking "
                 + (contentLoader.item.streaming ? "true" : "false"))
         }
     }

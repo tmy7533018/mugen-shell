@@ -47,6 +47,7 @@ FocusScope {
     property var messages: []
     property bool streaming: false
     property bool stopRequested: false
+    property bool discardStreamTail: false
     property bool aiAvailable: false
     property bool hasModel: false
     property bool healthChecked: false
@@ -339,8 +340,31 @@ FocusScope {
         pendingConfirm = null
     }
 
+    function finishStream(exitCode) {
+        streaming = false
+        freezeThinking()
+        // A timeout or error can end the stream with a card still up for an abandoned prompt.
+        pendingConfirm = null
+        // A stop is a SIGTERM, so curl's non-zero exit says nothing about the connection.
+        if (exitCode !== 0 && !stopRequested) {
+            updateLastMessage("\n[connection failed]")
+        }
+        stopRequested = false
+        refreshConversations()
+        if (discardStreamTail) {
+            discardStreamTail = false
+            return
+        }
+        // Message ids only exist server-side, so the turn that just landed must be read back.
+        loadCurrentConversation()
+    }
+
     function newChat() {
-        if (streaming) stopStreaming()
+        if (streaming) {
+            // The dying stream's read-back would restore the conversation this call is leaving.
+            discardStreamTail = true
+            stopStreaming()
+        }
         if (truncateProcess.running) truncateProcess.abandoned = true
         // speakingIndex is a row number, so it would mark an unrelated message after a replace.
         if (speakingIndex >= 0) stopReadAloud()
@@ -355,7 +379,10 @@ FocusScope {
 
     function selectConversation(convId) {
         if (convId === currentConvId) return
-        if (streaming) stopStreaming()
+        if (streaming) {
+            discardStreamTail = true
+            stopStreaming()
+        }
         if (truncateProcess.running) truncateProcess.abandoned = true
         if (speakingIndex >= 0) stopReadAloud()
         currentConvId = convId
@@ -425,6 +452,13 @@ FocusScope {
         onTriggered: eventsSubscriber.running = true
     }
 
+    // Qt fetches a markdown image target while rendering, so a model-authored URL phones home unclicked.
+    function stripImages(text) {
+        return text.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+                   .replace(/!\[([^\]]*)\]\[[^\]]*\]/g, "$1")
+                   .replace(/!\[([^\]]*)\]/g, "$1")
+    }
+
     // An unclosed ``` mid-stream still yields a code block, so partial code shows while it streams.
     function parseBlocks(content) {
         if (!content) return []
@@ -433,7 +467,7 @@ FocusScope {
         for (let i = 0; i < parts.length; i++) {
             let part = parts[i]
             if (i % 2 === 0) {
-                if (part.length > 0) blocks.push({ type: "text", content: part })
+                if (part.length > 0) blocks.push({ type: "text", content: root.stripImages(part) })
             } else {
                 let nl = part.indexOf("\n")
                 let lang = ""
@@ -1113,7 +1147,7 @@ FocusScope {
                                 font.letterSpacing: 0.3
                                 lineHeight: 1.5
                                 linkColor: root.theme ? root.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1.0)
-                                onLinkActivated: link => Qt.openUrlExternally(link)
+                                onLinkActivated: link => { if (/^https?:\/\//i.test(link)) Qt.openUrlExternally(link) }
                             }
 
                             Ai.CodeBlock {
@@ -1809,20 +1843,7 @@ FocusScope {
             }
         }
 
-        onExited: (exitCode) => {
-            root.streaming = false
-            root.freezeThinking()
-            // A timeout or error can end the stream with a card still up for an abandoned prompt.
-            root.pendingConfirm = null
-            // A stop is a SIGTERM, so curl's non-zero exit says nothing about the connection.
-            if (exitCode !== 0 && !root.stopRequested) {
-                root.updateLastMessage("\n[connection failed]")
-            }
-            root.stopRequested = false
-            root.refreshConversations()
-            // Message ids only exist server-side, so the turn that just landed must be read back.
-            root.loadCurrentConversation()
-        }
+        onExited: (exitCode) => root.finishStream(exitCode)
     }
 
     Process {
@@ -2030,12 +2051,12 @@ FocusScope {
         }
     }
 
-    // The panel outlives a backend that was still starting, and nothing else re-runs the check.
+    // Nothing else re-runs the check when the backend starts late or a model is set afterwards.
     Timer {
         id: healthRetry
         interval: 3000
         repeat: true
-        running: root.visible && root.healthChecked && !root.aiAvailable
+        running: root.visible && root.healthChecked && (!root.aiAvailable || !root.hasModel)
         onTriggered: healthProcess.running = true
     }
 

@@ -62,6 +62,7 @@ Row {
                     width: parent.width - root.modeManager.scale(10)
                     horizontalAlignment: Text.AlignHCenter
                     text: thumb.isImage ? "missing" : thumb.fileName
+                    textFormat: Text.PlainText
                     elide: Text.ElideMiddle
                     maximumLineCount: 2
                     wrapMode: Text.WrapAnywhere
