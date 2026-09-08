@@ -1,6 +1,8 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
+import "../../common" as Common
 import "../../../lib" as Theme
 
 Rectangle {
@@ -108,13 +110,32 @@ Rectangle {
             }
         }
 
-        Text {
+        RowLayout {
             Layout.fillWidth: true
-            text: "Restart the shell for a monitor change to take effect."
-            color: section.theme ? section.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.55)
-            font.pixelSize: 10
-            font.family: "M PLUS 2"
-            font.letterSpacing: 0.3
+            spacing: 12
+
+            Text {
+                Layout.fillWidth: true
+                text: "A monitor change only takes effect once the shell restarts."
+                color: section.theme ? section.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.55)
+                font.pixelSize: 10
+                font.family: "M PLUS 2"
+                font.letterSpacing: 0.3
+                wrapMode: Text.WordWrap
+            }
+
+            Common.ActionButton {
+                theme: section.theme
+                label: "Restart shell"
+                buttonWidth: 104
+                onClicked: { restartShellProcess.running = true; section.bump() }
+            }
         }
+    }
+
+    Process {
+        id: restartShellProcess
+        running: false
+        command: ["systemctl", "--user", "restart", "mugen-shell.service"]
     }
 }

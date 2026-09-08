@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import "../../common" as Common
 import "../../../lib" as Theme
 
 Rectangle {
@@ -182,36 +183,6 @@ Rectangle {
         }
     }
 
-    component ActionButton: Rectangle {
-        property string label: ""
-        property color tint: Qt.rgba(0.55, 0.55, 0.65, 0.22)
-        property color tintHover: Qt.rgba(0.55, 0.55, 0.65, 0.32)
-        signal clicked()
-
-        implicitWidth: 84
-        implicitHeight: 28
-        radius: 14
-        color: btnMouse.containsMouse ? tintHover : tint
-        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-
-        Text {
-            anchors.centerIn: parent
-            text: parent.label
-            color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-            font.pixelSize: 11
-            font.family: "M PLUS 2"
-            font.weight: Font.Medium
-        }
-
-        MouseArea {
-            id: btnMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: parent.clicked()
-        }
-    }
-
     ColumnLayout {
         id: contentColumn
         anchors.left: parent.left
@@ -254,7 +225,8 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            ActionButton {
+            Common.ActionButton {
+                theme: section.theme
                 label: "Open folder"
                 onClicked: { section.editConfig(); section.bump() }
             }
@@ -283,7 +255,8 @@ Rectangle {
                 horizontalAlignment: Text.AlignRight
             }
 
-            ActionButton {
+            Common.ActionButton {
+                theme: section.theme
                 label: "Open folder"
                 onClicked: { section.openPath(section.auditDir); section.bump() }
             }
@@ -375,7 +348,8 @@ Rectangle {
                 wrapMode: Text.WordWrap
             }
 
-            ActionButton {
+            Common.ActionButton {
+                theme: section.theme
                 label: "Restart AI"
                 tint: Qt.rgba(0.90, 0.45, 0.55, 0.30)
                 tintHover: Qt.rgba(0.90, 0.45, 0.55, 0.45)

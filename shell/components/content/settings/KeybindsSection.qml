@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import "../../ui" as UI
+import "../../common" as Common
 import "../../../lib" as Theme
 
 Rectangle {
@@ -25,34 +26,6 @@ Rectangle {
     border.width: 1
     border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
     height: layout.implicitHeight + 24
-
-    component ActionButton: Rectangle {
-        property string label: ""
-        signal clicked()
-
-        implicitWidth: 72
-        implicitHeight: 24
-        radius: 12
-        color: btnMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-        Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-
-        Text {
-            anchors.centerIn: parent
-            text: parent.label
-            color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-            font.pixelSize: 10
-            font.family: "M PLUS 2"
-            font.weight: Font.Medium
-        }
-
-        MouseArea {
-            id: btnMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: parent.clicked()
-        }
-    }
 
     function bump() {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
@@ -352,7 +325,11 @@ Rectangle {
                     wrapMode: Text.WordWrap
                 }
 
-                ActionButton {
+                Common.ActionButton {
+                    theme: section.theme
+                    buttonWidth: 72
+                    buttonHeight: 24
+                    fontSize: 10
                     label: "Open folder"
                     onClicked: { section.openUrl(section.overridesDir); section.bump() }
                 }
