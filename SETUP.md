@@ -43,6 +43,7 @@
             imports = [ mugen-shell.homeManagerModules.default ];
             programs.mugen-shell.enable = true;
             programs.mugen-shell.includeSystemDeps = false; # already on the system path
+            programs.mugen-shell.quickshellExecutable = "/run/current-system/sw/bin/quickshell";
             home.stateVersion = "26.05";
           };
         })
@@ -136,6 +137,7 @@ UI は `M PLUS 2` と `M PLUS 1 Code` を名指しするので、Nerd Fonts 版 
           programs.mugen-shell.enable = true;
           # Wayland stack already on the OS path, skip the Nix copies
           programs.mugen-shell.includeSystemDeps = false;
+          programs.mugen-shell.quickshellExecutable = "/usr/bin/quickshell";
           # Stop the mugen-ai service with: programs.mugen-shell.ai.enable = false;
           home.stateVersion = "26.05";
         })

@@ -87,6 +87,19 @@ in
       '';
     };
 
+    quickshellExecutable = lib.mkOption {
+      type = lib.types.str;
+      default = "${pkgs.quickshell}/bin/quickshell";
+      defaultText = lib.literalExpression ''"''${pkgs.quickshell}/bin/quickshell"'';
+      description = ''
+        Absolute path to the Quickshell the bar's unit runs. A systemd unit
+        cannot resolve a name on PATH, so a distro build has to be named here
+        (e.g. <literal>/usr/bin/quickshell</literal>). Overriding this keeps
+        Nix's own Quickshell out of the closure, which is the point of
+        <literal>includeSystemDeps = false</literal>.
+      '';
+    };
+
     zsh.enable = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -271,6 +284,30 @@ in
         Slice = "session.slice";
         TimeoutStopSec = "5sec";
         Restart = "on-failure";
+      };
+    };
+
+    # Started as a unit rather than an exec-once so it can be restarted from the
+    # settings panel and comes back on its own after a crash.
+    systemd.user.services.mugen-shell = {
+      Unit = {
+        Description = "mugen-shell bar";
+        After = [ "graphical-session.target" ];
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        ExecStart = "${cfg.quickshellExecutable} -c mugen-shell";
+        # A layer shell never becomes the focus window, so Qt reaches fcitx over
+        # DBus instead, and picks no platform theme under XDG_CURRENT_DESKTOP=Hyprland.
+        Environment = [
+          "QT_IM_MODULE=fcitx"
+          "QT_QPA_PLATFORMTHEME=xdgdesktopportal"
+        ];
+        Restart = "on-failure";
+        RestartSec = 1;
+      };
+      Install = {
+        WantedBy = [ "graphical-session.target" ];
       };
     };
 
