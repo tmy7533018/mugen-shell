@@ -61,7 +61,15 @@ Rectangle {
         return !!section.exposedSet[catId]
     }
 
+    function toggleOption(key) {
+        if (section.saving) return
+        if (key === "enabled") section.exposeEnabled = !section.exposeEnabled
+        else section.readonlyOn = !section.readonlyOn
+        section.dirty = true
+    }
+
     function setExposed(catId, on) {
+        if (section.saving) return
         let next = Object.assign({}, section.exposedSet)
         if (on) next[catId] = true
         else delete next[catId]
@@ -82,11 +90,28 @@ Rectangle {
         return s + (dirty ? " · unsaved" : "")
     }
 
+    // The server merges a partial body, so sending the whole document reverts other sections.
+    function savePayload() {
+        let cats = []
+        for (let i = 0; i < section.categories.length; i++) {
+            let id = section.categories[i].id
+            if (section.exposedSet[id]) cats.push(id)
+        }
+        return JSON.stringify({
+            mcp_expose: {
+                enabled: section.exposeEnabled,
+                readonly: section.readonlyOn,
+                categories: cats
+            }
+        })
+    }
+
     function save() {
-        if (saveProcess.running || getCurrentProcess.running) return
+        if (saveProcess.running) return
         section.saving = true
         section.statusText = "saving…"
-        getCurrentProcess.running = true
+        saveProcess.payload = savePayload()
+        saveProcess.running = true
     }
 
     Behavior on height {
@@ -115,40 +140,6 @@ Rectangle {
                 section.dirty = false
                 section.loaded = true
             } catch (err) {
-                section.statusText = "parse failed"
-            }
-        }
-    }
-
-    Process {
-        id: getCurrentProcess
-        running: false
-        property string buf: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
-        stdout: SplitParser { onRead: data => getCurrentProcess.buf += data }
-        onRunningChanged: { if (running) buf = "" }
-        onExited: (exitCode) => {
-            if (exitCode !== 0) {
-                section.saving = false
-                section.statusText = "load before save failed"
-                return
-            }
-            try {
-                let cfg = (JSON.parse(getCurrentProcess.buf).config) || {}
-                let cats = []
-                for (let i = 0; i < section.categories.length; i++) {
-                    let id = section.categories[i].id
-                    if (section.exposedSet[id]) cats.push(id)
-                }
-                cfg.mcp_expose = {
-                    enabled: section.exposeEnabled,
-                    readonly: section.readonlyOn,
-                    categories: cats
-                }
-                saveProcess.payload = JSON.stringify(cfg)
-                saveProcess.running = true
-            } catch (err) {
-                section.saving = false
                 section.statusText = "parse failed"
             }
         }
@@ -192,8 +183,16 @@ Rectangle {
         onExited: (exitCode) => {
             section.saving = false
             section.dirty = false
-            section.statusText = exitCode === 0 ? "applied" : "applied (restart pending)"
+            section.statusText = exitCode === 0 ? "applied — reloading status…" : "applied (restart pending)"
+            reloadTimer.start()
         }
+    }
+
+    Timer {
+        id: reloadTimer
+        // Wait for mugen-ai to come back up after the restart.
+        interval: 4000
+        onTriggered: if (!section.dirty) loadProcess.running = true
     }
 
     Component.onCompleted: loadProcess.running = true
@@ -340,11 +339,7 @@ Rectangle {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            if (toggleRow.modelData.key === "enabled") section.exposeEnabled = !section.exposeEnabled
-                            else section.readonlyOn = !section.readonlyOn
-                            section.dirty = true
-                        }
+                        onClicked: section.toggleOption(toggleRow.modelData.key)
                     }
                 }
             }

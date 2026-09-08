@@ -218,42 +218,24 @@ Rectangle {
 
     function reload() { loadProcess.running = true }
 
+    // The server merges a partial body, so sending the whole document reverts other sections.
+    function savePayload() {
+        return JSON.stringify({
+            personality: {
+                name: section.formName,
+                tone: section.formTone,
+                language: section.formLanguage,
+                system_prompt: section.formSystemPrompt
+            }
+        })
+    }
+
     function save() {
         if (saveProcess.running) return
         section.saving = true
         section.statusText = "saving…"
-        let getReq = getCurrentProcess
-        getReq.running = true
-    }
-
-    Process {
-        id: getCurrentProcess
-        running: false
-        property string buf: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
-        stdout: SplitParser { onRead: data => getCurrentProcess.buf += data }
-        onRunningChanged: { if (running) buf = "" }
-        onExited: (exitCode) => {
-            if (exitCode !== 0) {
-                section.saving = false
-                section.statusText = "load before save failed"
-                return
-            }
-            try {
-                let obj = JSON.parse(getCurrentProcess.buf)
-                let cfg = obj.config || {}
-                if (!cfg.personality) cfg.personality = {}
-                cfg.personality.name = section.formName
-                cfg.personality.tone = section.formTone
-                cfg.personality.language = section.formLanguage
-                cfg.personality.system_prompt = section.formSystemPrompt
-                saveProcess.payload = JSON.stringify(cfg)
-                saveProcess.running = true
-            } catch (e) {
-                section.saving = false
-                section.statusText = "parse failed"
-            }
-        }
+        saveProcess.payload = savePayload()
+        saveProcess.running = true
     }
 
     Component.onCompleted: reload()
@@ -516,7 +498,10 @@ Rectangle {
                                 anchors.fill: parent
                                 anchors.leftMargin: 8
                                 anchors.rightMargin: 8
-                                text: section.languageFilter
+                                // Typing severs the text binding, so the source is mirrored and re-applied.
+                                property string sourceValue: section.languageFilter
+                                text: sourceValue
+                                onSourceValueChanged: if (text !== sourceValue) text = sourceValue
                                 color: section.theme ? section.theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.9)
                                 selectionColor: section.theme ? Qt.rgba(section.theme.glowPrimary.r, section.theme.glowPrimary.g, section.theme.glowPrimary.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4)
                                 font.pixelSize: 11

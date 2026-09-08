@@ -106,37 +106,6 @@ Rectangle {
     }
 
     Process {
-        id: getCurrentProcess
-        running: false
-        property string buf: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
-        stdout: SplitParser { onRead: data => getCurrentProcess.buf += data }
-        onRunningChanged: { if (running) buf = "" }
-        onExited: (exitCode) => {
-            if (exitCode !== 0) {
-                section.saving = false
-                section.statusText = "load before save failed"
-                return
-            }
-            try {
-                let obj = JSON.parse(getCurrentProcess.buf)
-                let cfg = obj.config || {}
-                if (!cfg.tools) cfg.tools = {}
-                let list = []
-                for (let k in section.disabledSet) {
-                    if (section.disabledSet[k]) list.push(k)
-                }
-                cfg.tools.disabled_categories = list
-                saveProcess.payload = JSON.stringify(cfg)
-                saveProcess.running = true
-            } catch (e) {
-                section.saving = false
-                section.statusText = "parse failed"
-            }
-        }
-    }
-
-    Process {
         id: saveProcess
         running: false
         property string buf: ""
@@ -177,11 +146,21 @@ Rectangle {
         }
     }
 
+    // The server merges a partial body, so sending the whole document reverts other sections.
+    function savePayload() {
+        let list = []
+        for (let k in section.disabledSet) {
+            if (section.disabledSet[k]) list.push(k)
+        }
+        return JSON.stringify({ tools: { disabled_categories: list } })
+    }
+
     function save() {
-        if (saveProcess.running || getCurrentProcess.running) return
+        if (saveProcess.running) return
         section.saving = true
         section.statusText = "saving…"
-        getCurrentProcess.running = true
+        saveProcess.payload = savePayload()
+        saveProcess.running = true
     }
 
     function allOn() {

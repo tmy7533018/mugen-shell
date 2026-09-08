@@ -131,6 +131,20 @@ Rectangle {
         section.statusText = "added \"" + name + "\" — Save & Apply to start it"
     }
 
+    // Only this subtree: the whole document would revert whatever another section just saved.
+    // `existing` carries the per-server fields this section does not model.
+    function savePayload(existing) {
+        let m = {}
+        for (let i = 0; i < section.servers.length; i++) {
+            let srv = section.servers[i]
+            m[srv.name] = Object.assign({}, existing[srv.name] || {}, {
+                command: srv.command, args: srv.args, env: srv.env,
+                url: srv.url || "", disabled: srv.disabled, trusted: srv.trusted
+            })
+        }
+        return JSON.stringify({ mcp: { servers: m } })
+    }
+
     function save() {
         if (saveProcess.running || getCurrentProcess.running) return
         section.saving = true
@@ -224,17 +238,7 @@ Rectangle {
                 let cfg = (JSON.parse(getCurrentProcess.buf).config) || {}
                 if (!cfg.mcp) cfg.mcp = {}
                 // Overlaid onto the config just fetched, so per-server fields this section doesn't model survive.
-                let existing = cfg.mcp.servers || {}
-                let m = {}
-                for (let i = 0; i < section.servers.length; i++) {
-                    let s = section.servers[i]
-                    m[s.name] = Object.assign({}, existing[s.name] || {}, {
-                        command: s.command, args: s.args, env: s.env,
-                        url: s.url || "", disabled: s.disabled, trusted: s.trusted
-                    })
-                }
-                cfg.mcp.servers = m
-                saveProcess.payload = JSON.stringify(cfg)
+                saveProcess.payload = section.savePayload(cfg.mcp.servers || {})
                 saveProcess.running = true
             } catch (e) {
                 section.saving = false
@@ -290,7 +294,7 @@ Rectangle {
         id: reloadTimer
         // Wait for mugen-ai to come back up and re-handshake its MCP servers.
         interval: 4000
-        onTriggered: loadConfigProcess.running = true
+        onTriggered: if (!section.dirty) loadConfigProcess.running = true
     }
 
     Process {
@@ -778,9 +782,12 @@ Rectangle {
                                 anchors.fill: parent
                                 anchors.leftMargin: 8
                                 anchors.rightMargin: 8
-                                text: fieldRow.modelData.key === "name" ? section.formName
+                                // Typing severs the text binding, so the source is mirrored and re-applied.
+                                property string sourceValue: fieldRow.modelData.key === "name" ? section.formName
                                     : fieldRow.modelData.key === "command" ? section.formCommand
                                     : section.formUrl
+                                text: sourceValue
+                                onSourceValueChanged: if (text !== sourceValue) text = sourceValue
                                 color: section.theme ? section.theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.9)
                                 selectionColor: section.theme ? Qt.rgba(section.theme.glowPrimary.r, section.theme.glowPrimary.g, section.theme.glowPrimary.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4)
                                 font.pixelSize: 11

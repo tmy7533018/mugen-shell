@@ -62,11 +62,17 @@ Rectangle {
         return s
     }
 
+    // The server merges a partial body, so sending the whole document reverts other sections.
+    function savePayload() {
+        return JSON.stringify({ history: { retain_days: section.retainDays } })
+    }
+
     function applyRetention() {
-        if (saveProcess.running || getCurrentProcess.running) return
+        if (saveProcess.running) return
         section.saving = true
         section.statusText = "saving…"
-        getCurrentProcess.running = true
+        saveProcess.payload = savePayload()
+        saveProcess.running = true
     }
 
     function doExport() {
@@ -128,32 +134,6 @@ Rectangle {
     }
 
     // The retention prune only runs at mugen-ai startup, so applying retain_days needs a restart.
-    Process {
-        id: getCurrentProcess
-        running: false
-        property string buf: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
-        stdout: SplitParser { onRead: data => getCurrentProcess.buf += data }
-        onRunningChanged: { if (running) buf = "" }
-        onExited: (exitCode) => {
-            if (exitCode !== 0) {
-                section.saving = false
-                section.statusText = "load before save failed"
-                return
-            }
-            try {
-                let cfg = (JSON.parse(getCurrentProcess.buf).config) || {}
-                if (!cfg.history) cfg.history = {}
-                cfg.history.retain_days = section.retainDays
-                saveProcess.payload = JSON.stringify(cfg)
-                saveProcess.running = true
-            } catch (e) {
-                section.saving = false
-                section.statusText = "parse failed"
-            }
-        }
-    }
-
     Process {
         id: saveProcess
         running: false
@@ -217,7 +197,14 @@ Rectangle {
             section.statusText = exitCode === 0
                 ? "exported to " + exportProcess.outPath
                 : "export failed"
+            if (exitCode === 0) chmodExportProcess.running = true
         }
+    }
+
+    Process {
+        id: chmodExportProcess
+        running: false
+        command: ["chmod", "600", exportProcess.outPath]
     }
 
     Process {
