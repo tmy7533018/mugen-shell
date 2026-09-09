@@ -1,0 +1,14 @@
+#%PAM-1.0
+# Not `include system-auth`: its pam_unix carries nullok, so an empty password would unlock.
+# pam_env and pam_time are out: a time restriction that blocked unlock would strand the session.
+
+auth       required                    pam_faillock.so      preauth
+-auth      [success=2 default=ignore]  pam_systemd_home.so
+auth       [success=1 default=bad]     pam_unix.so          try_first_pass
+auth       [default=die]               pam_faillock.so      authfail
+auth       optional                    pam_permit.so
+auth       required                    pam_faillock.so      authsucc
+
+-account   [success=1 default=ignore]  pam_systemd_home.so
+account    required                    pam_unix.so
+account    optional                    pam_permit.so
