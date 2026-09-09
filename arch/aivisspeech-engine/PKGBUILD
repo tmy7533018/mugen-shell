@@ -8,7 +8,6 @@ arch=('x86_64')
 url='https://github.com/Aivis-Project/AivisSpeech-Engine'
 license=('LGPL-3.0-or-later')
 depends=('zlib' 'gcc-libs')
-makedepends=('7zip')
 # A PyInstaller bundle: stripping breaks the packed .so set.
 options=('!strip')
 source=("https://github.com/Aivis-Project/AivisSpeech-Engine/releases/download/${pkgver}/AivisSpeech-Engine-Linux-x64-${pkgver}.7z.001")
@@ -17,8 +16,8 @@ sha256sums=('a4b1cc790e9a1522d880e063d788ea2c33df909e88e764d8ae5a17e3597b15b5')
 _repo() { (cd "$startdir/../.." && pwd); }
 
 package() {
+  # libarchive unpacks the single-volume .7z during makepkg's own extract step.
   cd "$srcdir"
-  7zz x -y "AivisSpeech-Engine-Linux-x64-${pkgver}.7z.001" > /dev/null
 
   install -d "$pkgdir/opt/$pkgname"
   cp -r Linux-x64/. "$pkgdir/opt/$pkgname/"
