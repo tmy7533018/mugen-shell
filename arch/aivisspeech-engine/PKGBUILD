@@ -26,6 +26,10 @@ package() {
   install -d "$pkgdir/usr/bin"
   ln -s "/opt/$pkgname/run" "$pkgdir/usr/bin/$pkgname"
 
-  install -Dm644 "$(_repo)/system/systemd/user/aivisspeech-engine.service" \
+  local repo; repo=$(_repo)
+  install -Dm644 "$repo/system/systemd/user/aivisspeech-engine.service" \
     "$pkgdir/usr/lib/systemd/user/aivisspeech-engine.service"
+  # Installing this package is what switches yura-voice's default engine.
+  install -Dm644 "$repo/system/systemd/user/yura-voice.service.d/aivis.conf" \
+    "$pkgdir/usr/lib/systemd/user/yura-voice.service.d/aivis.conf"
 }
