@@ -21,6 +21,8 @@ package() {
 
   install -d "$pkgdir/opt/$pkgname"
   cp -r Linux-x64/. "$pkgdir/opt/$pkgname/"
+  # The upstream archive carries 0600 files, and pacman keeps the mode, so the service cannot read them.
+  chmod -R u=rwX,go=rX "$pkgdir/opt/$pkgname"
 
   install -d "$pkgdir/usr/bin"
   ln -s "/opt/$pkgname/run" "$pkgdir/usr/bin/$pkgname"
