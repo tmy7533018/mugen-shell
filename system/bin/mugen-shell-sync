@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Places the shipped configs into ~/.config. The session wrapper runs this on
+# Arch and home-manager's activation runs it on Nix, so both share one copy.
+set -euo pipefail
+
+SHARE="${MUGEN_SHELL_SHARE:-/usr/share/mugen-shell}"
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+RUN=()
+if [[ "${1:-}" == "--dry-run" ]]; then
+  RUN=(echo "[dry-run]")
+fi
+
+install_file() {
+  local src="$1" dst="$2"
+  if [[ -e "$dst" ]]; then
+    return 0
+  fi
+  "${RUN[@]}" mkdir -p "$(dirname "$dst")"
+  "${RUN[@]}" install -m 644 "$src" "$dst"
+}
+
+install_dir() {
+  local src="$1" dst="$2"
+  if [[ -e "$dst" ]]; then
+    return 0
+  fi
+  "${RUN[@]}" mkdir -p "$dst"
+  "${RUN[@]}" cp -r "$src"/. "$dst"/
+  "${RUN[@]}" chmod -R u+w "$dst"
+}
+
+# Trailing names are seeded once: the machine or the user owns them afterwards.
+install_product_tree() {
+  local src="$1" dst="$2"; shift 2
+  local f rel mode skip
+  # dev/link-configs.sh points this at the checkout, where a refresh would revert tracked files.
+  if [[ -L "$dst" ]]; then
+    echo "mugen-shell: $dst is a symlink, skipping product refresh" >&2
+    return 0
+  fi
+  while IFS= read -r -d "" f; do
+    rel="${f#"$src"/}"
+    for skip in "$@"; do
+      if [[ "$rel" == "$skip" ]]; then
+        install_file "$f" "$dst/$rel"
+        continue 2
+      fi
+    done
+    mode=644
+    [[ -x "$f" ]] && mode=755
+    "${RUN[@]}" mkdir -p "$(dirname "$dst/$rel")"
+    # `install` unlinks first, and a Hyprland reload landing in that window latches an error.
+    "${RUN[@]}" install -m "$mode" "$f" "$dst/$rel.new"
+    "${RUN[@]}" mv -f "$dst/$rel.new" "$dst/$rel"
+  done < <(find "$src" -type f -print0)
+}
+
+install_product_tree "$SHARE/hypr" "$CONFIG/hypr" \
+  hypridle.conf colors.lua configs/blur.lua configs/.blur-current \
+  configs/user-overrides.lua configs/keybind-overrides.lua
+install_product_tree "$SHARE/matugen" "$CONFIG/matugen"
+install_dir  "$SHARE/cava"          "$CONFIG/cava"
+install_dir  "$SHARE/kitty"         "$CONFIG/kitty"
+install_dir  "$SHARE/fastfetch"     "$CONFIG/fastfetch"
+install_file "$SHARE/starship.toml" "$CONFIG/starship.toml"
+# matugen writes colors.css into both; nothing reads it without this import.
+install_file "$SHARE/gtk/gtk.css"   "$CONFIG/gtk-3.0/gtk.css"
+install_file "$SHARE/gtk/gtk.css"   "$CONFIG/gtk-4.0/gtk.css"
+
+# `quickshell -c mugen-shell` resolves the config name through this path only.
+if [[ -d "$SHARE/qml" ]]; then
+  "${RUN[@]}" mkdir -p "$CONFIG/quickshell"
+  "${RUN[@]}" ln -sfn "$SHARE/qml" "$CONFIG/quickshell/mugen-shell"
+fi

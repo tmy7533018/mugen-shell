@@ -251,7 +251,11 @@
 
             # An existing ~/.config silently keeps a shipped fix out, so assert what refreshes and what does not.
             config-refresh = pkgs.runCommand "check-config-refresh" { } ''
-              call=$(grep -A2 'install_product_tree /nix/store/[^ ]*-hypr ' ${pathB}/activate) || {
+              if ! grep -q 'mugen-shell-sync' ${./nix/home-manager.nix}; then
+                echo "the activation no longer runs mugen-shell-sync, so this checks nothing" >&2
+                exit 1
+              fi
+              call=$(grep -A2 'install_product_tree "$SHARE/hypr"' ${./system/bin/mugen-shell-sync}) || {
                 echo "hypr is no longer installed as refreshable product" >&2
                 exit 1
               }

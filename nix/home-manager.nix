@@ -407,61 +407,28 @@ in
 
     # Copied rather than symlinked so matugen, blur-preset.sh and the user can keep writing into these.
     home.activation.installMugenSystemDefaults =
+      let
+        # mugen-shell-sync reads one tree; qml stays out so it cannot fight xdg.configFile.
+        share = pkgs.runCommand "mugen-shell-share" { } ''
+          mkdir -p $out/gtk
+          cp -r ${./../system/hypr}      $out/hypr
+          cp -r ${./../system/matugen}   $out/matugen
+          cp -r ${./../system/cava}      $out/cava
+          cp -r ${./../system/kitty}     $out/kitty
+          cp -r ${./../system/fastfetch} $out/fastfetch
+          cp ${./../system/starship.toml} $out/starship.toml
+          cp ${./../system/gtk/gtk.css}   $out/gtk/gtk.css
+        '';
+      in
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        install_dir() {
-          local src="$1" dst="$2"
-          if [[ ! -e "$dst" ]]; then
-            $DRY_RUN_CMD mkdir -p "$dst"
-            $DRY_RUN_CMD cp -r "$src"/. "$dst"/
-            $DRY_RUN_CMD chmod -R u+w "$dst"
-          fi
-        }
-        install_file() {
-          local src="$1" dst="$2"
-          if [[ ! -e "$dst" ]]; then
-            $DRY_RUN_CMD mkdir -p "$(dirname "$dst")"
-            $DRY_RUN_CMD install -m 644 "$src" "$dst"
-          fi
-        }
-
-        # Product is refreshed every activation, or an existing ~/.config keeps a shipped fix out forever.
-        install_product_tree() {
-          local src="$1" dst="$2"; shift 2
-          local f rel mode skip
-          # dev/link-configs.sh points this at the checkout, where a refresh would revert tracked files.
-          if [[ -L "$dst" ]]; then
-            echo "mugen-shell: $dst is a symlink, skipping product refresh" >&2
-            return
-          fi
-          # Trailing names are seeded once: the machine or the user owns them afterwards.
-          while IFS= read -r -d "" f; do
-            rel="''${f#"$src"/}"
-            for skip in "$@"; do
-              if [[ "$rel" == "$skip" ]]; then
-                install_file "$f" "$dst/$rel"
-                continue 2
-              fi
-            done
-            mode=644
-            [[ -x "$f" ]] && mode=755
-            $DRY_RUN_CMD mkdir -p "$(dirname "$dst/$rel")"
-            # `install` unlinks first, and a Hyprland reload landing in that window latches an error.
-            $DRY_RUN_CMD install -m "$mode" "$f" "$dst/$rel.hm-new"
-            $DRY_RUN_CMD mv -f "$dst/$rel.hm-new" "$dst/$rel"
-          done < <(find "$src" -type f -print0)
-        }
-
-        install_product_tree ${./../system/hypr} "${config.xdg.configHome}/hypr" \
-          hypridle.conf colors.lua configs/blur.lua configs/.blur-current \
-          configs/user-overrides.lua configs/keybind-overrides.lua
-        install_product_tree ${./../system/matugen} "${config.xdg.configHome}/matugen"
-        install_dir   ${./../system/cava}      "${config.xdg.configHome}/cava"
-        install_dir   ${./../system/kitty}     "${config.xdg.configHome}/kitty"
-        install_dir   ${./../system/fastfetch} "${config.xdg.configHome}/fastfetch"
-        install_file  ${./../system/starship.toml} "${config.xdg.configHome}/starship.toml"
-        # matugen writes colors.css into both; nothing reads it without this import.
-        install_file  ${./../system/gtk/gtk.css} "${config.xdg.configHome}/gtk-3.0/gtk.css"
-        install_file  ${./../system/gtk/gtk.css} "${config.xdg.configHome}/gtk-4.0/gtk.css"
+        syncFlag=""
+        if [[ -n "$DRY_RUN_CMD" ]]; then
+          syncFlag="--dry-run"
+        fi
+        PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.findutils ]}:$PATH \
+        MUGEN_SHELL_SHARE=${share} \
+        XDG_CONFIG_HOME=${config.xdg.configHome} \
+          ${pkgs.bash}/bin/bash ${./../system/bin/mugen-shell-sync} $syncFlag
       '';
   };
 }
