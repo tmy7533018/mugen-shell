@@ -1,0 +1,7 @@
+[Unit]
+Description=mugen-shell calendar event notifications
+
+[Service]
+Type=oneshot
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/mugen-ai calendar notify

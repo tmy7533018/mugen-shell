@@ -1,0 +1,15 @@
+[Unit]
+Description=mugen-ai backend server
+After=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/mugen-ai serve
+# An MCP server's command (npx, uvx, ...) is resolved by this PATH.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+RuntimeDirectory=mugen-ai
+EnvironmentFile=-%E/mugen-ai/.env
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

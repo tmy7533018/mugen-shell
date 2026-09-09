@@ -1,0 +1,10 @@
+[Unit]
+Description=AivisSpeech TTS engine (VOICEVOX-compatible API on :10101)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+# CPU mode: the bundled onnxruntime-gpu is CUDA-only.
+ExecStart=/usr/bin/aivisspeech-engine --host 127.0.0.1 --port 10101
+Restart=on-failure
+RestartSec=5
