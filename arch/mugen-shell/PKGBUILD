@@ -1,0 +1,125 @@
+# Maintainer: tmy7533018 <baske3018@gmail.com>
+
+pkgbase=mugen-shell
+pkgname=(mugen-shell mugen-ai mugen-audio mugen-voice)
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='A Quickshell + Hyprland desktop with a 夢幻 aesthetic'
+arch=('x86_64')
+url='https://github.com/tmy7533018/mugen-shell'
+license=('MIT')
+makedepends=('go' 'cmake' 'ninja' 'pkgconf' 'qt6-base' 'qt6-declarative' 'libcava')
+source=('vits-piper-en_US-lessac-high.tar.bz2::https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-high.tar.bz2')
+sha256sums=('8619d204c7005866fe4f420181dfa79622af6a6222389f0b0818d2af31e0db0e')
+
+# Built from the surrounding checkout so a one-line fix needs no push.
+# Publishing to the AUR later means swapping this for a git source.
+_repo() { (cd "$startdir/../.." && pwd); }
+
+build() {
+  local repo; repo=$(_repo)
+
+  cd "$repo/ai"
+  export CGO_CPPFLAGS="${CPPFLAGS-}"
+  export CGO_CFLAGS="${CFLAGS-}"
+  export CGO_LDFLAGS="${LDFLAGS-}"
+  export GOFLAGS='-buildmode=pie -trimpath -ldflags=-linkmode=external -modcacherw'
+  go build -o "$srcdir/mugen-ai" .
+
+  cd "$srcdir"
+  # Arch scans lib/qt6/qml; the default targets nixpkgs' lib/qt-6/qml.
+  cmake -S "$repo/plugin" -B build-audio -G Ninja \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DMUGEN_AUDIO_QML_INSTALL_DIR=lib/qt6/qml
+  cmake --build build-audio
+}
+
+package_mugen-audio() {
+  pkgdesc='Qt QML module exposing libcava spectrum data to mugen-shell'
+  depends=('qt6-base' 'qt6-declarative' 'libcava')
+  DESTDIR="$pkgdir" cmake --install "$srcdir/build-audio"
+  install -Dm644 "$(_repo)/LICENSE" "$pkgdir/usr/share/licenses/mugen-audio/LICENSE"
+}
+
+package_mugen-ai() {
+  pkgdesc='AI backend service for mugen-shell'
+  local repo; repo=$(_repo)
+  install -Dm755 "$srcdir/mugen-ai" "$pkgdir/usr/bin/mugen-ai"
+  install -Dm644 "$repo/ai/.env.example" "$pkgdir/usr/share/mugen-ai/.env.example"
+  install -Dm644 "$repo/ai/config.toml.example" "$pkgdir/usr/share/mugen-ai/config.toml.example"
+  local u
+  for u in mugen-ai.service mugen-event-notifier.service mugen-event-notifier.timer; do
+    install -Dm644 "$repo/system/systemd/user/$u" "$pkgdir/usr/lib/systemd/user/$u"
+  done
+  install -Dm644 "$repo/LICENSE" "$pkgdir/usr/share/licenses/mugen-ai/LICENSE"
+}
+
+package_mugen-shell() {
+  depends=(
+    'hyprland' 'quickshell' 'hypridle' 'hyprpolkitagent' 'mpvpaper' 'awww'
+    'matugen' 'playerctl' 'wl-clipboard' 'cliphist' 'libnotify' 'grim' 'slurp'
+    'cava' 'ffmpeg' 'imv' 'pavucontrol' 'libpulse' 'brightnessctl' 'jq' 'glib2'
+    'gsettings-desktop-schemas' 'gnome-themes-extra' 'xdg-utils' 'socat' 'curl'
+    'fzf' 'python-gobject' 'gtk3' 'ttf-mplus-git' 'ttf-jetbrains-mono-nerd'
+    'noto-fonts-emoji' 'mugen-audio' 'mugen-ai'
+  )
+  optdepends=(
+    'kitty: the default $terminal'
+    'thunar: the default $fileManager'
+    'firefox: the default $browser'
+    'mugen-voice: read replies aloud'
+    'starship: prompt for the packaged zsh config'
+    'jp2a: ascii art for the packaged zsh config'
+    'fastfetch: system info for the packaged zsh config'
+    'eza: ls replacement for the packaged zsh config'
+    'bat: cat replacement for the packaged zsh config'
+    'ugrep: grep replacement for the packaged zsh config'
+    'zsh-syntax-highlighting: for the packaged zsh config'
+    'zsh-autosuggestions: for the packaged zsh config'
+    'zsh-history-substring-search: for the packaged zsh config'
+  )
+  local repo; repo=$(_repo)
+  cd "$repo"
+
+  install -d "$pkgdir/usr/share/mugen-shell"
+  cp -r shell "$pkgdir/usr/share/mugen-shell/qml"
+
+  local d
+  for d in hypr matugen cava kitty fastfetch; do
+    cp -r "system/$d" "$pkgdir/usr/share/mugen-shell/$d"
+  done
+  install -Dm644 system/starship.toml "$pkgdir/usr/share/mugen-shell/starship.toml"
+  install -Dm644 system/gtk/gtk.css "$pkgdir/usr/share/mugen-shell/gtk/gtk.css"
+  install -Dm644 .zshrc "$pkgdir/usr/share/mugen-shell/zsh/mugen-shell.zshrc"
+
+  install -Dm755 system/bin/mugen-shell-sync "$pkgdir/usr/bin/mugen-shell-sync"
+  install -Dm755 system/bin/mugen-shell-session "$pkgdir/usr/bin/mugen-shell-session"
+  install -Dm644 system/wayland-sessions/mugen-shell.desktop \
+    "$pkgdir/usr/share/wayland-sessions/mugen-shell.desktop"
+  install -Dm644 system/pam/mugen-lock "$pkgdir/etc/pam.d/mugen-lock"
+  install -Dm644 system/systemd/user/mugen-shell.service \
+    "$pkgdir/usr/lib/systemd/user/mugen-shell.service"
+  install -Dm644 system/systemd/user/mugen-shell-session.target \
+    "$pkgdir/usr/lib/systemd/user/mugen-shell-session.target"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/mugen-shell/LICENSE"
+}
+
+package_mugen-voice() {
+  pkgdesc='Yura speech daemon for mugen-shell (read-aloud TTS)'
+  depends=('python' 'python-sherpa-onnx' 'python-sounddevice' 'python-numpy'
+           'python-requests' 'mugen-ai')
+  optdepends=('aivisspeech-engine: Japanese TTS')
+  local repo; repo=$(_repo)
+
+  install -Dm644 "$repo/voice/yurad.py" "$pkgdir/usr/share/mugen-voice/yurad.py"
+  # yura/ is the pipeline; shipping yurad.py alone crashes on the first import.
+  cp -r "$repo/voice/yura" "$pkgdir/usr/share/mugen-voice/yura"
+
+  install -d "$pkgdir/usr/share/mugen-voice/tts"
+  cp -r "$srcdir/vits-piper-en_US-lessac-high" "$pkgdir/usr/share/mugen-voice/tts/"
+
+  install -Dm644 "$repo/system/systemd/user/yura-voice.service" \
+    "$pkgdir/usr/lib/systemd/user/yura-voice.service"
+  install -Dm644 "$repo/LICENSE" "$pkgdir/usr/share/licenses/mugen-voice/LICENSE"
+}

@@ -1,0 +1,31 @@
+# Maintainer: tmy7533018 <baske3018@gmail.com>
+
+pkgname=aivisspeech-engine
+pkgver=1.2.0
+pkgrel=1
+pkgdesc='AivisSpeech TTS engine (VOICEVOX-compatible API), prebuilt Linux bundle'
+arch=('x86_64')
+url='https://github.com/Aivis-Project/AivisSpeech-Engine'
+license=('LGPL-3.0-or-later')
+depends=('zlib' 'gcc-libs')
+makedepends=('7zip')
+# A PyInstaller bundle: stripping breaks the packed .so set.
+options=('!strip')
+source=("https://github.com/Aivis-Project/AivisSpeech-Engine/releases/download/${pkgver}/AivisSpeech-Engine-Linux-x64-${pkgver}.7z.001")
+sha256sums=('a4b1cc790e9a1522d880e063d788ea2c33df909e88e764d8ae5a17e3597b15b5')
+
+_repo() { (cd "$startdir/../.." && pwd); }
+
+package() {
+  cd "$srcdir"
+  7zz x -y "AivisSpeech-Engine-Linux-x64-${pkgver}.7z.001" > /dev/null
+
+  install -d "$pkgdir/opt/$pkgname"
+  cp -r Linux-x64/. "$pkgdir/opt/$pkgname/"
+
+  install -d "$pkgdir/usr/bin"
+  ln -s "/opt/$pkgname/run" "$pkgdir/usr/bin/$pkgname"
+
+  install -Dm644 "$(_repo)/system/systemd/user/aivisspeech-engine.service" \
+    "$pkgdir/usr/lib/systemd/user/aivisspeech-engine.service"
+}
