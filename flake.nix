@@ -228,6 +228,27 @@
               touch $out
             '';
 
+            # Arch scans /usr/lib/qt6/qml, so a hardcoded qt-6 builds fine and then never loads.
+            qml-install-dir =
+              let
+                arch = self.packages.${system}.mugen-audio.overrideAttrs (old: {
+                  cmakeFlags = (old.cmakeFlags or [ ]) ++ [
+                    "-DMUGEN_AUDIO_QML_INSTALL_DIR=lib/qt6/qml"
+                  ];
+                });
+              in
+              pkgs.runCommand "check-qml-install-dir" { } ''
+                if [ ! -e ${self.packages.${system}.mugen-audio}/lib/qt-6/qml/Mugen/Audio/qmldir ]; then
+                  echo "the default moved away from lib/qt-6/qml, which is what nixpkgs scans" >&2
+                  exit 1
+                fi
+                if [ ! -e ${arch}/lib/qt6/qml/Mugen/Audio/qmldir ]; then
+                  echo "MUGEN_AUDIO_QML_INSTALL_DIR did not move the module" >&2
+                  exit 1
+                fi
+                touch $out
+              '';
+
             # An existing ~/.config silently keeps a shipped fix out, so assert what refreshes and what does not.
             config-refresh = pkgs.runCommand "check-config-refresh" { } ''
               call=$(grep -A2 'install_product_tree /nix/store/[^ ]*-hypr ' ${pathB}/activate) || {

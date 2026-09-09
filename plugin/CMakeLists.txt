@@ -30,7 +30,9 @@ target_link_libraries(mugen-audio PRIVATE Qt6::Qml PkgConfig::Cava Threads::Thre
 
 include(GNUInstallDirs)
 
-set(MUGEN_AUDIO_QMLDIR "${CMAKE_INSTALL_LIBDIR}/qt-6/qml/Mugen/Audio")
+# STRING, not PATH: cmake absolutises a relative PATH cache entry against the build dir.
+set(MUGEN_AUDIO_QML_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/qt-6/qml"
+    CACHE STRING "Directory under the install prefix that Qt scans for QML modules")
 
 # nixpkgs rejects a result whose rpath still points into the sandbox build dir.
 set_target_properties(mugen-audioplugin PROPERTIES
@@ -39,8 +41,8 @@ set_target_properties(mugen-audioplugin PROPERTIES
 )
 
 install(TARGETS mugen-audio
-    LIBRARY DESTINATION "${MUGEN_AUDIO_QMLDIR}"
+    LIBRARY DESTINATION "${MUGEN_AUDIO_QML_INSTALL_DIR}/Mugen/Audio"
 )
 install(DIRECTORY "${QT_QML_OUTPUT_DIRECTORY}/Mugen"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/qt-6/qml"
+    DESTINATION "${MUGEN_AUDIO_QML_INSTALL_DIR}"
 )
