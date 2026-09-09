@@ -259,6 +259,7 @@
                 status=0
 
                 for f in "$own"/*; do
+                  [ -f "$f" ] || continue
                   u=$(basename "$f")
                   if [ ! -e "$gen/$u" ]; then
                     echo "$u: shipped as a file but home-manager generates no such unit" >&2
@@ -278,6 +279,7 @@
                 done
 
                 for f in "$own"/*; do
+                  [ -f "$f" ] || continue
                   u=$(basename "$f")
                   [ -e "$gen/$u" ] || continue
                   if ! diff <(grep -E '^(${keys})=' "$gen/$u" | sort) \
