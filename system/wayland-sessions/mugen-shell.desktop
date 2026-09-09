@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=mugen-shell
+Comment=Quickshell desktop on Hyprland
+Exec=/usr/bin/mugen-shell-session
+Type=Application
+DesktopNames=Hyprland

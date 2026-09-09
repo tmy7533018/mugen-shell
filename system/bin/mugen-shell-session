@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Hyprland's exec-once lines call scripts that ~/.config must already carry, so sync first.
+set -euo pipefail
+
+mugen-shell-sync || echo "mugen-shell: config sync failed, starting anyway" >&2
+
+# XWayland clients still reach fcitx over XIM; native ones use the Wayland text-input frontend.
+if command -v fcitx5 > /dev/null; then
+  export XMODIFIERS="${XMODIFIERS:-@im=fcitx}"
+fi
+
+# start-hyprland sets up the session env and the crash-restart watchdog that bare Hyprland skips.
+exec start-hyprland "$@"
