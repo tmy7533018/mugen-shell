@@ -70,6 +70,10 @@ install_file "$SHARE/gtk/gtk.css"   "$CONFIG/gtk-4.0/gtk.css"
 
 # `quickshell -c mugen-shell` resolves the config name through this path only.
 if [[ -d "$SHARE/qml" ]]; then
-  "${RUN[@]}" mkdir -p "$CONFIG/quickshell"
-  "${RUN[@]}" ln -sfn "$SHARE/qml" "$CONFIG/quickshell/mugen-shell"
+  link="$CONFIG/quickshell/mugen-shell"
+  # One that still resolves was aimed at a checkout on purpose; only a missing or dangling one is ours.
+  if [[ ! -e "$link" ]]; then
+    "${RUN[@]}" mkdir -p "$CONFIG/quickshell"
+    "${RUN[@]}" ln -sfn "$SHARE/qml" "$link"
+  fi
 fi

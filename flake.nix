@@ -316,6 +316,41 @@
               '';
 
             # An existing ~/.config silently keeps a shipped fix out, so assert what refreshes and what does not.
+            # The session wrapper runs this on every login, so a stomped link is a daily loss.
+            qml-link =
+              let
+                share = pkgs.runCommand "fake-share" { } ''
+                  mkdir -p $out/hypr $out/matugen $out/cava $out/kitty $out/fastfetch $out/gtk $out/qml
+                  touch $out/starship.toml $out/gtk/gtk.css $out/qml/shell.qml
+                '';
+              in
+              pkgs.runCommand "check-qml-link" { } ''
+                run() {
+                  MUGEN_SHELL_SHARE=${share} XDG_CONFIG_HOME="$1" \
+                    ${pkgs.bash}/bin/bash ${./system/bin/mugen-shell-sync}
+                }
+
+                mkdir -p $TMPDIR/absent
+                run $TMPDIR/absent
+                [ -e "$TMPDIR/absent/quickshell/mugen-shell/shell.qml" ] || {
+                  echo "no link was created where there was none" >&2; exit 1; }
+
+                mkdir -p $TMPDIR/dangling/quickshell
+                ln -s /nonexistent $TMPDIR/dangling/quickshell/mugen-shell
+                run $TMPDIR/dangling
+                [ -e "$TMPDIR/dangling/quickshell/mugen-shell/shell.qml" ] || {
+                  echo "a dangling link was not repaired" >&2; exit 1; }
+
+                mkdir -p $TMPDIR/live/quickshell $TMPDIR/checkout
+                echo LIVE > $TMPDIR/checkout/shell.qml
+                ln -s $TMPDIR/checkout $TMPDIR/live/quickshell/mugen-shell
+                run $TMPDIR/live
+                [ "$(cat $TMPDIR/live/quickshell/mugen-shell/shell.qml)" = LIVE ] || {
+                  echo "the sync stomped a link aimed at a live checkout" >&2; exit 1; }
+
+                touch $out
+              '';
+
             config-refresh = pkgs.runCommand "check-config-refresh" { } ''
               if ! grep -q 'mugen-shell-sync' ${./nix/home-manager.nix}; then
                 echo "the activation no longer runs mugen-shell-sync, so this checks nothing" >&2
