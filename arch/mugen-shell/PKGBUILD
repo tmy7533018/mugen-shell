@@ -10,16 +10,26 @@ url='https://github.com/tmy7533018/mugen-shell'
 license=('MIT')
 # Split debug packages symlink across subpackages and land broken.
 options=('!debug')
-makedepends=('go' 'cmake' 'ninja' 'pkgconf' 'qt6-base' 'qt6-declarative' 'libcava')
+makedepends=('git' 'go' 'cmake' 'ninja' 'pkgconf' 'qt6-base' 'qt6-declarative' 'libcava')
 source=('vits-piper-en_US-lessac-high.tar.bz2::https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-high.tar.bz2')
 sha256sums=('8619d204c7005866fe4f420181dfa79622af6a6222389f0b0818d2af31e0db0e')
 
 # Built from the surrounding checkout so a one-line fix needs no push.
 # Publishing to the AUR later means swapping this for a git source.
 _repo() { (cd "$startdir/../.." && pwd); }
+# Only what git tracks: the directories we copy also hold ignored personal files.
+_tree() { echo "$srcdir/tree"; }
+
+prepare() {
+  local repo; repo=$(_repo)
+  rm -rf "$(_tree)"
+  mkdir -p "$(_tree)"
+  # -C has to precede -T or GNU tar resolves the file list against the cwd instead.
+  git -C "$repo" ls-files -z | tar -C "$repo" -cf - --null -T - | tar -xf - -C "$(_tree)"
+}
 
 build() {
-  local repo; repo=$(_repo)
+  local repo; repo=$(_tree)
 
   cd "$repo/ai"
   export CGO_CPPFLAGS="${CPPFLAGS-}"
@@ -41,13 +51,13 @@ package_mugen-audio() {
   pkgdesc='Qt QML module exposing libcava spectrum data to mugen-shell'
   depends=('qt6-base' 'qt6-declarative' 'libcava')
   DESTDIR="$pkgdir" cmake --install "$srcdir/build-audio"
-  install -Dm644 "$(_repo)/LICENSE" "$pkgdir/usr/share/licenses/mugen-audio/LICENSE"
+  install -Dm644 "$(_tree)/LICENSE" "$pkgdir/usr/share/licenses/mugen-audio/LICENSE"
 }
 
 package_mugen-ai() {
   pkgdesc='AI backend service for mugen-shell'
   depends=('glibc')
-  local repo; repo=$(_repo)
+  local repo; repo=$(_tree)
   install -Dm755 "$srcdir/mugen-ai" "$pkgdir/usr/bin/mugen-ai"
   install -Dm644 "$repo/ai/.env.example" "$pkgdir/usr/share/mugen-ai/.env.example"
   install -Dm644 "$repo/ai/config.toml.example" "$pkgdir/usr/share/mugen-ai/config.toml.example"
@@ -87,7 +97,7 @@ package_mugen-shell() {
     'zsh-autosuggestions: for the packaged zsh config'
     'zsh-history-substring-search: for the packaged zsh config'
   )
-  local repo; repo=$(_repo)
+  local repo; repo=$(_tree)
   cd "$repo"
 
   install -d "$pkgdir/usr/share/mugen-shell"
@@ -119,7 +129,7 @@ package_mugen-voice() {
   depends=('python' 'python-sherpa-onnx' 'python-sounddevice' 'python-numpy'
            'python-requests' 'mugen-ai')
   optdepends=('aivisspeech-engine: Japanese TTS')
-  local repo; repo=$(_repo)
+  local repo; repo=$(_tree)
 
   install -Dm644 "$repo/voice/yurad.py" "$pkgdir/usr/share/mugen-voice/yurad.py"
   # yura/ is the pipeline; shipping yurad.py alone crashes on the first import.

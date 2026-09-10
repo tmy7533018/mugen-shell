@@ -26,7 +26,7 @@ git clone https://aur.archlinux.org/yay.git
 **3. AUR から来る依存を入れる**
 
 ```bash
-yay -S --needed mpvpaper awww matugen ttf-mplus-git
+yay -S --needed mpvpaper awww matugen ttf-mplus-git libcava
 ```
 
 UI は `M PLUS 2` と `M PLUS 1 Code` を名指しするので、Nerd Fonts 版 (`ttf-mplus-nerd`) では代用できません。

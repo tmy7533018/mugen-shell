@@ -43,7 +43,7 @@ git clone https://aur.archlinux.org/yay.git
 **3. Install the dependencies that come from the AUR**
 
 ```bash
-yay -S --needed mpvpaper awww matugen ttf-mplus-git
+yay -S --needed mpvpaper awww matugen ttf-mplus-git libcava
 ```
 
 The UI names `M PLUS 2` and `M PLUS 1 Code`, so the Nerd Fonts build (`ttf-mplus-nerd`) is not a substitute.

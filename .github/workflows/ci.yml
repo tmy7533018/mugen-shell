@@ -77,6 +77,9 @@ jobs:
       # makepkg refuses to run as root, so the build happens as `builder` throughout.
       - name: Bootstrap
         run: |
+          # Upgrading archlinux-keyring runs a hook that fails on the image's uninitialised keyring.
+          pacman-key --init
+          pacman-key --populate archlinux
           pacman -Syu --noconfirm --needed git sudo
           useradd -m builder
           echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
@@ -91,6 +94,10 @@ jobs:
         run: |
           sudo -u builder git clone https://aur.archlinux.org/libcava.git /tmp/libcava
           sudo -u builder sh -c 'cd /tmp/libcava && makepkg -si --noconfirm'
+
+      # The build reads the checkout, so a git-ignored file must not reach the package.
+      - name: Plant an ignored file
+        run: sudo -u builder sh -c 'echo PERSONAL > system/hypr/configs/user-overrides.lua'
 
       - name: makepkg
         run: sudo -u builder sh -c 'cd arch/mugen-shell && makepkg -s --noconfirm'
@@ -111,6 +118,12 @@ jobs:
           check 'mugen-shell-*.pkg.tar.zst' 'usr/share/wayland-sessions/mugen-shell.desktop'
           check 'mugen-shell-*.pkg.tar.zst' 'etc/pam.d/mugen-lock'
           check 'mugen-voice-*.pkg.tar.zst' 'usr/share/mugen-voice/yurad.py'
+          absent() {
+            bsdtar tf $1 | grep -q "$2" && { echo "$1 ships an ignored file: $2" >&2; exit 1; }
+            true
+          }
+          absent 'mugen-shell-*.pkg.tar.zst' 'user-overrides.lua'
+          absent 'mugen-shell-*.pkg.tar.zst' 'test-shell.qml'
 
       # The engine bundle is a few hundred MB, so CI only parses the recipe.
       - name: Parse the AivisSpeech PKGBUILD
