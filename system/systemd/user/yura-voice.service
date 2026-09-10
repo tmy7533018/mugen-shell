@@ -9,7 +9,7 @@ PartOf=graphical-session.target
 WorkingDirectory=/usr/share/mugen-voice
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 # A voice dropped in the writable dir shadows a packaged one of the same name.
-Environment=YURA_TTS_MODELS=%S/mugen-shell/tts:/usr/share/mugen-voice/tts
+Environment=YURA_TTS_MODELS=%h/.local/share/mugen-shell/tts:/usr/share/mugen-voice/tts
 ExecStart=/usr/bin/python /usr/share/mugen-voice/yurad.py
 Restart=on-failure
 RestartSec=3
