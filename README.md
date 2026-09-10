@@ -11,7 +11,7 @@
 https://github.com/user-attachments/assets/cd9e2538-a30f-4c8c-a143-9f8c2c7b3a8f
 
 
-Hyprland + Quickshell デスクトップ向けの私の dotfiles を、Nix flake で入れられる形にまとめたものです。
+Hyprland + Quickshell デスクトップ向けの私の dotfiles を、Arch のパッケージと Nix flake で入れられる形にまとめたものです。
 
 ---
 
@@ -46,7 +46,7 @@ Yura はデスクトップの操作も可能です。「音量 30 にして」�
 nix build "github:tmy7533018/mugen-shell#nixosConfigurations.vm.config.system.build.vm" && ./result/bin/run-mugen-vm-vm
 ```
 
-設定については [SETUP.md](SETUP.md) にまとめました。
+インストール手順と設定については [SETUP.md](SETUP.md) にまとめました。Arch なら `arch/mugen-shell` の PKGBUILD から入ります。
 
 ---
 

@@ -21,10 +21,75 @@ Audio files dropped into `sounds/` and `timer-sounds/` above show up in the Sett
 
 ## Install
 
-Two install paths. Open the one that matches your setup. Both need **Hyprland 0.55 or newer**.
+Needs **Hyprland 0.55 or newer**. Arch Linux installs from packages; on any other distribution, open one of the Nix routes below.
+
+### Arch Linux
+
+**1. Install what the build needs**
+
+```bash
+sudo pacman -S --needed base-devel git
+```
+
+**2. Install an AUR helper**
+
+`paru-bin` is pinned to the libalpm it was built against and will not run, so build `yay` from source:
+
+```bash
+git clone https://aur.archlinux.org/yay.git
+(cd yay && makepkg -si)
+```
+
+**3. Install the dependencies that come from the AUR**
+
+```bash
+yay -S --needed mpvpaper awww matugen ttf-mplus-git
+```
+
+The UI names `M PLUS 2` and `M PLUS 1 Code`, so the Nerd Fonts build (`ttf-mplus-nerd`) is not a substitute.
+
+**4. Build and install**
+
+```bash
+git clone https://github.com/tmy7533018/mugen-shell.git
+cd mugen-shell/arch/mugen-shell
+makepkg -s
+sudo pacman -U mugen-audio-*.pkg.tar.zst mugen-ai-*.pkg.tar.zst mugen-shell-*.pkg.tar.zst
+```
+
+Do not use `makepkg -si`. This is a split package, so it also installs `mugen-voice`, which builds `python-sherpa-onnx` from source and takes over 30 minutes. Install read-aloud separately from [Read aloud](#read-aloud-optional).
+
+**5. Log in**
+
+Pick **mugen-shell** from your display manager's session list (sddm, for instance; install and enable one first if you have none). No environment variables to set.
+
+**Japanese input (other languages work the same way)**
+
+```bash
+sudo pacman -S --needed fcitx5 fcitx5-mozc fcitx5-gtk fcitx5-qt fcitx5-configtool
+# or:  fcitx5-rime    for Chinese
+# or:  fcitx5-hangul  for Korean
+```
+
+The session wrapper sets `XMODIFIERS` inside the session. For apps launched outside the compositor, add `XMODIFIERS=@im=fcitx` to `/etc/environment` as well.
+
+**Make the terminal match mugen-shell too (optional)**
+
+Gets you the starship prompt, fish-style completion and history, `ls` → `eza` aliases, and the fastfetch ASCII art splash.
+
+```bash
+sudo pacman -S --needed zsh starship jp2a fastfetch eza bat ugrep \
+     zsh-syntax-highlighting zsh-autosuggestions zsh-history-substring-search
+```
+
+Then add this one line to your own `~/.zshrc`:
+
+```sh
+source /usr/share/mugen-shell/zsh/mugen-shell.zshrc
+```
 
 <details>
-<summary><b>Path A: NixOS</b></summary>
+<summary><b>NixOS</b></summary>
 
 NixOS users just need the repo root flake:
 
@@ -97,9 +162,9 @@ programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
 </details>
 
 <details>
-<summary><b>Path B: Arch or any non-NixOS Linux, with Nix</b></summary>
+<summary><b>Any non-NixOS Linux, with Nix</b></summary>
 
-Point at the user-level flake (the repo root); the Wayland and compositor stack comes from pacman.
+Point at the user-level flake (the repo root); the Wayland and compositor stack comes from your distribution. The package names below are Arch's.
 
 ```nix
 # ~/.config/home-manager/flake.nix
@@ -215,13 +280,16 @@ Activation already places that file at `~/.config/hypr/configs/mugen-shell.lua`,
 source = ~/.config/hypr/configs/mugen-shell.conf
 ```
 
-Two things to do yourself on Arch:
+Two things to do yourself:
 
 - **Lock screen PAM file.** The lock screen falls back to hyprlock's or
   swaylock's stack if one exists; with none of them it cannot authenticate and
-  `ext-session-lock` holds the session locked. Create one:
+  `ext-session-lock` holds the session locked. Install the shipped stack (an
+  `include system-auth` would let a passwordless account unlock on an empty
+  password):
   ```bash
-  printf '#%%PAM-1.0\nauth include system-auth\n' | sudo tee /etc/pam.d/mugen-lock
+  sudo curl -fLo /etc/pam.d/mugen-lock \
+    https://raw.githubusercontent.com/tmy7533018/mugen-shell/main/system/pam/mugen-lock
   ```
 - **fcitx5 env vars.** The shipped `system/hypr/hyprland.lua` exports `XMODIFIERS=@im=fcitx` for Hyprland sessions; add the same line to `/etc/environment` for anything started outside the compositor.
 
@@ -235,7 +303,7 @@ Everything is configured under **Settings → Yura**: personality, provider stat
 
 Three defaults worth knowing. **No model ships with this.** Yura's panel reads "No model yet" until you install Ollama and pull one (`ollama pull qwen3:4b`, say) or put an API key in `~/.config/mugen-ai/.env`. **Allowed apps starts empty** too, so Yura cannot launch anything until you pick apps there. And when `mugen-ai.service` itself is not running, that panel (`Super + Shift + Y`) shows the command to start it.
 
-A full annotated template lives at `ai/config.toml.example` (or `$(nix build --no-link --print-out-paths "github:tmy7533018/mugen-shell#mugen-ai")/share/mugen-ai/config.toml.example` if you installed via Nix).
+A full annotated template lives at `ai/config.toml.example`. Arch installs it to `/usr/share/mugen-ai/config.toml.example`; Nix puts it at `$(nix build --no-link --print-out-paths "github:tmy7533018/mugen-shell#mugen-ai")/share/mugen-ai/config.toml.example`.
 
 <details>
 <summary>A minimal <code>~/.config/mugen-ai/config.toml</code></summary>
@@ -306,7 +374,7 @@ Tools are merged under a `<name>__<tool>` prefix, so keep the server name short,
 
 ### Provider API keys
 
-Copy `ai/.env.example` (Nix install: `$(nix build --no-link --print-out-paths "github:tmy7533018/mugen-shell#mugen-ai")/share/mugen-ai/.env.example`) to `~/.config/mugen-ai/.env` and fill in the keys you have, or append directly:
+Copy `ai/.env.example` (Arch: `/usr/share/mugen-ai/.env.example`; Nix: `$(nix build --no-link --print-out-paths "github:tmy7533018/mugen-shell#mugen-ai")/share/mugen-ai/.env.example`) to `~/.config/mugen-ai/.env` and fill in the keys you have, or append directly:
 
 ```sh
 cat >> ~/.config/mugen-ai/.env <<'EOF'
@@ -336,14 +404,33 @@ Conversations live in SQLite at `~/.local/state/mugen-ai/history.db`. For termin
 
 Yura can speak its replies: press the speaker icon on a reply in the panel.
 
-The default stack is Japanese-first but not Japanese-only (see *Running Yura's voice in another language* below). It sits on top of a running mugen-ai, and the home-manager module (Paths A and B) packages the whole thing behind one option:
+The default stack is Japanese-first but not Japanese-only (see *Running Yura's voice in another language* below). It sits on top of a running mugen-ai.
+
+**Arch Linux.** `makepkg` already built `mugen-voice` during the install, so install its dependencies and then that package. `python-sherpa-onnx` builds from source on the AUR and takes over 30 minutes:
+
+```bash
+yay -S --needed python-sherpa-onnx python-sounddevice
+cd mugen-shell/arch/mugen-shell
+sudo pacman -U mugen-voice-*.pkg.tar.zst
+```
+
+For a Japanese voice, add the AivisSpeech engine. Installing it is what switches the default voice over to it:
+
+```bash
+cd ../aivisspeech-engine
+makepkg -si
+```
+
+**Nix (NixOS and home-manager alike).** One option packages the whole thing:
 
 ```nix
 programs.mugen-shell.voice.enable = true;
 # programs.mugen-shell.voice.aivis.enable = false;      # skip the AivisSpeech engine
 ```
 
-Everything comes from the store, so there is no checkout and no need for `nix-ld`. The AivisSpeech engine downloads its default voice model (~900 MB) on first start, so it needs the network once. Replies are routed at it automatically, so they are audible before any voice is picked in Settings. VOICEVOX is not part of the Nix wiring; run it yourself and its voices join the same picker.
+Everything comes from the store, so there is no checkout and no need for `nix-ld`.
+
+On either route the AivisSpeech engine downloads its default voice model (~900 MB) on first start, so it needs the network once. With the engine installed, replies are routed at it automatically and are audible before any voice is picked in Settings. VOICEVOX is not part of either route; run it yourself and its voices join the same picker.
 
 The engine starts on demand (it costs ~2.6 GB resident) and stops after `voice.idleStopMin` minutes without synthesis (default 10, hand-edited in `settings.json`). Set `YURA_TTS_SERVICE=` empty in the unit to run it yourself instead.
 
@@ -354,7 +441,7 @@ Runtime control lives in **Settings → Yura → Voice**: voice picker, speech s
 
 Only the reply voice is engine-specific; everything else is multilingual already:
 
-- **TTS**: local voices run in-process through sherpa-onnx, so there is no `piper` binary to install. Take a model from the [sherpa-onnx TTS models release](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) (Piper/VITS and Kokoro both work) and unpack the whole **model directory** (the `.onnx` next to its `tokens.txt` and `espeak-ng-data/`) into `~/.local/share/mugen-shell/tts/`, or point `YURA_TTS_MODELS` somewhere else. Each directory then appears in the Settings voice picker, and VOICEVOX becomes optional. The Nix path already ships `vits-piper-en_US-lessac-high`.
+- **TTS**: local voices run in-process through sherpa-onnx, so there is no `piper` binary to install. Take a model from the [sherpa-onnx TTS models release](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) (Piper/VITS and Kokoro both work) and unpack the whole **model directory** (the `.onnx` next to its `tokens.txt` and `espeak-ng-data/`) into `~/.local/share/mugen-shell/tts/`, or point `YURA_TTS_MODELS` somewhere else. Each directory then appears in the Settings voice picker, and VOICEVOX becomes optional. `vits-piper-en_US-lessac-high` ships on both routes.
 - **Replies**: set the assistant's language under Settings → Yura → Model → Personality.
 
 **Environment knobs**, set in the unit or a drop-in: `YURA_TTS` (`<engine>:<style-id>`), `YURA_VOICEVOX_SPEAKER`, `YURA_VOICE_SPEED`, `YURA_VOICEVOX_URL`, `YURA_AIVIS_URL`. Anything Settings also exposes wins from `settings.json` once the shell has saved it.

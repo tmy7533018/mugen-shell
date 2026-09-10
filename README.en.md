@@ -9,7 +9,7 @@
 
 https://github.com/user-attachments/assets/cd9e2538-a30f-4c8c-a143-9f8c2c7b3a8f
 
-My dotfiles for a Hyprland + Quickshell desktop, packaged so they can be installed via a Nix flake.
+My dotfiles for a Hyprland + Quickshell desktop, packaged so they can be installed from Arch packages or a Nix flake.
 
 ---
 
@@ -44,7 +44,7 @@ Try it without installing anything (Yura needs a model of your own before it wil
 nix build "github:tmy7533018/mugen-shell#nixosConfigurations.vm.config.system.build.vm" && ./result/bin/run-mugen-vm-vm
 ```
 
-Setup is documented in [SETUP.en.md](SETUP.en.md).
+Install steps and configuration are documented in [SETUP.en.md](SETUP.en.md). On Arch, the PKGBUILD in `arch/mugen-shell` is the entry point.
 
 ---
 

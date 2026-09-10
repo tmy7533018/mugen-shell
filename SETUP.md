@@ -4,13 +4,75 @@
 
 ## インストール
 
-インストール経路は 2 つあります。どちらも **Hyprland 0.55 以上**が前提です。自分の環境に合う方を開いてください。
+**Hyprland 0.55 以上**が前提です。Arch Linux はパッケージから入ります。それ以外のディストリビューションでは、下の Nix 経路のどちらかを開いてください。
 
-- **Path A (NixOS)**: リポジトリの flake を読み込むだけ
-- **Path B (Arch など NixOS 以外の Linux + Nix)**: home-manager (ユーザ単位) + distro のパッケージ
+### Arch Linux
+
+**1. ビルドに要るものを入れる**
+
+```bash
+sudo pacman -S --needed base-devel git
+```
+
+**2. AUR ヘルパを入れる**
+
+`paru-bin` はビルド時の libalpm に固定されていて動かないので、`yay` をソースから入れてください:
+
+```bash
+git clone https://aur.archlinux.org/yay.git
+(cd yay && makepkg -si)
+```
+
+**3. AUR から来る依存を入れる**
+
+```bash
+yay -S --needed mpvpaper awww matugen ttf-mplus-git
+```
+
+UI は `M PLUS 2` と `M PLUS 1 Code` を名指しするので、Nerd Fonts 版 (`ttf-mplus-nerd`) では代用できません。
+
+**4. 本体を作って入れる**
+
+```bash
+git clone https://github.com/tmy7533018/mugen-shell.git
+cd mugen-shell/arch/mugen-shell
+makepkg -s
+sudo pacman -U mugen-audio-*.pkg.tar.zst mugen-ai-*.pkg.tar.zst mugen-shell-*.pkg.tar.zst
+```
+
+`makepkg -si` は使わないでください。split package なので `mugen-voice` まで一緒に入り、`python-sherpa-onnx` のソースビルド (30 分超) を待たされます。読み上げは[読み上げ](#読み上げ-オプション)から別に入れられます。
+
+**5. ログインする**
+
+ディスプレイマネージャ (sddm など。無ければ先に入れて有効化してください) のセッション一覧から **mugen-shell** を選んでください。環境変数の設定は要りません。
+
+**日本語入力 (他の言語も同様)**
+
+```bash
+sudo pacman -S --needed fcitx5 fcitx5-mozc fcitx5-gtk fcitx5-qt fcitx5-configtool
+# または: fcitx5-rime    中国語
+# または: fcitx5-hangul  韓国語
+```
+
+セッション内の `XMODIFIERS` はセッションラッパーが設定します。コンポジタの外から起動するアプリのために、`/etc/environment` にも `XMODIFIERS=@im=fcitx` を書いておいてください。
+
+**ターミナルも mugen-shell の見た目にする (オプション)**
+
+starship のプロンプト、fish 風の補完と履歴、`ls` → `eza` のエイリアス、`fastfetch` の ASCII アート表示が入ります。
+
+```bash
+sudo pacman -S --needed zsh starship jp2a fastfetch eza bat ugrep \
+     zsh-syntax-highlighting zsh-autosuggestions zsh-history-substring-search
+```
+
+そのうえで、自分の `~/.zshrc` に次の 1 行を足してください:
+
+```sh
+source /usr/share/mugen-shell/zsh/mugen-shell.zshrc
+```
 
 <details>
-<summary><b>Path A: NixOS</b></summary>
+<summary><b>NixOS</b></summary>
 
 リポジトリ root の flake を読み込むだけでインストールできます:
 
@@ -83,9 +145,9 @@ programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
 </details>
 
 <details>
-<summary><b>Path B: Arch や NixOS 以外の Linux + Nix</b></summary>
+<summary><b>NixOS 以外の Linux + Nix</b></summary>
 
-リポジトリ root の flake を home-manager (ユーザ単位) から使う経路です。Hyprland 本体と Wayland まわりは distro 側 (pacman など) で入れます。
+リポジトリ root の flake を home-manager (ユーザ単位) から使う経路です。Hyprland 本体と Wayland まわりは distro 側で入れます。以下のパッケージ名は Arch のものです。
 
 **1. システム側のパッケージを入れる**
 
@@ -186,11 +248,12 @@ dofile(os.getenv("HOME") .. "/.config/hypr/configs/mugen-shell.lua")
 source = ~/.config/hypr/configs/mugen-shell.conf
 ```
 
-**5. Arch で追加で必要な設定 (2 つ)**
+**5. 追加で必要な設定 (2 つ)**
 
-- **ロック画面の PAM ファイル。** hyprlock か swaylock の PAM が既にあればそちらに落ちますが、無ければロック画面で認証できず、`ext-session-lock` がセッションを掴んだままになります。先に作っておいてください:
+- **ロック画面の PAM ファイル。** hyprlock か swaylock の PAM が既にあればそちらに落ちますが、無ければロック画面で認証できず、`ext-session-lock` がセッションを掴んだままになります。同梱のスタックを置いてください (`system-auth` をそのまま include すると、パスワード無しのアカウントが空パスワードで解錠できます):
   ```bash
-  printf '#%%PAM-1.0\nauth include system-auth\n' | sudo tee /etc/pam.d/mugen-lock
+  sudo curl -fLo /etc/pam.d/mugen-lock \
+    https://raw.githubusercontent.com/tmy7533018/mugen-shell/main/system/pam/mugen-lock
   ```
 - **fcitx5 の環境変数。** Hyprland セッション内では、同梱の `system/hypr/hyprland.lua` が `XMODIFIERS=@im=fcitx` を設定してくれます。コンポジタの外から起動するアプリのために、`/etc/environment` にも同じ行を書いておいてください。
 
@@ -233,7 +296,7 @@ source ~/.config/mugen-shell/mugen-shell.zshrc
 2. **Allowed apps は空の状態から始まります。** ここでアプリを許可するまで、Yura は何も起動できません。
 3. **`mugen-ai.service` が止まっている場合**は、Yura のパネル (`Super + Shift + Y`) に起動用のコマンドが表示されます。
 
-注釈付きのフル版テンプレートは `ai/config.toml.example` にあります (Nix インストールの場合は `$(nix build --no-link --print-out-paths "github:tmy7533018/mugen-shell#mugen-ai")/share/mugen-ai/config.toml.example`)。
+注釈付きのフル版テンプレートは `ai/config.toml.example` にあります。Arch では `/usr/share/mugen-ai/config.toml.example`、Nix では `$(nix build --no-link --print-out-paths "github:tmy7533018/mugen-shell#mugen-ai")/share/mugen-ai/config.toml.example` に入ります。
 
 <details>
 <summary>最小構成の <code>~/.config/mugen-ai/config.toml</code></summary>
@@ -306,7 +369,7 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 
 ### プロバイダ API キー
 
-`ai/.env.example` (Nix インストールの場合は `$(nix build --no-link --print-out-paths "github:tmy7533018/mugen-shell#mugen-ai")/share/mugen-ai/.env.example`) を `~/.config/mugen-ai/.env` にコピーして手持ちのキーを埋めるか、次のように直接追記してください:
+`ai/.env.example` (Arch では `/usr/share/mugen-ai/.env.example`、Nix では `$(nix build --no-link --print-out-paths "github:tmy7533018/mugen-shell#mugen-ai")/share/mugen-ai/.env.example`) を `~/.config/mugen-ai/.env` にコピーして手持ちのキーを埋めるか、次のように直接追記してください:
 
 ```sh
 cat >> ~/.config/mugen-ai/.env <<'EOF'
@@ -336,16 +399,33 @@ Yura がチャットだけでなく実際にシェル操作までこなせるか
 
 Yura の返事は、パネルのスピーカーアイコンを押すと読み上げられます。
 
-前提として mugen-ai が動いている必要があります。有効化は home-manager モジュール (Path A・B 共通) の 1 行だけで、必要なものは一式まとめて入ります:
+前提として mugen-ai が動いている必要があります。
+
+**Arch Linux.** インストールのときに `makepkg` が `mugen-voice` まで作ってあるので、依存を入れてからそれを入れます。`python-sherpa-onnx` は AUR からのソースビルドで、30 分以上かかります:
+
+```bash
+yay -S --needed python-sherpa-onnx python-sounddevice
+cd mugen-shell/arch/mugen-shell
+sudo pacman -U mugen-voice-*.pkg.tar.zst
+```
+
+日本語の声が要る場合は、AivisSpeech エンジンも入れてください。既定の声がこのエンジンに切り替わります:
+
+```bash
+cd ../aivisspeech-engine
+makepkg -si
+```
+
+**Nix (NixOS・home-manager 共通).** 1 行で、必要なものは一式まとめて入ります:
 
 ```nix
 programs.mugen-shell.voice.enable = true;
 # programs.mugen-shell.voice.aivis.enable = false;      # AivisSpeech エンジンを外す場合
 ```
 
-必要なファイルはすべて Nix store から来るので、リポジトリの clone も `nix-ld` も不要です。ただし AivisSpeech エンジンだけは、初回起動時に既定の音声モデル (約 900 MB) をダウンロードします。ネットワークが必要なのはこの一度だけです。
+必要なファイルはすべて Nix store から来るので、リポジトリの clone も `nix-ld` も不要です。
 
-読み上げは既定でこのエンジンを使うため、Settings で声を選ばなくても音は出ます。VOICEVOX は Nix 側の構成に含まれていませんが、自分で立てれば同じピッカーに並びます。
+AivisSpeech エンジンは、どちらの経路でも初回起動時に既定の音声モデル (約 900 MB) をダウンロードします。ネットワークが必要なのはこの一度だけです。エンジンを入れていれば Settings で声を選ばなくても音は出ます。VOICEVOX はどちらの経路にも含まれていませんが、自分で立てれば同じピッカーに並びます。
 
 エンジンは常駐させると約 2.6 GB 使うため、必要になったときだけ起動する仕組みになっています。合成が `voice.idleStopMin` 分 (既定 10 分。`settings.json` を直接編集して変更) 途切れると自動で停止します。自分で管理したい場合は、unit の `YURA_TTS_SERVICE=` を空にしてください。
 
@@ -356,7 +436,7 @@ programs.mugen-shell.voice.enable = true;
 
 エンジンに縛られるのは返事の声だけで、それ以外はもともと多言語に対応しています:
 
-- **TTS**: ローカル音声は sherpa-onnx がプロセス内で再生するため、`piper` バイナリのインストールは不要です。[sherpa-onnx の TTS モデル配布](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) からモデルを取得し (Piper/VITS でも Kokoro でも動きます)、`.onnx`・`tokens.txt`・`espeak-ng-data/` を含む**ディレクトリごと** `~/.local/share/mugen-shell/tts/` に展開してください。置き場所は `YURA_TTS_MODELS` で変更できます。展開したディレクトリはそのまま Settings のピッカーに並ぶので、この構成なら VOICEVOX は無くても構いません。Nix 経路には `vits-piper-en_US-lessac-high` が最初から含まれています。
+- **TTS**: ローカル音声は sherpa-onnx がプロセス内で再生するため、`piper` バイナリのインストールは不要です。[sherpa-onnx の TTS モデル配布](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) からモデルを取得し (Piper/VITS でも Kokoro でも動きます)、`.onnx`・`tokens.txt`・`espeak-ng-data/` を含む**ディレクトリごと** `~/.local/share/mugen-shell/tts/` に展開してください。置き場所は `YURA_TTS_MODELS` で変更できます。展開したディレクトリはそのまま Settings のピッカーに並ぶので、この構成なら VOICEVOX は無くても構いません。`vits-piper-en_US-lessac-high` はどちらの経路にも最初から含まれています。
 - **返事の言語**: Settings → Yura → Model の Personality にある language で指定します。
 
 **環境変数** (unit か drop-in で設定): `YURA_TTS` (`<engine>:<style-id>`)、`YURA_VOICEVOX_SPEAKER`、`YURA_VOICE_SPEED`、`YURA_VOICEVOX_URL`、`YURA_AIVIS_URL`。Settings にも同じ項目があるものは、シェルが保存した時点で `settings.json` が優先されます。
