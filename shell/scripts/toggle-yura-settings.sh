@@ -3,7 +3,7 @@
 
 set -uo pipefail
 
-SHELL_PATH="$HOME/.config/quickshell/mugen-shell/yura-settings-shell.qml"
+SHELL_PATH="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/mugen-shell/yura-settings-shell.qml"
 
 if pgrep -f "yura-settings-shell\.qml" >/dev/null 2>&1; then
     pkill -f "yura-settings-shell\.qml"

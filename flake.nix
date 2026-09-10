@@ -316,6 +316,39 @@
               '';
 
             # An existing ~/.config silently keeps a shipped fix out, so assert what refreshes and what does not.
+            # Every autostart path is built from one resolution; a second one silently spawns nothing.
+            hypr-config-home = pkgs.runCommand "check-hypr-config-home" { } ''
+              cat > stub.lua <<'LUA'
+              local cmds = {}
+              local noop = function() end
+              hl = setmetatable({ on = function(_, fn) fn() end,
+                                  exec_cmd = function(c) cmds[#cmds + 1] = c end },
+                                { __index = function() return noop end })
+              MUGEN_CONFIG_HOME = os.getenv("FAKE_CONFIG_HOME")
+              dofile(arg[1])
+              for _, c in ipairs(cmds) do print(c) end
+              LUA
+
+              lua=${pkgs.lua5_4}/bin/lua
+              conf=${./system/hypr/configs/mugen-shell.lua}
+
+              FAKE_CONFIG_HOME=/xdg/cfg $lua stub.lua $conf > moved.txt
+              grep -q '/xdg/cfg/quickshell/mugen-shell/yura-shell.qml' moved.txt || {
+                echo "the shell is not spawned from the resolved config home:" >&2
+                cat moved.txt >&2; exit 1; }
+              if grep -q '/\.config/' moved.txt; then
+                echo "an autostart path still hardcodes ~/.config:" >&2
+                grep '/\.config/' moved.txt >&2; exit 1
+              fi
+
+              HOME=/fake/home $lua stub.lua $conf > standalone.txt
+              grep -q '/fake/home/.config/quickshell/mugen-shell/yura-shell.qml' standalone.txt || {
+                echo "a standalone dofile no longer falls back to ~/.config:" >&2
+                cat standalone.txt >&2; exit 1; }
+
+              touch $out
+            '';
+
             # The session wrapper runs this on every login, so a stomped link is a daily loss.
             qml-link =
               let

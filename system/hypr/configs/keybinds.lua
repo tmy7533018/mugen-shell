@@ -1,11 +1,13 @@
 -- Keybinds, dofile'd by hyprland.lua. Rebind by hand-editing keybind-overrides.lua.
 
 local HOME = os.getenv("HOME")
+-- hyprland.lua already resolved this against the config it loaded; only a standalone dofile leaves it unset.
+local configHome = MUGEN_CONFIG_HOME or (HOME .. "/.config")
 
 -- Loaded before the app choices below so keybind-overrides.lua's `apps` table can win.
 local overridesFile = {}
 do
-    local ok, loaded = pcall(dofile, HOME .. "/.config/hypr/configs/keybind-overrides.lua")
+    local ok, loaded = pcall(dofile, configHome .. "/hypr/configs/keybind-overrides.lua")
     if ok and type(loaded) == "table" then overridesFile = loaded end
 end
 local appOverrides = type(overridesFile.apps) == "table" and overridesFile.apps or {}
@@ -16,8 +18,6 @@ local terminal    = appOverrides.terminal or "kitty"
 local fileManager = appOverrides.fileManager or "thunar"
 local browser     = appOverrides.browser or "firefox"
 
-local configHome = os.getenv("XDG_CONFIG_HOME")
-if not configHome or configHome == "" then configHome = HOME .. "/.config" end
 local shellDir = configHome .. "/quickshell/mugen-shell"
 local scripts  = shellDir .. "/scripts"
 

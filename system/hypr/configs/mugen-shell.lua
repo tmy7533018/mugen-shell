@@ -6,6 +6,9 @@
 --
 -- (equivalent to `source = ~/.config/hypr/configs/mugen-shell.conf` on hyprlang.)
 
+-- hyprland.lua already resolved this; adopting the snippet from your own config leaves it unset.
+local configHome = MUGEN_CONFIG_HOME or (os.getenv("HOME") .. "/.config")
+
 -- Lets the shell's Hypr dispatch facade detect the Lua config synchronously,
 -- so a dispatch fired at shell startup picks the hl.dsp.* syntax right away.
 hl.env("HYPR_CONFIG_LUA", "1")
@@ -35,7 +38,7 @@ hl.on("hyprland.start", function()
     -- bound to it come up only once something else pulls it up.
     hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE")
     hl.exec_cmd("systemctl --user start mugen-shell-session.target")
-    hl.exec_cmd("sh -lc 'sleep 1; ~/.config/hypr/scripts/wallp-restore.sh'")
+    hl.exec_cmd("sh -lc 'sleep 1; " .. configHome .. "/hypr/scripts/wallp-restore.sh'")
     -- fcitx's Wayland frontend only reaches a surface Qt has activated, and a
     -- layer shell never becomes the application's focus window, so text input
     -- here has to go over fcitx's DBus frontend instead. Scoped to the mugen
@@ -43,9 +46,9 @@ hl.on("hyprland.start", function()
     -- about, and every other app is fine on the Wayland frontend.
     -- Qt picks no platform theme under XDG_CURRENT_DESKTOP=Hyprland, and
     -- without one its FileDialog is self-drawn rather than the desktop's.
-    hl.exec_cmd("env QT_IM_MODULE=fcitx QT_QPA_PLATFORMTHEME=xdgdesktopportal quickshell -p ~/.config/quickshell/mugen-shell/yura-shell.qml")
-    hl.exec_cmd("~/.config/quickshell/mugen-shell/scripts/blur-preset.sh boot")
-    hl.exec_cmd("~/.config/hypr/scripts/hypridle-auto-start.sh")
+    hl.exec_cmd("env QT_IM_MODULE=fcitx QT_QPA_PLATFORMTHEME=xdgdesktopportal quickshell -p " .. configHome .. "/quickshell/mugen-shell/yura-shell.qml")
+    hl.exec_cmd(configHome .. "/quickshell/mugen-shell/scripts/blur-preset.sh boot")
+    hl.exec_cmd(configHome .. "/hypr/scripts/hypridle-auto-start.sh")
     hl.exec_cmd("wl-paste --type text  --watch cliphist store")
     hl.exec_cmd("wl-paste --type image --watch cliphist store")
     hl.exec_cmd("systemctl --user start hyprpolkitagent")

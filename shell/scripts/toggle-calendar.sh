@@ -3,7 +3,7 @@
 
 set -uo pipefail
 
-SHELL_PATH="$HOME/.config/quickshell/mugen-shell/calendar-shell.qml"
+SHELL_PATH="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/mugen-shell/calendar-shell.qml"
 
 if pgrep -f "calendar-shell\.qml" >/dev/null 2>&1; then
     pkill -f "calendar-shell\.qml"

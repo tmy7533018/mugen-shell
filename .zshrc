@@ -297,7 +297,7 @@ command -v mcfly &>/dev/null && eval "$(mcfly init zsh)"
 
 # ~/.zshrc
 ascii_fetch() {
-  local img="$HOME/.config/fastfetch/fastfetch.png"
+  local img="${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/fastfetch.png"
   local width=45
   local gap=3
   local y_offset=0

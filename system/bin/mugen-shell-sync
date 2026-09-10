@@ -68,6 +68,21 @@ install_file "$SHARE/starship.toml" "$CONFIG/starship.toml"
 install_file "$SHARE/gtk/gtk.css"   "$CONFIG/gtk-3.0/gtk.css"
 install_file "$SHARE/gtk/gtk.css"   "$CONFIG/gtk-4.0/gtk.css"
 
+# matugen, hypridle and the hyprlang snippet expand ~ but not $XDG_CONFIG_HOME.
+rewrite_config_home() {
+  if [[ "$CONFIG" == "$HOME/.config" ]]; then
+    return 0
+  fi
+  local f
+  for f in "$@"; do
+    [[ -f "$f" ]] || continue
+    "${RUN[@]}" sed -i "s|~/\.config/|$CONFIG/|g; s|\$HOME/\.config/|$CONFIG/|g" "$f"
+  done
+}
+rewrite_config_home "$CONFIG/matugen/config.toml" \
+                    "$CONFIG/hypr/hypridle.conf" \
+                    "$CONFIG/hypr/configs/mugen-shell.conf"
+
 # `quickshell -c mugen-shell` resolves the config name through this path only.
 if [[ -d "$SHARE/qml" ]]; then
   link="$CONFIG/quickshell/mugen-shell"
