@@ -68,3 +68,50 @@ jobs:
             let pkgs = (builtins.getFlake (toString ./.)).inputs.nixpkgs.legacyPackages.${builtins.currentSystem};
             in pkgs.python314.withPackages (ps: [ps.pytest ps.numpy ps.requests ps.sounddevice])' \
             --command pytest voice/tests -q
+
+  arch:
+    name: arch
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      # makepkg refuses to run as root, so the build happens as `builder` throughout.
+      - name: Bootstrap
+        run: |
+          pacman -Syu --noconfirm --needed git sudo
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+
+      - uses: actions/checkout@v4
+
+      - name: Hand the checkout to the build user
+        run: chown -R builder "$GITHUB_WORKSPACE"
+
+      # libcava is the one makedepend that is not in the official repos.
+      - name: Build libcava
+        run: |
+          sudo -u builder git clone https://aur.archlinux.org/libcava.git /tmp/libcava
+          sudo -u builder sh -c 'cd /tmp/libcava && makepkg -si --noconfirm'
+
+      - name: makepkg
+        run: sudo -u builder sh -c 'cd arch/mugen-shell && makepkg -s --noconfirm'
+
+      # A package that builds but ships nothing passes every other check.
+      - name: Inspect the packages
+        run: |
+          cd arch/mugen-shell
+          for p in *.pkg.tar.zst; do echo "=== $p ==="; bsdtar tf "$p"; done
+          check() {
+            bsdtar tf $1 | grep -qx "$2" || { echo "missing in $1: $2" >&2; exit 1; }
+          }
+          check 'mugen-audio-*.pkg.tar.zst' 'usr/lib/qt6/qml/Mugen/Audio/qmldir'
+          check 'mugen-ai-*.pkg.tar.zst'    'usr/bin/mugen-ai'
+          check 'mugen-ai-*.pkg.tar.zst'    'usr/lib/systemd/user/mugen-ai.service'
+          check 'mugen-ai-*.pkg.tar.zst'    'usr/share/mugen-ai/config.toml.example'
+          check 'mugen-shell-*.pkg.tar.zst' 'usr/bin/mugen-shell-session'
+          check 'mugen-shell-*.pkg.tar.zst' 'usr/share/wayland-sessions/mugen-shell.desktop'
+          check 'mugen-shell-*.pkg.tar.zst' 'etc/pam.d/mugen-lock'
+          check 'mugen-voice-*.pkg.tar.zst' 'usr/share/mugen-voice/yurad.py'
+
+      # The engine bundle is a few hundred MB, so CI only parses the recipe.
+      - name: Parse the AivisSpeech PKGBUILD
+        run: sudo -u builder sh -c 'cd arch/aivisspeech-engine && makepkg --printsrcinfo > /dev/null'
