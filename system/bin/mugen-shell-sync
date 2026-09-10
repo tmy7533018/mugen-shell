@@ -33,12 +33,13 @@ install_dir() {
 # Trailing names are seeded once: the machine or the user owns them afterwards.
 install_product_tree() {
   local src="$1" dst="$2"; shift 2
-  local f rel mode skip
+  local f rel mode skip dstReal
   # dev/link-configs.sh points this at the checkout, where a refresh would revert tracked files.
   if [[ -L "$dst" ]]; then
     echo "mugen-shell: $dst is a symlink, skipping product refresh" >&2
     return 0
   fi
+  dstReal=$(realpath -m "$dst")
   while IFS= read -r -d "" f; do
     rel="${f#"$src"/}"
     for skip in "$@"; do
@@ -47,6 +48,10 @@ install_product_tree() {
         continue 2
       fi
     done
+    # link-configs.sh links hypr entry by entry, so a write can leave $dst through a subtree symlink.
+    if [[ "$(realpath -m "$dst/$rel")" != "$dstReal"/* ]]; then
+      continue
+    fi
     mode=644
     [[ -x "$f" ]] && mode=755
     "${RUN[@]}" mkdir -p "$(dirname "$dst/$rel")"
