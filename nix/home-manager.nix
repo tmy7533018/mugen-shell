@@ -425,7 +425,7 @@ in
         if [[ -n "$DRY_RUN_CMD" ]]; then
           syncFlag="--dry-run"
         fi
-        PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.findutils ]}:$PATH \
+        PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.findutils pkgs.gnused ]}:$PATH \
         MUGEN_SHELL_SHARE=${share} \
         XDG_CONFIG_HOME=${config.xdg.configHome} \
           ${pkgs.bash}/bin/bash ${./../system/bin/mugen-shell-sync} $syncFlag

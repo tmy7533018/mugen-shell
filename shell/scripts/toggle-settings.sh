@@ -3,7 +3,8 @@
 
 set -uo pipefail
 
-SHELL_PATH="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/mugen-shell/settings-shell.qml"
+# Resolved from this script's own location, so it cannot disagree with whoever launched it.
+SHELL_PATH="$(dirname "$0")/../settings-shell.qml"
 category="${1:-}"
 
 if pgrep -f "/settings-shell\.qml" >/dev/null 2>&1; then
