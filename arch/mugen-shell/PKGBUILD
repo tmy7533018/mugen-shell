@@ -1,7 +1,7 @@
 # Maintainer: tmy7533018 <baske3018@gmail.com>
 
 pkgbase=mugen-shell
-pkgname=(mugen-shell mugen-ai mugen-audio mugen-voice)
+pkgname=(mugen-shell mugen-ai mugen-audio)
 pkgver=0.1.0
 pkgrel=1
 pkgdesc='A Quickshell + Hyprland desktop with a 夢幻 aesthetic'
@@ -11,9 +11,6 @@ license=('MIT')
 # Split debug packages symlink across subpackages and land broken.
 options=('!debug')
 makedepends=('git' 'go' 'cmake' 'ninja' 'pkgconf' 'qt6-base' 'qt6-declarative' 'libcava')
-source=('vits-piper-en_US-lessac-high.tar.bz2::https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-high.tar.bz2')
-sha256sums=('8619d204c7005866fe4f420181dfa79622af6a6222389f0b0818d2af31e0db0e')
-
 # Built from the surrounding checkout so a one-line fix needs no push.
 # Publishing to the AUR later means swapping this for a git source.
 _repo() { (cd "$startdir/../.." && pwd); }
@@ -121,24 +118,4 @@ package_mugen-shell() {
   install -Dm644 system/systemd/user/mugen-shell-session.target \
     "$pkgdir/usr/lib/systemd/user/mugen-shell-session.target"
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/mugen-shell/LICENSE"
-}
-
-package_mugen-voice() {
-  pkgdesc='Yura speech daemon for mugen-shell (read-aloud TTS)'
-  arch=('any')
-  depends=('python' 'python-sherpa-onnx' 'python-sounddevice' 'python-numpy'
-           'python-requests' 'mugen-ai')
-  optdepends=('aivisspeech-engine: Japanese TTS')
-  local repo; repo=$(_tree)
-
-  install -Dm644 "$repo/voice/yurad.py" "$pkgdir/usr/share/mugen-voice/yurad.py"
-  # yura/ is the pipeline; shipping yurad.py alone crashes on the first import.
-  cp -r "$repo/voice/yura" "$pkgdir/usr/share/mugen-voice/yura"
-
-  install -d "$pkgdir/usr/share/mugen-voice/tts"
-  cp -r "$srcdir/vits-piper-en_US-lessac-high" "$pkgdir/usr/share/mugen-voice/tts/"
-
-  install -Dm644 "$repo/system/systemd/user/yura-voice.service" \
-    "$pkgdir/usr/lib/systemd/user/yura-voice.service"
-  install -Dm644 "$repo/LICENSE" "$pkgdir/usr/share/licenses/mugen-voice/LICENSE"
 }

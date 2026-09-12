@@ -117,13 +117,23 @@ jobs:
           check 'mugen-shell-*.pkg.tar.zst' 'usr/bin/mugen-shell-session'
           check 'mugen-shell-*.pkg.tar.zst' 'usr/share/wayland-sessions/mugen-shell.desktop'
           check 'mugen-shell-*.pkg.tar.zst' 'etc/pam.d/mugen-lock'
-          check 'mugen-voice-*.pkg.tar.zst' 'usr/share/mugen-voice/yurad.py'
           absent() {
             bsdtar tf $1 | grep -q "$2" && { echo "$1 ships an ignored file: $2" >&2; exit 1; }
             true
           }
           absent 'mugen-shell-*.pkg.tar.zst' 'user-overrides.lua'
           absent 'mugen-shell-*.pkg.tar.zst' 'test-shell.qml'
+
+      # Its own pkgbase, so the desktop build never downloads the 111MB voice model.
+      # -d because nothing here is compiled: the depends are runtime-only and one is AUR.
+      - name: Build and inspect mugen-voice
+        run: |
+          sudo -u builder sh -c 'cd arch/mugen-voice && makepkg -d --noconfirm'
+          cd arch/mugen-voice
+          bsdtar tf mugen-voice-*.pkg.tar.zst | grep -qx 'usr/share/mugen-voice/yurad.py' \
+            || { echo 'mugen-voice ships no yurad.py' >&2; exit 1; }
+          bsdtar tf mugen-voice-*.pkg.tar.zst | grep -q 'tts/vits-piper-en_US-lessac-high/.*onnx' \
+            || { echo 'mugen-voice ships no voice model' >&2; exit 1; }
 
       # The engine bundle is a few hundred MB, so CI only parses the recipe.
       - name: Parse the AivisSpeech PKGBUILD
