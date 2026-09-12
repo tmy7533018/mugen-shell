@@ -68,6 +68,7 @@ package_mugen-ai() {
 package_mugen-shell() {
   # Only QML, scripts and assets.
   arch=('any')
+  # A new entry here needs its counterpart in nix/home-manager.nix; nothing checks the pair.
   depends=(
     'hyprland' 'quickshell' 'hypridle' 'hyprpolkitagent' 'mpvpaper' 'awww'
     'matugen' 'playerctl' 'wl-clipboard' 'cliphist' 'libnotify' 'grim' 'slurp'

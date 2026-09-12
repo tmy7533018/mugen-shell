@@ -184,6 +184,7 @@ in
         lib.concatStringsSep ":" (import ./gi-typelib-dirs.nix pkgs);
     };
 
+    # A new entry here needs its counterpart in arch/mugen-shell/PKGBUILD; nothing checks the pair.
     home.packages =
       lib.optionals cfg.includeSystemDeps (
         with pkgs;
