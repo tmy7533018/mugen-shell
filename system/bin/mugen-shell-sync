@@ -20,14 +20,12 @@ install_file() {
   "${RUN[@]}" install -m 644 "$src" "$dst"
 }
 
+# Per file, not per directory: matugen generates into these, and a directory guard would seed nothing ever after.
 install_dir() {
-  local src="$1" dst="$2"
-  if [[ -e "$dst" ]]; then
-    return 0
-  fi
-  "${RUN[@]}" mkdir -p "$dst"
-  "${RUN[@]}" cp -r "$src"/. "$dst"/
-  "${RUN[@]}" chmod -R u+w "$dst"
+  local src="$1" dst="$2" f
+  while IFS= read -r -d "" f; do
+    install_file "$f" "$dst/${f#"$src"/}"
+  done < <(find "$src" -type f -print0)
 }
 
 # Trailing names are seeded once: the machine or the user owns them afterwards.
