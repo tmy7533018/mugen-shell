@@ -1,3 +1,4 @@
+import functools
 import io
 import os
 import queue
@@ -17,6 +18,18 @@ from .router import configured_voice, synthesize
 
 # Engines master at very different loudness, so every clip is RMS-normalized to keep swaps inaudible.
 TTS_TARGET_DBFS = float(os.environ.get("YURA_TTS_TARGET_DBFS", "-23"))
+
+
+@functools.lru_cache(maxsize=1)
+def output_device() -> str | None:
+    """The sound server, not PortAudio's default: that is a raw ALSA device, which
+    ignores whichever sink the user picked and refuses a 22.05kHz Piper voice."""
+    for name in ("pipewire", "pulse", "default"):
+        try:
+            return str(sd.query_devices(name, "output")["name"])
+        except Exception:
+            continue
+    return None
 
 _MD_JUNK = re.compile(r"```.*?```|`|[*_#>]|\[([^\]]*)\]\([^)]*\)", re.S)
 _EMOJI = re.compile(r"[\U0001F000-\U0001FAFF☀-➿️]")
@@ -106,7 +119,7 @@ def play_wav(data: bytes, should_stop=None) -> None:
         # Boost stays capped so quiet styles don't get their noise floor dragged up.
         gain = min(10 ** (TTS_TARGET_DBFS / 20) / rms * vol, 3.0)
         audio = (np.clip(x * gain, -1.0, 1.0) * 32767).astype(np.int16)
-    sd.play(audio, sr)
+    sd.play(audio, sr, device=output_device())
     if should_stop is None:
         sd.wait()
         return
