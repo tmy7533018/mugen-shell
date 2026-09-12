@@ -8,6 +8,27 @@
 
 ### Arch Linux
 
+```bash
+git clone https://github.com/tmy7533018/mugen-shell.git
+cd mugen-shell
+./install.sh
+```
+
+入れるものをメニューで選べます。既定のまま進めればログインして使える状態になります。
+読み上げだけは `onnxruntime` のソースビルドで数時間かかるので、既定では入りません。
+
+非対話で走らせる場合:
+
+```bash
+./install.sh --yes                      # 既定のまま
+./install.sh --with-voice --without-zsh # 個別に指定 (--help で一覧)
+```
+
+終わったらログアウトして、ディスプレイマネージャのセッション一覧から **mugen-shell** を選んでください。
+
+<details>
+<summary>インストーラを使わず手で入れる</summary>
+
 **1. ビルドに要るものを入れる**
 
 ```bash
@@ -36,11 +57,10 @@ UI は `M PLUS 2` と `M PLUS 1 Code` を名指しするので、Nerd Fonts 版 
 ```bash
 git clone https://github.com/tmy7533018/mugen-shell.git
 cd mugen-shell/arch/mugen-shell
-makepkg -s
-sudo pacman -U mugen-audio-*.pkg.tar.zst mugen-ai-*.pkg.tar.zst mugen-shell-*.pkg.tar.zst
+makepkg -si
 ```
 
-`makepkg -si` は使わないでください。split package なので `mugen-voice` まで一緒に入り、`python-sherpa-onnx` のソースビルド (30 分超) を待たされます。読み上げは[読み上げ](#読み上げ-オプション)から別に入れられます。
+読み上げは別のパッケージです。要る場合は[読み上げ](#読み上げ-オプション)へ。
 
 **5. ログインする**
 
@@ -56,7 +76,7 @@ sudo pacman -S --needed fcitx5 fcitx5-mozc fcitx5-gtk fcitx5-qt fcitx5-configtoo
 
 セッション内の `XMODIFIERS` はセッションラッパーが設定します。コンポジタの外から起動するアプリのために、`/etc/environment` にも `XMODIFIERS=@im=fcitx` を書いておいてください。
 
-**ターミナルも mugen-shell の見た目にする (オプション)**
+**ターミナルも mugen-shell の見た目にする**
 
 starship のプロンプト、fish 風の補完と履歴、`ls` → `eza` のエイリアス、`fastfetch` の ASCII アート表示が入ります。
 
@@ -70,6 +90,8 @@ sudo pacman -S --needed zsh starship jp2a fastfetch eza bat ugrep \
 ```sh
 source /usr/share/mugen-shell/zsh/mugen-shell.zshrc
 ```
+
+</details>
 
 <details>
 <summary><b>NixOS</b></summary>
@@ -401,12 +423,12 @@ Yura の返事は、パネルのスピーカーアイコンを押すと読み上
 
 前提として mugen-ai が動いている必要があります。
 
-**Arch Linux.** インストールのときに `makepkg` が `mugen-voice` まで作ってあるので、依存を入れてからそれを入れます。`python-sherpa-onnx` は AUR からのソースビルドで、30 分以上かかります:
+**Arch Linux.** `python-sherpa-onnx` は AUR からのソースビルドで、`onnxruntime` も一緒に作るので数時間かかります:
 
 ```bash
 yay -S --needed python-sherpa-onnx python-sounddevice
-cd mugen-shell/arch/mugen-shell
-sudo pacman -U mugen-voice-*.pkg.tar.zst
+cd mugen-shell/arch/mugen-voice
+makepkg -si
 ```
 
 日本語の声が要る場合は、AivisSpeech エンジンも入れてください。既定の声がこのエンジンに切り替わります:

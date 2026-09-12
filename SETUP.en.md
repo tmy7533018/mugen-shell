@@ -25,6 +25,27 @@ Needs **Hyprland 0.55 or newer**. Arch Linux installs from packages; on any othe
 
 ### Arch Linux
 
+```bash
+git clone https://github.com/tmy7533018/mugen-shell.git
+cd mugen-shell
+./install.sh
+```
+
+A menu lets you pick what goes in. Taking the defaults leaves you with a desktop you can log into.
+Read-aloud is off by default: it builds `onnxruntime` from source, which takes hours.
+
+To run it without the menu:
+
+```bash
+./install.sh --yes                      # the defaults
+./install.sh --with-voice --without-zsh # pick individually (--help lists them)
+```
+
+When it finishes, log out and pick **mugen-shell** from your display manager's session list.
+
+<details>
+<summary>Installing by hand instead</summary>
+
 **1. Install what the build needs**
 
 ```bash
@@ -53,11 +74,10 @@ The UI names `M PLUS 2` and `M PLUS 1 Code`, so the Nerd Fonts build (`ttf-mplus
 ```bash
 git clone https://github.com/tmy7533018/mugen-shell.git
 cd mugen-shell/arch/mugen-shell
-makepkg -s
-sudo pacman -U mugen-audio-*.pkg.tar.zst mugen-ai-*.pkg.tar.zst mugen-shell-*.pkg.tar.zst
+makepkg -si
 ```
 
-Do not use `makepkg -si`. This is a split package, so it also installs `mugen-voice`, which builds `python-sherpa-onnx` from source and takes over 30 minutes. Install read-aloud separately from [Read aloud](#read-aloud-optional).
+Read-aloud is a separate package. If you want it, see [Read aloud](#read-aloud-optional).
 
 **5. Log in**
 
@@ -73,7 +93,7 @@ sudo pacman -S --needed fcitx5 fcitx5-mozc fcitx5-gtk fcitx5-qt fcitx5-configtoo
 
 The session wrapper sets `XMODIFIERS` inside the session. For apps launched outside the compositor, add `XMODIFIERS=@im=fcitx` to `/etc/environment` as well.
 
-**Make the terminal match mugen-shell too (optional)**
+**Make the terminal match mugen-shell too**
 
 Gets you the starship prompt, fish-style completion and history, `ls` → `eza` aliases, and the fastfetch ASCII art splash.
 
@@ -87,6 +107,8 @@ Then add this one line to your own `~/.zshrc`:
 ```sh
 source /usr/share/mugen-shell/zsh/mugen-shell.zshrc
 ```
+
+</details>
 
 <details>
 <summary><b>NixOS</b></summary>
@@ -406,12 +428,12 @@ Yura can speak its replies: press the speaker icon on a reply in the panel.
 
 The default stack is Japanese-first but not Japanese-only (see *Running Yura's voice in another language* below). It sits on top of a running mugen-ai.
 
-**Arch Linux.** `makepkg` already built `mugen-voice` during the install, so install its dependencies and then that package. `python-sherpa-onnx` builds from source on the AUR and takes over 30 minutes:
+**Arch Linux.** `python-sherpa-onnx` builds from source on the AUR, and it builds `onnxruntime` with it, so expect hours:
 
 ```bash
 yay -S --needed python-sherpa-onnx python-sounddevice
-cd mugen-shell/arch/mugen-shell
-sudo pacman -U mugen-voice-*.pkg.tar.zst
+cd mugen-shell/arch/mugen-voice
+makepkg -si
 ```
 
 For a Japanese voice, add the AivisSpeech engine. Installing it is what switches the default voice over to it:

@@ -46,7 +46,7 @@ Yura はデスクトップの操作も可能です。「音量 30 にして」�
 nix build "github:tmy7533018/mugen-shell#nixosConfigurations.vm.config.system.build.vm" && ./result/bin/run-mugen-vm-vm
 ```
 
-インストール手順と設定については [SETUP.md](SETUP.md) にまとめました。Arch なら `arch/mugen-shell` の PKGBUILD から入ります。
+インストール手順と設定については [SETUP.md](SETUP.md) にまとめました。Arch なら `./install.sh` 一本で入ります。
 
 ---
 

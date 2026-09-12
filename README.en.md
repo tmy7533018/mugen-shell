@@ -44,7 +44,7 @@ Try it without installing anything (Yura needs a model of your own before it wil
 nix build "github:tmy7533018/mugen-shell#nixosConfigurations.vm.config.system.build.vm" && ./result/bin/run-mugen-vm-vm
 ```
 
-Install steps and configuration are documented in [SETUP.en.md](SETUP.en.md). On Arch, the PKGBUILD in `arch/mugen-shell` is the entry point.
+Install steps and configuration are documented in [SETUP.en.md](SETUP.en.md). On Arch, `./install.sh` does the whole thing.
 
 ---
 
