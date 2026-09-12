@@ -4,13 +4,13 @@ set -euo pipefail
 
 mugen-shell-sync || echo "mugen-shell: config sync failed, starting anyway" >&2
 
-# WantedBy only takes effect once enabled, and packaging never enables a unit.
-# Stamped per unit, so `systemctl --user disable` survives the next login.
+# Stamped per unit, so a deliberate `systemctl --user disable` survives the next login.
 stamps="${XDG_STATE_HOME:-$HOME/.local/state}/mugen-shell/enabled"
 mkdir -p "$stamps"
 for unit in mugen-shell.service mugen-ai.service mugen-event-notifier.timer yura-voice.service; do
   if [[ -f "/usr/lib/systemd/user/$unit" && ! -e "$stamps/$unit" ]]; then
-    systemctl --user enable "$unit" > /dev/null 2>&1 || true
+    # Packaging never enables a unit, and the WantedBy targets are already active here, so enable alone starts nothing.
+    systemctl --user enable --now "$unit" > /dev/null 2>&1 || true
     touch "$stamps/$unit"
   fi
 done
