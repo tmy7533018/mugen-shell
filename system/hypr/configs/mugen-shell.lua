@@ -36,8 +36,8 @@ hl.on("hyprland.start", function()
     -- Hand the compositor's address to systemd, then pull up the session
     -- target: graphical-session.target refuses a manual start, so the services
     -- bound to it come up only once something else pulls it up.
-    hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE")
-    hl.exec_cmd("systemctl --user start mugen-shell-session.target")
+    -- One shell: exec_cmd does not wait, and a bar started before the import has no display.
+    hl.exec_cmd("sh -c 'systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE && systemctl --user start mugen-shell-session.target'")
     hl.exec_cmd("sh -lc 'sleep 1; " .. configHome .. "/hypr/scripts/wallp-restore.sh'")
     -- fcitx's Wayland frontend only reaches a surface Qt has activated, and a
     -- layer shell never becomes the application's focus window, so text input

@@ -7,13 +7,19 @@ mugen-shell-sync || echo "mugen-shell: config sync failed, starting anyway" >&2
 # Stamped per unit, so a deliberate `systemctl --user disable` survives the next login.
 stamps="${XDG_STATE_HOME:-$HOME/.local/state}/mugen-shell/enabled"
 mkdir -p "$stamps"
-for unit in mugen-shell.service mugen-ai.service mugen-event-notifier.timer yura-voice.service; do
+enable_once() {
+  local unit=$1; shift
   if [[ -f "/usr/lib/systemd/user/$unit" && ! -e "$stamps/$unit" ]]; then
-    # Packaging never enables a unit, and the WantedBy targets are already active here, so enable alone starts nothing.
-    systemctl --user enable --now "$unit" > /dev/null 2>&1 || true
+    systemctl --user enable "$@" "$unit" > /dev/null 2>&1 || true
     touch "$stamps/$unit"
   fi
-done
+}
+# The session units wait for Hyprland to raise the session target: started here, the bar has no display yet.
+enable_once mugen-shell.service
+enable_once yura-voice.service
+# default.target is already up, so nothing else will start these on the first login.
+enable_once mugen-ai.service --now
+enable_once mugen-event-notifier.timer --now
 
 # XWayland clients still reach fcitx over XIM; native ones use the Wayland text-input frontend.
 if command -v fcitx5 > /dev/null; then
