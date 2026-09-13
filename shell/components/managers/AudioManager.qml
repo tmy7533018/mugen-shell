@@ -21,7 +21,7 @@ QtObject {
 
     property Process volumeProcess: Process {
         running: false
-        command: ["bash", "-c", "pactl get-sink-volume @DEFAULT_SINK@ | grep -oP '\\d+%' | head -1 | tr -d '%'"]
+        command: ["bash", "-c", "set -o pipefail; pactl get-sink-volume @DEFAULT_SINK@ | grep -oP '\\d+%' | head -1 | tr -d '%'"]
 
         property string outputData: ""
 
@@ -113,7 +113,7 @@ QtObject {
 
     property Process micVolumeProcess: Process {
         running: false
-        command: ["bash", "-c", "pactl get-source-volume @DEFAULT_SOURCE@ | grep -oP '\\d+%' | head -1 | tr -d '%'"]
+        command: ["bash", "-c", "set -o pipefail; pactl get-source-volume @DEFAULT_SOURCE@ | grep -oP '\\d+%' | head -1 | tr -d '%'"]
 
         property string outputData: ""
 

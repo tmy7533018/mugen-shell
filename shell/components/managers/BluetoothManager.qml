@@ -250,9 +250,6 @@ QtObject {
         onTriggered: {
             if (!bluetoothStatusProcess.running && !pairedDevicesProcess.running) {
                 refreshStatus()
-                if (bluetoothManager.isPowered) {
-                    refreshPairedDevices()
-                }
             }
         }
     }

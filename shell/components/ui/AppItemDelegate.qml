@@ -160,7 +160,7 @@ Item {
                     fillMode: Image.PreserveAspectFit
                     smooth: true
                     asynchronous: true
-                    cache: false
+                    sourceSize: Qt.size(96, 96)
 
                     onStatusChanged: {
                         if (status === Image.Error) {

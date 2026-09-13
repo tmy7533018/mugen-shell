@@ -40,7 +40,7 @@ Item {
 
     // Keeps the wallpaper's hue but pins lightness, so an accent can't wash out or collapse it.
     function hue(c, lightness, degrees) {
-        if (!c) return Qt.hsla(0.72, 0.35, lightness, 1.0)
+        if (!c || c.hslHue < 0) return Qt.hsla(0.72, 0.35, lightness, 1.0)
         return Qt.hsla((c.hslHue + (degrees || 0) / 360 + 1) % 1,
                        Math.min(root.satMax, Math.max(root.satMin, c.hslSaturation)),
                        lightness, 1.0)

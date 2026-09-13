@@ -51,8 +51,6 @@ QtObject {
     property real duration: 0
     property bool seekingSuspended: false
 
-    property var barLevels: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
     property Process listPlayersProcess: Process {
         running: false
         command: ["playerctl", "-l"]

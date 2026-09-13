@@ -27,7 +27,7 @@ QtObject {
     }
 
     property Process ensureDirProcess: Process {
-        command: ["bash", "-lc", "mkdir -p '" + screenshotManager.screenshotDir + "'"]
+        command: ["mkdir", "-p", screenshotManager.screenshotDir]
         running: true
         onExited: {
             if (folderModel) {
@@ -108,11 +108,7 @@ QtObject {
         if (!filePath || copyScreenshotProcess.running) {
             return
         }
-        function escapeSingleQuotes(path) {
-            return path.replace(/'/g, "'\"'\"'")
-        }
-        let escapedPath = escapeSingleQuotes(filePath)
-        copyScreenshotProcess.command = ["bash", "-lc", "wl-copy < '" + escapedPath + "'"]
+        copyScreenshotProcess.command = ["bash", "-c", "wl-copy < \"$1\"", "bash", filePath]
         copyScreenshotProcess.running = true
     }
 }
