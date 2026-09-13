@@ -292,6 +292,8 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		}
 
 		switch evt.Type {
+		case "error":
+			return fmt.Errorf("anthropic: %s", parseAnthropicError([]byte(data), resp.StatusCode))
 		case "content_block_start":
 			if evt.ContentBlock.Type == "tool_use" {
 				pending[evt.Index] = &pendingTool{
