@@ -71,40 +71,15 @@ Rectangle {
         }
     }
 
+    // PUT /config merges, so one field is enough and nothing edited elsewhere gets clobbered.
     function toggleAudit() {
-        if (auditGetProc.running || auditSaveProc.running) return
+        if (auditSaveProc.running) return
         section.auditBusy = true
         section.auditTarget = !section.auditEnabled
         section.auditStatus = "saving…"
-        auditGetProc.running = true
+        auditSaveProc.payload = JSON.stringify({ logging: { audit: section.auditTarget } })
+        auditSaveProc.running = true
         section.bump()
-    }
-
-    // Re-fetch before save, or the toggle clobbers edits made elsewhere since this panel loaded.
-    Process {
-        id: auditGetProc
-        running: false
-        property string buf: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
-        stdout: SplitParser { onRead: data => auditGetProc.buf += data }
-        onRunningChanged: { if (running) buf = "" }
-        onExited: (exitCode) => {
-            if (exitCode !== 0) {
-                section.auditBusy = false
-                section.auditStatus = "load failed"
-                return
-            }
-            try {
-                let cfg = JSON.parse(auditGetProc.buf).config || {}
-                if (!cfg.logging) cfg.logging = {}
-                cfg.logging.audit = section.auditTarget
-                auditSaveProc.payload = JSON.stringify(cfg)
-                auditSaveProc.running = true
-            } catch (e) {
-                section.auditBusy = false
-                section.auditStatus = "parse failed"
-            }
-        }
     }
 
     Process {
