@@ -184,7 +184,7 @@ yay -S hyprland quickshell qt6-5compat hypridle hyprpolkitagent zsh kitty firefo
        pipewire pipewire-pulse pavucontrol cava playerctl \
        networkmanager bluez bluez-utils \
        fcitx5 fcitx5-mozc fcitx5-gtk fcitx5-qt fcitx5-configtool \
-       awww mpvpaper ffmpeg matugen-bin socat \
+       awww mpvpaper ffmpeg matugen socat \
        grim slurp wl-clipboard cliphist imv curl jq xdg-utils brightnessctl fzf \
        thunar gtk3 gnome-themes-extra dconf gsettings-desktop-schemas \
        xdg-desktop-portal xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \
