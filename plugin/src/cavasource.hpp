@@ -4,8 +4,7 @@
 #include <QQmlEngine>
 #include <QVariantList>
 #include <QVector>
-#include <atomic>
-#include <thread>
+#include <memory>
 
 /// Audio spectrum from libcava. `source` takes a PipeWire node name, or "auto"
 /// for the default sink's monitor and "auto_input" for the default source.
@@ -44,11 +43,15 @@ signals:
     void levelsChanged();
 
 private:
+    struct OwnerLink;
+    struct Worker;
+
     void start();
     void stop();
     void restart();
-    void run(int bars, QByteArray source);
-    void publish(QVector<double> values);
+    static void run(std::shared_ptr<Worker> worker, int bars, QByteArray source);
+    void receive(quint64 generation, const QVector<double>& values);
+    void applyLevels(const QVector<double>& values);
 
     bool m_active = false;
     int m_bars = 16;
@@ -58,6 +61,7 @@ private:
     qreal m_audioLevel = 0.0;
     qreal m_rms = 0.0;
 
-    std::thread m_worker;
-    std::atomic_bool m_stopping{false};
+    std::shared_ptr<OwnerLink> m_link;
+    std::shared_ptr<Worker> m_worker;
+    quint64 m_generation = 0;
 };

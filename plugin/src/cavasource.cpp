@@ -7,11 +7,13 @@ extern "C" {
 }
 
 #include <QMetaObject>
+#include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
 #include <pthread.h>
+#include <thread>
 
 namespace {
 
@@ -46,13 +48,41 @@ void interruptibleSleep(std::chrono::milliseconds total, const std::atomic_bool&
 
 } // namespace
 
+// Nulled by ~CavaSource so a worker that outlives it never posts to a dead object.
+struct CavaSource::OwnerLink {
+    std::mutex lock;
+    CavaSource* owner = nullptr;
+};
+
+struct CavaSource::Worker {
+    std::shared_ptr<OwnerLink> link;
+    quint64 generation = 0;
+    std::atomic_bool stopping{false};
+
+    void publish(const QVector<double>& values) {
+        const std::lock_guard<std::mutex> guard(link->lock);
+        CavaSource* owner = link->owner;
+        if (owner == nullptr) {
+            return;
+        }
+        QMetaObject::invokeMethod(
+            owner,
+            [owner, generation = generation, values]() { owner->receive(generation, values); },
+            Qt::QueuedConnection);
+    }
+};
+
 CavaSource::CavaSource(QObject* parent)
-    : QObject(parent) {
+    : QObject(parent)
+    , m_link(std::make_shared<OwnerLink>()) {
+    m_link->owner = this;
     m_barLevels.fill(0.0, m_bars);
 }
 
 CavaSource::~CavaSource() {
     stop();
+    const std::lock_guard<std::mutex> guard(m_link->lock);
+    m_link->owner = nullptr;
 }
 
 void CavaSource::setActive(bool active) {
@@ -67,7 +97,7 @@ void CavaSource::setActive(bool active) {
         start();
     } else {
         stop();
-        publish(QVector<double>(m_bars, 0.0));
+        applyLevels(QVector<double>(m_bars, 0.0));
     }
 }
 
@@ -101,53 +131,54 @@ void CavaSource::restart() {
 }
 
 void CavaSource::start() {
-    if (m_worker.joinable()) {
+    if (m_worker) {
         return;
     }
 
-    m_stopping.store(false);
-    m_worker = std::thread(&CavaSource::run, this, m_bars, m_source.toUtf8());
+    m_worker = std::make_shared<Worker>();
+    m_worker->link = m_link;
+    m_worker->generation = ++m_generation;
+    std::thread(&CavaSource::run, m_worker, m_bars, m_source.toUtf8()).detach();
 }
 
+// Never joined: cava's input thread only sees `terminate` once PipeWire delivers a buffer.
 void CavaSource::stop() {
-    if (!m_worker.joinable()) {
+    if (!m_worker) {
         return;
     }
 
-    m_stopping.store(true);
-    m_worker.join();
+    m_worker->stopping.store(true);
+    m_worker.reset();
 }
 
-void CavaSource::publish(QVector<double> values) {
-    QMetaObject::invokeMethod(
-        this,
-        [this, values]() {
-            // A replaced worker's frames outlive it in the event queue.
-            if (values.size() != m_bars) {
-                return;
-            }
-
-            QVariantList levels;
-            levels.reserve(values.size());
-
-            double peak = 0.0;
-            double sum = 0.0;
-            for (const double value : values) {
-                levels.append(value);
-                peak = std::max(peak, value);
-                sum += value;
-            }
-
-            m_barLevels = levels;
-            m_audioLevel = peak;
-            m_rms = values.isEmpty() ? 0.0 : sum / values.size();
-            emit levelsChanged();
-        },
-        Qt::QueuedConnection);
+void CavaSource::receive(quint64 generation, const QVector<double>& values) {
+    if (generation != m_generation || m_worker == nullptr) {
+        return;
+    }
+    applyLevels(values);
 }
 
-void CavaSource::run(int bars, QByteArray source) {
-    while (!m_stopping.load()) {
+void CavaSource::applyLevels(const QVector<double>& values) {
+    QVariantList levels;
+    levels.reserve(values.size());
+
+    double peak = 0.0;
+    double sum = 0.0;
+    for (const double value : values) {
+        levels.append(value);
+        peak = std::max(peak, value);
+        sum += value;
+    }
+
+    m_barLevels = levels;
+    m_audioLevel = peak;
+    m_rms = values.isEmpty() ? 0.0 : sum / values.size();
+    emit levelsChanged();
+}
+
+void CavaSource::run(std::shared_ptr<Worker> worker, int bars, QByteArray source) {
+    std::atomic_bool& stopping = worker->stopping;
+    while (!stopping.load()) {
         struct audio_data audio;
         struct config_params prm;
         std::memset(&audio, 0, sizeof(audio));
@@ -178,7 +209,7 @@ void CavaSource::run(int bars, QByteArray source) {
 
         struct cava_plan* plan = nullptr;
         if (spawned) {
-            for (int tick = 0; tick < ParamPollTicks && !m_stopping.load(); ++tick) {
+            for (int tick = 0; tick < ParamPollTicks && !stopping.load(); ++tick) {
                 std::this_thread::sleep_for(ParamPollPeriod);
                 pthread_mutex_lock(&audio.lock);
                 const bool ready = audio.threadparams == 0 && audio.format != -1 && audio.rate != 0;
@@ -194,7 +225,7 @@ void CavaSource::run(int bars, QByteArray source) {
         // The packaged headers only forward-declare cava_plan, so status is unreadable.
         if (plan != nullptr) {
             QVector<double> out(bars);
-            while (!m_stopping.load()) {
+            while (!stopping.load()) {
                 std::this_thread::sleep_for(FramePeriod);
 
                 pthread_mutex_lock(&audio.lock);
@@ -209,7 +240,7 @@ void CavaSource::run(int bars, QByteArray source) {
                 if (lost) {
                     break;
                 }
-                publish(out);
+                worker->publish(out);
             }
         }
 
@@ -228,9 +259,9 @@ void CavaSource::run(int bars, QByteArray source) {
         std::free(audio.cava_in);
         std::free(audio.source);
 
-        if (!m_stopping.load()) {
-            publish(QVector<double>(bars, 0.0));
-            interruptibleSleep(std::chrono::duration_cast<std::chrono::milliseconds>(RestartDelay), m_stopping);
+        if (!stopping.load()) {
+            worker->publish(QVector<double>(bars, 0.0));
+            interruptibleSleep(std::chrono::duration_cast<std::chrono::milliseconds>(RestartDelay), stopping);
         }
     }
 }
