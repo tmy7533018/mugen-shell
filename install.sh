@@ -30,7 +30,8 @@ preflight() {
   [[ $EUID -ne 0 ]] || die "run as your normal user: makepkg refuses to build as root"
   local missing=()
   have git || missing+=(git)
-  have makepkg || missing+=(base-devel)
+  # makepkg itself ships with pacman; fakeroot is what only base-devel brings.
+  have fakeroot || missing+=(base-devel)
   if (( ${#missing[@]} )); then
     say "Installing build prerequisites"
     as_root "install ${missing[*]}" pacman -S --needed --noconfirm "${missing[@]}"
@@ -154,12 +155,19 @@ pac_install() {
   as_root "install ${want[*]}" pacman -S --needed --noconfirm "${want[@]}"
 }
 
+# A fresh PKGDEST per build: a glob over the checkout would also pick up packages left by an older pkgver.
+build_pkg() {
+  local dir=$1; shift
+  local dest; dest=$(mktemp -d)
+  (cd "$repo/arch/$dir" && PKGDEST=$dest makepkg "$@")
+  as_root "install $dir" pacman -U --noconfirm "$dest"/*.pkg.tar.zst
+  rm -rf "$dest"
+}
+
 build_core() {
   say "Building mugen-shell, mugen-ai and mugen-audio"
-  (cd "$repo/arch/mugen-shell" && makepkg -sf --noconfirm)
   # Only the three built here: read-aloud is its own pkgbase precisely so this stays cheap.
-  as_root "install the three built packages" \
-    pacman -U --noconfirm "$repo"/arch/mugen-shell/*.pkg.tar.zst
+  build_pkg mugen-shell -sf --noconfirm
 
   # pacman swaps the QML the running shell watches, and a reload landing mid-extraction fails.
   if systemctl --user is-active --quiet mugen-shell.service 2> /dev/null; then
@@ -172,13 +180,10 @@ build_voice() {
   say "Building read-aloud (this is the slow one)"
   aur_install python-sherpa-onnx python-sounddevice
   # -d: nothing is compiled here, and the runtime depends were just installed above.
-  (cd "$repo/arch/mugen-voice" && makepkg -df --noconfirm)
-  as_root "install mugen-voice" pacman -U --noconfirm "$repo"/arch/mugen-voice/*.pkg.tar.zst
+  build_pkg mugen-voice -df --noconfirm
 
   say "Building the AivisSpeech engine (Japanese voice)"
-  (cd "$repo/arch/aivisspeech-engine" && makepkg -f --noconfirm)
-  as_root "install aivisspeech-engine" \
-    pacman -U --noconfirm "$repo"/arch/aivisspeech-engine/*.pkg.tar.zst
+  build_pkg aivisspeech-engine -f --noconfirm
 }
 
 # The panels shell out to nmcli, bluetoothctl and pactl; the packages come with the core, the daemons do not.
@@ -198,8 +203,7 @@ setup_ime() {
   # Apps started outside the compositor never see the session wrapper's XMODIFIERS.
   local env_file=${MUGEN_ENV_FILE:-/etc/environment}   # overridable so the test can drive both branches
   if ! grep -q '^XMODIFIERS=' "$env_file" 2> /dev/null; then
-    as_root "add XMODIFIERS to $env_file" \
-      sh -c "echo XMODIFIERS=@im=fcitx >> '$env_file'"
+    printf 'XMODIFIERS=@im=fcitx\n' | as_root "add XMODIFIERS to $env_file" tee -a -- "$env_file" > /dev/null
   fi
 }
 
