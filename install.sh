@@ -181,6 +181,17 @@ build_voice() {
     pacman -U --noconfirm "$repo"/arch/aivisspeech-engine/*.pkg.tar.zst
 }
 
+# The panels shell out to nmcli, bluetoothctl and pactl; the packages come with the core, the daemons do not.
+enable_services() {
+  say "Enabling the system services the panels talk to"
+  as_root "enable bluetooth" systemctl enable bluetooth.service
+  if systemctl is-enabled --quiet iwd.service systemd-networkd.service dhcpcd.service connman.service 2> /dev/null; then
+    printf '  another network service is enabled; not enabling NetworkManager over it\n'
+  else
+    as_root "enable NetworkManager" systemctl enable NetworkManager.service
+  fi
+}
+
 setup_ime() {
   say "Installing the input method"
   pac_install fcitx5 fcitx5-gtk fcitx5-qt fcitx5-configtool "fcitx5-$ime_engine"
@@ -219,6 +230,7 @@ main() {
   aur_install "${aur_deps[@]}"
 
   build_core
+  enable_services
   if (( want_apps ));  then say "Installing the default applications"; pac_install "${default_apps[@]}"; fi
   if (( want_ime ));   then setup_ime; fi
   if (( want_zsh ));   then setup_zsh; fi

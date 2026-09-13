@@ -54,6 +54,8 @@ package_mugen-audio() {
 package_mugen-ai() {
   pkgdesc='AI backend service for mugen-shell'
   depends=('glibc')
+  optdepends=('libnotify: calendar event notifications'
+              'gtk3: gtk-launch for the focus_app tool')
   local repo; repo=$(_tree)
   install -Dm755 "$srcdir/mugen-ai" "$pkgdir/usr/bin/mugen-ai"
   install -Dm644 "$repo/ai/.env.example" "$pkgdir/usr/share/mugen-ai/.env.example"
@@ -74,6 +76,10 @@ package_mugen-shell() {
     'matugen' 'playerctl' 'wl-clipboard' 'cliphist' 'libnotify' 'grim' 'slurp'
     'cava' 'ffmpeg' 'imv' 'pavucontrol' 'libpulse' 'brightnessctl' 'jq' 'glib2'
     'gsettings-desktop-schemas' 'gnome-themes-extra' 'xdg-utils' 'socat' 'curl'
+    # The panels shell out to nmcli, bluetoothctl and pactl.
+    'networkmanager' 'bluez' 'bluez-utils' 'pipewire-pulse' 'wireplumber'
+    # FileChooser backend for QT_QPA_PLATFORMTHEME=xdgdesktopportal; dconf is what gsettings writes to.
+    'xdg-desktop-portal-gtk' 'dconf'
     'fzf' 'python' 'python-gobject' 'gtk3' 'ttf-mplus-git'
     'ttf-jetbrains-mono-nerd' 'noto-fonts-emoji' 'qt6-declarative'
     # quickshell does not pull qt5compat, and 34 QML files import it.
@@ -82,6 +88,7 @@ package_mugen-shell() {
   )
   optdepends=(
     'kitty: the default $terminal'
+    'ttf-firacode-nerd: font_family of the packaged kitty config'
     'thunar: the default $fileManager'
     'firefox: the default $browser'
     'mugen-voice: read replies aloud'

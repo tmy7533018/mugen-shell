@@ -32,6 +32,7 @@ cd mugen-shell
 ```
 
 A menu lets you pick what goes in. Taking the defaults leaves you with a desktop you can log into.
+It also enables `NetworkManager.service` and `bluetooth.service`, which the Wi-Fi, Bluetooth and volume panels talk to (NetworkManager is left alone if another network service is already enabled).
 Read-aloud is off by default: it builds `onnxruntime` from source, which takes hours.
 
 To run it without the menu:
@@ -75,7 +76,10 @@ The UI names `M PLUS 2` and `M PLUS 1 Code`, so the Nerd Fonts build (`ttf-mplus
 git clone https://github.com/tmy7533018/mugen-shell.git
 cd mugen-shell/arch/mugen-shell
 makepkg -si
+sudo systemctl enable NetworkManager.service bluetooth.service
 ```
+
+The last line enables the services the Wi-Fi, Bluetooth and volume panels talk to; the packages themselves come in as dependencies of `makepkg -si`.
 
 Read-aloud is a separate package. If you want it, see [Read aloud](#read-aloud-optional).
 

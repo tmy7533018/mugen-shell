@@ -15,6 +15,7 @@ cd mugen-shell
 ```
 
 入れるものをメニューで選べます。既定のまま進めればログインして使える状態になります。
+Wi-Fi / Bluetooth / 音量のパネルが使う `NetworkManager.service` と `bluetooth.service` も有効化します (別のネットワーク管理サービスが有効なら NetworkManager には触りません)。
 読み上げだけは `onnxruntime` のソースビルドで数時間かかるので、既定では入りません。
 
 非対話で走らせる場合:
@@ -58,7 +59,10 @@ UI は `M PLUS 2` と `M PLUS 1 Code` を名指しするので、Nerd Fonts 版 
 git clone https://github.com/tmy7533018/mugen-shell.git
 cd mugen-shell/arch/mugen-shell
 makepkg -si
+sudo systemctl enable NetworkManager.service bluetooth.service
 ```
+
+最後の行は Wi-Fi / Bluetooth / 音量のパネルが話しかけるサービスです。パッケージ自体は `makepkg -si` が依存として入れます。
 
 読み上げは別のパッケージです。要る場合は[読み上げ](#読み上げ-オプション)へ。
 
