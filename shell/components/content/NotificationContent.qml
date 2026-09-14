@@ -33,56 +33,24 @@ Item {
         }
     }
     
+    // Reconciled by id so surviving rows keep their delegates (reuseItems is off).
     function syncNotificationsToModel() {
-        if (notifications.length > notificationListModel.count) {
-            let newCount = notifications.length - notificationListModel.count
-            for (let i = newCount - 1; i >= 0; i--) {
-                notificationListModel.insert(0, {
-                    "modelData": notifications[i]
-                })
-            }
+        const wanted = {}
+        for (let i = 0; i < notifications.length; i++) wanted[notifications[i].id] = true
+        for (let i = notificationListModel.count - 1; i >= 0; i--) {
+            if (!wanted[notificationListModel.get(i).modelData.id]) notificationListModel.remove(i)
         }
-        else if (notifications.length < notificationListModel.count) {
-            for (let i = notificationListModel.count - 1; i >= 0; i--) {
-                let modelId = notificationListModel.get(i).modelData.id
-                let found = false
-                for (let j = 0; j < notifications.length; j++) {
-                    if (notifications[j].id === modelId) {
-                        found = true
-                        break
-                    }
-                }
-                if (!found) {
-                    notificationListModel.remove(i)
-                }
-            }
-        }
-        else if (notifications.length > 0) {
-            let needsSync = false
-            for (let i = 0; i < notifications.length && i < notificationListModel.count; i++) {
-                if (notifications[i].id !== notificationListModel.get(i).modelData.id) {
-                    needsSync = true
-                    break
-                }
-            }
-            if (needsSync) {
-                notificationListModel.clear()
-                for (let i = 0; i < notifications.length; i++) {
-                    notificationListModel.append({
-                        "modelData": notifications[i]
-                    })
-                }
-            } else {
+        for (let i = 0; i < notifications.length; i++) {
+            const row = { "modelData": notifications[i] }
+            if (i < notificationListModel.count && notificationListModel.get(i).modelData.id === notifications[i].id) {
                 // The relative "x mins ago" label mutates each tick, so delegates freeze without a re-push.
-                for (let i = 0; i < notifications.length; i++) {
-                    notificationListModel.set(i, {
-                        "modelData": notifications[i]
-                    })
-                }
+                notificationListModel.set(i, row)
+            } else {
+                notificationListModel.insert(i, row)
             }
         }
     }
-    
+
     // Dismissals overlap, so each carries its own deadline.
     property var pendingDismissals: ({})
 
