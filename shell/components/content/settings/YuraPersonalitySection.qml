@@ -25,6 +25,7 @@ Rectangle {
 
     property bool isExpanded: false
     property bool loaded: false
+    readonly property bool canSave: loaded && !saving
     property bool saving: false
     property string statusText: ""
 
@@ -158,6 +159,7 @@ Rectangle {
         onExited: (exitCode) => {
             if (exitCode !== 0) {
                 section.statusText = "load failed"
+                loadRetry.restart()
                 return
             }
             try {
@@ -218,6 +220,13 @@ Rectangle {
 
     function reload() { loadProcess.running = true }
 
+    // The usual failure is mugen-ai restarting after another section's save, so a retry lands within seconds.
+    Timer {
+        id: loadRetry
+        interval: 3000
+        onTriggered: if (!section.loaded) loadProcess.running = true
+    }
+
     // The server merges a partial body, so sending the whole document reverts other sections.
     function savePayload() {
         return JSON.stringify({
@@ -230,8 +239,9 @@ Rectangle {
         })
     }
 
+    // Saving before the config loaded would PUT an empty form over the real one.
     function save() {
-        if (saveProcess.running) return
+        if (!section.loaded || saveProcess.running) return
         section.saving = true
         section.statusText = "saving…"
         saveProcess.payload = savePayload()
@@ -683,11 +693,11 @@ Rectangle {
                 Layout.preferredWidth: 88
                 Layout.preferredHeight: 28
                 radius: 14
-                enabled: !section.saving
+                enabled: section.canSave
                 color: saveMouse.containsMouse
                     ? Qt.rgba(0.45, 0.65, 0.90, 0.45)
                     : Qt.rgba(0.45, 0.65, 0.90, 0.3)
-                opacity: section.saving ? 0.5 : 1.0
+                opacity: section.canSave ? 1.0 : 0.5
                 Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
                 Text {
@@ -703,7 +713,7 @@ Rectangle {
                     id: saveMouse
                     anchors.fill: parent
                     hoverEnabled: true
-                    enabled: !section.saving
+                    enabled: section.canSave
                     cursorShape: Qt.PointingHandCursor
                     onClicked: { section.save(); section.bump() }
                 }

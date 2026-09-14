@@ -22,6 +22,7 @@ Rectangle {
 
     property bool isExpanded: false
     property bool loaded: false
+    readonly property bool canSave: loaded && dirty && !saving
     property bool saving: false
     property bool dirty: false
     property string statusText: ""
@@ -106,8 +107,9 @@ Rectangle {
         })
     }
 
+    // Saving before the list loaded would PUT an empty category list over the real one.
     function save() {
-        if (saveProcess.running) return
+        if (!section.loaded || saveProcess.running) return
         section.saving = true
         section.statusText = "saving…"
         saveProcess.payload = savePayload()
@@ -126,7 +128,7 @@ Rectangle {
         stdout: SplitParser { onRead: data => loadProcess.buf += data }
         onRunningChanged: { if (running) buf = "" }
         onExited: (exitCode) => {
-            if (exitCode !== 0) { section.statusText = "load failed"; return }
+            if (exitCode !== 0) { section.statusText = "load failed"; reloadTimer.restart(); return }
             try {
                 let obj = JSON.parse(loadProcess.buf)
                 let e = (obj.config && obj.config.mcp_expose) || {}
@@ -139,6 +141,7 @@ Rectangle {
                 section.dirtyTick++
                 section.dirty = false
                 section.loaded = true
+                if (section.statusText === "load failed") section.statusText = ""
             } catch (err) {
                 section.statusText = "parse failed"
             }
@@ -489,8 +492,8 @@ Rectangle {
                 Layout.preferredWidth: 110
                 Layout.preferredHeight: 28
                 radius: 14
-                enabled: section.dirty && !section.saving
-                opacity: (section.dirty && !section.saving) ? 1.0 : 0.5
+                enabled: section.canSave
+                opacity: section.canSave ? 1.0 : 0.5
                 color: saveMouse.containsMouse ? Qt.rgba(0.45, 0.65, 0.90, 0.45) : Qt.rgba(0.45, 0.65, 0.90, 0.3)
                 Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
 
@@ -507,7 +510,7 @@ Rectangle {
                     id: saveMouse
                     anchors.fill: parent
                     hoverEnabled: true
-                    enabled: section.dirty && !section.saving
+                    enabled: section.canSave
                     cursorShape: Qt.PointingHandCursor
                     onClicked: { section.save(); section.bump() }
                 }
