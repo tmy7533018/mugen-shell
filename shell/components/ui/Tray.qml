@@ -86,7 +86,8 @@ RowLayout {
                 anchors.fill: parent
                 source: trayDelegate.modelData.icon
                 fillMode: Image.PreserveAspectFit
-                // Height only: width animates on reveal, and sourceSize re-decodes on every change.
+                // Both from height: width animates on reveal, and Quickshell's icon provider decodes 2x2 when either dimension is 0.
+                sourceSize.width: height * 2
                 sourceSize.height: height * 2
                 smooth: true
                 opacity: trayMouse.containsMouse ? 1.0 : 0.75
