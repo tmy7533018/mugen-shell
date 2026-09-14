@@ -43,6 +43,8 @@ set_target_properties(mugen-audioplugin PROPERTIES
 install(TARGETS mugen-audio
     LIBRARY DESTINATION "${MUGEN_AUDIO_QML_INSTALL_DIR}/Mugen/Audio"
 )
+# The *_dir_map.qrc is rcc input for the build tree and carries its absolute path.
 install(DIRECTORY "${QT_QML_OUTPUT_DIRECTORY}/Mugen"
     DESTINATION "${MUGEN_AUDIO_QML_INSTALL_DIR}"
+    PATTERN "*.qrc" EXCLUDE
 )
