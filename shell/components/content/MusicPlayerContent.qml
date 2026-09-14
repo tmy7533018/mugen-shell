@@ -33,7 +33,7 @@ Item {
             theme: root.theme
 
             readonly property var mgr: moduleContext ? moduleContext.musicManager : null
-            readonly property string art: mgr && mgr.artUrl ? mgr.artUrl : ""
+            readonly property string art: mgr ? mgr.safeArtUrl : ""
 
             readonly property var barSize: moduleContext ? moduleContext.requiredBarSize : null
             readonly property real settledWidth: barSize ? moduleContext.width - barSize.leftMargin - barSize.rightMargin : width

@@ -24,7 +24,7 @@ Item {
     Layout.preferredWidth: width
     Layout.preferredHeight: height
     
-    property bool hasArt: root.musicManager && root.musicManager.artUrl !== ""
+    property bool hasArt: root.musicManager && root.musicManager.safeArtUrl !== ""
 
     Rectangle {
         id: artBackground
@@ -42,7 +42,7 @@ Item {
         Image {
             id: albumArt
             anchors.fill: parent
-            source: root.musicManager && root.musicManager.artUrl ? root.musicManager.artUrl : ""
+            source: root.musicManager ? root.musicManager.safeArtUrl : ""
             fillMode: Image.PreserveAspectCrop
             visible: false
             asynchronous: true

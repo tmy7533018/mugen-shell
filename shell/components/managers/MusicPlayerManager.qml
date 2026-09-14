@@ -31,6 +31,8 @@ QtObject {
     property string artist: ""
     property string album: ""
     property string artUrl: ""
+    // Any local MPRIS client can publish an artUrl; only web and file art gets loaded.
+    readonly property string safeArtUrl: /^(https?:\/\/|file:\/\/|\/)/.test(artUrl) ? artUrl : ""
     property string _artTrackKey: ""
     property bool _artIsFallback: false
     property string _artCachedUrl: ""
