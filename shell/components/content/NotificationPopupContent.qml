@@ -167,9 +167,8 @@ Item {
                     property var iconPaths: {
                         if (!root.currentNotification) return []
                         let n = root.currentNotification
-                        let candidates = []
-                        if (n.desktopEntry && n.desktopEntry.length > 0) candidates.push(n.desktopEntry)
-                        if (n.appName && n.appName.length > 0) candidates.push(n.appName.toLowerCase())
+                        // Names only: a sender-supplied path would otherwise be shown as-is.
+                        let candidates = [n.desktopEntry, (n.appName || "").toLowerCase()].filter(c => c && !c.includes("/"))
                         let paths = []
                         for (let i = 0; i < candidates.length; i++) {
                             let resolved = iconResolver.resolveIconPath(candidates[i])

@@ -171,9 +171,8 @@ Rectangle {
 
                 property var iconPaths: {
                     if (!modelData) return []
-                    let candidates = []
-                    if (modelData.desktopEntry && modelData.desktopEntry.length > 0) candidates.push(modelData.desktopEntry)
-                    if (modelData.appName && modelData.appName.length > 0) candidates.push(modelData.appName.toLowerCase())
+                    // Names only: a sender-supplied path would otherwise be shown as-is.
+                    let candidates = [modelData.desktopEntry, (modelData.appName || "").toLowerCase()].filter(c => c && !c.includes("/"))
                     let paths = []
                     for (let i = 0; i < candidates.length; i++) {
                         let resolved = iconResolver.resolveIconPath(candidates[i])
