@@ -129,7 +129,16 @@ FocusScope {
     }
 
     // An index only means something against the conversation it came from.
-    onCurrentConvIdChanged: editingIndex = -1
+    onCurrentConvIdChanged: { editingIndex = -1; openReasoning = ({}) }
+
+    // Held here by message index: every streamed chunk reassigns `messages`, which rebuilds the delegates.
+    property var openReasoning: ({})
+    function toggleReasoning(index) {
+        let next = Object.assign({}, openReasoning)
+        if (next[index]) delete next[index]
+        else next[index] = true
+        openReasoning = next
+    }
 
     Timer {
         id: revealTimer
@@ -906,7 +915,7 @@ FocusScope {
                 }
                 readonly property string reasoning: modelData.thinking || ""
                 readonly property real reasoningMs: modelData.thinkingMs || 0
-                property bool reasoningOpen: false
+                readonly property bool reasoningOpen: !!root.openReasoning[index]
                 readonly property string reasoningLabel: reasoningMs > 0
                     ? "Thought for " + (reasoningMs / 1000).toFixed(1) + "s"
                     : "Thinking\u2026"
@@ -1100,7 +1109,7 @@ FocusScope {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: delegateRoot.reasoningOpen = !delegateRoot.reasoningOpen
+                                    onClicked: root.toggleReasoning(index)
                                 }
                             }
 
