@@ -1988,7 +1988,7 @@ FocusScope {
         id: copyProcess
         property string text: ""
         running: false
-        command: ["wl-copy", text]
+        command: ["wl-copy", "--", text]
     }
 
     Process {
