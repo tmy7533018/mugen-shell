@@ -91,18 +91,18 @@ QtObject {
 
     function getVolumeIcon(volume, isMuted, isHeadphone) {
         if (isHeadphone && useVolumeIcons) {
-            return { type: "svg", value: headphonesSvg }
+            return { type: "svg", value: headphonesSvg, variant: "headphones" }
         } else if (isHeadphone && !useVolumeIcons) {
             return { type: "text", value: "🎧" }
         }
-        
+
         if (useVolumeIcons) {
             if (volume === 0 || isMuted) {
-                return { type: "svg", value: volumeMutedSvg }
+                return { type: "svg", value: volumeMutedSvg, variant: "muted" }
             } else if (volume < 50) {
-                return { type: "svg", value: volumeDownSvg }
+                return { type: "svg", value: volumeDownSvg, variant: "down" }
             } else {
-                return { type: "svg", value: volumeUpSvg }
+                return { type: "svg", value: volumeUpSvg, variant: "up" }
             }
         } else {
             if (volume === 0 || isMuted) {

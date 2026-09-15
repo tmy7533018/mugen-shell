@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import "../../ui" as UI
+import "../../common" as Common
 import "../../../lib" as Theme
 
 Item {
@@ -20,106 +20,100 @@ Item {
     Layout.leftMargin: 0
     Layout.rightMargin: 0
 
-    Text {
-        id: volumeTextMeasure
-        visible: false
-        text: "100%"
-        font.family: volumeContainer.typo ? volumeContainer.typo.clockStyle.family : "M PLUS 2"
-        font.pixelSize: volumeContainer.typo ? volumeContainer.typo.clockStyle.size : 14
-        font.weight: volumeContainer.typo ? volumeContainer.typo.clockStyle.weight : Font.Normal
-        font.letterSpacing: volumeContainer.typo ? volumeContainer.typo.clockStyle.letterSpacing : 0
-    }
-
-    readonly property real volumePercentTextWidth: Math.ceil(volumeTextMeasure.implicitWidth * 1.05)
-
-    state: volumeMouseArea.containsMouse ? "hovered" : "normal"
-
-    states: [
-        State {
-            name: "normal"
-            PropertyChanges { target: volumeIconSvg; opacity: 0.6; scale: 1.0 }
-            PropertyChanges { target: volumeIcon; opacity: 0.6; scale: 1.0 }
-            PropertyChanges { target: volumePercentText; opacity: 0; scale: 1.0 }
-        },
-        State {
-            name: "hovered"
-            PropertyChanges { target: volumeIconSvg; opacity: 0; scale: 0.8 }
-            PropertyChanges { target: volumeIcon; opacity: 0; scale: 0.8 }
-            PropertyChanges { target: volumePercentText; opacity: 1.0; scale: 1.3 }
-        }
-    ]
-
-    transitions: [
-        Transition {
-            from: "normal"; to: "hovered"
-            PropertyAnimation {
-                target: volumeIconSvg
-                properties: "opacity,scale"
-                duration: Theme.Motion.standard
-                easing.type: Easing.OutCubic
-            }
-            PropertyAnimation {
-                target: volumeIcon
-                properties: "opacity,scale"
-                duration: Theme.Motion.standard
-                easing.type: Easing.OutCubic
-            }
-            SequentialAnimation {
-                PauseAnimation { duration: Theme.Motion.micro }
-                ParallelAnimation {
-                    PropertyAnimation {
-                        target: volumePercentText
-                        property: "opacity"
-                        duration: Theme.Motion.gentle
-                        easing.type: Easing.OutCubic
-                    }
-                    PropertyAnimation {
-                        target: volumePercentText
-                        property: "scale"
-                        duration: Theme.Motion.slow
-                        easing.type: Easing.OutCubic
-                    }
-                }
-            }
-        },
-        Transition {
-            from: "hovered"; to: "normal"
-            PropertyAnimation {
-                targets: [volumeIconSvg, volumeIcon, volumePercentText]
-                properties: "opacity,scale"
-                duration: Theme.Motion.standard
-                easing.type: Easing.OutCubic
-            }
-        }
-    ]
-
-    property string currentIconSource: ""
+    property string currentVariant: ""
     property string currentIconText: ""
     property bool currentIconIsSvg: true
     property bool isInitialized: false
 
+    readonly property color iconColor: theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+
+    function iconData() {
+        if (!icons || !audioManager) return null
+        return icons.getVolumeIcon(audioManager.volume, audioManager.isMuted, audioManager.isHeadphone)
+    }
+
+    function applyIcon() {
+        const data = iconData()
+        if (!data) return
+        currentIconIsSvg = data.type === "svg"
+        currentVariant = data.type === "svg" ? data.variant : ""
+        currentIconText = data.type === "text" ? data.value : ""
+    }
+
+    function iconChanged() {
+        const data = iconData()
+        if (!data) return false
+        const variant = data.type === "svg" ? data.variant : ""
+        const text = data.type === "text" ? data.value : ""
+        return variant !== currentVariant || text !== currentIconText || (data.type === "svg") !== currentIconIsSvg
+    }
+
     function updateIcon(animate) {
-        if (!volumeContainer.icons || !volumeContainer.audioManager) return
+        if (!iconChanged()) return
+        if (animate && isInitialized) {
+            iconChangeAnimation.start()
+        } else {
+            applyIcon()
+        }
+    }
 
-        let iconData = volumeContainer.icons.getVolumeIcon(
-            volumeContainer.audioManager.volume,
-            volumeContainer.audioManager.isMuted,
-            volumeContainer.audioManager.isHeadphone
-        )
+    function ring() {
+        if (rigLoader.item) rigLoader.item.play()
+    }
 
-        let newSource = iconData.type === "svg" ? iconData.value : ""
-        let newText = iconData.type === "text" ? iconData.value : ""
-        let newIsSvg = iconData.type === "svg"
+    function ringIfIdle() {
+        if (rigLoader.item && !rigLoader.item.playing) rigLoader.item.play()
+    }
 
-        if (newSource !== currentIconSource || newText !== currentIconText || newIsSvg !== currentIconIsSvg) {
-            if (animate && isInitialized) {
-                iconChangeAnimation.start()
-            } else {
-                currentIconSource = newSource
-                currentIconText = newText
-                currentIconIsSvg = newIsSvg
-                volumeIconSvg.opacity = volumeContainer.state === "hovered" ? 0 : 0.6
-                volumeIcon.opacity = volumeContainer.state === "hovered" ? 0 : 0.6
+    Component {
+        id: waveRig
+        Common.VolumeRig {
+            color: volumeContainer.iconColor
+            variant: volumeContainer.currentVariant
+        }
+    }
+    Component {
+        id: muteRig
+        Common.ShakeRig {
+            color: volumeContainer.iconColor
+            source: volumeContainer.icons ? volumeContainer.icons.volumeMutedSvg : ""
+        }
+    }
+
+    Item {
+        id: iconStack
+        anchors.fill: parent
+
+        Loader {
+            id: rigLoader
+            anchors.centerIn: parent
+            width: volumeContainer.scaled(24)
+            height: volumeContainer.scaled(24)
+            active: volumeContainer.currentIconIsSvg && volumeContainer.currentVariant !== ""
+            sourceComponent: volumeContainer.currentVariant === "muted" ? muteRig : waveRig
+            opacity: volumeMouseArea.containsMouse ? 1.0 : 0.6
+
+            Behavior on opacity {
+                NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
+            }
+        }
+
+        Text {
+            id: volumeIcon
+            anchors.centerIn: parent
+            text: volumeContainer.currentIconText
+            font.family: volumeContainer.typo ? volumeContainer.typo.clockStyle.family : "M PLUS 2"
+            font.pixelSize: volumeContainer.scaled(volumeContainer.typo ? volumeContainer.typo.clockStyle.size : 14)
+            font.weight: volumeContainer.typo ? volumeContainer.typo.clockStyle.weight : Font.Normal
+            font.letterSpacing: volumeContainer.typo ? volumeContainer.typo.clockStyle.letterSpacing : 0
+            font.hintingPreference: volumeContainer.typo ? volumeContainer.typo.clockStyle.hinting : Font.PreferDefaultHinting
+            font.kerning: volumeContainer.typo ? volumeContainer.typo.clockStyle.kerning : true
+            color: volumeContainer.iconColor
+            visible: !volumeContainer.currentIconIsSvg && volumeContainer.currentIconText !== ""
+            opacity: volumeMouseArea.containsMouse ? 1.0 : 0.6
+
+            Behavior on opacity {
+                NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
             }
         }
     }
@@ -128,83 +122,22 @@ Item {
         id: iconChangeAnimation
         running: false
 
-        ParallelAnimation {
-            NumberAnimation {
-                target: volumeIconSvg
-                property: "opacity"
-                from: volumeIconSvg.opacity
-                to: 0
-                duration: Theme.Motion.fast
-                easing.type: Easing.InOutQuad
-            }
-            NumberAnimation {
-                target: volumeIcon
-                property: "opacity"
-                from: volumeIcon.opacity
-                to: 0
-                duration: Theme.Motion.fast
-                easing.type: Easing.InOutQuad
-            }
+        NumberAnimation {
+            target: iconStack
+            property: "opacity"
+            to: 0
+            duration: Theme.Motion.fast
+            easing.type: Easing.InOutQuad
         }
-
-        PropertyAction {
-            target: volumeContainer
-            property: "currentIconSource"
-            value: {
-                if (!volumeContainer.icons || !volumeContainer.audioManager) return ""
-                let iconData = volumeContainer.icons.getVolumeIcon(
-                    volumeContainer.audioManager.volume,
-                    volumeContainer.audioManager.isMuted,
-                    volumeContainer.audioManager.isHeadphone
-                )
-                return iconData.type === "svg" ? iconData.value : ""
-            }
+        ScriptAction { script: volumeContainer.applyIcon() }
+        NumberAnimation {
+            target: iconStack
+            property: "opacity"
+            to: 1
+            duration: Theme.Motion.fast
+            easing.type: Easing.InOutQuad
         }
-        PropertyAction {
-            target: volumeContainer
-            property: "currentIconText"
-            value: {
-                if (!volumeContainer.icons || !volumeContainer.audioManager) return ""
-                let iconData = volumeContainer.icons.getVolumeIcon(
-                    volumeContainer.audioManager.volume,
-                    volumeContainer.audioManager.isMuted,
-                    volumeContainer.audioManager.isHeadphone
-                )
-                return iconData.type === "text" ? iconData.value : ""
-            }
-        }
-        PropertyAction {
-            target: volumeContainer
-            property: "currentIconIsSvg"
-            value: {
-                if (!volumeContainer.icons || !volumeContainer.audioManager) return true
-                let iconData = volumeContainer.icons.getVolumeIcon(
-                    volumeContainer.audioManager.volume,
-                    volumeContainer.audioManager.isMuted,
-                    volumeContainer.audioManager.isHeadphone
-                )
-                return iconData.type === "svg"
-            }
-        }
-
-        ParallelAnimation {
-            NumberAnimation {
-                target: volumeIconSvg
-                property: "opacity"
-                from: 0
-                to: volumeContainer.state === "hovered" ? 0 : 0.6
-                duration: Theme.Motion.fast
-                easing.type: Easing.InOutQuad
-            }
-            NumberAnimation {
-                target: volumeIcon
-                property: "opacity"
-                from: 0
-                to: volumeContainer.state === "hovered" ? 0 : 0.6
-                duration: Theme.Motion.fast
-                easing.type: Easing.InOutQuad
-            }
-        }
+        ScriptAction { script: volumeContainer.ring() }
     }
 
     Component.onCompleted: {
@@ -216,53 +149,16 @@ Item {
 
     Connections {
         target: volumeContainer.audioManager
-        function onVolumeChanged() { volumeContainer.updateIcon(true) }
-        function onIsMutedChanged() { volumeContainer.updateIcon(true) }
+        function onVolumeChanged() {
+            volumeContainer.updateIcon(true)
+            if (!iconChangeAnimation.running) volumeContainer.ringIfIdle()
+        }
+        function onIsMutedChanged() {
+            volumeContainer.updateIcon(true)
+            if (!iconChangeAnimation.running) volumeContainer.ringIfIdle()
+        }
         function onIsHeadphoneChanged() { volumeContainer.updateIcon(true) }
         function onHeadphoneReadyChanged() { volumeContainer.updateIcon(false) }
-    }
-
-    UI.SvgIcon {
-        id: volumeIconSvg
-        anchors.centerIn: parent
-        width: volumeContainer.scaled(24)
-        height: volumeContainer.scaled(24)
-        source: volumeContainer.currentIconSource
-        color: volumeContainer.theme ? volumeContainer.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-        visible: volumeContainer.currentIconIsSvg && volumeContainer.currentIconSource !== ""
-    }
-
-    Text {
-        id: volumeIcon
-        anchors.centerIn: parent
-        text: volumeContainer.currentIconText
-        font.family: volumeContainer.typo ? volumeContainer.typo.clockStyle.family : "M PLUS 2"
-        font.pixelSize: volumeContainer.scaled(volumeContainer.typo ? volumeContainer.typo.clockStyle.size : 14)
-        font.weight: volumeContainer.typo ? volumeContainer.typo.clockStyle.weight : Font.Normal
-        font.letterSpacing: volumeContainer.typo ? volumeContainer.typo.clockStyle.letterSpacing : 0
-        font.hintingPreference: volumeContainer.typo ? volumeContainer.typo.clockStyle.hinting : Font.PreferDefaultHinting
-        font.kerning: volumeContainer.typo ? volumeContainer.typo.clockStyle.kerning : true
-        color: volumeContainer.theme ? volumeContainer.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-        visible: !volumeContainer.currentIconIsSvg && volumeContainer.currentIconText !== ""
-    }
-
-    Text {
-        id: volumePercentText
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: volumeContainer.scaled(-1)
-        text: volumeContainer.audioManager ? (volumeContainer.audioManager.isMuted ? "—" : volumeContainer.audioManager.volume.toString()) : "0"
-        color: volumeContainer.theme ? volumeContainer.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-        font.family: volumeContainer.typo ? volumeContainer.typo.clockStyle.family : "M PLUS 2"
-        font.pixelSize: volumeContainer.scaled(volumeContainer.typo ? volumeContainer.typo.clockStyle.size : 14)
-        font.weight: volumeContainer.typo ? volumeContainer.typo.clockStyle.weight : Font.Normal
-        font.letterSpacing: volumeContainer.typo ? volumeContainer.typo.clockStyle.letterSpacing : 0
-        font.hintingPreference: volumeContainer.typo ? volumeContainer.typo.clockStyle.hinting : Font.PreferDefaultHinting
-        font.kerning: volumeContainer.typo ? volumeContainer.typo.clockStyle.kerning : true
-
-        Behavior on color {
-            ColorAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
-        }
     }
 
     MouseArea {
@@ -270,6 +166,7 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
+        onEntered: volumeContainer.ring()
         onClicked: {
             if (volumeContainer.modeManager) {
                 volumeContainer.modeManager.switchMode("volume")
