@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Services.SystemTray
+import "../common" as Common
 import "../../lib" as Theme
 
 RowLayout {
@@ -132,23 +133,20 @@ RowLayout {
         Layout.preferredHeight: root.scaled(24)
         Layout.alignment: Qt.AlignVCenter
 
-        SvgIcon {
+        Common.ChevronRig {
             id: chevronIcon
             anchors.centerIn: parent
             width: root.scaled(20)
             height: root.scaled(20)
-            source: Quickshell.shellDir + (root.expanded
-                ? "/assets/icons/chevron-double-right.svg"
-                : "/assets/icons/chevron-double-left.svg")
             color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
             opacity: chevronMouse.containsMouse ? 1.0 : 0.6
-            scale: chevronMouse.containsMouse ? 1.3 : 1.0
+            rotation: root.expanded ? 180 : 0
 
+            Behavior on rotation {
+                NumberAnimation { duration: Theme.Motion.standard; easing.type: Theme.Motion.easeMove }
+            }
             Behavior on opacity {
                 NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
-            }
-            Behavior on scale {
-                NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic }
             }
         }
 
@@ -157,7 +155,11 @@ RowLayout {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: root.expanded = !root.expanded
+            onEntered: chevronIcon.play()
+            onClicked: {
+                root.expanded = !root.expanded
+                chevronIcon.play()
+            }
         }
     }
 
