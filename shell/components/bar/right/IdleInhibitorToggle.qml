@@ -16,7 +16,14 @@ Common.IconButton {
     Layout.leftMargin: spacing
     opacityDuration: 150
 
+    readonly property bool isInhibited: idleInhibitorManager ? idleInhibitorManager.isInhibited : false
     property bool isBlinking: false
+
+    // The blink is the glyph swap itself; the rig only carries the parts, it plays nothing.
+    rig: Common.EyeRig { variant: idleToggleButton.isBlinking === idleToggleButton.isInhibited ? "closed" : "open" }
+
+    onHoveredChanged: if (hovered && !idleBlinkAnimationSingle.running && !idleBlinkAnimationDouble.running) idleBlinkAnimationSingle.start()
+
     readonly property color accentColorBase: theme ? theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
     readonly property real hueShift: 0.2
     readonly property real brightnessBoost: 0.25

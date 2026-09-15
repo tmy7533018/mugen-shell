@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell
-import "../ui" as UI
+import "../common" as Common
 import "../../lib" as Theme
 
 Item {
@@ -152,7 +152,7 @@ Item {
         }
     }
 
-    UI.SvgIcon {
+    Common.SquashRig {
         id: menuIconSvg
         anchors.centerIn: parent
         width: scaled(24)
@@ -160,8 +160,8 @@ Item {
         source: icons.iconData.menu.type === "svg" ? icons.iconData.menu.value : ""
         color: textColor
         opacity: mouseArea.containsMouse ? 1.0 : 0.6
-        scale: mouseArea.pressed ? 0.9 : (mouseArea.containsMouse ? 1.3 : 1.0)
         visible: !powerMenuRoot.batteryActive && icons.iconData.menu.type === "svg"
+        scale: mouseArea.pressed ? 0.9 : 1.0
 
         Behavior on opacity {
             NumberAnimation {
@@ -208,7 +208,8 @@ Item {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        
+
+        onEntered: menuIconSvg.play()
         onClicked: (mouse) => {
             if (mouse.button === Qt.RightButton) {
                 powerMenuRoot.rightClicked()

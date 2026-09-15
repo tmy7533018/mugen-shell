@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import "../../ui" as UI
 import "../../common" as Common
 import "../../../lib" as Theme
 
@@ -19,6 +18,34 @@ Item {
     Layout.alignment: Qt.AlignVCenter
 
     property bool hasUnreadNotifications: notificationManager ? notificationManager.unreadCount > 0 : false
+
+    property real highlightPulse: 0.0
+
+    SequentialAnimation on highlightPulse {
+        loops: Animation.Infinite
+        running: notificationIconContainer.hasUnreadNotifications && !notificationMouseArea.containsMouse
+
+        NumberAnimation { from: 0.0; to: 1.0; duration: 1200; easing.type: Easing.InOutSine }
+        NumberAnimation { from: 1.0; to: 0.0; duration: 1200; easing.type: Easing.InOutSine }
+        PauseAnimation { duration: 800 }
+    }
+
+    readonly property color iconColor: {
+        if (!theme) return Qt.rgba(0.92, 0.92, 0.96, 0.90)
+        if (!hasUnreadNotifications) return theme.textPrimary
+
+        let base = theme.textPrimary
+        let accentBase = theme.accent
+        let themedH = (accentBase.hsvHue - 0.35 + 1.0) % 1.0
+        let themed = Qt.hsva(themedH, accentBase.hsvSaturation, Math.min(1.0, accentBase.hsvValue + 0.5), accentBase.a)
+        let t = highlightPulse
+        return Qt.rgba(base.r + (themed.r - base.r) * t,
+                       base.g + (themed.g - base.g) * t,
+                       base.b + (themed.b - base.b) * t,
+                       base.a + (themed.a - base.a) * t)
+    }
+
+    readonly property bool notificationsOff: notificationManager && !notificationManager.notificationsEnabled
 
     property color notificationBlueColor: {
         if (!theme) return Qt.rgba(0.65, 0.55, 0.85, 0.9)
@@ -51,68 +78,28 @@ Item {
         running: notificationIconContainer.hasUnreadNotifications
     }
 
-    UI.SvgIcon {
+    Component {
+        id: bellRig
+        Common.BellRig { color: notificationIconContainer.iconColor }
+    }
+    Component {
+        id: offRig
+        Common.ShakeRig {
+            color: notificationIconContainer.iconColor
+            source: notificationIconContainer.icons ? notificationIconContainer.icons.notificationOffSvg : ""
+        }
+    }
+
+    Loader {
         id: notificationIcon
         anchors.centerIn: parent
         width: notificationIconContainer.scaled(24)
         height: notificationIconContainer.scaled(24)
-        source: notificationIconContainer.icons
-            ? (notificationIconContainer.notificationManager && !notificationIconContainer.notificationManager.notificationsEnabled
-                ? notificationIconContainer.icons.notificationOffSvg
-                : notificationIconContainer.icons.notificationSvg)
-            : ""
-        color: {
-            if (!notificationIconContainer.theme) {
-                return Qt.rgba(0.92, 0.92, 0.96, 0.90)
-            }
-
-            if (notificationIconContainer.hasUnreadNotifications) {
-                let base = notificationIconContainer.theme.textPrimary
-
-                let accentBase = notificationIconContainer.theme.accent
-                let h = accentBase.hsvHue
-                let s = accentBase.hsvSaturation
-                let v = accentBase.hsvValue
-                let a = accentBase.a
-
-                let themedHueShift = -0.35
-                let themedH = (h + themedHueShift + 1.0) % 1.0
-                let themed = Qt.hsva(themedH, s, Math.min(1.0, v + 0.5), a)
-
-                let t = notificationIcon.highlightPulse
-                let r = base.r + (themed.r - base.r) * t
-                let g = base.g + (themed.g - base.g) * t
-                let b = base.b + (themed.b - base.b) * t
-                let finalA = base.a + (themed.a - base.a) * t
-                return Qt.rgba(r, g, b, finalA)
-            }
-
-            return notificationIconContainer.theme.textPrimary
-        }
+        sourceComponent: notificationIconContainer.notificationsOff ? offRig : bellRig
         opacity: notificationMouseArea.containsMouse ? 1.0 : 0.6
         z: 1
 
-        property real baseScale: 1.0
-        property real hoverScale: notificationMouseArea.containsMouse ? 0.3 : 0.0
-        property real gentleScale: 0.0
-        property real highlightPulse: 0.0
-
-        scale: baseScale + hoverScale + gentleScale
-
-        SequentialAnimation on highlightPulse {
-            id: highlightBreath
-            loops: Animation.Infinite
-            running: notificationIconContainer.hasUnreadNotifications && !notificationMouseArea.containsMouse
-
-            NumberAnimation { from: 0.0; to: 1.0; duration: 1200; easing.type: Easing.InOutSine }
-            NumberAnimation { from: 1.0; to: 0.0; duration: 1200; easing.type: Easing.InOutSine }
-            PauseAnimation { duration: 800 }
-        }
-
         Behavior on opacity {
-            NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
-        }
-        Behavior on hoverScale {
             NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
         }
     }
@@ -124,9 +111,7 @@ Item {
         cursorShape: Qt.PointingHandCursor
         z: 2
 
-        onEntered: {
-            notificationIcon.gentleScale = 0.0
-        }
+        onEntered: if (notificationIcon.item) notificationIcon.item.play()
         onClicked: {
             if (notificationIconContainer.modeManager) {
                 notificationIconContainer.modeManager.switchMode("notification")

@@ -8,6 +8,8 @@ Common.IconButton {
     required property var icons
     required modeManager
 
+    rig: Common.ScreenshotRig {}
+
     iconSource: icons && icons.iconData.screenshot && icons.iconData.screenshot.type === "svg"
         ? icons.iconData.screenshot.value
         : ""

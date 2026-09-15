@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import "../../ui" as UI
+import "../../common" as Common
 import "../../../lib" as Theme
 
 Item {
@@ -19,26 +19,29 @@ Item {
 
     property bool isConnected: wifiManager ? wifiManager.isConnected : false
 
-    UI.SvgIcon {
-        id: wifiIconSvg
+    Component {
+        id: wifiRig
+        Common.WifiRig { color: wifiContainer.theme ? wifiContainer.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90) }
+    }
+    Component {
+        id: wifiOffRig
+        Common.ShakeRig {
+            color: wifiContainer.theme ? wifiContainer.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+            source: wifiContainer.icons ? wifiContainer.icons.wifiOffSvg : ""
+        }
+    }
+
+    Loader {
+        id: wifiIcon
         anchors.centerIn: parent
         width: wifiContainer.scaled(24)
         height: wifiContainer.scaled(24)
-        source: wifiContainer.icons ? (wifiContainer.isConnected ? wifiContainer.icons.wifiSvg : wifiContainer.icons.wifiOffSvg) : ""
-        color: wifiContainer.theme ? wifiContainer.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+        sourceComponent: wifiContainer.isConnected ? wifiRig : wifiOffRig
         opacity: wifiMouseArea.containsMouse ? 1.0 : 0.6
-        scale: wifiMouseArea.containsMouse ? 1.3 : 1.0
 
         Behavior on opacity {
             NumberAnimation {
                 duration: Theme.Motion.gentle
-                easing.type: Easing.OutCubic
-            }
-        }
-
-        Behavior on scale {
-            NumberAnimation {
-                duration: Theme.Motion.slow
                 easing.type: Easing.OutCubic
             }
         }
@@ -49,6 +52,7 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
+        onEntered: if (wifiIcon.item) wifiIcon.item.play()
         onClicked: {
             if (wifiContainer.modeManager) {
                 wifiContainer.modeManager.switchMode("wifi")

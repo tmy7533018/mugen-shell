@@ -50,6 +50,7 @@ RowLayout {
     }
     
     Common.IconButton {
+        rig: Common.LauncherRig {}
         modeManager: root.modeManager
         iconSource: root.icons ? (root.icons.iconData.launcher.type === "svg" ? root.icons.iconData.launcher.value : "") : ""
         iconText: root.icons ? (root.icons.iconData.launcher.type === "text" ? root.icons.iconData.launcher.value : "") : ""
@@ -247,6 +248,7 @@ RowLayout {
     Separator {}
 
     Common.IconButton {
+        rig: Common.WallpaperRig {}
         modeManager: root.modeManager
         iconSource: root.icons ? (root.icons.iconData.wallpaper.type === "svg" ? root.icons.iconData.wallpaper.value : "") : ""
         iconText: root.icons ? (root.icons.iconData.wallpaper.type === "text" ? root.icons.iconData.wallpaper.value : "") : ""

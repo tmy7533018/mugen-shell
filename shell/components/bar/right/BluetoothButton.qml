@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import "../../ui" as UI
+import "../../common" as Common
 import "../../../lib" as Theme
 
 Item {
@@ -22,30 +22,37 @@ Item {
     property bool isScanning: bluetoothManager ? bluetoothManager.isScanning : false
     property bool hasConnectedDevices: bluetoothManager ? bluetoothManager.hasConnectedDevices : false
 
-    UI.SvgIcon {
-        id: bluetoothIconSvg
+    readonly property string bluetoothIconSource: {
+        if (!icons || !bluetoothManager) return ""
+        return icons.getBluetoothIcon(isPowered, isScanning, hasConnectedDevices).value
+    }
+
+    Component {
+        id: runeRig
+        Common.BluetoothRig {
+            color: bluetoothContainer.theme ? bluetoothContainer.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+            variant: bluetoothContainer.isScanning ? "searching" : (bluetoothContainer.hasConnectedDevices ? "connected" : "plain")
+        }
+    }
+    Component {
+        id: slashRig
+        Common.ShakeRig {
+            color: bluetoothContainer.theme ? bluetoothContainer.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+            source: bluetoothContainer.bluetoothIconSource
+        }
+    }
+
+    Loader {
+        id: bluetoothIcon
         anchors.centerIn: parent
         width: bluetoothContainer.scaled(24)
         height: bluetoothContainer.scaled(24)
-        source: {
-            if (!bluetoothContainer.icons || !bluetoothContainer.bluetoothManager) return ""
-            let iconData = bluetoothContainer.icons.getBluetoothIcon(bluetoothContainer.isPowered, bluetoothContainer.isScanning, bluetoothContainer.hasConnectedDevices)
-            return iconData.value
-        }
-        color: bluetoothContainer.theme ? bluetoothContainer.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+        sourceComponent: bluetoothContainer.isPowered ? runeRig : slashRig
         opacity: bluetoothMouseArea.containsMouse ? 1.0 : 0.6
-        scale: bluetoothMouseArea.containsMouse ? 1.3 : 1.0
 
         Behavior on opacity {
             NumberAnimation {
                 duration: Theme.Motion.gentle
-                easing.type: Easing.OutCubic
-            }
-        }
-
-        Behavior on scale {
-            NumberAnimation {
-                duration: Theme.Motion.slow
                 easing.type: Easing.OutCubic
             }
         }
@@ -56,6 +63,7 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
+        onEntered: if (bluetoothIcon.item) bluetoothIcon.item.play()
         onClicked: {
             if (bluetoothContainer.modeManager) {
                 bluetoothContainer.modeManager.switchMode("bluetooth")

@@ -13,6 +13,8 @@ Common.IconButton {
     Layout.alignment: Qt.AlignVCenter
     opacityDuration: 150
 
+    rig: Common.ShakeRig { source: airplaneToggleButton.icons ? airplaneToggleButton.icons.airplaneSvg : "" }
+
     iconSource: airplaneToggleButton.icons ? airplaneToggleButton.icons.airplaneSvg : ""
     iconColor: (airplaneToggleButton.airplaneManager && airplaneToggleButton.airplaneManager.isEnabled)
         ? (airplaneToggleButton.theme ? airplaneToggleButton.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))

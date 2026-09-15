@@ -60,6 +60,11 @@ Item {
         }
     }
 
+    Component {
+        id: musicRig
+        Common.MusicRig {}
+    }
+
     Item {
         id: iconPanel
         anchors.fill: parent
@@ -73,6 +78,7 @@ Item {
             id: musicButton
             anchors.centerIn: parent
             modeManager: musicButtonWrapper.modeManager
+            rig: musicButtonWrapper.icons && musicButtonWrapper.icons.iconData.music.type === "svg" ? musicRig : null
             iconSource: musicButtonWrapper.icons ? (musicButtonWrapper.icons.iconData.music.type === "svg" ? musicButtonWrapper.icons.iconData.music.value : "") : ""
             iconText: musicButtonWrapper.icons ? (musicButtonWrapper.icons.iconData.music.type === "text" ? musicButtonWrapper.icons.iconData.music.value : "") : ""
             iconColor: musicButtonWrapper.currentIconColor
