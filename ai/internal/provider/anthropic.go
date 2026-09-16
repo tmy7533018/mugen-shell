@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync/atomic"
+	"time"
 )
 
 // Adaptive thinking spends from max_tokens, so each depth needs its own headroom on top of the reply cap.
@@ -208,6 +210,9 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		return err
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, a.baseURL+"/v1/messages", bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -239,6 +244,13 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 
+	var stalled atomic.Bool
+	stall := time.AfterFunc(streamStallTimeout, func() {
+		stalled.Store(true)
+		cancel()
+	})
+	defer stall.Stop()
+
 	// tool_use args stream as input_json_delta, so accumulate per index until content_block_stop.
 	type pendingTool struct {
 		ID      string
@@ -259,6 +271,7 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 	}
 
 	for scanner.Scan() {
+		stall.Reset(streamStallTimeout)
 		line := strings.TrimSpace(scanner.Text())
 		if !strings.HasPrefix(line, "data:") {
 			continue
@@ -337,6 +350,9 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 				delete(pending, evt.Index)
 			}
 		case "message_delta":
+			if evt.Delta.StopReason == "max_tokens" {
+				return truncatedStream("anthropic")
+			}
 			if evt.Delta.StopReason != "" {
 				return fn(finalChunk())
 			}
@@ -345,6 +361,9 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		}
 	}
 	if err := scanner.Err(); err != nil {
+		if stalled.Load() {
+			return fmt.Errorf("anthropic stopped sending output for %s", streamStallTimeout)
+		}
 		return err
 	}
 	return truncatedStream("anthropic")

@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync/atomic"
+	"time"
 )
 
 type OpenAI struct {
@@ -101,6 +103,9 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opt
 		return err
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, o.baseURL+"/chat/completions", bytes.NewReader(body))
 	if err != nil {
 		return err
@@ -132,6 +137,13 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opt
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 
+	var stalled atomic.Bool
+	stall := time.AfterFunc(streamStallTimeout, func() {
+		stalled.Store(true)
+		cancel()
+	})
+	defer stall.Stop()
+
 	// Tool calls arrive as deltas keyed by index and are only complete once finish_reason fires.
 	type pending struct {
 		ID   string
@@ -158,6 +170,7 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opt
 	}
 
 	for scanner.Scan() {
+		stall.Reset(streamStallTimeout)
 		line := strings.TrimSpace(scanner.Text())
 		if !strings.HasPrefix(line, "data:") {
 			continue
@@ -194,6 +207,9 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opt
 					p.Args.WriteString(tc.Function.Arguments)
 				}
 			}
+			if c.FinishReason == "length" {
+				return truncatedStream("openai")
+			}
 			if c.FinishReason != "" {
 				final := ChatChunk{Done: true}
 				if len(calls) > 0 {
@@ -222,6 +238,9 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opt
 		}
 	}
 	if err := scanner.Err(); err != nil {
+		if stalled.Load() {
+			return fmt.Errorf("openai stopped sending output for %s", streamStallTimeout)
+		}
 		return err
 	}
 	return truncatedStream("openai")

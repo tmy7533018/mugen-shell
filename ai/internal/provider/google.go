@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -136,6 +137,9 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 		return err
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	// The key goes in a header: net/http quotes the full URL into *url.Error, which reaches the client.
 	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?alt=sse", model)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
@@ -166,6 +170,13 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Buffer(make([]byte, 64*1024), 10*1024*1024)
 
+	var stalled atomic.Bool
+	stall := time.AfterFunc(streamStallTimeout, func() {
+		stalled.Store(true)
+		cancel()
+	})
+	defer stall.Stop()
+
 	var chunk struct {
 		Candidates []struct {
 			Content struct {
@@ -184,6 +195,7 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 	var accumulated []ToolCall
 
 	for scanner.Scan() {
+		stall.Reset(streamStallTimeout)
 		line := strings.TrimSpace(scanner.Text())
 		if !strings.HasPrefix(line, "data:") {
 			continue
@@ -213,6 +225,9 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 					})
 				}
 			}
+			if c.FinishReason == "MAX_TOKENS" {
+				return truncatedStream("google")
+			}
 			if c.FinishReason != "" {
 				final := ChatChunk{Done: true}
 				if len(accumulated) > 0 {
@@ -223,6 +238,9 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 		}
 	}
 	if err := scanner.Err(); err != nil {
+		if stalled.Load() {
+			return fmt.Errorf("google stopped sending output for %s", streamStallTimeout)
+		}
 		return err
 	}
 	return truncatedStream("google")
