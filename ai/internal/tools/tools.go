@@ -336,9 +336,11 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 			return rejection, nil
 		}
 		// Off-$PATH binaries need the absolute Exec path, or Hyprland fails the exec silently.
+		// Only for a bare name: an absolute path was allowlisted verbatim in rejectAppLaunch
+		// and must not be swapped for a different binary that happens to share its basename.
 		if cmd, _ := args["cmd"].(string); cmd != "" {
 			tokens := strings.Fields(strings.TrimSpace(cmd))
-			if len(tokens) > 0 {
+			if len(tokens) > 0 && !strings.ContainsRune(tokens[0], filepath.Separator) {
 				bin := filepath.Base(tokens[0])
 				if resolved := r.apps.Resolve(bin); resolved != "" {
 					resolvedTokens := strings.Fields(resolved)
