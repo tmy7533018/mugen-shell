@@ -39,6 +39,10 @@ type ToolCall struct {
 	ID        string         `json:"id"`
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments"`
+
+	// Gemini 3+ rejects a resent functionCall whose thought signature is missing; other
+	// providers leave this empty and it is dropped by omitempty.
+	ThoughtSignature string `json:"thought_signature,omitempty"`
 }
 
 type ChatOptions struct {

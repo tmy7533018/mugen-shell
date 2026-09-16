@@ -101,12 +101,17 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 			if args == nil {
 				args = map[string]any{}
 			}
-			parts = append(parts, map[string]any{
+			part := map[string]any{
 				"functionCall": map[string]any{
 					"name": tc.Name,
 					"args": args,
 				},
-			})
+			}
+			// Gemini 3+ rejects a resent call whose signature is missing; older models never set one.
+			if tc.ThoughtSignature != "" {
+				part["thoughtSignature"] = tc.ThoughtSignature
+			}
+			parts = append(parts, part)
 		}
 		if len(parts) > 0 {
 			contents = append(contents, map[string]any{
@@ -186,6 +191,7 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 						Name string         `json:"name"`
 						Args map[string]any `json:"args"`
 					} `json:"functionCall"`
+					ThoughtSignature string `json:"thoughtSignature"`
 				} `json:"parts"`
 			} `json:"content"`
 			FinishReason string `json:"finishReason"`
@@ -219,9 +225,10 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 				}
 				if p.FunctionCall.Name != "" {
 					accumulated = append(accumulated, ToolCall{
-						ID:        fmt.Sprintf("call_%d_%d", time.Now().UnixNano(), len(accumulated)),
-						Name:      p.FunctionCall.Name,
-						Arguments: p.FunctionCall.Args,
+						ID:               fmt.Sprintf("call_%d_%d", time.Now().UnixNano(), len(accumulated)),
+						Name:             p.FunctionCall.Name,
+						Arguments:        p.FunctionCall.Args,
+						ThoughtSignature: p.ThoughtSignature,
 					})
 				}
 			}
