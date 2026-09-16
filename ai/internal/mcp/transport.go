@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"syscall"
+	"time"
 )
 
 type transport interface {
@@ -60,6 +62,12 @@ func newStdioTransport(name, command string, args []string, env map[string]strin
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
 	cmd.Stderr = &prefixWriter{prefix: fmt.Sprintf("mcp[%s]: ", name)}
+	// A launcher like "npx -y <pkg>" spawns the real server as a grandchild that inherits
+	// our stdout pipe; killing only the direct child leaves it holding the pipe open and
+	// Wait blocks forever. Setpgid lets close() signal the whole group, and WaitDelay bounds
+	// Wait itself in case a process outside the group still holds a copy of the fd.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.WaitDelay = 2 * time.Second
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -98,8 +106,14 @@ func (t *stdioTransport) recv() ([]byte, error) {
 func (t *stdioTransport) close() error {
 	_ = t.stdin.Close()
 	// Closing stdin only asks; Kill makes sure, and Wait reaps the stderr goroutine too.
+	// Signal the whole process group (negative pid), not just the direct child, so a
+	// launcher's grandchild dies with it instead of orphaning and holding the pipe open.
 	if t.cmd.Process != nil {
-		_ = t.cmd.Process.Kill()
+		if pgid, err := syscall.Getpgid(t.cmd.Process.Pid); err == nil {
+			_ = syscall.Kill(-pgid, syscall.SIGKILL)
+		} else {
+			_ = t.cmd.Process.Kill()
+		}
 	}
 	return t.cmd.Wait()
 }
