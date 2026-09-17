@@ -25,9 +25,23 @@ def search_dirs() -> list[str]:
     return [d for d in MODEL_PATH.split(":") if d]
 
 
+def _phonemizer_inputs(path: str) -> bool:
+    return (os.path.isdir(os.path.join(path, "espeak-ng-data"))
+            or os.path.isdir(os.path.join(path, "dict"))
+            or bool(glob.glob(os.path.join(path, "lexicon*.txt"))))
+
+
 def is_model_dir(path: str) -> bool:
     # An .onnx is the one file every family here has; without it a stray directory could be picked.
-    return bool(glob.glob(os.path.join(path, "*.onnx")))
+    if not glob.glob(os.path.join(path, "*.onnx")):
+        return False
+    if not os.path.exists(os.path.join(path, "tokens.txt")):
+        return False
+    if os.path.exists(os.path.join(path, "voices.bin")):
+        return True
+    # sherpa-onnx kills the process (_Exit) rather than raising when a VITS model has
+    # neither, so an unusable directory must never be offered as a voice.
+    return _phonemizer_inputs(path)
 
 
 def find_model(name: str) -> str | None:
@@ -85,6 +99,9 @@ def _config(path: str):
                 glob.glob(os.path.join(path, "*.onnx")))
     if not onnx:
         raise RuntimeError(f"no .onnx model in {path}")
+    if not os.path.isdir(data_dir) and not lexicons and not os.path.isdir(dict_dir):
+        raise RuntimeError(
+            f"{path} has no espeak-ng-data, dict or lexicon; sherpa-onnx would _Exit here")
     vits = sherpa_onnx.OfflineTtsVitsModelConfig(
         model=onnx[0], tokens=tokens,
         data_dir=data_dir if os.path.isdir(data_dir) else "",

@@ -116,6 +116,16 @@ class ConfiguredVoice(_LangFixture):
         self.assertEqual(router.configured_voice(), self.EN)
 
 
+def _make_model_dir(path: str, phonemizer: bool = True) -> str:
+    """A directory shaped like a Piper voice: sherpa-onnx needs all three parts."""
+    os.makedirs(path, exist_ok=True)
+    open(os.path.join(path, "m.onnx"), "w").close()
+    open(os.path.join(path, "tokens.txt"), "w").close()
+    if phonemizer:
+        os.makedirs(os.path.join(path, "espeak-ng-data"), exist_ok=True)
+    return path
+
+
 class BuildEngine(unittest.TestCase):
     """A bad voice string must cost the user a voice, never the whole reply."""
 
@@ -124,8 +134,7 @@ class BuildEngine(unittest.TestCase):
 
         from yura.tts import local
         self._tmp = tempfile.TemporaryDirectory()
-        os.makedirs(os.path.join(self._tmp.name, "installed-voice"))
-        open(os.path.join(self._tmp.name, "installed-voice", "m.onnx"), "w").close()
+        _make_model_dir(os.path.join(self._tmp.name, "installed-voice"))
         self._saved = local.MODEL_PATH
         local.MODEL_PATH = self._tmp.name
 
@@ -184,13 +193,42 @@ class FindModel(unittest.TestCase):
         from yura.tts import local
         with tempfile.TemporaryDirectory() as root:
             os.makedirs(os.path.join(root, "__pycache__"))
-            os.makedirs(os.path.join(root, "real-voice"))
-            open(os.path.join(root, "real-voice", "model.onnx"), "w").close()
+            _make_model_dir(os.path.join(root, "real-voice"))
             saved = local.MODEL_PATH
             local.MODEL_PATH = root
             try:
                 self.assertEqual(local.available(), ["real-voice"])
                 self.assertIsNone(local.find_model("__pycache__"))
+            finally:
+                local.MODEL_PATH = saved
+
+    def test_a_model_without_phonemizer_data_is_not_offered(self):
+        """sherpa-onnx _Exit()s on these, so they must not reach a voice list."""
+        import tempfile
+
+        from yura.tts import local
+        with tempfile.TemporaryDirectory() as root:
+            _make_model_dir(os.path.join(root, "no-espeak"), phonemizer=False)
+            _make_model_dir(os.path.join(root, "complete"))
+            saved = local.MODEL_PATH
+            local.MODEL_PATH = root
+            try:
+                self.assertEqual(local.available(), ["complete"])
+                self.assertIsNone(local.find_model("no-espeak"))
+            finally:
+                local.MODEL_PATH = saved
+
+    def test_a_lexicon_stands_in_for_espeak_data(self):
+        import tempfile
+
+        from yura.tts import local
+        with tempfile.TemporaryDirectory() as root:
+            path = _make_model_dir(os.path.join(root, "lexicon-voice"), phonemizer=False)
+            open(os.path.join(path, "lexicon.txt"), "w").close()
+            saved = local.MODEL_PATH
+            local.MODEL_PATH = root
+            try:
+                self.assertEqual(local.available(), ["lexicon-voice"])
             finally:
                 local.MODEL_PATH = saved
 
