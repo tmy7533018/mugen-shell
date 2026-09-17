@@ -515,7 +515,7 @@ FocusScope {
                 Layout.alignment: Qt.AlignHCenter
 
                 cellWidth: 100
-                cellHeight: 100
+                cellHeight: 110
                 clip: true
 
                 cacheBuffer: 200

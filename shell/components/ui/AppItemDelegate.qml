@@ -81,9 +81,22 @@ Item {
     Rectangle {
         id: appItem
         anchors.fill: parent
-        anchors.margins: 8
-        color: "transparent"
-        radius: 12
+        anchors.margins: 6
+        radius: 15
+
+        readonly property color accent: delegateRoot.theme ? delegateRoot.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 1.0)
+        readonly property real faceAlpha: delegateRoot.isCurrent ? 0.12 : 0.06
+        color: delegateRoot.isFavorite
+            ? Qt.rgba(accent.r, accent.g, accent.b, faceAlpha + 0.04)
+            : Qt.rgba(1, 1, 1, faceAlpha)
+        border.width: 1
+        border.color: delegateRoot.isFavorite
+            ? Qt.rgba(accent.r, accent.g, accent.b, 0.25)
+            : Qt.rgba(1, 1, 1, 0.10)
+
+        Behavior on color {
+            ColorAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
+        }
 
         Item {
             id: selectionEffect
