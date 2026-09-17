@@ -141,6 +141,10 @@ class LocalEngine:
 
         audio = _load(self.path).generate(sentence, sid=self.speaker, speed=speed)
         samples = np.asarray(audio.samples, dtype=np.float32)
+        # A sentence the model cannot tokenise comes back empty; framing it raises wave.Error
+        # and the raise would end the whole reply, not just this sentence.
+        if samples.size == 0 or audio.sample_rate <= 0:
+            return b""
         pcm = (np.clip(samples, -1.0, 1.0) * 32767).astype(np.int16)
         buf = io.BytesIO()
         with wave.open(buf, "wb") as w:

@@ -182,7 +182,8 @@ def speak(text: str | Iterable[str], on_sentence=None, should_stop=None,
             sentence, wav = item
             if on_sentence:
                 on_sentence(sentence)
-            play_wav(wav, should_stop=should_stop)
+            if wav:
+                play_wav(wav, should_stop=should_stop)
     finally:
         done.set()
         while not q.empty():
