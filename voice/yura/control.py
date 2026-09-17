@@ -14,6 +14,8 @@ CTL_SOCKET = os.path.join(
     "mugen-shell", "yura-ctl.sock")
 # A pasted wall of text would park the synthesis queue for many minutes.
 SPEAK_MAX_CHARS = 4000
+# An unknown voice degrades to an installed one and is cached under the name it came in as.
+VOICE_MAX_CHARS = 128
 
 
 class ReadAloud:
@@ -121,7 +123,8 @@ class _CtlHandler(http.server.BaseHTTPRequestHandler):
                 self._reply(400, {"error": "empty text"})
                 return
             # Absent means "whatever the language routing picks"; Settings passes one to audition.
-            daemon.read_aloud.speak(text, str(body.get("voice") or "") or None)
+            voice = str(body.get("voice") or "")[:VOICE_MAX_CHARS]
+            daemon.read_aloud.speak(text, voice or None)
         elif self.path == "/stop":
             daemon.read_aloud.stop()
         else:
