@@ -132,6 +132,10 @@ jobs:
           cd arch/mugen-voice
           bsdtar tf mugen-voice-*.pkg.tar.zst | grep -qx 'usr/share/mugen-voice/yurad.py' \
             || { echo 'mugen-voice ships no yurad.py' >&2; exit 1; }
+          for f in yura/daemon.py yura/tts/router.py; do
+            bsdtar tf mugen-voice-*.pkg.tar.zst | grep -qx "usr/share/mugen-voice/$f" \
+              || { echo "mugen-voice ships no $f" >&2; exit 1; }
+          done
           bsdtar tf mugen-voice-*.pkg.tar.zst | grep -q 'tts/vits-piper-en_US-lessac-high/.*onnx' \
             || { echo 'mugen-voice ships no voice model' >&2; exit 1; }
 
