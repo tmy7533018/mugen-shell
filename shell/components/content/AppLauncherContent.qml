@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import "../common" as Common
 import "../ui" as UI
 import "../../lib" as Theme
 
@@ -31,6 +32,56 @@ FocusScope {
     property string searchText: ""
 
     property var favoritesSet: ({})
+
+    // First match wins, so the identifying categories come before the ones half the
+    // desktop carries: Steam is Network;FileTransfer;Game and belongs under Games.
+    readonly property var genres: [
+        { "label": "Games", "keys": ["Game", "ActionGame", "StrategyGame", "Emulator"] },
+        { "label": "Dev", "keys": ["Development", "IDE", "Building", "Debugger", "TextEditor"] },
+        { "label": "Graphics", "keys": ["Graphics", "2DGraphics", "3DGraphics", "RasterGraphics", "VectorGraphics", "Photography"] },
+        { "label": "Media", "keys": ["AudioVideo", "Audio", "Video", "Player", "Recorder", "TV", "Music"] },
+        { "label": "Internet", "keys": ["Network", "WebBrowser", "Email", "Chat", "InstantMessaging", "P2P", "FileTransfer"] },
+        { "label": "System", "keys": ["System", "Settings", "Monitor", "Security", "HardwareSettings", "DesktopSettings"] },
+        { "label": "Utilities", "keys": ["Utility", "FileManager", "FileTools", "TerminalEmulator", "Archiving", "Calculator"] }
+    ]
+
+    property string activeGenre: ""
+
+    function genreOf(app) {
+        let cats = (app && app.categories ? app.categories : "").split(";")
+        for (let g = 0; g < genres.length; g++) {
+            for (let c = 0; c < cats.length; c++) {
+                if (cats[c] !== "" && genres[g].keys.indexOf(cats[c]) >= 0) {
+                    return genres[g].label
+                }
+            }
+        }
+        return ""
+    }
+
+    // Only genres that actually hold something: an empty chip is a dead end.
+    readonly property var presentGenres: {
+        let seen = {}
+        for (let i = 0; i < apps.length; i++) {
+            let g = genreOf(apps[i])
+            if (g !== "") seen[g] = true
+        }
+        let out = []
+        for (let g = 0; g < genres.length; g++) {
+            if (seen[genres[g].label]) out.push(genres[g].label)
+        }
+        return out
+    }
+
+    readonly property var tabs: ["All"].concat(presentGenres)
+
+    function selectGenre(label) {
+        activeGenre = (activeGenre === label) ? "" : label
+        appGrid.userInteracted = false
+        appGrid.currentIndex = -1
+        filterApps()
+        modeManager.bump()
+    }
 
     function isFavorite(execKey) {
         return execKey && favoritesSet[execKey] === true
@@ -227,23 +278,30 @@ FocusScope {
     function filterApps() {
         // trim: a trailing space would fail the substring tiers and drop real hits
         let search = searchText.trim().toLowerCase()
+        // The chip narrows the pool the search then ranks, so the two compose.
+        let pool = []
+        for (let i = 0; i < apps.length; i++) {
+            if (activeGenre === "" || genreOf(apps[i]) === activeGenre) {
+                pool.push(apps[i])
+            }
+        }
         if (search === "") {
             let favs = []
             let rest = []
-            for (let i = 0; i < apps.length; i++) {
-                if (isFavorite(apps[i].exec)) {
-                    favs.push(apps[i])
+            for (let i = 0; i < pool.length; i++) {
+                if (isFavorite(pool[i].exec)) {
+                    favs.push(pool[i])
                 } else {
-                    rest.push(apps[i])
+                    rest.push(pool[i])
                 }
             }
             filteredApps = favs.concat(rest)
             return
         }
         let scored = []
-        for (let i = 0; i < apps.length; i++) {
-            let s = scoreApp(apps[i], search)
-            if (s > 0) scored.push({ app: apps[i], score: s })
+        for (let i = 0; i < pool.length; i++) {
+            let s = scoreApp(pool[i], search)
+            if (s > 0) scored.push({ app: pool[i], score: s })
         }
         scored.sort((a, b) => {
             if (a.score !== b.score) return b.score - a.score
@@ -466,42 +524,61 @@ FocusScope {
             anchors.fill: parent
             spacing: 16
 
-            UI.SearchField {
-                id: searchField
-                Layout.preferredWidth: {
-                    let cols = Math.floor(parent.width / 100)
-                    return cols > 0 ? cols * 100 : 100
-                }
-                Layout.alignment: Qt.AlignHCenter
-                theme: root.theme
-                typo: root.typo
-                icons: root.icons
-                resultCount: root.filteredApps.length
-                placeholder: "Search apps..."
+            RowLayout {
+                id: topRow
+                // Lined up with the tile faces below: the grid is centred on whole columns and each
+                // tile insets its own face by 6, so the row starts and ends on those faces.
+                readonly property int faceInset: Math.round((mainColumn.width - appGrid.width) / 2) + 6
 
-                onSearchTextChanged: (text) => {
-                    root.searchText = text
-                    filterDebounceTimer.restart()
-                    root.modeManager.bump()
-                    appGrid.userInteracted = false
-                    appGrid.currentIndex = -1
-                }
+                Layout.fillWidth: true
+                Layout.leftMargin: faceInset
+                Layout.rightMargin: faceInset
+                spacing: 22
 
-                // Entering the grid must not clobber a selection the user already moved.
-                onRequestFocusResults: (backwards) => {
-                    if (appGrid.count === 0) return
-                    appGrid.forceActiveFocus()
-                    appGrid.userInteracted = true
-                    if (appGrid.currentIndex < 0)
-                        appGrid.currentIndex = backwards ? appGrid.count - 1 : 0
+                Common.SegmentedControl {
+                    theme: root.theme
+                    typo: root.typo
+                    labels: root.tabs
+                    current: root.activeGenre === "" ? "All" : root.activeGenre
+                    controlHeight: searchField.fieldHeight
+                    onSelected: (label) => root.selectGenre(label === "All" ? "" : label)
                 }
 
-                // The grid keeps its highlight while the field has focus, so honour it over the top hit.
-                onRequestActivateSelected: () => {
-                    const i = appGrid.currentIndex
-                    root.launchApp(i >= 0 && root.filteredApps[i]
-                        ? root.filteredApps[i]
-                        : root.filteredApps[0])
+                Item { Layout.fillWidth: true }
+
+                UI.SearchField {
+                    id: searchField
+                    Layout.preferredWidth: 360
+                    theme: root.theme
+                    typo: root.typo
+                    icons: root.icons
+                    resultCount: root.filteredApps.length
+                    placeholder: "Search apps..."
+
+                    onSearchTextChanged: (text) => {
+                        root.searchText = text
+                        filterDebounceTimer.restart()
+                        root.modeManager.bump()
+                        appGrid.userInteracted = false
+                        appGrid.currentIndex = -1
+                    }
+
+                    // Entering the grid must not clobber a selection the user already moved.
+                    onRequestFocusResults: (backwards) => {
+                        if (appGrid.count === 0) return
+                        appGrid.forceActiveFocus()
+                        appGrid.userInteracted = true
+                        if (appGrid.currentIndex < 0)
+                            appGrid.currentIndex = backwards ? appGrid.count - 1 : 0
+                    }
+
+                    // The grid keeps its highlight while the field has focus, so honour it over the top hit.
+                    onRequestActivateSelected: () => {
+                        const i = appGrid.currentIndex
+                        root.launchApp(i >= 0 && root.filteredApps[i]
+                            ? root.filteredApps[i]
+                            : root.filteredApps[0])
+                    }
                 }
             }
 
