@@ -33,7 +33,9 @@ Item {
         : (cavaManager ? cavaManager.audioLevel : 0.0)
     readonly property int currentVolume: isMicMode ? audioManager.micVolume : audioManager.volume
     readonly property bool currentMuted: isMicMode ? audioManager.micMuted : audioManager.isMuted
-    readonly property string currentLabel: isMicMode ? "mic" : "speaker"
+    readonly property string speakerLabel: "speaker"
+    readonly property string micLabel: "mic"
+    readonly property string currentLabel: isMicMode ? micLabel : speakerLabel
 
     function setCurrentVolume(v) {
         if (isMicMode) audioManager.setMicVolume(v)
@@ -569,8 +571,12 @@ Item {
             anchors.top: parent.top
             anchors.topMargin: modeManager.scale(16)
             z: 5
-            width: volumeLabel.implicitWidth
+            // Both icons hang off this box, so it keeps the wider label's width and they stay put across a swap.
+            width: Math.ceil(Math.max(speakerMetrics.width, micMetrics.width))
             height: volumeLabel.implicitHeight
+
+            TextMetrics { id: speakerMetrics; font: volumeLabel.font; text: root.speakerLabel }
+            TextMetrics { id: micMetrics; font: volumeLabel.font; text: root.micLabel }
 
             Common.GlowText {
                 id: volumeLabel
@@ -604,7 +610,7 @@ Item {
                 id: swapIcon
                 width: modeManager.scale(16)
                 height: modeManager.scale(16)
-                anchors.right: volumeLabel.left
+                anchors.right: parent.left
                 anchors.rightMargin: modeManager.scale(18)
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.verticalCenterOffset: modeManager.scale(2)
@@ -653,7 +659,7 @@ Item {
                 id: dropdownIcon
                 width: modeManager.scale(16)
                 height: modeManager.scale(16)
-                anchors.left: volumeLabel.right
+                anchors.left: parent.right
                 anchors.leftMargin: modeManager.scale(18)
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.verticalCenterOffset: modeManager.scale(2)
