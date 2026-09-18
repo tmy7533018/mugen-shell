@@ -19,7 +19,7 @@ Rectangle {
     property real maxHeight: modeManager ? modeManager.scale(250) : 250
     height: Math.min(dropdownFlickable.contentHeight + (modeManager ? modeManager.scale(16) : 16), maxHeight)
 
-    color: theme ? theme.surfaceInsetCardHover : Qt.rgba(0.08, 0.08, 0.12, 0.75)
+    color: theme ? theme.popupFace : Qt.rgba(0.08, 0.08, 0.12, 0.75)
     radius: modeManager ? modeManager.scale(12) : 12
     border.width: 1
     border.color: theme ? theme.surfaceBorder : Qt.rgba(0.3, 0.3, 0.4, 0.3)
@@ -72,7 +72,7 @@ Rectangle {
             Common.GlowText {
                 visible: !dropdown.isMicMode
                 text: "Output"
-                color: Qt.rgba(0.7, 0.7, 0.8, 0.8)
+                color: dropdown.theme ? dropdown.theme.textSecondary : Qt.rgba(0.7, 0.7, 0.8, 0.8)
                 font.pixelSize: dropdown.modeManager ? dropdown.modeManager.scale(12) : 12
                 font.weight: Font.Medium
                 font.letterSpacing: 1
@@ -92,7 +92,7 @@ Rectangle {
                         height: sinkText.implicitHeight + (dropdown.modeManager ? dropdown.modeManager.scale(12) : 12)
                         color: modelData.isDefault
                             ? Qt.rgba(dropdown.theme ? dropdown.theme.accent.r : 0.5, dropdown.theme ? dropdown.theme.accent.g : 0.4, dropdown.theme ? dropdown.theme.accent.b : 0.7, 0.25)
-                            : (sinkMouseArea.containsMouse ? Qt.rgba(0.3, 0.3, 0.4, 0.3) : "transparent")
+                            : (sinkMouseArea.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent")
                         radius: dropdown.modeManager ? dropdown.modeManager.scale(6) : 6
 
                         Behavior on color {
@@ -106,7 +106,9 @@ Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.margins: dropdown.modeManager ? dropdown.modeManager.scale(8) : 8
                             text: modelData.description
-                            color: modelData.isDefault ? Qt.rgba(0.95, 0.93, 0.98, 1.0) : Qt.rgba(0.85, 0.85, 0.9, 0.9)
+                            color: dropdown.theme
+                                ? (modelData.isDefault ? dropdown.theme.textPrimary : dropdown.theme.textSecondary)
+                                : (modelData.isDefault ? Qt.rgba(0.95, 0.93, 0.98, 1.0) : Qt.rgba(0.85, 0.85, 0.9, 0.9))
                             font.pixelSize: dropdown.modeManager ? dropdown.modeManager.scale(13) : 13
                             font.family: dropdown.typo ? dropdown.typo.fontFamily : "M PLUS 2"
                             elide: Text.ElideRight
@@ -130,7 +132,7 @@ Rectangle {
             Common.GlowText {
                 visible: dropdown.isMicMode
                 text: "Input"
-                color: Qt.rgba(0.7, 0.7, 0.8, 0.8)
+                color: dropdown.theme ? dropdown.theme.textSecondary : Qt.rgba(0.7, 0.7, 0.8, 0.8)
                 font.pixelSize: dropdown.modeManager ? dropdown.modeManager.scale(12) : 12
                 font.weight: Font.Medium
                 font.letterSpacing: 1
@@ -150,7 +152,7 @@ Rectangle {
                         height: sourceText.implicitHeight + (dropdown.modeManager ? dropdown.modeManager.scale(12) : 12)
                         color: modelData.isDefault
                             ? Qt.rgba(dropdown.theme ? dropdown.theme.accent.r : 0.5, dropdown.theme ? dropdown.theme.accent.g : 0.4, dropdown.theme ? dropdown.theme.accent.b : 0.7, 0.25)
-                            : (sourceMouseArea.containsMouse ? Qt.rgba(0.3, 0.3, 0.4, 0.3) : "transparent")
+                            : (sourceMouseArea.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent")
                         radius: dropdown.modeManager ? dropdown.modeManager.scale(6) : 6
 
                         Behavior on color {
@@ -164,7 +166,9 @@ Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.margins: dropdown.modeManager ? dropdown.modeManager.scale(8) : 8
                             text: modelData.description
-                            color: modelData.isDefault ? Qt.rgba(0.95, 0.93, 0.98, 1.0) : Qt.rgba(0.85, 0.85, 0.9, 0.9)
+                            color: dropdown.theme
+                                ? (modelData.isDefault ? dropdown.theme.textPrimary : dropdown.theme.textSecondary)
+                                : (modelData.isDefault ? Qt.rgba(0.95, 0.93, 0.98, 1.0) : Qt.rgba(0.85, 0.85, 0.9, 0.9))
                             font.pixelSize: dropdown.modeManager ? dropdown.modeManager.scale(13) : 13
                             font.family: dropdown.typo ? dropdown.typo.fontFamily : "M PLUS 2"
                             elide: Text.ElideRight

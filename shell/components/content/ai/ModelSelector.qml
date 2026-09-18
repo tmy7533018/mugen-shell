@@ -75,9 +75,7 @@ Item {
 
         background: Rectangle {
             radius: selector.modeManager ? selector.modeManager.scale(10) : 10
-            color: selector.theme
-                ? Qt.rgba(selector.theme.surfaceGlass.r, selector.theme.surfaceGlass.g, selector.theme.surfaceGlass.b, 0.9)
-                : Qt.rgba(0.08, 0.05, 0.15, 0.9)
+            color: selector.theme ? selector.theme.popupFace : Qt.rgba(0.08, 0.05, 0.15, 0.9)
             border.color: selector.theme ? selector.theme.surfaceBorder : Qt.rgba(0.55, 0.55, 0.68, 0.2)
             border.width: 1
         }

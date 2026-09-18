@@ -457,7 +457,7 @@ FocusScope {
                     anchors.fill: parent
                     radius: parent.radius
                     visible: root.pendingConfirm !== null
-                    color: Qt.rgba(0.06, 0.05, 0.11, 0.93)
+                    color: root.theme ? root.theme.popupFace : Qt.rgba(0.06, 0.05, 0.11, 0.93)
                     border.width: 1
                     border.color: Qt.rgba(0.95, 0.74, 0.42, 0.60)
 
