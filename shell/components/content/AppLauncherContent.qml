@@ -73,14 +73,189 @@ FocusScope {
         return out
     }
 
-    readonly property var tabs: ["All"].concat(presentGenres)
+    readonly property var tabs: ["Home"].concat(presentGenres)
 
     function selectGenre(label) {
         activeGenre = (activeGenre === label) ? "" : label
         appGrid.userInteracted = false
         appGrid.currentIndex = -1
+        homeView.reset()
         filterApps()
         modeManager.bump()
+    }
+
+    // Groups live only on Home: a genre view or a search dissolves them into their apps.
+    property var groups: []
+
+    property var homeFavorites: []
+    property var homeGroups: []
+    property var homeAllApps: []
+
+    readonly property bool isHome: activeGenre === "" && searchText.trim() === ""
+
+    // An app may sit in any number of groups: they are ways of looking at the All band, not folders it moves into.
+    function groupsOf(execKey) {
+        return groups.filter(g => g.items.indexOf(execKey) >= 0)
+    }
+
+    function findGroup(id) {
+        for (let g = 0; g < groups.length; g++) {
+            if (groups[g].id === id) return groups[g]
+        }
+        return null
+    }
+
+    // Copy-on-write: QML only notices a var property when the reference changes.
+    function commitGroups(next) {
+        groups = next
+        saveState()
+        filterApps()
+    }
+
+    function createGroup(execA, execB) {
+        if (!execA || !execB || execA === execB) return null
+        let apps = [findApp(execA), findApp(execB)]
+        let genreA = genreOf(apps[0])
+        let name = genreA !== "" && genreA === genreOf(apps[1]) ? genreA : "Group"
+        let group = { id: "g-" + Date.now(), name: name, items: [execA, execB] }
+        commitGroups(groups.concat([group]))
+        return group
+    }
+
+    function addToGroup(id, execKey) {
+        if (!execKey) return
+        commitGroups(groups.map(g => ({
+            id: g.id, name: g.name,
+            items: g.id === id && g.items.indexOf(execKey) < 0 ? g.items.concat([execKey]) : g.items
+        })))
+    }
+
+    // A group is two or more apps; the last one left walks back to Home on its own.
+    function removeFromGroup(id, execKey) {
+        let next = groups.map(g => ({
+            id: g.id, name: g.name,
+            items: g.id === id ? g.items.filter(e => e !== execKey) : g.items
+        })).filter(g => g.items.length > 1)
+        commitGroups(next)
+    }
+
+    function renameGroup(id, name) {
+        let trimmed = (name || "").trim()
+        if (trimmed === "") return
+        commitGroups(groups.map(g => ({ id: g.id, name: g.id === id ? trimmed : g.name, items: g.items })))
+    }
+
+    function findApp(execKey) {
+        for (let i = 0; i < apps.length; i++) {
+            if (apps[i].exec === execKey) return apps[i]
+        }
+        return null
+    }
+
+    property string dragExec: ""
+    property var dragApp: null
+    property var dragSourceView: null
+    property real dragX: 0
+    property real dragY: 0
+    property real dragGrabX: 44
+    property real dragGrabY: 49
+    property string dropTargetExec: ""
+    property bool dropArmed: false
+
+    // Hovering alone must never group: only a deliberate pause over a tile arms the drop.
+    Timer {
+        id: dropDwell
+        interval: 250
+        onTriggered: if (root.dropTargetExec !== "") root.dropArmed = true
+    }
+
+    function dragStart(app, view, x, y, grabX, grabY) {
+        dragApp = app
+        dragExec = app.exec
+        dragSourceView = view
+        dragGrabX = grabX
+        dragGrabY = grabY
+        dragX = x
+        dragY = y
+        dropTargetExec = ""
+        dropArmed = false
+        modeManager.bump()
+    }
+
+    function dragMove(x, y) {
+        dragX = x
+        dragY = y
+        // Inside an open group the only meaningful drop is outside its panel.
+        let hit = openGroupId !== "" ? null : tileAt(x, y)
+        let exec = hit && hit.item && hit.item.exec !== dragExec ? hit.item.exec : ""
+        if (exec !== dropTargetExec) {
+            dropTargetExec = exec
+            dropArmed = false
+            if (exec !== "") dropDwell.restart()
+            else dropDwell.stop()
+        }
+    }
+
+    function dragEnd(x, y) {
+        let app = dragApp
+        let target = dropArmed ? findDropTarget(dropTargetExec) : null
+        let fromGroup = dragSourceView === groupGridView ? openGroupId : ""
+        dragCancel()
+        if (!app) return
+        if (target) {
+            if (target.kind === "group") addToGroup(target.id, app.exec)
+            else createGroupAndOpen(target.exec, app.exec)
+            return
+        }
+        if (fromGroup !== "" && !pointInPanel(x, y)) {
+            removeFromGroup(fromGroup, app.exec)
+            if (findGroup(fromGroup) === null) closeGroup()
+        }
+    }
+
+    function dragCancel() {
+        dropDwell.stop()
+        dragApp = null
+        dragExec = ""
+        dragSourceView = null
+        dropTargetExec = ""
+        dropArmed = false
+    }
+
+    function createGroupAndOpen(execA, execB) {
+        let g = createGroup(execA, execB)
+        if (g) openGroup(g.id, true)
+    }
+
+    function findDropTarget(execKey) {
+        if (execKey.startsWith("group:")) {
+            for (let i = 0; i < homeGroups.length; i++) {
+                if (homeGroups[i].exec === execKey) return homeGroups[i]
+            }
+            return null
+        }
+        return findApp(execKey)
+    }
+
+    function pointInPanel(x, y) {
+        if (openGroupId === "") return false
+        let p = groupPanel.mapFromItem(launcherLayer, x, y)
+        return p.x >= 0 && p.y >= 0 && p.x < groupPanel.width && p.y < groupPanel.height
+    }
+
+    // Which tile is under a point in layer coordinates, across whichever view is showing.
+    function tileAt(x, y) {
+        if (openGroupId !== "") {
+            let p = groupGridView.mapFromItem(launcherLayer, x, y)
+            if (p.x < 0 || p.y < 0 || p.x >= groupGridView.width || p.y >= groupGridView.height) return null
+            let i = groupGridView.indexAt(p.x, p.y + groupGridView.contentY)
+            return i >= 0 && i < openGroupMembers.length ? { item: openGroupMembers[i] } : null
+        }
+        if (isHome) {
+            let p = homeView.mapFromItem(launcherLayer, x, y)
+            return homeView.tileAt(p.x, p.y)
+        }
+        return null
     }
 
     function isFavorite(execKey) {
@@ -96,13 +271,12 @@ FocusScope {
             next[execKey] = true
         }
         favoritesSet = next
-        saveFavorites()
+        saveState()
         filterApps()
     }
 
-    function saveFavorites() {
-        let list = Object.keys(favoritesSet)
-        let json = JSON.stringify({ favorites: list })
+    function saveState() {
+        let json = JSON.stringify({ favorites: Object.keys(favoritesSet), groups: groups })
         let escaped = json.replace(/'/g, "'\\''")
         saveFavoritesProcess.command = [
             "sh", "-c",
@@ -124,12 +298,61 @@ FocusScope {
 
     function launchApp(app) {
         if (!app) return
+        if (app.kind === "group") {
+            openGroup(app.id)
+            return
+        }
         launchExec(app.exec || "", app.terminal === true)
     }
 
+    property string openGroupId: ""
+    property bool groupNameEditing: false
+    readonly property var openGroupMembers: {
+        let g = findGroup(openGroupId)
+        return g ? g.items.map(findApp).filter(a => a !== null) : []
+    }
+    // What the panel draws: it keeps the last group on close so the fade-out still shows the members.
+    property string shownGroupId: ""
+    readonly property var shownGroup: findGroup(shownGroupId)
+    readonly property var shownGroupMembers: {
+        let g = findGroup(shownGroupId)
+        return g ? g.items.map(findApp).filter(a => a !== null) : []
+    }
+
+    function openGroup(id, editName) {
+        shownGroupId = id
+        openGroupId = id
+        groupNameEditing = editName === true
+        groupGridView.currentIndex = -1
+        modeManager.bump()
+        groupFocusTimer.restart()
+    }
+
+    // Same dance as focusTimer: the surface needs a beat before forceActiveFocus sticks.
+    Timer {
+        id: groupFocusTimer
+        interval: 120
+        onTriggered: {
+            if (root.openGroupId === "") return
+            if (root.groupNameEditing) {
+                groupNameInput.forceActiveFocus()
+                groupNameInput.selectAll()
+            } else {
+                groupGridView.forceActiveFocus()
+            }
+        }
+    }
+
+    function closeGroup() {
+        openGroupId = ""
+        groupNameEditing = false
+        if (modeManager.isMode("launcher")) homeView.forceActiveFocus()
+    }
+
     function openContextMenu(app, px, py) {
-        if (!app) return
-        contextMenu.openFor(app, isFavorite(app.exec || ""))
+        if (!app || app.kind === "group") return
+        let leavable = openGroupId !== "" ? groupsOf(app.exec || "").filter(g => g.id === openGroupId) : groupsOf(app.exec || "")
+        contextMenu.openFor(app, isFavorite(app.exec || ""), leavable)
         contextMenu.x = Math.max(0, Math.min(px, launcherLayer.width - contextMenu.width))
         contextMenu.y = Math.max(0, Math.min(py, launcherLayer.height - contextMenu.height))
         modeManager.bump()
@@ -286,16 +509,25 @@ FocusScope {
             }
         }
         if (search === "") {
-            let favs = []
-            let rest = []
-            for (let i = 0; i < pool.length; i++) {
-                if (isFavorite(pool[i].exec)) {
-                    favs.push(pool[i])
-                } else {
-                    rest.push(pool[i])
-                }
+            let byName = (a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+            let favs = pool.filter(a => isFavorite(a.exec)).sort(byName)
+            if (activeGenre !== "") {
+                filteredApps = favs.concat(pool.filter(a => !isFavorite(a.exec)).sort(byName))
+                return
             }
-            filteredApps = favs.concat(rest)
+            let groupTiles = []
+            for (let g = 0; g < groups.length; g++) {
+                let members = groups[g].items.map(findApp).filter(a => a !== null)
+                if (members.length < 2) continue
+                groupTiles.push({ kind: "group", id: groups[g].id, name: groups[g].name,
+                                  exec: "group:" + groups[g].id, members: members })
+            }
+            // The bottom band is the whole A-Z: favourites and grouped apps appear there too.
+            let all = pool.slice().sort(byName)
+            homeFavorites = favs
+            homeGroups = groupTiles
+            homeAllApps = all
+            filteredApps = favs.concat(groupTiles).concat(all)
             return
         }
         let scored = []
@@ -323,7 +555,7 @@ FocusScope {
     }
 
     Theme.IconResolver {
-        id: iconResolver
+        id: launcherIcons
     }
 
     Process {
@@ -391,6 +623,9 @@ FocusScope {
                 let set = {}
                 for (let i = 0; i < favs.length; i++) set[favs[i]] = true
                 root.favoritesSet = set
+                let gs = Array.isArray(parsed.groups) ? parsed.groups : []
+                root.groups = gs.filter(g => g && typeof g.id === "string" && Array.isArray(g.items))
+                    .map(g => ({ id: g.id, name: String(g.name || "Group"), items: g.items.filter(e => typeof e === "string") }))
                 if (root.appsLoaded) root.filterApps()
             } catch (e) {
             }
@@ -413,7 +648,7 @@ FocusScope {
             onRead: data => {
                 let theme = data.trim()
                 if (theme.length > 0) {
-                    iconResolver.iconTheme = theme
+                    launcherIcons.iconTheme = theme
                 }
             }
         }
@@ -423,6 +658,8 @@ FocusScope {
         target: modeManager
         function onCurrentModeChanged() {
             contextMenu.shown = false
+            root.openGroupId = ""
+            root.groupNameEditing = false
             if (modeManager.isMode("launcher")) {
                 root.loadApps()
                 root.searchText = ""
@@ -456,6 +693,93 @@ FocusScope {
                             searchField.searchFieldItem.forceActiveFocus()
                         }
                     })
+                }
+            }
+        }
+    }
+
+    Component {
+        id: tileDelegate
+
+        Item {
+            id: delegateWrapper
+            width: GridView.view.cellWidth
+            height: GridView.view.cellHeight
+
+            property bool isCurrentItem: GridView.isCurrentItem
+
+            property var wrapperModelData: {
+                if (typeof modelData !== 'undefined') {
+                    return modelData
+                }
+                if (GridView.view && GridView.view.model && typeof index !== 'undefined' && index >= 0) {
+                    let model = GridView.view.model
+                    if (Array.isArray(model) && index < model.length) {
+                        return model[index]
+                    }
+                }
+                return undefined
+            }
+
+            UI.AppItemDelegate {
+                id: delegateItem
+                anchors.fill: parent
+                modelData: delegateWrapper.wrapperModelData
+                isCurrent: delegateWrapper.isCurrentItem
+                theme: root.theme
+                typo: root.typo
+                iconResolver: launcherIcons
+                modeManager: root.modeManager
+                // The star and tint mark the Favorites band and the genre grid; All and group panels list plain apps.
+                isFavorite: root.isFavorite(delegateWrapper.wrapperModelData ? delegateWrapper.wrapperModelData.exec : "")
+                    && delegateWrapper.GridView.view
+                    && (delegateWrapper.GridView.view.sectionIndex === 0 || delegateWrapper.GridView.view === appGrid)
+                dragEnabled: {
+                    let view = delegateWrapper.GridView.view
+                    return view ? (view.sectionIndex !== undefined || view === groupGridView) : false
+                }
+                willGroup: root.dropArmed && delegateWrapper.wrapperModelData
+                    && root.dropTargetExec === delegateWrapper.wrapperModelData.exec
+                isDragging: root.dragExec !== "" && delegateWrapper.wrapperModelData
+                    && root.dragExec === delegateWrapper.wrapperModelData.exec
+                    && delegateWrapper.GridView.view === root.dragSourceView
+
+                onLaunchApp: (app) => {
+                    root.launchApp(app)
+                }
+
+                onDragStarted: (app, lx, ly) => {
+                    let p = delegateItem.mapToItem(launcherLayer, lx, ly)
+                    root.dragStart(app, delegateWrapper.GridView.view, p.x, p.y, lx, ly)
+                }
+                onDragMoved: (lx, ly) => {
+                    let p = delegateItem.mapToItem(launcherLayer, lx, ly)
+                    root.dragMove(p.x, p.y)
+                }
+                onDragEnded: (lx, ly) => {
+                    let p = delegateItem.mapToItem(launcherLayer, lx, ly)
+                    root.dragEnd(p.x, p.y)
+                }
+                onDragCancelled: root.dragCancel()
+
+                onResetAutoCloseTimer: () => {
+                    modeManager.bump()
+                }
+
+                onContextMenuRequested: (app, px, py) => {
+                    let p = delegateItem.mapToItem(launcherLayer, px, py)
+                    root.openContextMenu(app, p.x, p.y)
+                }
+
+                onEntered: {
+                    let view = delegateWrapper.GridView.view
+                    if (!view) return
+                    if (view.sectionIndex !== undefined) {
+                        homeView.hoverSelect(view.sectionIndex, index)
+                    } else {
+                        view.userInteracted = true
+                        view.currentIndex = index
+                    }
                 }
             }
         }
@@ -507,14 +831,21 @@ FocusScope {
 
         focus: modeManager.isMode("launcher")
 
-        Keys.forwardTo: [searchField ? searchField.searchFieldItem : null, appGrid]
+        // With a group open its grid is the only key target; anything else would leak into the Home behind it.
+        Keys.forwardTo: root.openGroupId !== ""
+            ? [groupGridView]
+            : [searchField ? searchField.searchFieldItem : null, root.isHome ? homeView : appGrid]
 
         Keys.onPressed: (event) => {
             if (modeManager.isMode("launcher")) {
                 modeManager.bump()
             }
             if (event.key === Qt.Key_Escape) {
-                modeManager.closeAllModes()
+                if (root.openGroupId !== "") {
+                    root.closeGroup()
+                } else {
+                    modeManager.closeAllModes()
+                }
                 event.accepted = true
             }
         }
@@ -523,12 +854,18 @@ FocusScope {
             id: mainColumn
             anchors.fill: parent
             spacing: 16
+            opacity: root.openGroupId !== "" ? 0.3 : 1.0
+            Behavior on opacity { NumberAnimation { duration: Theme.Motion.standard; easing.type: Theme.Motion.easeOut } }
+
+            // Whole columns only, centred: every view below and the row above share this.
+            readonly property int gridColumns: Math.max(1, Math.floor(width / 100))
+            readonly property int gridWidth: gridColumns * 100
 
             RowLayout {
                 id: topRow
                 // Lined up with the tile faces below: the grid is centred on whole columns and each
                 // tile insets its own face by 6, so the row starts and ends on those faces.
-                readonly property int faceInset: Math.round((mainColumn.width - appGrid.width) / 2) + 6
+                readonly property int faceInset: Math.round((mainColumn.width - mainColumn.gridWidth) / 2) + 6
 
                 Layout.fillWidth: true
                 Layout.leftMargin: faceInset
@@ -539,9 +876,9 @@ FocusScope {
                     theme: root.theme
                     typo: root.typo
                     labels: root.tabs
-                    current: root.activeGenre === "" ? "All" : root.activeGenre
+                    current: root.activeGenre === "" ? "Home" : root.activeGenre
                     controlHeight: searchField.fieldHeight
-                    onSelected: (label) => root.selectGenre(label === "All" ? "" : label)
+                    onSelected: (label) => root.selectGenre(label === "Home" ? "" : label)
                 }
 
                 Item { Layout.fillWidth: true }
@@ -561,10 +898,17 @@ FocusScope {
                         root.modeManager.bump()
                         appGrid.userInteracted = false
                         appGrid.currentIndex = -1
+                        homeView.reset()
                     }
 
                     // Entering the grid must not clobber a selection the user already moved.
                     onRequestFocusResults: (backwards) => {
+                        if (root.isHome) {
+                            if (homeView.total() === 0) return
+                            homeView.forceActiveFocus()
+                            homeView.enterFrom(backwards)
+                            return
+                        }
                         if (appGrid.count === 0) return
                         appGrid.forceActiveFocus()
                         appGrid.userInteracted = true
@@ -574,6 +918,10 @@ FocusScope {
 
                     // The grid keeps its highlight while the field has focus, so honour it over the top hit.
                     onRequestActivateSelected: () => {
+                        if (root.isHome) {
+                            root.launchApp(homeView.current ? homeView.current : root.filteredApps[0])
+                            return
+                        }
                         const i = appGrid.currentIndex
                         root.launchApp(i >= 0 && root.filteredApps[i]
                             ? root.filteredApps[i]
@@ -582,13 +930,44 @@ FocusScope {
                 }
             }
 
+            LauncherHome {
+                id: homeView
+                visible: root.isHome
+                Layout.fillHeight: true
+                Layout.preferredWidth: mainColumn.gridWidth
+                Layout.alignment: Qt.AlignHCenter
+
+                theme: root.theme
+                typo: root.typo
+                favorites: root.homeFavorites
+                groups: root.homeGroups
+                allApps: root.homeAllApps
+                tileDelegate: tileDelegate
+                columns: mainColumn.gridColumns
+
+                onLaunch: (item) => root.launchApp(item)
+                onContextMenu: (item, px, py) => {
+                    let p = homeView.mapToItem(launcherLayer, px, py)
+                    root.openContextMenu(item, p.x, p.y)
+                }
+                onLeaveToSearch: {
+                    if (searchField && searchField.searchFieldItem) {
+                        searchField.searchFieldItem.forceActiveFocus()
+                        searchField.searchFieldItem.Keys.forwardTo = null
+                    }
+                }
+                onCloseRequested: {
+                    searchField.forceActiveFocus()
+                    modeManager.closeAllModes()
+                }
+                onActivity: modeManager.bump()
+            }
+
             GridView {
                 id: appGrid
+                visible: !root.isHome
                 Layout.fillHeight: true
-                Layout.preferredWidth: {
-                    let cols = Math.floor(mainColumn.width / 100)
-                    return cols > 0 ? cols * 100 : 100
-                }
+                Layout.preferredWidth: mainColumn.gridWidth
                 Layout.alignment: Qt.AlignHCenter
 
                 cellWidth: 100
@@ -713,58 +1092,7 @@ FocusScope {
                     }
                 }
 
-                delegate: Item {
-                    id: delegateWrapper
-                    width: GridView.view.cellWidth
-                    height: GridView.view.cellHeight
-
-                    property bool isCurrentItem: GridView.isCurrentItem
-
-                    property var wrapperModelData: {
-                        if (typeof modelData !== 'undefined') {
-                            return modelData
-                        }
-                        if (GridView.view && GridView.view.model && typeof index !== 'undefined' && index >= 0) {
-                            let model = GridView.view.model
-                            if (Array.isArray(model) && index < model.length) {
-                                return model[index]
-                            }
-                        }
-                        return undefined
-                    }
-
-                    UI.AppItemDelegate {
-                        id: delegateItem
-                        anchors.fill: parent
-                        modelData: delegateWrapper.wrapperModelData
-                        isCurrent: delegateWrapper.isCurrentItem
-                        theme: root.theme
-                        typo: root.typo
-                        iconResolver: root.iconResolver
-                        modeManager: root.modeManager
-                        isFavorite: root.isFavorite(delegateWrapper.wrapperModelData ? delegateWrapper.wrapperModelData.exec : "")
-
-                        onLaunchApp: (app) => {
-                            root.launchApp(app)
-                        }
-
-                        onResetAutoCloseTimer: () => {
-                            modeManager.bump()
-                        }
-
-                        onContextMenuRequested: (app, px, py) => {
-                            let p = delegateItem.mapToItem(launcherLayer, px, py)
-                            root.openContextMenu(app, p.x, p.y)
-                        }
-
-                        onEntered: {
-                            if (delegateWrapper.GridView.view) {
-                                delegateWrapper.GridView.view.userInteracted = true
-                                delegateWrapper.GridView.view.currentIndex = index
-                            }
-                        }
-                    }
-                }
+                delegate: tileDelegate
             }
 
             Text {
@@ -774,7 +1102,8 @@ FocusScope {
                     if (root.searchText === "" && Object.keys(root.favoritesSet).length === 0) {
                         return "Right-click for options"
                     }
-                    return root.filteredApps.length + " apps"
+                    // Home lists favourites twice and adds group tiles, so count the apps themselves.
+                    return (root.isHome ? root.apps.length : root.filteredApps.length) + " apps"
                 }
                 color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
                 font.pixelSize: root.typo ? root.typo.sizeSmall : 11
@@ -782,10 +1111,208 @@ FocusScope {
             }
         }
 
+        Item {
+            id: dragGhost
+            z: 48
+            visible: root.dragExec !== ""
+            x: root.dragX - root.dragGrabX
+            y: root.dragY - root.dragGrabY
+            width: 88
+            height: 98
+            rotation: -3
+            scale: 1.06
+            transformOrigin: Item.Center
+
+            Rectangle {
+                anchors.fill: parent
+                anchors.topMargin: 10
+                radius: 15
+                color: Qt.rgba(0, 0, 0, 0.45)
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: 15
+                color: Qt.rgba(1, 1, 1, 0.12)
+                border.width: 1
+                border.color: Qt.rgba(1, 1, 1, 0.18)
+
+                Column {
+                    anchors.centerIn: parent
+                    spacing: 8
+
+                    Image {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: 40
+                        height: 40
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                        sourceSize: Qt.size(96, 96)
+                        source: {
+                            if (!root.dragApp || !root.dragApp.icon) return ""
+                            let paths = launcherIcons.resolveIconPath(root.dragApp.icon)
+                            return paths && paths.length > 0 ? "file://" + paths[0] : ""
+                        }
+                    }
+
+                    Text {
+                        width: 76
+                        text: root.dragApp ? root.dragApp.name : ""
+                        color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                        font.pixelSize: root.typo ? root.typo.sizeSmall : 11
+                        font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
+                    }
+                }
+            }
+        }
+
+        MouseArea {
+            id: groupDismissArea
+            anchors.fill: parent
+            z: 44
+            enabled: root.openGroupId !== ""
+            visible: enabled
+            hoverEnabled: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+            onClicked: root.closeGroup()
+            onWheel: (wheel) => { wheel.accepted = true }
+            onPositionChanged: modeManager.bump()
+        }
+
+        Rectangle {
+            id: groupPanel
+            z: 45
+            readonly property bool open: root.openGroupId !== ""
+            opacity: open ? 1.0 : 0.0
+            scale: open ? 1.0 : 0.94
+            visible: opacity > 0.01
+            anchors.centerIn: parent
+            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Theme.Motion.easeOut } }
+            Behavior on scale { NumberAnimation { duration: Theme.Motion.fast; easing.type: Theme.Motion.easeOut } }
+
+            readonly property int columns: Math.max(2, Math.min(mainColumn.gridColumns - 2, root.shownGroupMembers.length))
+            readonly property int rows: Math.max(1, Math.ceil(root.shownGroupMembers.length / columns))
+
+            width: columns * 100 + 48
+            height: 26 + 40 + 14 + rows * 110 + 20
+            radius: 24
+            color: root.theme ? root.theme.popupFace : Qt.rgba(13 / 255, 8 / 255, 26 / 255, 0.92)
+            border.width: 1
+            border.color: root.theme ? root.theme.surfaceBorder : Qt.rgba(0.70, 0.65, 0.90, 0.3)
+
+            // Swallow clicks so they do not fall through to the dismiss area.
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                onClicked: (mouse) => { mouse.accepted = true }
+                onWheel: (wheel) => { wheel.accepted = true }
+            }
+
+            Item {
+                id: groupNameRow
+                anchors.top: parent.top
+                anchors.topMargin: 26
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: Math.max(groupNameInput.contentWidth, 40) + 20
+                height: 40
+
+                TextInput {
+                    id: groupNameInput
+                    anchors.centerIn: parent
+                    anchors.verticalCenterOffset: -3
+                    text: root.shownGroup ? root.shownGroup.name : ""
+                    font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
+                    font.pixelSize: 20
+                    color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                    selectionColor: root.theme ? Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.35) : Qt.rgba(0.65, 0.55, 0.85, 0.35)
+                    selectedTextColor: color
+                    horizontalAlignment: TextInput.AlignHCenter
+                    activeFocusOnPress: true
+                    selectByMouse: true
+
+                    Keys.onPressed: (event) => {
+                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Escape) {
+                            groupGridView.forceActiveFocus()
+                            event.accepted = true
+                        }
+                    }
+                    // Whatever is in the field when it loses focus is the name; there is no cancel.
+                    onActiveFocusChanged: {
+                        if (!activeFocus && root.openGroupId !== "") root.renameGroup(root.openGroupId, text)
+                    }
+                }
+
+                Rectangle {
+                    anchors.bottom: parent.bottom
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: parent.width
+                    height: 2
+                    radius: 1
+                    color: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 1.0)
+                    opacity: groupNameInput.activeFocus ? 0.75 : (groupNameHover.hovered ? 0.3 : 0.0)
+
+                    Behavior on opacity { NumberAnimation { duration: Theme.Motion.micro } }
+                }
+
+                HoverHandler { id: groupNameHover }
+            }
+
+            GridView {
+                id: groupGridView
+                anchors.top: groupNameRow.bottom
+                anchors.topMargin: 14
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: groupPanel.columns * 100
+                height: groupPanel.rows * 110
+                interactive: false
+                cellWidth: 100
+                cellHeight: 110
+                model: root.shownGroupMembers
+                delegate: tileDelegate
+                currentIndex: -1
+                highlight: null
+                highlightFollowsCurrentItem: false
+                property bool userInteracted: false
+
+                // GridView selects 0 whenever its model changes; nothing is chosen until hover or a key.
+                onCountChanged: {
+                    if (!userInteracted && currentIndex !== -1) currentIndex = -1
+                }
+
+                Keys.onPressed: (event) => {
+                    modeManager.bump()
+                    let cols = groupPanel.columns
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        if (currentIndex >= 0 && root.openGroupMembers[currentIndex]) root.launchApp(root.openGroupMembers[currentIndex])
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.key === Qt.Key_Backtab) {
+                        currentIndex = count === 0 ? -1 : (currentIndex - 1 + count) % count
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L || event.key === Qt.Key_Tab) {
+                        currentIndex = count === 0 ? -1 : (currentIndex + 1) % count
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
+                        if (currentIndex < 0) currentIndex = 0
+                        else if (currentIndex + cols < count) currentIndex += cols
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
+                        if (currentIndex >= cols) currentIndex -= cols
+                        else groupNameInput.forceActiveFocus()
+                        event.accepted = true
+                    }
+                }
+            }
+        }
+
         MouseArea {
             id: menuDismissArea
             anchors.fill: parent
-            z: 40
+            // Above the group panel, so a click anywhere but the menu dismisses it there too.
+            z: 49
             enabled: contextMenu.shown
             visible: enabled
             hoverEnabled: true
@@ -802,9 +1329,10 @@ FocusScope {
             typo: root.typo
 
             onDismissed: {
-                if (modeManager.isMode("launcher")) {
-                    appGrid.forceActiveFocus()
-                }
+                if (!modeManager.isMode("launcher")) return
+                if (root.openGroupId !== "") groupGridView.forceActiveFocus()
+                else if (root.isHome) homeView.forceActiveFocus()
+                else appGrid.forceActiveFocus()
             }
 
             onLaunchRequested: (app) => {
@@ -814,6 +1342,11 @@ FocusScope {
             onActionRequested: (app, actionExec) => {
                 // Terminal= applies to the whole entry, actions included
                 root.launchExec(actionExec, app && app.terminal === true)
+            }
+
+            onGroupRemovalRequested: (app, groupId) => {
+                removeFromGroup(groupId, app.exec)
+                if (root.openGroupId !== "" && findGroup(root.openGroupId) === null) root.closeGroup()
             }
 
             onFavoriteToggled: (app) => {

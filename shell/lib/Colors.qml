@@ -444,6 +444,11 @@ QtObject {
         return onLightSurface ? onLightVariant(animated) : animated
     }
 
+    // Menus and the group panel sit over unblurred app icons, so they stay dark in light mode too; only the hue follows the wallpaper.
+    readonly property color popupFace: themeMode === "light"
+        ? Qt.hsla(Math.max(0, accent.hslHue), accent.hslSaturation * 0.3, 0.14, 0.72)
+        : Qt.hsla(Math.max(0, accent.hslHue), accent.hslSaturation * 0.55, 0.12, 0.92)
+
     Behavior on surfaceBorder { ColorAnimation { duration: 400; easing.type: Easing.InOutCubic } }
     Behavior on surfaceGlass { ColorAnimation { duration: 400; easing.type: Easing.InOutCubic } }
     Behavior on textPrimary { ColorAnimation { duration: 400; easing.type: Easing.InOutCubic } }

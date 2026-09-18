@@ -15,6 +15,7 @@ FocusScope {
     signal launchRequested(var app)
     signal actionRequested(var app, string actionExec)
     signal favoriteToggled(var app)
+    signal groupRemovalRequested(var app, string groupId)
     signal openLocationRequested(var app)
     signal uninstallRequested(var app)
     signal dismissed()
@@ -63,9 +64,9 @@ FocusScope {
         }
     ]
 
-    function openFor(appData, isFav) {
+    function openFor(appData, isFav, leavableGroups) {
         app = appData
-        menuItems = buildItems(appData, isFav)
+        menuItems = buildItems(appData, isFav, leavableGroups || [])
         currentIndex = -1
         shown = true
         menuRoot.forceActiveFocus()
@@ -77,7 +78,7 @@ FocusScope {
         dismissed()
     }
 
-    function buildItems(a, fav) {
+    function buildItems(a, fav, leavableGroups) {
         let list = [{ kind: "open", label: "Open" }]
         let acts = (a && a.actions) ? a.actions : []
         for (let i = 0; i < acts.length; i++) {
@@ -85,6 +86,9 @@ FocusScope {
         }
         list.push({ kind: "sep" })
         list.push({ kind: "favorite", label: fav ? "Remove from Favorites" : "Add to Favorites" })
+        for (let i = 0; i < leavableGroups.length; i++) {
+            list.push({ kind: "ungroup", label: "Remove from " + leavableGroups[i].name, groupId: leavableGroups[i].id })
+        }
         if (a && a.desktopFile) {
             list.push({ kind: "location", label: "Open File Location" })
             list.push({ kind: "sep" })
@@ -104,6 +108,8 @@ FocusScope {
             actionRequested(a, it.exec || "")
         } else if (it.kind === "favorite") {
             favoriteToggled(a)
+        } else if (it.kind === "ungroup") {
+            groupRemovalRequested(a, it.groupId)
         } else if (it.kind === "location") {
             openLocationRequested(a)
         } else if (it.kind === "uninstall") {
@@ -140,10 +146,7 @@ FocusScope {
     Rectangle {
         anchors.fill: parent
         radius: Theme.Motion.radiusCard
-        // dark in light mode too: the menu sits over unblurred app icons where clear glass is unreadable
-        color: menuRoot.theme && menuRoot.theme.themeMode === "light"
-            ? Qt.rgba(0.12, 0.10, 0.18, 0.62)
-            : Qt.rgba(0.05, 0.03, 0.10, 0.85)
+        color: menuRoot.theme ? menuRoot.theme.popupFace : Qt.rgba(0.05, 0.03, 0.10, 0.85)
         border.width: 1
         border.color: menuRoot.theme ? menuRoot.theme.surfaceBorder : Qt.rgba(0.70, 0.65, 0.90, 0.3)
     }
