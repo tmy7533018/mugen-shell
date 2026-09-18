@@ -866,6 +866,11 @@ FocusScope {
                 // Lined up with the tile faces below: the grid is centred on whole columns and each
                 // tile insets its own face by 6, so the row starts and ends on those faces.
                 readonly property int faceInset: Math.round((mainColumn.width - mainColumn.gridWidth) / 2) + 6
+                readonly property int searchFull: 360
+                readonly property int searchLeast: 220
+                // A tight row (1080p with every genre present) squeezes the search field first, then the segments.
+                readonly property int searchWidth: Math.max(searchLeast, Math.min(searchFull, width - spacing * 2 - genreTabs.naturalWidth))
+                readonly property int tabsWidth: Math.max(0, Math.min(genreTabs.naturalWidth, width - spacing * 2 - searchWidth))
 
                 Layout.fillWidth: true
                 Layout.leftMargin: faceInset
@@ -873,6 +878,8 @@ FocusScope {
                 spacing: 22
 
                 Common.SegmentedControl {
+                    id: genreTabs
+                    Layout.preferredWidth: topRow.tabsWidth
                     theme: root.theme
                     typo: root.typo
                     labels: root.tabs
@@ -885,7 +892,7 @@ FocusScope {
 
                 UI.SearchField {
                     id: searchField
-                    Layout.preferredWidth: 360
+                    Layout.preferredWidth: topRow.searchWidth
                     theme: root.theme
                     typo: root.typo
                     icons: root.icons
@@ -1099,7 +1106,7 @@ FocusScope {
                 Layout.alignment: Qt.AlignHCenter
                 text: {
                     if (root.isLoading) return "Loading..."
-                    if (root.searchText === "" && Object.keys(root.favoritesSet).length === 0) {
+                    if (root.searchText === "" && root.activeGenre === "" && Object.keys(root.favoritesSet).length === 0) {
                         return "Right-click for options"
                     }
                     // Home lists favourites twice and adds group tiles, so count the apps themselves.

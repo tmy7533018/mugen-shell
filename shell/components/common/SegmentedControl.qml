@@ -12,9 +12,9 @@ Rectangle {
     property int controlHeight: 50
 
     readonly property int inset: 4
-    // Every segment takes the widest label's width, so the control does not jitter between
-    // selections. Measured imperatively: a binding that feeds TextMetrics would loop.
-    property int segmentWidth: 0
+    // The widest label sets every segment, measured imperatively: a binding feeding TextMetrics would loop.
+    property int naturalWidth: 0
+    readonly property int segmentWidth: labels.length > 0 ? Math.floor((width - inset * 2) / labels.length) : 0
 
     readonly property int currentIndex: {
         let i = labels.indexOf(current)
@@ -23,7 +23,7 @@ Rectangle {
 
     signal selected(string label)
 
-    implicitWidth: segmentWidth * labels.length + inset * 2
+    implicitWidth: naturalWidth
     implicitHeight: controlHeight
 
     radius: height / 2
@@ -35,6 +35,7 @@ Rectangle {
         id: labelMetrics
         font.family: control.typo ? control.typo.fontFamily : "M PLUS 2"
         font.pixelSize: control.typo ? control.typo.sizeSmall : 11
+        onFontChanged: control.measureSegments()
     }
 
     function measureSegments() {
@@ -43,7 +44,7 @@ Rectangle {
             labelMetrics.text = labels[i]
             widest = Math.max(widest, labelMetrics.width)
         }
-        segmentWidth = Math.ceil(widest) + 30
+        naturalWidth = (Math.ceil(widest) + 30) * labels.length + inset * 2
     }
 
     onLabelsChanged: measureSegments()
@@ -51,7 +52,7 @@ Rectangle {
 
     Rectangle {
         // Equal-width segments mean the selection is arithmetic, no itemAt() lookup.
-        x: control.inset + control.currentIndex * control.segmentWidth
+        x: segmentsRow.x + control.currentIndex * control.segmentWidth
         y: control.inset
         width: control.segmentWidth
         height: control.height - control.inset * 2
@@ -65,6 +66,7 @@ Rectangle {
     }
 
     Row {
+        id: segmentsRow
         anchors.centerIn: parent
         spacing: 0
 
@@ -75,7 +77,7 @@ Rectangle {
                 id: segment
                 // Declaring modelData required would drop the whole file from the headless harness.
                 property string label: typeof modelData !== 'undefined' ? modelData : ""
-                readonly property bool isCurrent: control.current === label
+                readonly property bool isCurrent: control.labels[control.currentIndex] === label
 
                 width: control.segmentWidth
                 height: control.height - control.inset * 2
@@ -93,7 +95,6 @@ Rectangle {
                     anchors.centerIn: parent
                     width: parent.width - 8
                     horizontalAlignment: Text.AlignHCenter
-                    // Segments are measured to fit, so this only catches a font change after measuring.
                     elide: Text.ElideRight
                     text: segment.label
                     font.family: control.typo ? control.typo.fontFamily : "M PLUS 2"
