@@ -58,6 +58,10 @@ guess_ime_engine() {
   esac
 }
 
+ime_engine_known() {
+  [[ "$1" =~ ^[a-z0-9-]+$ ]] && pacman -Si "fcitx5-$1" > /dev/null 2>&1
+}
+
 want_ime=1
 want_voice=0
 want_zsh=0
@@ -113,14 +117,15 @@ menu() {
     fi
     printf '\n  mugen-shell, mugen-ai and mugen-audio are always installed.\n'
     printf '  \033[2mnumber to toggle, e to pick the IME engine, Enter to start, q to quit\033[0m\n\n  > '
-    local choice; read -r choice || choice=q
+    local choice engine; read -r choice || choice=q
     case "$choice" in
       1) want_ime=$((1 - want_ime)) ;;
       2) want_voice=$((1 - want_voice)) ;;
       3) want_zsh=$((1 - want_zsh)) ;;
       4) want_apps=$((1 - want_apps)) ;;
       5) dm_present || want_dm=$((1 - want_dm)) ;;
-      e) printf '  engine (mozc/rime/hangul): '; read -r ime_engine ;;
+      e) printf '  engine (mozc/rime/hangul): '; read -r engine
+         if ime_engine_known "$engine"; then ime_engine=$engine; else warn "no fcitx5-$engine package"; fi ;;
       "") return 0 ;;
       q|Q) exit 0 ;;
       *) warn "unknown choice: $choice" ;;
@@ -164,16 +169,23 @@ build_pkg() {
   rm -rf "$dest"
 }
 
+# A running unit keeps the old binary until restarted, and the shell reloading mid-extraction fails.
+restart_running() {
+  local u
+  for u in "$@"; do
+    if systemctl --user is-active --quiet "$u" 2> /dev/null; then
+      printf '  restarting %s onto the new files\n' "$u"
+      systemctl --user restart "$u"
+    fi
+  done
+}
+
 build_core() {
   say "Building mugen-shell, mugen-ai and mugen-audio"
   # Only the three built here: read-aloud is its own pkgbase precisely so this stays cheap.
   build_pkg mugen-shell -sf --noconfirm
-
-  # pacman swaps the QML the running shell watches, and a reload landing mid-extraction fails.
-  if systemctl --user is-active --quiet mugen-shell.service 2> /dev/null; then
-    printf '  restarting the running bar onto the new files\n'
-    systemctl --user restart mugen-shell.service
-  fi
+  # The backend first, so the bar comes back up against the new API.
+  restart_running mugen-ai.service mugen-shell.service
 }
 
 build_voice() {
@@ -184,6 +196,7 @@ build_voice() {
 
   say "Building the AivisSpeech engine (Japanese voice)"
   build_pkg aivisspeech-engine -f --noconfirm
+  restart_running aivisspeech-engine.service yura-voice.service
 }
 
 # The panels shell out to nmcli, bluetoothctl and pactl; the packages come with the core, the daemons do not.
@@ -228,6 +241,7 @@ setup_dm() {
 main() {
   preflight
   (( assume_yes )) || menu
+  if (( want_ime )); then ime_engine_known "$ime_engine" || die "no fcitx5-$ime_engine package: mozc, rime or hangul"; fi
 
   ensure_aur_helper
   say "Installing AUR dependencies"
