@@ -115,6 +115,11 @@ jobs:
           check 'mugen-ai-*.pkg.tar.zst'    'usr/lib/systemd/user/mugen-ai.service'
           check 'mugen-ai-*.pkg.tar.zst'    'usr/share/mugen-ai/config.toml.example'
           check 'mugen-shell-*.pkg.tar.zst' 'usr/bin/mugen-shell-session'
+          check 'mugen-shell-*.pkg.tar.zst' 'usr/bin/mugen-shell-sync'
+          check 'mugen-shell-*.pkg.tar.zst' 'usr/lib/systemd/user/mugen-shell.service'
+          check 'mugen-shell-*.pkg.tar.zst' 'usr/lib/systemd/user/mugen-shell-session.target'
+          check 'mugen-shell-*.pkg.tar.zst' 'usr/share/mugen-shell/qml/shell.qml'
+          check 'mugen-shell-*.pkg.tar.zst' 'usr/share/mugen-shell/hypr/hyprland.lua'
           check 'mugen-shell-*.pkg.tar.zst' 'usr/share/wayland-sessions/mugen-shell.desktop'
           check 'mugen-shell-*.pkg.tar.zst' 'etc/pam.d/mugen-lock'
           absent() {
