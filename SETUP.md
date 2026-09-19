@@ -17,9 +17,10 @@ cd mugen-shell
 非対話で走らせる場合:
 
 ```bash
-./install.sh --yes                      # 既定のまま
-./install.sh --with-voice --without-zsh # 個別に指定 (--help で一覧)
+./install.sh --yes
 ```
+
+オプションの一覧は `./install.sh --help` で出ます。
 
 終わったらログアウトして、ディスプレイマネージャのセッション一覧から **mugen-shell** を選んでください。
 
@@ -74,7 +75,7 @@ programs.mugen-shell.zsh.enable = true;                    # システム層
 home-manager.users.YOUR_USER.programs.mugen-shell.zsh.enable = true;
 ```
 
-**日本語入力 (他の言語も同様)**: fcitx5 は必ずこのオプションで入れます:
+**日本語入力**: fcitx5 はこのオプションで入れます。直接インストールすると IME がログインセッションに登録されず、入力欄で使えません。
 
 ```nix
 programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
@@ -88,13 +89,13 @@ programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
 
 ## mugen-ai の設定
 
-設定は **Settings → Yura** から。手で編集する場合は同じ画面の **Edit toml** で `~/.config/mugen-ai/config.toml` を開きます (テンプレート: `ai/config.toml.example`、Arch では `/usr/share/mugen-ai/config.toml.example`)。
+設定は **Settings → Yura** から。手で編集する場合は同じ画面の **Edit toml** で `~/.config/mugen-ai/config.toml` を開きます。テンプレートは `ai/config.toml.example` で、Arch では `/usr/share/mugen-ai/config.toml.example` にあります。
 
 最初にやること:
 
-1. **モデルを用意する。** Ollama でモデルを pull する (`ollama pull qwen3:4b` など) か、下の API キーを置きます。
+1. **モデルを用意する。** `ollama pull qwen3:4b` のように Ollama でモデルを pull するか、下の API キーを置きます。
 2. **Allowed apps でアプリを許可する。** 許可するまで Yura はアプリを起動しません。
-3. **`mugen-ai.service` が止まっていたら**、Yura のパネル (`Super + Shift + Y`) に出るコマンドで起動します。
+3. **`mugen-ai.service` が止まっていたら**、Yura のチャットパネルに出るコマンドで起動します。
 
 ### プロバイダ API キー
 
@@ -112,7 +113,7 @@ systemctl --user restart mugen-ai.service
 
 ### モデル選び
 
-ツール実行が安定するのは API 経由の Claude / Gemini。Ollama なら `qwen3:14b`、`qwen3:4b` は **Thinking** を ON にします。
+ツール実行が安定するのは API 経由の Claude / Gemini です。Ollama なら `qwen3:14b`。`qwen3:4b` を使う場合は **Thinking** を ON にします。
 
 <details>
 <summary><b>MCP サーバ</b>: 外部ツールを取り込む</summary>
@@ -128,9 +129,9 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 # trusted = false    # true にすると、このサーバのツールでは承認プロンプトを省略
 ```
 
-- `command` はサービスの `PATH` から見える必要があります。`npx` 系なら Node.js、`uvx` 系なら [uv](https://docs.astral.sh/uv/) を別途入れてください (Nix なら `home.packages`)
+- `command` はサービスの `PATH` から見える必要があります。`npx` 系なら Node.js、`uvx` 系なら [uv](https://docs.astral.sh/uv/) を別途入れてください。Nix なら `home.packages` に足します
 - リモートサーバは `command` の代わりに `url = "https://example.com/mcp"`
-- サーバ名は短く・小文字・アンダースコア無し (ツール名が `<name>__<tool>` になるため)。変更したら `mugen-ai.service` を再起動
+- サーバ名は短く・小文字・アンダースコア無しにします。ツール名が `<name>__<tool>` になるためです。変更したら `mugen-ai.service` を再起動
 - 信用するサーバは `trusted = true` で承認プロンプトを省略できます
 - トークンは `~/.config/mugen-ai/.env` に置き、`env = { GITHUB_TOKEN = "${GITHUB_TOKEN}" }` のように参照します
 
@@ -169,7 +170,7 @@ programs.mugen-shell.voice.enable = true;
 | キー | 動作 |
 |---|---|
 | `Super + R` | アプリランチャー |
-| `Super + Y` / `Super + Shift + Y` | Yura (バーの入力行 / コーナーパネル) |
+| `Super + Y` / `Super + Shift + Y` | Yura のバーの入力欄 / チャットパネル |
 | `Super + ,` | Settings |
 | `Super + Enter` | ターミナル |
 | `Super + Backspace` | アクティブなウィンドウを閉じる |

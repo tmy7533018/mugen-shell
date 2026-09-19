@@ -17,9 +17,10 @@ cd mugen-shell
 To run it without the menu:
 
 ```bash
-./install.sh --yes                      # the defaults
-./install.sh --with-voice --without-zsh # pick individually (--help lists them)
+./install.sh --yes
 ```
+
+`./install.sh --help` lists the options.
 
 When it finishes, log out and pick **mugen-shell** from your display manager's session list.
 
@@ -74,7 +75,7 @@ programs.mugen-shell.zsh.enable = true;                    # system layer
 home-manager.users.YOUR_USER.programs.mugen-shell.zsh.enable = true;
 ```
 
-**Japanese (or other) input**: install fcitx5 through this option only:
+**Japanese input**: install fcitx5 through this option. Installed directly, the IME is not registered for the login session and the input fields cannot use it.
 
 ```nix
 programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
@@ -88,13 +89,13 @@ programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
 
 ## Configuring mugen-ai
 
-Configure it under **Settings → Yura**. To edit by hand, **Edit toml** on the same page opens `~/.config/mugen-ai/config.toml` (template: `ai/config.toml.example`, on Arch `/usr/share/mugen-ai/config.toml.example`).
+Configure it under **Settings → Yura**. To edit by hand, **Edit toml** on the same page opens `~/.config/mugen-ai/config.toml`. The template is `ai/config.toml.example`, or `/usr/share/mugen-ai/config.toml.example` on Arch.
 
 First steps:
 
-1. **Get a model.** Pull one with Ollama (`ollama pull qwen3:4b`, say) or add an API key below.
+1. **Get a model.** Pull one with Ollama, such as `ollama pull qwen3:4b`, or add an API key below.
 2. **Allow apps under Allowed apps.** Yura launches nothing until you do.
-3. **If `mugen-ai.service` is not running**, start it with the command Yura's panel (`Super + Shift + Y`) shows.
+3. **If `mugen-ai.service` is not running**, start it with the command Yura's chat panel shows.
 
 ### Provider API keys
 
@@ -112,7 +113,7 @@ systemctl --user restart mugen-ai.service
 
 ### Choosing a model
 
-Hosted Claude and Gemini drive the tools most reliably. On Ollama use `qwen3:14b`, or `qwen3:4b` with **Thinking** on.
+Hosted Claude and Gemini drive the tools most reliably. On Ollama use `qwen3:14b`. If you use `qwen3:4b`, turn **Thinking** on.
 
 <details>
 <summary><b>MCP servers</b>: pulling in external tools</summary>
@@ -128,9 +129,9 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 # trusted = false    # true = skip the approval prompt for this server's tools
 ```
 
-- `command` has to be on the service's `PATH`. Install Node.js for `npx` servers or [uv](https://docs.astral.sh/uv/) for `uvx` ones yourself (`home.packages` on Nix)
+- `command` has to be on the service's `PATH`. Install Node.js for `npx` servers or [uv](https://docs.astral.sh/uv/) for `uvx` ones yourself. On Nix, add them to `home.packages`
 - For a remote server, use `url = "https://example.com/mcp"` instead of `command`
-- Keep server names short, lowercase, without underscores (tools are named `<name>__<tool>`). Restart `mugen-ai.service` after changes
+- Keep server names short, lowercase and without underscores, because tools are named `<name>__<tool>`. Restart `mugen-ai.service` after changes
 - `trusted = true` skips the approval prompt for a server you trust
 - Keep tokens in `~/.config/mugen-ai/.env` and reference them as `env = { GITHUB_TOKEN = "${GITHUB_TOKEN}" }`
 
@@ -169,7 +170,7 @@ Full list: `Super + /`. Definitions: `system/hypr/configs/keybinds.lua`.
 | Key | Action |
 |---|---|
 | `Super + R` | App launcher |
-| `Super + Y` / `Super + Shift + Y` | Yura (bar row / corner panel) |
+| `Super + Y` / `Super + Shift + Y` | Yura's bar input / chat panel |
 | `Super + ,` | Settings |
 | `Super + Enter` | Terminal |
 | `Super + Backspace` | Close the active window |
