@@ -21,9 +21,14 @@ is_video() { case "${1,,}" in *.mp4|*.webm|*.mkv|*.gif) return 0;; *) return 1;;
 # The daemon is up long before it listens, so a running process is not readiness.
 swww_ready() { awww query >/dev/null 2>&1; }
 
+# A service restart kills the shell's whole cgroup, so the daemons get a scope of their own.
+spawn_daemon() {
+  setsid nohup systemd-run --user --scope --quiet -- "$@" >/dev/null 2>&1 &
+}
+
 ensure_swww() {
   swww_ready && return 0
-  setsid nohup awww-daemon --format xrgb --no-cache >/dev/null 2>&1 &
+  spawn_daemon awww-daemon --format xrgb --no-cache
   for _ in {1..60}; do
     swww_ready && return 0
     sleep 0.05
@@ -46,7 +51,7 @@ for _ in {1..10}; do
 done
 
 if is_video "$TARGET"; then
-  setsid nohup mpvpaper -o "$MPV_OPTS" '*' "$TARGET" >/dev/null 2>&1 &
+  spawn_daemon mpvpaper -o "$MPV_OPTS" '*' "$TARGET"
 else
   ensure_swww
   awww img --resize crop "$TARGET" "${TRANS_OPTS[@]}"

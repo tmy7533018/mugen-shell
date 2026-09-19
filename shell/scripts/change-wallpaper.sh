@@ -128,8 +128,13 @@ swww_ready() {
   awww query >/dev/null 2>&1
 }
 
+# A service restart kills the shell's whole cgroup, so the daemons get a scope of their own.
+spawn_daemon() {
+  setsid nohup systemd-run --user --scope --quiet -- "$@" 9>&- &
+}
+
 start_swww() {
-  setsid nohup awww-daemon --format xrgb --no-cache >/dev/null 2>&1 9>&- &
+  spawn_daemon awww-daemon --format xrgb --no-cache >/dev/null 2>&1
 }
 
 ensure_swww() {
@@ -327,7 +332,7 @@ elif is_video "$WALLPAPER_ABS"; then
 
   echo "Starting mpvpaper..."
   debug_log "Starting mpvpaper with: $WALLPAPER_ABS"
-  setsid nohup mpvpaper -o "$MPV_OPTS" '*' "$WALLPAPER_ABS" >"$THUMB_DIR/mpvpaper.log" 2>&1 9>&- &
+  spawn_daemon mpvpaper -o "$MPV_OPTS" '*' "$WALLPAPER_ABS" >"$THUMB_DIR/mpvpaper.log" 2>&1
 
   for i in {1..20}; do
     if pgrep mpvpaper >/dev/null 2>&1; then
