@@ -83,6 +83,7 @@ Item {
     Component { id: themeSection; Settings.ThemeSection {
         theme: root.theme
         modeManager: root.modeManager
+        settingsManager: root.settingsManager
     }}
     Component { id: barSurfaceSection; Settings.BarSurfaceSection {
         theme: root.theme

@@ -186,6 +186,7 @@ PanelWindow {
 
     Theme.Colors {
         id: theme
+        settings: settingsManager
 
         // A module backdrop hides the face entirely, so only judge the colour when none is up.
         windowTint: (settingsManager.barSurfaceCustom && !surface.moduleBackground)

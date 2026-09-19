@@ -13,6 +13,7 @@ ShellRoot {
 
     Theme.Colors {
         id: themeColors
+        settings: settingsManager
     }
 
     Theme.SettingsManager {

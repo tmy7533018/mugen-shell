@@ -325,7 +325,7 @@ ShellRoot {
 
     Theme.SettingsManager { id: settingsManager }
     Theme.Typography { id: typography }
-    Theme.Colors { id: colors }
+    Theme.Colors { id: colors; settings: settingsManager }
 
     // Colors resolves the mode via a subprocess; the face would open dark.
     FileView {

@@ -9,7 +9,7 @@ import "./components/yura" as Yura
 ShellRoot {
     id: root
 
-    Theme.Colors { id: themeColors }
+    Theme.Colors { id: themeColors; settings: settingsManager }
     Theme.IconProvider { id: icons }
     Theme.AiBackend { id: aiBackend }
     Theme.SettingsManager { id: settingsManager }

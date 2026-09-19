@@ -14,6 +14,7 @@ ShellRoot {
 
     Theme.Colors {
         id: themeColors
+        settings: settingsManager
 
         // This is a window over other apps, not glass over the wallpaper, so it takes the bar's colour.
         windowTint: settingsManager.barSurfaceCustom

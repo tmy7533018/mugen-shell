@@ -52,6 +52,9 @@ QtObject {
     property real barSurfaceLightness: 0.090196
     property real barSurfaceOpacity: 0.82
     property bool barSurfaceBorder: true
+    property real glassOpacityDark: 0.82
+    property real glassOpacityLight: 0.65
+
     property int workspaceCount: 5
     property string displayMonitor: ""  // Quickshell screen name; "" = first screen
 
@@ -139,6 +142,10 @@ QtObject {
             },
             "batteryIndicator": {
                 "enabled": batteryIndicatorEnabled
+            },
+            "glass": {
+                "opacityDark": glassOpacityDark,
+                "opacityLight": glassOpacityLight
             },
             "animations": {
                 "speed": animationSpeed,
@@ -267,6 +274,15 @@ QtObject {
                 }
             } catch (e) {
                 console.error("Failed to apply settings.autoCloseTimer:", e)
+            }
+
+            try {
+                if (settings.glass) {
+                    if (settings.glass.opacityDark !== undefined) glassOpacityDark = _unitOr(settings.glass.opacityDark, glassOpacityDark)
+                    if (settings.glass.opacityLight !== undefined) glassOpacityLight = _unitOr(settings.glass.opacityLight, glassOpacityLight)
+                }
+            } catch (e) {
+                console.error("Failed to apply settings.glass:", e)
             }
 
             try {

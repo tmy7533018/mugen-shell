@@ -342,8 +342,11 @@ QtObject {
     }
     
     // The bar / Yura panel / lock face base fill. MugenSurface reads these.
-    readonly property color surfaceBaseDark: Qt.rgba(20 / 255, 22 / 255, 26 / 255, 0.82)
-    readonly property color surfaceBaseLight: Qt.rgba(0.50, 0.48, 0.58, 0.65)
+    property var settings: null
+    readonly property real glassOpacityDark: settings && isFinite(settings.glassOpacityDark) ? settings.glassOpacityDark : 0.82
+    readonly property real glassOpacityLight: settings && isFinite(settings.glassOpacityLight) ? settings.glassOpacityLight : 0.65
+    readonly property color surfaceBaseDark: Qt.rgba(20 / 255, 22 / 255, 26 / 255, glassOpacityDark)
+    readonly property color surfaceBaseLight: Qt.rgba(0.50, 0.48, 0.58, glassOpacityLight)
 
     // Window shells set this to the bar's colour; unset leaves the glass tokens alone.
     property color windowTint: "transparent"

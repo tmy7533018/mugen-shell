@@ -7,9 +7,15 @@ Rectangle {
 
     required property var theme
     required property var modeManager
+    required property var settingsManager
+
+    readonly property bool dark: theme ? theme.themeMode === "dark" : true
+    readonly property real glassOpacity: settingsManager
+        ? (section.dark ? settingsManager.glassOpacityDark : settingsManager.glassOpacityLight)
+        : 0.82
 
     width: parent ? parent.width : 420
-    height: 64
+    height: column.implicitHeight + 24
     color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
     radius: 20
     border.width: 1
@@ -19,31 +25,57 @@ Rectangle {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
     }
 
-    RowLayout {
+    function commit() {
+        if (settingsManager) settingsManager.saveSettings()
+        bump()
+    }
+
+    ColumnLayout {
+        id: column
         anchors.fill: parent
         anchors.margins: 12
         spacing: 12
 
-        Text {
+        RowLayout {
             Layout.fillWidth: true
-            text: "Dark mode"
-            color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-            font.pixelSize: 12
-            font.family: "M PLUS 2"
-            font.weight: Font.Normal
-            font.letterSpacing: 0.5
-        }
+            spacing: 12
 
-        Common.Switch {
-            checked: section.theme ? section.theme.themeMode === "dark" : true
-            theme: section.theme
+            Text {
+                Layout.fillWidth: true
+                text: "Dark mode"
+                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                font.pixelSize: 12
+                font.family: "M PLUS 2"
+                font.weight: Font.Normal
+                font.letterSpacing: 0.5
+            }
 
-            onToggled: value => {
-                if (section.theme && (section.theme.themeMode === "dark") !== value) {
-                    section.theme.toggleThemeMode()
-                    section.bump()
+            Common.Switch {
+                checked: section.dark
+                theme: section.theme
+
+                onToggled: value => {
+                    if (section.theme && section.dark !== value) {
+                        section.theme.toggleThemeMode()
+                        section.bump()
+                    }
                 }
             }
+        }
+
+        // One slider, two values: it edits the glass of whichever mode is showing.
+        Common.SliderRow {
+            rowTheme: section.theme
+            active: section.settingsManager !== null
+            label: "Glass opacity"
+            value: section.glassOpacity
+            onMoved: nv => {
+                if (!section.settingsManager) return
+                if (section.dark) section.settingsManager.glassOpacityDark = nv
+                else section.settingsManager.glassOpacityLight = nv
+                section.bump()
+            }
+            onReleased: section.commit()
         }
     }
 }
