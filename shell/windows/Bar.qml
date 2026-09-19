@@ -46,7 +46,7 @@ PanelWindow {
 
     readonly property bool barHidden: fullscreenHidden || lockHidden
 
-    implicitHeight: modeManager.currentBarSize.height
+    implicitHeight: modeManager.normalBarSize.height
     // Not lock-aware: dropping the zone reflows tiled windows, which session_lock_xray makes visible.
     exclusiveZone: fullscreenHidden ? 0 : modeManager.normalBarSize.height
     // The lock path fades to zero instead of unmapping: an unmapped layer has no exclusive zone.
@@ -163,15 +163,9 @@ PanelWindow {
     // stays click-through instead of swallowing presses meant for the app underneath.
     mask: Region { item: barBody }
 
-    // Grow before the animation starts, shrink after it ends: either way the surface never
-    // resizes mid-animation, which is what drops a quarter of the frames.
-    Behavior on implicitHeight {
-        enabled: barWindow.implicitHeight > modeManager.currentBarSize.height
-        SequentialAnimation {
-            PauseAnimation { duration: Theme.Motion.sweep }
-            PropertyAction { }
-        }
-    }
+    // The layer only ever grows: every resize shifts the bar content for two frames, and a shrink would do that on each close.
+    readonly property int targetHeight: modeManager.currentBarSize.height
+    onTargetHeightChanged: if (targetHeight > implicitHeight) implicitHeight = targetHeight
 
     Theme.ModeManager { id: modeManager; screenWidth: barWindow.width; settingsManager: settingsManager }
 
