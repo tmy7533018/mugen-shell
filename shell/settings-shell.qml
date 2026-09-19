@@ -45,27 +45,32 @@ ShellRoot {
     readonly property string soundsDir: Theme.Paths.soundsDir
     readonly property string timerSoundsDir: Theme.Paths.timerSoundsDir
 
-    property var blurPresets: []
-    property bool isLoadingPresets: false
-    property string currentPreset: ""
-
     property var notificationSounds: ["None"]
     property var timerSounds: ["None"]
 
-    function loadBlurPresets() {
-        if (isLoadingPresets) return
-        isLoadingPresets = true
-        listPresetsProcess.running = true
-        getCurrentPresetProcess.running = true
+
+    // Drag previews go straight to the compositor; the file only changes on release.
+    property var pendingBlurPreview: null
+
+    function blurLua(params) {
+        const b = v => v ? "true" : "false"
+        return "hl.config({ decoration = { blur = { enabled = " + b(params.enabled)
+            + ", size = " + Math.round(params.size) + ", passes = " + Math.round(params.passes)
+            + ", noise = " + params.noise + ", contrast = " + params.contrast
+            + ", brightness = " + params.brightness + ", vibrancy = " + params.vibrancy
+            + ", xray = " + b(params.xray) + ", ignore_opacity = " + b(params.ignoreOpacity)
+            + ", new_optimizations = true } } })"
     }
 
-    function applyBlurPreset(presetName) {
-        applyPresetProcess.command = [
-            "bash",
-            Quickshell.shellDir + "/scripts/blur-preset.sh",
-            presetName
-        ]
-        applyPresetProcess.running = true
+    function previewBlur(params) {
+        pendingBlurPreview = params
+        if (!blurPreviewProcess.running) blurPreviewTimer.restart()
+    }
+
+    function applyBlur(params) {
+        settingsManager.saveSettings()
+        applyBlurProcess.command = ["bash", Quickshell.shellDir + "/scripts/blur.sh", "apply", JSON.stringify(params)]
+        applyBlurProcess.running = true
     }
 
     function loadNotificationSounds() {
@@ -163,51 +168,27 @@ ShellRoot {
     }
 
     Process {
-        id: listPresetsProcess
-        command: ["bash", Quickshell.shellDir + "/scripts/blur-preset.sh", "list"]
-        running: false
-        property string output: ""
-
-        stdout: SplitParser {
-            onRead: data => {
-                let trimmed = data.trim()
-                if (trimmed.length > 0) listPresetsProcess.output += trimmed + "\n"
-            }
-        }
-
-        onExited: () => {
-            try {
-                let presets = listPresetsProcess.output.split("\n").filter(p => p.length > 0)
-                root.blurPresets = presets
-                root.isLoadingPresets = false
-                listPresetsProcess.output = ""
-            } catch (e) {
-                root.isLoadingPresets = false
-            }
-        }
-    }
-
-    Process {
-        id: getCurrentPresetProcess
-        command: ["bash", Quickshell.shellDir + "/scripts/blur-preset.sh", "current"]
-        running: false
-        property string output: ""
-
-        stdout: SplitParser {
-            onRead: data => { getCurrentPresetProcess.output += data }
-        }
-
-        onExited: () => {
-            root.currentPreset = getCurrentPresetProcess.output.trim()
-            getCurrentPresetProcess.output = ""
-        }
-    }
-
-    Process {
-        id: applyPresetProcess
+        id: applyBlurProcess
         command: []
         running: false
-        onExited: () => getCurrentPresetProcess.running = true
+    }
+
+    Timer {
+        id: blurPreviewTimer
+        interval: 50
+        onTriggered: {
+            if (!root.pendingBlurPreview || blurPreviewProcess.running) return
+            blurPreviewProcess.command = ["hyprctl", "eval", root.blurLua(root.pendingBlurPreview)]
+            root.pendingBlurPreview = null
+            blurPreviewProcess.running = true
+        }
+    }
+
+    Process {
+        id: blurPreviewProcess
+        command: []
+        running: false
+        onExited: () => { if (root.pendingBlurPreview) blurPreviewTimer.restart() }
     }
 
     Process {
@@ -287,16 +268,14 @@ ShellRoot {
             modeManager: modeStub
             theme: themeColors
             settingsManager: settingsManager
-            blurPresets: root.blurPresets
-            currentPreset: root.currentPreset
-            isLoadingPresets: root.isLoadingPresets
             notificationSounds: root.notificationSounds
             timerSounds: root.timerSounds
             soundsDir: root.soundsDir
             timerSoundsDir: root.timerSoundsDir
             initialCategory: Quickshell.env("MUGEN_SETTINGS_CATEGORY") || ""
 
-            onApplyPreset: name => root.applyBlurPreset(name)
+            onPreviewBlur: params => root.previewBlur(params)
+            onApplyBlur: params => root.applyBlur(params)
             onApplySound: name => root.applyNotificationSound(name)
             onApplyTimerSound: name => root.applyTimerSound(name)
             onOpenYuraSettings: {
@@ -312,7 +291,6 @@ ShellRoot {
     }
 
     Component.onCompleted: {
-        loadBlurPresets()
         loadNotificationSounds()
         loadTimerSounds()
     }

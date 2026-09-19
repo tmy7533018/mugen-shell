@@ -81,7 +81,7 @@ package_mugen-shell() {
     'networkmanager' 'bluez' 'bluez-utils' 'pipewire-pulse' 'wireplumber'
     # FileChooser backend for QT_QPA_PLATFORMTHEME=xdgdesktopportal; dconf is what gsettings writes to.
     'xdg-desktop-portal-gtk' 'dconf'
-    'fzf' 'python' 'python-gobject' 'gtk3' 'ttf-mplus-git'
+    'python' 'python-gobject' 'gtk3' 'ttf-mplus-git'
     'ttf-jetbrains-mono-nerd' 'noto-fonts-emoji' 'qt6-declarative'
     # quickshell does not pull qt5compat, and 34 QML files import it.
     'qt6-5compat'
@@ -96,6 +96,7 @@ package_mugen-shell() {
     'starship: prompt for the packaged zsh config'
     'jp2a: ascii art for the packaged zsh config'
     'fastfetch: system info for the packaged zsh config'
+    'fzf: fuzzy history for the packaged zsh config'
     'eza: ls replacement for the packaged zsh config'
     'bat: cat replacement for the packaged zsh config'
     'ugrep: grep replacement for the packaged zsh config'

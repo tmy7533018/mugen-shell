@@ -7,16 +7,14 @@ Item {
     required property var modeManager
     property var theme
     required property var settingsManager
-    required property var blurPresets
-    required property string currentPreset
-    required property bool isLoadingPresets
     required property var notificationSounds
     required property var timerSounds
     property string soundsDir: ""
     property string timerSoundsDir: ""
     property string initialCategory: ""
 
-    signal applyPreset(string name)
+    signal previewBlur(var params)
+    signal applyBlur(var params)
     signal applySound(string name)
     signal applyTimerSound(string name)
     signal openYuraSettings()
@@ -93,10 +91,9 @@ Item {
     Component { id: blurSection; Settings.BlurSection {
         theme: root.theme
         modeManager: root.modeManager
-        presets: root.blurPresets
-        currentPreset: root.currentPreset
-        isLoadingPresets: root.isLoadingPresets
-        onApplyPreset: name => root.applyPreset(name)
+        settingsManager: root.settingsManager
+        onPreviewBlur: params => root.previewBlur(params)
+        onApplyBlur: params => root.applyBlur(params)
     }}
     Component { id: timerSection; Settings.TimerSection {
         theme: root.theme

@@ -1,150 +1,193 @@
 import QtQuick
 import QtQuick.Layouts
-import "../../../lib" as Theme
+import "../../common" as Common
 
 Rectangle {
     id: section
 
     required property var theme
     required property var modeManager
-    required property var presets
-    required property string currentPreset
-    required property bool isLoadingPresets
+    required property var settingsManager
 
-    signal applyPreset(string name)
+    // The values ride along with the signal so an apply never races the settings save.
+    signal previewBlur(var params)
+    signal applyBlur(var params)
+
+    readonly property bool enabled: settingsManager ? settingsManager.blurEnabled : true
 
     width: parent ? parent.width : 420
-    height: section.isExpanded ? 64 + Math.min(section.presets.length, 6) * 36 + 12 : 64
+    height: column.implicitHeight + 24
     color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
     radius: 20
     border.width: 1
     border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
-    clip: true
-
-    property bool isExpanded: false
 
     function bump() {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
     }
 
-    Behavior on height {
-        NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
+    function nudge() {
+        if (!settingsManager) return
+        section.previewBlur(settingsManager.blurParams())
+        bump()
     }
 
-    MouseArea {
-        id: blurHeader
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        height: 64
-        cursorShape: Qt.PointingHandCursor
-        preventStealing: true
+    function settle() {
+        if (!settingsManager) return
+        section.applyBlur(settingsManager.blurParams())
+        bump()
+    }
 
-        TapHandler {
-            onTapped: {
-                section.isExpanded = !section.isExpanded
-                section.bump()
-            }
-        }
+    ColumnLayout {
+        id: column
+        anchors.fill: parent
+        anchors.margins: 12
+        spacing: 12
 
         RowLayout {
-            anchors.fill: parent
-            anchors.margins: 12
+            Layout.fillWidth: true
             spacing: 12
 
             Text {
                 Layout.fillWidth: true
-                text: "Blur preset"
+                text: "Blur"
                 color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                 font.pixelSize: 12
                 font.family: "M PLUS 2"
-                font.weight: Font.Normal
                 font.letterSpacing: 0.5
             }
 
-            Text {
-                text: section.isLoadingPresets ? "Loading…"
-                    : (section.currentPreset || "Select preset")
-                textFormat: Text.PlainText
-                color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                font.pixelSize: 12
-                font.family: "M PLUS 2"
-                font.weight: Font.Medium
+            Common.Switch {
+                checked: section.enabled
+                theme: section.theme
+                onToggled: value => {
+                    if (!section.settingsManager) return
+                    section.settingsManager.blurEnabled = value
+                    section.settle()
+                }
             }
+        }
+
+        Common.SliderRow {
+            rowTheme: section.theme
+            active: section.enabled
+            label: "Size"
+            value: section.settingsManager ? (section.settingsManager.blurSize - 1) / 49 : 0
+            display: (section.settingsManager ? section.settingsManager.blurSize : 0) + " px"
+            onMoved: nv => { section.settingsManager.blurSize = 1 + Math.round(nv * 49); section.nudge() }
+            onReleased: section.settle()
+        }
+
+        Common.SliderRow {
+            rowTheme: section.theme
+            active: section.enabled
+            label: "Passes"
+            value: section.settingsManager ? (section.settingsManager.blurPasses - 1) / 4 : 0
+            display: String(section.settingsManager ? section.settingsManager.blurPasses : 0)
+            onMoved: nv => { section.settingsManager.blurPasses = 1 + Math.round(nv * 4); section.nudge() }
+            onReleased: section.settle()
+        }
+
+        Common.SliderRow {
+            rowTheme: section.theme
+            active: section.enabled
+            label: "Noise"
+            value: section.settingsManager ? section.settingsManager.blurNoise / 0.3 : 0
+            display: (section.settingsManager ? section.settingsManager.blurNoise : 0).toFixed(3)
+            onMoved: nv => { section.settingsManager.blurNoise = Math.round(nv * 300) / 1000; section.nudge() }
+            onReleased: section.settle()
+        }
+
+        Common.SliderRow {
+            rowTheme: section.theme
+            active: section.enabled
+            label: "Contrast"
+            value: section.settingsManager ? (section.settingsManager.blurContrast - 0.5) / 1.5 : 0
+            display: (section.settingsManager ? section.settingsManager.blurContrast : 0).toFixed(2)
+            onMoved: nv => { section.settingsManager.blurContrast = Math.round((0.5 + nv * 1.5) * 100) / 100; section.nudge() }
+            onReleased: section.settle()
+        }
+
+        Common.SliderRow {
+            rowTheme: section.theme
+            active: section.enabled
+            label: "Brightness"
+            value: section.settingsManager ? section.settingsManager.blurBrightness - 0.5 : 0
+            display: (section.settingsManager ? section.settingsManager.blurBrightness : 0).toFixed(2)
+            onMoved: nv => { section.settingsManager.blurBrightness = Math.round((0.5 + nv) * 100) / 100; section.nudge() }
+            onReleased: section.settle()
+        }
+
+        Common.SliderRow {
+            rowTheme: section.theme
+            active: section.enabled
+            label: "Vibrancy"
+            value: section.settingsManager ? section.settingsManager.blurVibrancy : 0
+            display: (section.settingsManager ? section.settingsManager.blurVibrancy : 0).toFixed(2)
+            onMoved: nv => { section.settingsManager.blurVibrancy = Math.round(nv * 100) / 100; section.nudge() }
+            onReleased: section.settle()
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 24
+            spacing: 12
+            enabled: section.enabled
+            opacity: enabled ? 1 : 0.35
 
             Text {
-                text: section.isExpanded ? "▴" : "▾"
+                Layout.fillWidth: true
+                text: "X-ray"
                 color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                 font.pixelSize: 12
                 font.family: "M PLUS 2"
+                font.letterSpacing: 0.5
+            }
+
+            Common.Switch {
+                checked: section.settingsManager ? section.settingsManager.blurXray : false
+                theme: section.theme
+                onToggled: value => { section.settingsManager.blurXray = value; section.settle() }
             }
         }
-    }
 
-    ListView {
-        id: presetList
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: blurHeader.bottom
-        anchors.bottom: parent.bottom
-        anchors.leftMargin: 12
-        anchors.rightMargin: 12
-        anchors.bottomMargin: 12
-        clip: true
-        model: section.presets
-        visible: section.isExpanded
-        interactive: contentHeight > height
-        boundsBehavior: Flickable.StopAtBounds
-
-        delegate: Rectangle {
-            width: presetList.width
-            height: 36
-            radius: 8
-            property bool isCurrent: modelData === section.currentPreset
-
-            color: presetMouseArea.containsMouse
-                ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.25) : Qt.rgba(0.65, 0.55, 0.85, 0.25))
-                : (isCurrent
-                    ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4))
-                    : "transparent")
-
-            Behavior on color {
-                ColorAnimation { duration: Theme.Motion.micro }
-            }
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 24
+            spacing: 12
+            enabled: section.enabled
+            opacity: enabled ? 1 : 0.35
 
             Text {
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.leftMargin: 12
-                text: modelData
-                textFormat: Text.PlainText
-                color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
+                Layout.fillWidth: true
+                text: "Ignore opacity"
+                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
                 font.pixelSize: 12
                 font.family: "M PLUS 2"
-                font.weight: isCurrent ? Font.Medium : Font.Normal
+                font.letterSpacing: 0.5
             }
 
-            Text {
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.rightMargin: 12
-                text: "✓"
-                visible: isCurrent
-                color: section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
-                font.pixelSize: 12
-                font.family: "M PLUS 2"
+            Common.Switch {
+                checked: section.settingsManager ? section.settingsManager.blurIgnoreOpacity : true
+                theme: section.theme
+                onToggled: value => { section.settingsManager.blurIgnoreOpacity = value; section.settle() }
             }
+        }
 
-            MouseArea {
-                id: presetMouseArea
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                preventStealing: true
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Item { Layout.fillWidth: true }
+
+            Common.ActionButton {
+                theme: section.theme
+                label: "Reset to default"
+                buttonWidth: 130
                 onClicked: {
-                    section.applyPreset(modelData)
-                    section.isExpanded = false
-                    section.bump()
+                    if (!section.settingsManager) return
+                    section.settingsManager.resetBlur()
+                    section.settle()
                 }
             }
         }

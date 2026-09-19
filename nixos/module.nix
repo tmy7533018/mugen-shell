@@ -179,7 +179,6 @@ in
         xdg-utils     # `xdg-open` for Settings → Personality → Edit toml
         socat
         curl
-        fzf             # the blur preset picker falls back to it
         hyprpolkitagent # mugen-shell.lua starts its user unit at hyprland.start
         # pygobject3 for list-apps.py.
         (python3.withPackages (ps: [ ps.pygobject3 ]))

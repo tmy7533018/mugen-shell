@@ -60,7 +60,7 @@ install_product_tree() {
 }
 
 install_product_tree "$SHARE/hypr" "$CONFIG/hypr" \
-  hypridle.conf colors.lua configs/blur.lua configs/.blur-current \
+  hypridle.conf colors.lua configs/blur.lua \
   configs/user-overrides.lua configs/keybind-overrides.lua
 install_product_tree "$SHARE/matugen" "$CONFIG/matugen"
 install_dir  "$SHARE/cava"          "$CONFIG/cava"

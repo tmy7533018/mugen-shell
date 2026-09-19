@@ -55,6 +55,36 @@ QtObject {
     property real glassOpacityDark: 0.82
     property real glassOpacityLight: 0.65
 
+    property bool blurEnabled: true
+    property int blurSize: 5
+    property int blurPasses: 3
+    property real blurNoise: 0.02
+    property real blurContrast: 1.0
+    property real blurBrightness: 1.2
+    property real blurVibrancy: 0.0
+    property bool blurXray: false
+    property bool blurIgnoreOpacity: true
+
+    function blurParams() {
+        return {
+            "enabled": blurEnabled, "size": blurSize, "passes": blurPasses, "noise": blurNoise,
+            "contrast": blurContrast, "brightness": blurBrightness, "vibrancy": blurVibrancy,
+            "xray": blurXray, "ignoreOpacity": blurIgnoreOpacity
+        }
+    }
+
+    function resetBlur() {
+        blurEnabled = true
+        blurSize = 5
+        blurPasses = 3
+        blurNoise = 0.02
+        blurContrast = 1.0
+        blurBrightness = 1.2
+        blurVibrancy = 0.0
+        blurXray = false
+        blurIgnoreOpacity = true
+    }
+
     property int workspaceCount: 5
     property string displayMonitor: ""  // Quickshell screen name; "" = first screen
 
@@ -147,6 +177,7 @@ QtObject {
                 "opacityDark": glassOpacityDark,
                 "opacityLight": glassOpacityLight
             },
+            "blur": blurParams(),
             "animations": {
                 "speed": animationSpeed,
                 "durationMultiplier": animationDurationMultiplier,
@@ -283,6 +314,23 @@ QtObject {
                 }
             } catch (e) {
                 console.error("Failed to apply settings.glass:", e)
+            }
+
+            try {
+                if (settings.blur) {
+                    const c = settings.blur
+                    if (c.enabled !== undefined) blurEnabled = !!c.enabled
+                    if (isFinite(c.size)) blurSize = Math.round(c.size)
+                    if (isFinite(c.passes)) blurPasses = Math.round(c.passes)
+                    if (isFinite(c.noise)) blurNoise = c.noise
+                    if (isFinite(c.contrast)) blurContrast = c.contrast
+                    if (isFinite(c.brightness)) blurBrightness = c.brightness
+                    if (isFinite(c.vibrancy)) blurVibrancy = c.vibrancy
+                    if (c.xray !== undefined) blurXray = !!c.xray
+                    if (c.ignoreOpacity !== undefined) blurIgnoreOpacity = !!c.ignoreOpacity
+                }
+            } catch (e) {
+                console.error("Failed to apply settings.blur:", e)
             }
 
             try {

@@ -11,6 +11,17 @@
     "opacityDark": 0.82,
     "opacityLight": 0.65
   },
+  "blur": {
+    "enabled": true,
+    "size": 5,
+    "passes": 3,
+    "noise": 0.02,
+    "contrast": 1.0,
+    "brightness": 1.2,
+    "vibrancy": 0.0,
+    "xray": false,
+    "ignoreOpacity": true
+  },
   "batteryIndicator": {
     "enabled": false
   },

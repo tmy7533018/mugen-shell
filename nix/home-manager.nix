@@ -213,7 +213,6 @@ in
           xdg-utils      # `xdg-open` for every Settings "Open folder" button
           socat
           curl
-          fzf            # the blur preset picker falls back to it
           # pygobject3 for list-apps.py.
           (python3.withPackages (ps: [ ps.pygobject3 ]))
           gtk3
@@ -406,7 +405,7 @@ in
       };
     };
 
-    # Copied rather than symlinked so matugen, blur-preset.sh and the user can keep writing into these.
+    # Copied rather than symlinked so matugen, blur.sh and the user can keep writing into these.
     home.activation.installMugenSystemDefaults =
       let
         # mugen-shell-sync reads one tree; qml stays out so it cannot fight xdg.configFile.
