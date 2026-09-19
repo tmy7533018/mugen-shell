@@ -14,7 +14,6 @@ Item {
 
     readonly property var categories: [
         { id: "model",    label: "Model",       types: ["yuraProvider", "aiBarModel", "yuraPersonality"] },
-        { id: "voice",    label: "Voice",       types: ["voice"] },
         { id: "tools",    label: "Tools & MCP", types: ["yuraToolCategories", "yuraMcp", "yuraMcpExpose", "yuraAppLaunch"] },
         { id: "memory",   label: "Memory",      types: ["yuraMemory", "yuraHistory"] },
         { id: "panel",    label: "Panel",       types: ["yuraPanelSide", "yuraUi", "yuraThinking"] },
@@ -26,7 +25,6 @@ Item {
             case "yuraProvider":       return yuraProviderSection
             case "aiBarModel":         return aiBarModelSection
             case "yuraPersonality":    return yuraPersonalitySection
-            case "voice":              return voiceSection
             case "yuraToolCategories": return yuraToolCategoriesSection
             case "yuraMcp":            return yuraMcpSection
             case "yuraMcpExpose":      return yuraMcpExposeSection
@@ -64,11 +62,6 @@ Item {
         modeManager: root.modeManager
         onEditConfig: root.editAiConfig()
         onRestartService: root.restartAi()
-    }}
-    Component { id: voiceSection; Settings.VoiceSection {
-        theme: root.theme
-        modeManager: root.modeManager
-        settingsManager: root.settingsManager
     }}
     Component { id: yuraToolCategoriesSection; Settings.YuraToolCategoriesSection {
         theme: root.theme

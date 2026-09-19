@@ -16,7 +16,6 @@ enable_once() {
 }
 # The session units wait for Hyprland to raise the session target: started here, the bar has no display yet.
 enable_once mugen-shell.service
-enable_once yura-voice.service
 # default.target is already up, so nothing else will start these on the first login.
 enable_once mugen-ai.service --now
 enable_once mugen-event-notifier.timer --now

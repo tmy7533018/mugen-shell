@@ -26,21 +26,6 @@ PanelWindow {
         else pendingConversation = convId
     }
 
-    property bool voiceSpeaking: false
-
-    function setVoiceSpeaking(on) {
-        voiceSpeaking = on
-        if (on) voiceSpeakingFailsafe.restart()
-        else voiceSpeakingFailsafe.stop()
-    }
-
-    // A spoken reply runs minutes at most; past that yurad died mid-turn.
-    Timer {
-        id: voiceSpeakingFailsafe
-        interval: 10 * 60 * 1000
-        onTriggered: chatWindow.voiceSpeaking = false
-    }
-
     color: "transparent"
 
     visible: false
@@ -345,7 +330,6 @@ PanelWindow {
                 aiBackend: chatWindow.aiBackend
                 settingsManager: chatWindow.settingsManager
                 showInternalOrb: false
-                voiceSpeaking: chatWindow.voiceSpeaking
                 orbEmptyScale: 0.48
                 orbEmptyYRatio: 0.10
 
@@ -458,7 +442,6 @@ PanelWindow {
                 idleBreathPeak: 1.20
                 idleBreathDuration: 1400
                 active: yuraState.expanded
-                speaking: chatWindow.voiceSpeaking
                 breathEnabled: chatWindow.settingsManager ? chatWindow.settingsManager.yuraIdleBreath : true
             }
 

@@ -165,39 +165,6 @@ type chatRequest struct {
 	Model string `json:"model,omitempty"`
 	// Pointer so absent and explicit-false stay distinguishable.
 	Thinking *bool `json:"thinking,omitempty"`
-	// Set by yurad. Attaches a transient style hint, never persisted.
-	Voice bool `json:"voice,omitempty"`
-	// Set by yurad. Overrides the persona's language for this turn only.
-	Language string `json:"language,omitempty"`
-}
-
-const voiceStyleHint = "This is a voice conversation. Answer in short spoken-style sentences: no markdown, no bullet or numbered lists, no headings, no code blocks, no emoji. When the user asks you to do something a tool can do, emit the tool call NOW, in this same turn — a reply that only promises to act (\"やっておくね\", \"変えておくね\") with no tool call does nothing and is a failure."
-
-// Names rather than codes: models follow them far more reliably, and an unknown code returns "".
-func languageName(code string) string {
-	switch strings.ToLower(strings.TrimSpace(code)) {
-	case "en":
-		return "English"
-	case "ja":
-		return "Japanese"
-	case "zh":
-		return "Chinese"
-	case "ko":
-		return "Korean"
-	case "es":
-		return "Spanish"
-	case "fr":
-		return "French"
-	case "de":
-		return "German"
-	case "it":
-		return "Italian"
-	case "pt":
-		return "Portuguese"
-	case "hi":
-		return "Hindi"
-	}
-	return ""
 }
 
 // Returns request-local copies so a concurrent conversation switch can't retarget this turn.
@@ -307,17 +274,6 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			msgs = append(msgs[:len(msgs)-1:len(msgs)-1],
 				provider.Message{Role: "system", Content: blk}, userMsg)
 		}
-	}
-
-	// Same transient rider as the desktop snapshot, so typed follow-ups get markdown again.
-	if req.Voice && len(msgs) > 0 {
-		hint := voiceStyleHint
-		if lang := languageName(req.Language); lang != "" {
-			hint += " Respond in " + lang + ", whatever language the persona or these instructions are written in."
-		}
-		userMsg := msgs[len(msgs)-1]
-		msgs = append(msgs[:len(msgs)-1:len(msgs)-1],
-			provider.Message{Role: "system", Content: hint}, userMsg)
 	}
 
 	// Tool calls / results stay in-memory; history persists just the assistant text.

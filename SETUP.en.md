@@ -139,30 +139,6 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 
 ---
 
-## Read aloud (optional)
-
-Requires a running mugen-ai.
-
-- **Arch Linux**: `./install.sh --with-voice` (includes the AivisSpeech engine; builds `onnxruntime`, which takes hours)
-- **NixOS**:
-
-```nix
-programs.mugen-shell.voice.enable = true;
-# programs.mugen-shell.voice.aivis.enable = false;      # skip the AivisSpeech engine
-```
-
-The first read-aloud downloads a voice model of about 900 MB. Voice, speed and volume: **Settings → Yura → Voice**.
-
-<details>
-<summary><b>Running Yura's voice in another language</b></summary>
-
-- **TTS**: unpack a [sherpa-onnx TTS model](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) (Piper/VITS or Kokoro) as a whole **directory** (the `.onnx` with its `tokens.txt` and `espeak-ng-data/`) into `~/.local/share/mugen-shell/tts/` and it appears in the Settings voice picker (`YURA_TTS_MODELS` changes the location)
-- **Reply language**: the language field under Settings → Yura → Model → Personality
-
-</details>
-
----
-
 ## Keybindings
 
 Full list: `Super + /`. Definitions: `system/hypr/configs/keybinds.lua`.
@@ -189,7 +165,7 @@ Everything lives outside the repo, under XDG dirs:
 | `$XDG_CONFIG_HOME/mugen-shell/settings.json` | Persisted user settings |
 | `$XDG_STATE_HOME/mugen-shell/{theme-mode,idle-inhibitor.json,keybinds.json,launcher.json,notifications.json,timer.json,notified.json}` | Toggleable state and exported listings |
 | `$XDG_CACHE_HOME/mugen-shell/{colors.json,weather.json,apps_v4.json,apps_v4.sha256,wallp/,wallpaper-thumbs/,clipboard-thumbs/,art/}` | Regenerable cache |
-| `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/,timer-sounds/,tts/}` | User-supplied media |
+| `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/,timer-sounds/}` | User-supplied media |
 | `$XDG_DATA_HOME/mugen-shell/calendar.db` | Calendar SQLite database |
 | `$XDG_STATE_HOME/mugen-ai/history.db` | Yura conversation history (SQLite) |
 | `$XDG_PICTURES_DIR/mugen-screenshots/` | Captured screenshots |
@@ -208,8 +184,5 @@ Audio files dropped into `sounds/` and `timer-sounds/` above show up in the Sett
 - [playerctl](https://github.com/altdesktop/playerctl): Media player control
 - [grim](https://sr.ht/~emersion/grim/) / [slurp](https://github.com/emersion/slurp): Screenshot tools
 - [cliphist](https://github.com/sentriz/cliphist): Clipboard history
-- [VOICEVOX](https://voicevox.hiroshiba.jp/): TTS engine
-- [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine): VOICEVOX-compatible TTS with Style-Bert-VITS2 voices, models from [AivisHub](https://hub.aivis-project.com/)
-- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx): in-process TTS for local voices
-- [Piper](https://github.com/rhasspy/piper): the model behind the default English voice
+
 - [LRO WAC moon mosaic](https://commons.wikimedia.org/wiki/File:Moon_nearside_LRO.jpg): the moon on the lock screen. NASA/GSFC/Arizona State University, public domain (bundled brightness-adjusted and scaled down to 320px)

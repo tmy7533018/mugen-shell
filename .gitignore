@@ -38,7 +38,6 @@ __pycache__/
 TODO.md
 note.txt
 MCP_DESIGN.md
-VOICE_DESIGN.md
 LOCK_DESIGN.md
 
 # nix build output symlink (anywhere in the tree, since `nix build` drops it

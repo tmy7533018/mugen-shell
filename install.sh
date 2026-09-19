@@ -63,7 +63,6 @@ ime_engine_known() {
 }
 
 want_ime=1
-want_voice=0
 want_zsh=0
 want_apps=1
 want_dm=1
@@ -77,7 +76,7 @@ usage: ./install.sh [--yes] [--with-X | --without-X] ...
 
   --yes            take the defaults without showing the menu
   --with-ime=ENGINE   mozc, rime or hangul (default: guessed from $LANG)
-  --with-X            X is one of: ime voice zsh apps dm
+  --with-X            X is one of: ime zsh apps dm
   --without-X         the same names, turned off
 
 With no arguments the menu is shown.
@@ -89,7 +88,6 @@ while (( $# )); do
     --yes) assume_yes=1 ;;
     --with-ime=*) want_ime=1; ime_engine=${1#*=} ;;
     --with-ime)    want_ime=1   ;; --without-ime)   want_ime=0   ;;
-    --with-voice)  want_voice=1 ;; --without-voice) want_voice=0 ;;
     --with-zsh)    want_zsh=1   ;; --without-zsh)   want_zsh=0   ;;
     --with-apps)   want_apps=1  ;; --without-apps)  want_apps=0  ;;
     --with-dm)     want_dm=1    ;; --without-dm)    want_dm=0    ;;
@@ -107,23 +105,21 @@ menu() {
   while :; do
     printf '\n  \033[1mmugen-shell installer\033[0m\n\n'
     printf '    1  [%s] %-14s fcitx5 + %s\n' "$(mark want_ime)"   'IME'          "$ime_engine"
-    printf '    2  [%s] %-14s mugen-voice + AivisSpeech (builds onnxruntime, hours)\n' "$(mark want_voice)" 'read-aloud'
-    printf '    3  [%s] %-14s starship, eza, fastfetch\n' "$(mark want_zsh)"  'zsh config'
-    printf '    4  [%s] %-14s %s\n' "$(mark want_apps)" 'default apps' "${default_apps[*]}"
+    printf '    2  [%s] %-14s starship, eza, fastfetch\n' "$(mark want_zsh)"  'zsh config'
+    printf '    3  [%s] %-14s %s\n' "$(mark want_apps)" 'default apps' "${default_apps[*]}"
     if dm_present; then
-      printf '    5  [-] %-14s already configured\n' 'display mgr'
+      printf '    4  [-] %-14s already configured\n' 'display mgr'
     else
-      printf '    5  [%s] %-14s no display manager found\n' "$(mark want_dm)" 'SDDM'
+      printf '    4  [%s] %-14s no display manager found\n' "$(mark want_dm)" 'SDDM'
     fi
     printf '\n  mugen-shell, mugen-ai and mugen-audio are always installed.\n'
     printf '  \033[2mnumber to toggle, e to pick the IME engine, Enter to start, q to quit\033[0m\n\n  > '
     local choice engine; read -r choice || choice=q
     case "$choice" in
       1) want_ime=$((1 - want_ime)) ;;
-      2) want_voice=$((1 - want_voice)) ;;
-      3) want_zsh=$((1 - want_zsh)) ;;
-      4) want_apps=$((1 - want_apps)) ;;
-      5) dm_present || want_dm=$((1 - want_dm)) ;;
+      2) want_zsh=$((1 - want_zsh)) ;;
+      3) want_apps=$((1 - want_apps)) ;;
+      4) dm_present || want_dm=$((1 - want_dm)) ;;
       e) printf '  engine (mozc/rime/hangul): '; read -r engine
          if ime_engine_known "$engine"; then ime_engine=$engine; else warn "no fcitx5-$engine package"; fi ;;
       "") return 0 ;;
@@ -182,21 +178,9 @@ restart_running() {
 
 build_core() {
   say "Building mugen-shell, mugen-ai and mugen-audio"
-  # Only the three built here: read-aloud is its own pkgbase precisely so this stays cheap.
   build_pkg mugen-shell -sf --noconfirm
   # The backend first, so the bar comes back up against the new API.
   restart_running mugen-ai.service mugen-shell.service
-}
-
-build_voice() {
-  say "Building read-aloud (this is the slow one)"
-  aur_install python-sherpa-onnx python-sounddevice
-  # -d: nothing is compiled here, and the runtime depends were just installed above.
-  build_pkg mugen-voice -df --noconfirm
-
-  say "Building the AivisSpeech engine (Japanese voice)"
-  build_pkg aivisspeech-engine -f --noconfirm
-  restart_running aivisspeech-engine.service yura-voice.service
 }
 
 # The panels shell out to nmcli, bluetoothctl and pactl; the packages come with the core, the daemons do not.
@@ -253,11 +237,9 @@ main() {
   if (( want_ime ));   then setup_ime; fi
   if (( want_zsh ));   then setup_zsh; fi
   if (( want_dm ));    then setup_dm; fi
-  if (( want_voice )); then build_voice; fi
 
   say "Done"
   printf '  Log out and pick \033[1mmugen-shell\033[0m from your display manager.\n'
-  if (( ! want_voice )); then printf '  Read-aloud was skipped; see SETUP.md if you want it later.\n'; fi
   printf '  Personal Hyprland tweaks go in ~/.config/hypr/configs/user-overrides.lua\n\n'
 }
 

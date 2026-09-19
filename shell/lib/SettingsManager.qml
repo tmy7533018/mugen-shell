@@ -101,16 +101,6 @@ QtObject {
     property int yuraAutoCollapseMin: 0  // 0 = never
     property string yuraTypingSpeed: "instant"  // "instant" | "fast" | "normal" | "slow"
 
-    // Read-aloud (yurad reads these straight from settings.json).
-    property bool voiceEnabled: true
-    property real voiceSpeed: 1.0
-    property string voiceTts: ""
-    // Per-language overrides of voiceTts; Japanese is here because no light multilingual model speaks it.
-    property var voiceTtsByLang: ({})
-    // Persisted because losing it reads as the voice override itself having been lost.
-    property string voiceEditingLang: ""
-    property real voiceVolume: 1.0  // 0..1
-
     // Suppress save while applying values that just came in from disk.
     property bool _applyingExternal: false
 
@@ -119,9 +109,6 @@ QtObject {
 
     // A replace-semantics save against an empty _rawSettings would wipe the file, so gate it on the load.
     property bool _settingsLoaded: false
-
-    // Subtrees saveSettings() replaces wholesale instead of merging, so a deleted key stays deleted.
-    readonly property var _replacedPaths: ["voice.ttsByLang"]
 
     signal settingsChanged()
 
@@ -140,14 +127,12 @@ QtObject {
         return v !== null && typeof v === "object" && !Array.isArray(v)
     }
 
-    function _deepMerge(base, override, path) {
+    function _deepMerge(base, override) {
         let out = _isPlainObject(base) ? JSON.parse(JSON.stringify(base)) : {}
         for (let k in override) {
             if (!override.hasOwnProperty(k)) continue
-            const at = path ? path + "." + k : k
-            if (_isPlainObject(override[k]) && _isPlainObject(out[k])
-                    && _replacedPaths.indexOf(at) < 0) {
-                out[k] = _deepMerge(out[k], override[k], at)
+            if (_isPlainObject(override[k]) && _isPlainObject(out[k])) {
+                out[k] = _deepMerge(out[k], override[k])
             } else if (_isPlainObject(override[k])) {
                 out[k] = JSON.parse(JSON.stringify(override[k]))
             } else {
@@ -249,14 +234,6 @@ QtObject {
                 "idleBreath": yuraIdleBreath,
                 "autoCollapseMin": yuraAutoCollapseMin,
                 "typingSpeed": yuraTypingSpeed
-            },
-            "voice": {
-                "enabled": voiceEnabled,
-                "speed": voiceSpeed,
-                "tts": voiceTts,
-                "ttsByLang": voiceTtsByLang,
-                "editingLang": voiceEditingLang,
-                "volume": voiceVolume
             }
         }
 
@@ -576,35 +553,6 @@ QtObject {
                 }
             } catch (e) {
                 console.error("Failed to apply settings.yura:", e)
-            }
-
-            try {
-                if (settings.voice) {
-                    if (settings.voice.enabled !== undefined) {
-                        voiceEnabled = settings.voice.enabled
-                    }
-                    if (settings.voice.speed !== undefined) {
-                        voiceSpeed = settings.voice.speed
-                    }
-                    if (settings.voice.tts !== undefined) {
-                        voiceTts = settings.voice.tts
-                    } else if (settings.voice.speaker !== undefined) {
-                        voiceTts = "voicevox:" + settings.voice.speaker
-                    }
-                    if (settings.voice.ttsByLang !== undefined
-                            && typeof settings.voice.ttsByLang === "object"
-                            && settings.voice.ttsByLang !== null) {
-                        voiceTtsByLang = settings.voice.ttsByLang
-                    }
-                    if (settings.voice.editingLang !== undefined) {
-                        voiceEditingLang = settings.voice.editingLang
-                    }
-                    if (settings.voice.volume !== undefined) {
-                        voiceVolume = settings.voice.volume
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.voice:", e)
             }
 
             updateAnimationMultiplier()

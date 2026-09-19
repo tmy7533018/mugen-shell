@@ -8,9 +8,6 @@ Item {
 
     property color orbColor: Qt.rgba(0.65, 0.55, 0.85, 0.9)
     property bool streaming: false
-    property bool speaking: false
-    // Multiple of the ring's base size; height-constrained hosts must lower it or rings spill out.
-    property real rippleMaxScale: 2.0
     property bool active: true
     property bool breathEnabled: true
     property bool showHalo: true
@@ -64,19 +61,6 @@ Item {
         origin.y: root.height / 2
         xScale: root.pulseScale
         yScale: root.pulseScale
-    }
-
-    Common.RippleRings {
-        anchors.centerIn: parent
-        width: root.width
-        height: root.height
-        z: -1
-        color: root.orbColor
-        ringSize: root.width * 0.83
-        borderWidth: Math.max(1, root.width * 0.02)
-        maxScale: root.rippleMaxScale
-        cycleMs: 2000
-        running: root.active && root.speaking
     }
 
     Common.BlobEffect {

@@ -8,14 +8,11 @@ Row {
     required property var modeManager
     required property var theme
     required property var icons
-    property bool canSpeak: false
-    property bool speaking: false
     property bool canRetry: false
     property bool canEdit: false
     property string timestamp: ""
 
     signal copyRequested()
-    signal speakToggled()
     signal retryRequested()
     signal editRequested()
 
@@ -92,17 +89,6 @@ Row {
             root.justCopied = true
             copiedReset.restart()
         }
-    }
-
-    ActionButton {
-        visible: root.canSpeak
-        mgr: root.modeManager
-        pal: root.theme
-        iconSource: root.icons ? root.icons.volumeUpSvg : ""
-        glyph: root.speaking ? "■" : ""
-        glyphSize: root.modeManager.scale(11)
-        lit: root.speaking
-        onTriggered: root.speakToggled()
     }
 
     ActionButton {

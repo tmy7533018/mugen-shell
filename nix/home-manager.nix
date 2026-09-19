@@ -8,9 +8,6 @@
 let
   cfg = config.programs.mugen-shell;
 
-  voiceDir =
-    if cfg.voice.sourceDir != null then cfg.voice.sourceDir else "${cfg.package}/voice";
-
   # Off NixOS a user unit inherits no profile, so home.packages resolves nowhere.
   unitPath = lib.concatStringsSep ":" [
     "${config.home.profileDirectory}/bin"
@@ -20,32 +17,6 @@ let
     "/usr/bin"
     "/bin"
   ];
-
-  voicePython = pkgs.python314.withPackages (
-    ps:
-    [
-      ps.sounddevice
-      ps.numpy
-      ps.requests
-      ps.sherpa-onnx
-    ]
-  );
-
-  # The default non-Japanese voice. Piper rather than Kokoro: Kokoro's Japanese
-  # has no G2P here (its jf_* voices garble kanji) and its English measured
-  # ~20% of energy above 6 kHz against Piper's 4%, which is the harshness you
-  # hear. Japanese stays on AivisSpeech, picked per-language by voice.ttsByLang.
-  piperVoice = pkgs.stdenvNoCC.mkDerivation {
-    name = "piper-en_US-lessac-high";
-    src = pkgs.fetchurl {
-      url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-high.tar.bz2";
-      hash = "sha256-hhnSBMcAWGb+T0IBgd+nliKvamIiOJ8LCBjSrzHg2w4=";
-    };
-    sourceRoot = ".";
-    installPhase = "mkdir -p $out && cp -r vits-piper-en_US-lessac-high $out/";
-  };
-
-  aivisEngine = pkgs.callPackage ./voice/aivisspeech-engine.nix { };
 in
 {
   options.programs.mugen-shell = {
@@ -127,27 +98,6 @@ in
         default = pkgs.mugen-ai or null;
         defaultText = lib.literalExpression "pkgs.mugen-ai";
         description = "The mugen-ai package (Go backend binary).";
-      };
-    };
-
-    voice = {
-      enable = lib.mkEnableOption "the Yura speech daemon (reads replies aloud on request)";
-
-      sourceDir = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        example = "/home/you/mugen-shell/voice";
-        description = ''
-          Absolute path to a live checkout's voice/ directory. When set the
-          daemon runs yurad.py from there instead of the packaged copy, so
-          edits need a service restart rather than a rebuild.
-        '';
-      };
-
-      aivis.enable = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Run the AivisSpeech engine (primary Japanese TTS) as a user service.";
       };
     };
   };
@@ -332,53 +282,6 @@ in
         WantedBy = [ "default.target" ];
       };
     };
-
-    systemd.user.services.yura-voice = lib.mkIf cfg.voice.enable {
-      Unit = {
-        Description = "Yura speech daemon (read-aloud TTS)";
-        After = [
-          "graphical-session.target"
-          "aivisspeech-engine.service"
-          "mugen-ai.service"
-        ];
-        PartOf = [ "graphical-session.target" ];
-      };
-      Service = {
-        WorkingDirectory = voiceDir;
-        Environment = [
-          "PATH=${unitPath}"
-          # Colon-separated search path. A voice dropped in the writable dir
-          # shadows a packaged one of the same name.
-          "YURA_TTS_MODELS=${config.xdg.dataHome}/mugen-shell/tts:${piperVoice}"
-        ]
-        ++ lib.optionals cfg.voice.aivis.enable [
-          "YURA_TTS=aivis:"
-          "YURA_TTS_SERVICE=aivisspeech-engine.service"
-        ];
-        ExecStart = "${voicePython}/bin/python ${voiceDir}/yurad.py";
-        Restart = "on-failure";
-        RestartSec = 3;
-      };
-      Install = {
-        WantedBy = [ "graphical-session.target" ];
-      };
-    };
-
-    systemd.user.services.aivisspeech-engine =
-      lib.mkIf (cfg.voice.enable && cfg.voice.aivis.enable) {
-        Unit = {
-          Description = "AivisSpeech TTS engine (VOICEVOX-compatible API on :10101)";
-          After = [ "graphical-session.target" ];
-          PartOf = [ "graphical-session.target" ];
-        };
-        Service = {
-          # CPU mode: the bundled onnxruntime-gpu is CUDA-only. First start
-          # pulls the default model + BERT (~900 MB), so it needs the network.
-          ExecStart = "${aivisEngine}/bin/aivisspeech-engine --host 127.0.0.1 --port 10101";
-          Restart = "on-failure";
-          RestartSec = 5;
-        };
-      };
 
     systemd.user.services.mugen-event-notifier = lib.mkIf cfg.ai.enable {
       Unit = {

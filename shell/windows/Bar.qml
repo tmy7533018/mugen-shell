@@ -133,8 +133,8 @@ PanelWindow {
 
     property alias notificationManager: notificationManager
 
-    // AI only counts down while quiet: no streamed reply, no unsent draft, nothing being spoken.
-    readonly property bool aiQuiet: !yuraSpeaking && !yuraFloatThinking
+    // AI only counts down while quiet: no streamed reply, no unsent draft.
+    readonly property bool aiQuiet: !yuraFloatThinking
         && (!aiAssistantLoader.item
             || (!aiAssistantLoader.item.streaming && !aiAssistantLoader.item.hasDraft))
     readonly property bool autoCloseEligible: !modeManager.isMode("normal")
@@ -286,12 +286,9 @@ PanelWindow {
         weatherManager: weatherManager
     }
 
-    // Float Yura and yurad both mirror their state here over IPC, so auto-close waits for a spoken read-out.
+    // Float Yura mirrors its state here over IPC, so auto-close waits for its stream too.
     property bool yuraFloatThinking: false
-    property bool yuraSpeaking: false
     property bool yuraPanelOpen: false
-    // A visible conversation is the one a voice turn continues.
-    readonly property bool yuraSurfaceOpen: yuraPanelOpen || modeManager.isMode("ai")
 
     IpcHandler {
         target: "yura"
@@ -299,11 +296,6 @@ PanelWindow {
             barWindow.yuraFloatThinking = on
             if (on) yuraThinkingFailsafe.restart()
             else yuraThinkingFailsafe.stop()
-        }
-        function set_speaking(on: bool): void {
-            barWindow.yuraSpeaking = on
-            if (on) yuraSpeakingFailsafe.restart()
-            else yuraSpeakingFailsafe.stop()
         }
         function set_panel_open(on: bool): void {
             barWindow.yuraPanelOpen = on
@@ -437,13 +429,6 @@ PanelWindow {
         id: yuraThinkingFailsafe
         interval: 15 * 60 * 1000
         onTriggered: barWindow.yuraFloatThinking = false
-    }
-
-    // A spoken reply runs minutes at most; past that yurad died mid-turn.
-    Timer {
-        id: yuraSpeakingFailsafe
-        interval: 10 * 60 * 1000
-        onTriggered: barWindow.yuraSpeaking = false
     }
 
     Timer {
@@ -692,7 +677,6 @@ PanelWindow {
                 weatherManager: weatherManager
                 aiThinking: (aiAssistantLoader.item ? aiAssistantLoader.item.streaming : false)
                     || barWindow.yuraFloatThinking
-                aiSpeaking: barWindow.yuraSpeaking
                 aiPanelOpen: barWindow.yuraPanelOpen
             }
 
@@ -813,7 +797,6 @@ PanelWindow {
                 icons: aiAssistantLoader.iconsRef
                 settingsManager: aiAssistantLoader.settingsManagerRef
                 aiBackend: aiAssistantLoader.aiBackendRef
-                voiceSpeaking: barWindow.yuraSpeaking
             }
         }
 

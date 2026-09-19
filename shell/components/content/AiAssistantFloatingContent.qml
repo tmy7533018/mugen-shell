@@ -18,11 +18,6 @@ FocusScope {
     property var aiBackend
     property var settingsManager
     property bool showInternalOrb: true
-    property bool voiceSpeaking: false
-    onVoiceSpeakingChanged: {
-        if (voiceSpeaking) speakGuard.stop()
-        else speakingIndex = -1
-    }
 
     // Private instance — the volume panel stops the shared one on its own schedule.
 
@@ -40,9 +35,6 @@ FocusScope {
 
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://localhost"
     readonly property var _transportArgs: aiBackend ? aiBackend.transportArgs : []
-    // Read-aloud is yurad's TTS pipeline, so it follows the same switch the mic button does.
-    readonly property bool canReadAloud: Theme.YuraCtl.available
-        && (!settingsManager || settingsManager.voiceEnabled)
 
     property var messages: []
     property bool streaming: false
@@ -55,7 +47,6 @@ FocusScope {
     // "provider_unavailable" (a model is set but its backend did not answer).
     property string healthStatus: ""
     property bool userScrolled: false
-    property int speakingIndex: -1
     property string currentModel: ""
     // Messages before this index were dropped from the window sent to the model.
     property int contextDropped: 0
@@ -319,27 +310,6 @@ FocusScope {
         root.sendMessage(text, msg.attachments)
     }
 
-    function readAloud(index, text) {
-        if (!canReadAloud || !text) return
-        speakingIndex = index
-        speakProcess.payload = JSON.stringify({ text: text })
-        speakProcess.running = true
-        speakGuard.restart()
-    }
-
-    function stopReadAloud() {
-        speakingIndex = -1
-        speakGuard.stop()
-        stopSpeakProcess.running = true
-    }
-
-    Timer {
-        id: speakGuard
-        // Nothing ever started playing, so drop the stop button rather than strand it.
-        interval: 20000
-        onTriggered: root.speakingIndex = -1
-    }
-
     function stopStreaming() {
         if (!streaming) return
         stopRequested = true
@@ -375,8 +345,6 @@ FocusScope {
             stopStreaming()
         }
         if (truncateProcess.running) truncateProcess.abandoned = true
-        // speakingIndex is a row number, so it would mark an unrelated message after a replace.
-        if (speakingIndex >= 0) stopReadAloud()
         messages = []
         currentConvId = 0
         userScrolled = false
@@ -393,7 +361,6 @@ FocusScope {
             stopStreaming()
         }
         if (truncateProcess.running) truncateProcess.abandoned = true
-        if (speakingIndex >= 0) stopReadAloud()
         currentConvId = convId
         messages = []
         userScrolled = false
@@ -800,7 +767,6 @@ FocusScope {
             anchors.fill: parent
             orbColor: root.theme ? root.theme.glowTertiary : Qt.rgba(0.95, 0.72, 0.74, 0.9)
             streaming: !root.isEmpty && root.streaming
-            speaking: root.voiceSpeaking
             haloScale: root.isEmpty ? 1.5 : 1.8
             haloOpacity: root.isEmpty ? 0.45 : 0.6
         }
@@ -1189,25 +1155,18 @@ FocusScope {
                             modeManager: root.modeManager
                             theme: root.theme
                             icons: root.icons
-                            canSpeak: delegateRoot.isAssistant && root.canReadAloud
-                            speaking: root.speakingIndex === index
                             canRetry: delegateRoot.isAssistant && !root.busy
                                 && delegateRoot.hasServerId
                             canEdit: !delegateRoot.isAssistant && !root.busy
                                 && delegateRoot.hasServerId && !delegateRoot.isEditing
                             timestamp: delegateRoot.stamp
-                            // Stays put while it reads, so the stop button survives the pointer leaving.
-                            opacity: (msgHover.hovered || msgActions.speaking) ? 1.0 : 0.0
+                            opacity: msgHover.hovered ? 1.0 : 0.0
                             visible: opacity > 0
                             Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
                             onCopyRequested: {
                                 copyProcess.text = modelData.content
                                 copyProcess.running = true
-                            }
-                            onSpeakToggled: {
-                                if (root.speakingIndex === index) root.stopReadAloud()
-                                else root.readAloud(index, modelData.content)
                             }
                             onRetryRequested: root.retryFrom(index)
                             onEditRequested: root.beginEdit(index)
@@ -2004,30 +1963,6 @@ FocusScope {
         id: yuraSettingsProcess
         running: false
         command: ["bash", Quickshell.shellDir + "/scripts/toggle-yura-settings.sh"]
-    }
-
-    Process {
-        id: speakProcess
-        property string payload: ""
-        running: false
-        command: ["curl", "-sS", "--max-time", "5",
-                  "--unix-socket", Theme.YuraCtl.socket,
-                  "-X", "POST", "--data-binary", payload,
-                  "-H", "Content-Type: application/json",
-                  "http://localhost/speak"]
-
-        // yurad is down or was built without the socket; nothing will speak.
-        onExited: (exitCode) => {
-            if (exitCode !== 0) root.speakingIndex = -1
-        }
-    }
-
-    Process {
-        id: stopSpeakProcess
-        running: false
-        command: ["curl", "-sS", "--max-time", "5",
-                  "--unix-socket", Theme.YuraCtl.socket,
-                  "-X", "POST", "http://localhost/stop"]
     }
 
     Process {

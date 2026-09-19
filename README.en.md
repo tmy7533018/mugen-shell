@@ -34,7 +34,6 @@ The desktop assistant. You reach it from the input row in the bar or the chat pa
 - Models: local models through Ollama, Claude, Gemini, any OpenAI-compatible API
 - Desktop control: "set volume to 30" or "start a 5 minute timer" moves the matching panel
 - External MCP servers are supported; writes are held for approval
-- Read-aloud: AivisHub voices can be picked
 
 Configuration is in [SETUP.en.md](SETUP.en.md#configuring-mugen-ai).
 

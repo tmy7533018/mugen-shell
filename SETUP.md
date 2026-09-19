@@ -139,30 +139,6 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 
 ---
 
-## 読み上げ (オプション)
-
-前提: mugen-ai が動いていること。
-
-- **Arch Linux**: `./install.sh --with-voice` (AivisSpeech エンジン込み。`onnxruntime` のビルドで数時間)
-- **NixOS**:
-
-```nix
-programs.mugen-shell.voice.enable = true;
-# programs.mugen-shell.voice.aivis.enable = false;      # AivisSpeech エンジンを外す場合
-```
-
-初回は約 900 MB の音声モデルをダウンロードします。声・話速・音量は **Settings → Yura → Voice**。
-
-<details>
-<summary><b>Yura の声を他の言語で使う</b></summary>
-
-- **TTS**: [sherpa-onnx の TTS モデル](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models) (Piper/VITS、Kokoro) を、`.onnx`・`tokens.txt`・`espeak-ng-data/` を含む**ディレクトリごと** `~/.local/share/mugen-shell/tts/` に置くと Settings のピッカーに並びます (置き場所は `YURA_TTS_MODELS` で変更可)
-- **返事の言語**: Settings → Yura → Model の Personality にある language
-
-</details>
-
----
-
 ## キーバインド
 
 一覧は `Super + /`。定義は `system/hypr/configs/keybinds.lua`。
@@ -189,7 +165,7 @@ programs.mugen-shell.voice.enable = true;
 | `$XDG_CONFIG_HOME/mugen-shell/settings.json` | 保存されたユーザ設定 |
 | `$XDG_STATE_HOME/mugen-shell/{theme-mode,idle-inhibitor.json,keybinds.json,launcher.json,notifications.json,timer.json,notified.json}` | トグル状態と、書き出された一覧 |
 | `$XDG_CACHE_HOME/mugen-shell/{colors.json,weather.json,apps_v4.json,apps_v4.sha256,wallp/,wallpaper-thumbs/,clipboard-thumbs/,art/}` | 再生成できるキャッシュ |
-| `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/,timer-sounds/,tts/}` | ユーザが置くメディア |
+| `$XDG_DATA_HOME/mugen-shell/{wallpapers/,sounds/,timer-sounds/}` | ユーザが置くメディア |
 | `$XDG_DATA_HOME/mugen-shell/calendar.db` | カレンダーの SQLite DB |
 | `$XDG_STATE_HOME/mugen-ai/history.db` | Yura の会話履歴 (SQLite) |
 | `$XDG_PICTURES_DIR/mugen-screenshots/` | キャプチャしたスクリーンショット |
@@ -208,7 +184,3 @@ programs.mugen-shell.voice.enable = true;
 - [playerctl](https://github.com/altdesktop/playerctl): メディアプレイヤー制御
 - [grim](https://sr.ht/~emersion/grim/) / [slurp](https://github.com/emersion/slurp): スクリーンショットツール
 - [cliphist](https://github.com/sentriz/cliphist): クリップボード履歴
-- [VOICEVOX](https://voicevox.hiroshiba.jp/): TTS エンジン
-- [AivisSpeech Engine](https://github.com/Aivis-Project/AivisSpeech-Engine): VOICEVOX 互換の Style-Bert-VITS2 系 TTS。モデルは [AivisHub](https://hub.aivis-project.com/) から
-- [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx): ローカル音声をプロセス内で鳴らす TTS
-- [Piper](https://github.com/rhasspy/piper): 既定の英語音声のモデル

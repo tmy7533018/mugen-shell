@@ -16,8 +16,6 @@ FocusScope {
     property var settingsManager
     property var aiBackend
     property bool isStandalone: false
-    // Driven over IPC by yurad, never locally.
-    property bool voiceSpeaking: false
 
 
     readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://localhost"
@@ -60,7 +58,7 @@ FocusScope {
     }
     readonly property bool isThinking: streaming && responseDisplay.length === 0
 
-    // Mirrors yurad's clean_for_speech; the one-line pill can't render markdown.
+    // The one-line pill can't render markdown.
     function mdFlat(t) {
         return t.replace(/```[\s\S]*?```/g, " ")
                 .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
@@ -209,8 +207,6 @@ FocusScope {
                     anchors.fill: parent
                     orbColor: root.theme ? root.theme.glowTertiary : Qt.rgba(0.95, 0.72, 0.74, 0.9)
                     streaming: root.streaming
-                    speaking: root.voiceSpeaking
-                    rippleMaxScale: 1.5  // keep rings inside the bar strip
                     breathEnabled: root.settingsManager ? root.settingsManager.yuraIdleBreath : true
                     haloScale: 1.25
                     haloOpacity: orbHover.containsMouse ? 0.75 : 0.5

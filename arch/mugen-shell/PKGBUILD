@@ -92,7 +92,6 @@ package_mugen-shell() {
     'ttf-firacode-nerd: font_family of the packaged kitty config'
     'thunar: the default $fileManager'
     'firefox: the default $browser'
-    'mugen-voice: read replies aloud'
     'starship: prompt for the packaged zsh config'
     'jp2a: ascii art for the packaged zsh config'
     'fastfetch: system info for the packaged zsh config'

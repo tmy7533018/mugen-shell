@@ -42,8 +42,5 @@ ShellRoot {
             // toggleFrom is a toggle, so a conversation must not follow the closing half.
             if (conv_id > 0 && yuraState.expanded) chatPanel.showConversation(conv_id)
         }
-        // Called by the voice daemon.
-        function show_conversation(id: int) { chatPanel.showConversation(id) }
-        function set_speaking(on: bool) { chatPanel.setVoiceSpeaking(on) }
     }
 }

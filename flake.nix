@@ -141,25 +141,6 @@
               ];
             }).activationPackage;
 
-            # Only a voice-enabled config generates the yura and aivis units.
-            withVoice = (home-manager.lib.homeManagerConfiguration {
-              pkgs = import nixpkgs {
-                inherit system;
-                overlays = [ overlay ];
-              };
-              modules = [
-                self.homeManagerModules.default
-                {
-                  home.username = "check";
-                  home.homeDirectory = "/home/check";
-                  programs.mugen-shell.enable = true;
-                  programs.mugen-shell.includeSystemDeps = false;
-                  programs.mugen-shell.voice.enable = true;
-                  home.stateVersion = "26.05";
-                }
-              ];
-            }).activationPackage;
-
             nixosQmlPath = includeSystemDeps: (nixpkgs.lib.nixosSystem {
               modules = [
                 nixosModule
@@ -253,7 +234,7 @@
                 keys = "Description|After|Before|BindsTo|Wants|PartOf|Restart|RestartSec|Type|RuntimeDirectory|OnCalendar|Persistent|Unit|WantedBy";
               in
               pkgs.runCommand "check-unit-drift" { } ''
-                gen=${withVoice}/home-files/.config/systemd/user
+                gen=${standaloneHm}/home-files/.config/systemd/user
                 own=${./system/systemd/user}
                 hm=${./nix/home-manager.nix}
                 status=0
@@ -470,13 +451,6 @@
             cp ${./system/hypr/configs/mugen-shell.conf} $out/hypr/configs/mugen-shell.conf
             cp ${./system/hypr/configs/mugen-shell.lua} $out/hypr/configs/mugen-shell.lua
             cp -r ${./system/hypr/scripts} $out/hypr/scripts
-            # Voice daemon runtime, so the service works without a checkout.
-            # yura/ is the pipeline itself — yurad.py is only its entry point
-            # and imports from it, so shipping the one file crashes on start.
-            # tests/ stays out — it does not run at runtime.
-            mkdir -p $out/voice
-            cp ${./voice/yurad.py} $out/voice/yurad.py
-            cp -r ${./voice/yura} $out/voice/yura
             # Opt-in terminal half: sourced from the user's ~/.zshrc, never over it.
             mkdir -p $out/share/zsh
             cp ${./.zshrc} $out/share/zsh/mugen-shell.zshrc

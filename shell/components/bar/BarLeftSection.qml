@@ -25,7 +25,6 @@ RowLayout {
     property var timerManager
     property var weatherManager
     property bool aiThinking: false
-    property bool aiSpeaking: false
     property bool aiPanelOpen: false
 
     function aiOrbScreenRect() {
@@ -309,7 +308,6 @@ RowLayout {
             height: scaled(26)
             orbColor: root.theme ? root.theme.glowTertiary : Qt.rgba(0.95, 0.72, 0.74, 0.9)
             streaming: root.aiThinking
-            speaking: root.aiSpeaking
             showHalo: true
             haloScale: 1.5
             haloOpacity: aiMouseArea.containsMouse ? 0.7 : 0.45
@@ -318,7 +316,6 @@ RowLayout {
             coreWaveAmplitude: 0.8
             haloPointCount: 24
             haloWaveAmplitude: 1.2
-            rippleMaxScale: 1.8
             breathEnabled: root.settingsManager ? root.settingsManager.yuraIdleBreath : true
             active: true
             scale: aiMouseArea.containsMouse ? 1.08 : 1.0

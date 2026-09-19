@@ -36,7 +36,6 @@ Hyprland + Quickshell デスクトップ向けの私の dotfiles を、Arch の�
 - モデル: Ollama のローカルモデル、Claude、Gemini、OpenAI 互換 API
 - デスクトップの操作: 「音量 30 にして」「5 分タイマー計って」で、対応するパネルが動きます
 - 外部の MCP サーバにも対応しています。書き込み系の操作は実行前に確認します
-- 読み上げ: AivisHub のモデルを選べます
 
 設定は [SETUP.md](SETUP.md#mugen-ai-の設定) にまとめました。
 
