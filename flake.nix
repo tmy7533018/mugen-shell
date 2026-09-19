@@ -314,7 +314,7 @@
               conf=${./system/hypr/configs/mugen-shell.lua}
 
               FAKE_CONFIG_HOME=/xdg/cfg $lua stub.lua $conf > moved.txt
-              grep -q '/xdg/cfg/quickshell/mugen-shell/yura-shell.qml' moved.txt || {
+              grep -q '/xdg/cfg/quickshell/mugen-shell/scripts/yura-window.sh' moved.txt || {
                 echo "the shell is not spawned from the resolved config home:" >&2
                 cat moved.txt >&2; exit 1; }
               if grep -q '/\.config/' moved.txt; then
@@ -323,7 +323,7 @@
               fi
 
               HOME=/fake/home $lua stub.lua $conf > standalone.txt
-              grep -q '/fake/home/.config/quickshell/mugen-shell/yura-shell.qml' standalone.txt || {
+              grep -q '/fake/home/.config/quickshell/mugen-shell/scripts/yura-window.sh' standalone.txt || {
                 echo "a standalone dofile no longer falls back to ~/.config:" >&2
                 cat standalone.txt >&2; exit 1; }
 
