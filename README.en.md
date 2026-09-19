@@ -15,14 +15,15 @@ My dotfiles for a Hyprland + Quickshell desktop, packaged so they can be install
 
 ## Features
 
-- Panels for the everyday things: calendar, timer, weather, music, clipboard, notifications, app launcher, and screenshots
-- Wallpapers can be images or video, and they change through a smooth transition
-- Colors generated from the wallpaper are applied across the desktop, GTK apps and Hyprland included; the bar and panel surfaces take one of five palettes you pick. The light/dark switch carries across the desktop too
-- The usual system controls: audio, backlight, WiFi, Bluetooth, IME, battery, and the system tray
-- The lock screen is part of the shell: a grid of the clock, calendar, current track, and weather, with no external locker involved
-- Yura, the desktop assistant, reachable by chat, with replies it can read aloud (optional)
-- Smooth animation throughout, and it is easy to customize
-- A Settings window for changing all sorts of things: the bar's height, corner radius, and the color of its surface included
+- Panels: calendar, timer, weather, music, clipboard, notifications, app launcher, screenshots
+- System controls: audio, backlight, WiFi, Bluetooth, IME, battery, system tray
+- Image and video wallpapers
+- Colors generated from the wallpaper: applied to GTK apps and Hyprland too
+- Light / dark switch
+- Lock screen
+- Yura, the desktop assistant
+- Smooth animation
+- Customization: bar shape and color, transparency, blur, animation speed, and more
 
 ---
 
