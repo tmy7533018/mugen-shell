@@ -29,23 +29,26 @@ My dotfiles for a Hyprland + Quickshell desktop, packaged so they can be install
 
 ## Yura
 
-Yura is the desktop assistant. It can be used from an input row in the bar (`Super + Y`) and from a chat panel anchored to a screen corner (`Super + Shift + Y`), with the conversation history shared between them. The backend is **mugen-ai**, a Go server in [`ai/`](ai/) that talks to local models through [Ollama](https://ollama.com), to Anthropic Claude, to Google Gemini, or to any OpenAI-compatible API. Files can be attached to a message from the panel.
+The desktop assistant. You reach it from the input row in the bar or the chat panel.
 
-Yura also runs the desktop. "Set volume to 30" or "start a 5 minute timer" reaches the same panels you would click. It will not do anything dangerous. External [MCP](https://modelcontextprotocol.io) servers are supported as well, with their writes held for approval.
+- Models: local models through Ollama, Claude, Gemini, any OpenAI-compatible API
+- Desktop control: "set volume to 30" or "start a 5 minute timer" moves the matching panel
+- External MCP servers are supported; writes are held for approval
+- Read-aloud: AivisHub voices can be picked
 
-Press the speaker icon on a reply and a voice model reads it back (optional). The default voice is Japanese; install a model from [AivisHub](https://hub.aivis-project.com/) and pick it in Settings. [SETUP.en.md](SETUP.en.md#configuring-mugen-ai) has the details.
+Configuration is in [SETUP.en.md](SETUP.en.md#configuring-mugen-ai).
 
 ---
 
 ## Installation
 
-Try it without installing anything (Yura needs a model of your own before it will answer). The demo VM autologins into Hyprland, with `mugen` / `mugen` as the credentials:
+The steps are in [SETUP.en.md](SETUP.en.md).
+
+To try it without installing, use the demo VM. The user name, and the password for unlocking and sudo, are both `mugen`.
 
 ```sh
 nix build "github:tmy7533018/mugen-shell#nixosConfigurations.vm.config.system.build.vm" && ./result/bin/run-mugen-vm-vm
 ```
-
-Install steps and configuration are documented in [SETUP.en.md](SETUP.en.md). On Arch, `./install.sh` does the whole thing.
 
 ---
 

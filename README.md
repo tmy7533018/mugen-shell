@@ -31,23 +31,26 @@ Hyprland + Quickshell デスクトップ向けの私の dotfiles を、Arch の�
 
 ## Yura
 
-Yura はデスクトップのアシスタントです。バーの入力 (`Super + Y`) と画面コーナーのチャットパネル (`Super + Shift + Y`) の 2 か所で使用できて、会話履歴は共有されます。バックエンドは [`ai/`](ai/) 配下の Go サーバ **mugen-ai** で、[Ollama](https://ollama.com) 経由のローカルモデル、Anthropic Claude、Google Gemini、OpenAI 互換 API に対応しています。パネルからはメッセージにファイルを添えられます。
+デスクトップのアシスタントです。バーの入力欄と、チャットパネルから使えます。
 
-Yura はデスクトップの操作も可能です。「音量 30 にして」「5 分タイマー計って」と言えば、自分でクリックするのと同じパネルに届きます。危険な操作はしません。外部の [MCP](https://modelcontextprotocol.io) サーバにも対応しており、書き込み系は実行前に確認します。
+- モデル: Ollama のローカルモデル、Claude、Gemini、OpenAI 互換 API
+- デスクトップの操作: 「音量 30 にして」「5 分タイマー計って」で、対応するパネルが動きます
+- 外部の MCP サーバにも対応しています。書き込み系の操作は実行前に確認します
+- 読み上げ: AivisHub のモデルを選べます
 
-返事はスピーカーアイコンを押すと読み上げられます (オプション)。既定の声は日本語です。[AivisHub](https://hub.aivis-project.com/) のモデルをインストールして Settings で選べます。詳細は [SETUP.md](SETUP.md#mugen-ai-の設定) にまとめました。
+設定は [SETUP.md](SETUP.md#mugen-ai-の設定) にまとめました。
 
 ---
 
 ## インストール
 
-インストールせずに試すならデモ VM が使えます (Yura を動かすにはモデルの用意が要ります)。Hyprland に自動ログインします (資格情報は `mugen` / `mugen`):
+手順は [SETUP.md](SETUP.md) にあります。
+
+インストールせずに試すにはデモ VM を使います。ユーザー名とロック解除・sudo のパスワードはどちらも `mugen` です。
 
 ```sh
 nix build "github:tmy7533018/mugen-shell#nixosConfigurations.vm.config.system.build.vm" && ./result/bin/run-mugen-vm-vm
 ```
-
-インストール手順と設定については [SETUP.md](SETUP.md) にまとめました。Arch なら `./install.sh` 一本で入ります。
 
 ---
 
