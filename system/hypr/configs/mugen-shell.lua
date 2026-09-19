@@ -39,14 +39,7 @@ hl.on("hyprland.start", function()
     -- One shell: exec_cmd does not wait, and a bar started before the import has no display.
     hl.exec_cmd("sh -c 'systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE && systemctl --user start mugen-shell-session.target'")
     hl.exec_cmd("sh -lc 'sleep 1; " .. configHome .. "/hypr/scripts/wallp-restore.sh'")
-    -- fcitx's Wayland frontend only reaches a surface Qt has activated, and a
-    -- layer shell never becomes the application's focus window, so text input
-    -- here has to go over fcitx's DBus frontend instead. Scoped to the mugen
-    -- shells: exporting QT_IM_MODULE session-wide is what fcitx5 warns
-    -- about, and every other app is fine on the Wayland frontend.
-    -- Qt picks no platform theme under XDG_CURRENT_DESKTOP=Hyprland, and
-    -- without one its FileDialog is self-drawn rather than the desktop's.
-    hl.exec_cmd("env QT_IM_MODULE=fcitx QT_QPA_PLATFORMTHEME=xdgdesktopportal quickshell -p " .. configHome .. "/quickshell/mugen-shell/yura-shell.qml")
+    hl.exec_cmd(configHome .. "/quickshell/mugen-shell/scripts/yura-window.sh")
     hl.exec_cmd(configHome .. "/quickshell/mugen-shell/scripts/blur.sh boot")
     hl.exec_cmd(configHome .. "/hypr/scripts/hypridle-auto-start.sh")
     hl.exec_cmd("wl-paste --type text  --watch cliphist store")

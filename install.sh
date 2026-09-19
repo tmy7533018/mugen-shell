@@ -176,11 +176,20 @@ restart_running() {
   done
 }
 
+# The Yura window is Hyprland's exec-once child, not a unit, and keeps the old QML loaded.
+restart_yura_window() {
+  local qml="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/mugen-shell/yura-shell.qml"
+  qs kill -p "$qml" 2> /dev/null || return 0
+  printf '  restarting the Yura window onto the new files\n'
+  hyprctl dispatch "hl.dsp.exec_cmd('$(dirname "$qml")/scripts/yura-window.sh')" > /dev/null
+}
+
 build_core() {
   say "Building mugen-shell, mugen-ai and mugen-audio"
   build_pkg mugen-shell -sf --noconfirm
   # The backend first, so the bar comes back up against the new API.
   restart_running mugen-ai.service mugen-shell.service
+  restart_yura_window
 }
 
 # The panels shell out to nmcli, bluetoothctl and pactl; the packages come with the core, the daemons do not.
