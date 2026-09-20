@@ -193,6 +193,7 @@ in
           starship
           jp2a
           fastfetch
+          fzf
           eza
           bat
           ugrep
