@@ -36,6 +36,7 @@ QtObject {
     property string _artTrackKey: ""
     property bool _artIsFallback: false
     property string _artCachedUrl: ""
+    property string _artCachedSource: ""
     // Distinct from _artUnreachable, which is a fetch failure the retry timer keeps re-arming.
     property string _artBroken: ""
     property string _artVideoId: ""
@@ -119,10 +120,12 @@ QtObject {
         if (url === "" || url !== artUrl) return
         // Refusing only once we are already showing the derivation is what stops the loop.
         if (url === _artCachedUrl && _artIsFallback) return
+        // The poller compares against the source url, so a cached copy has to fail as its source.
+        let failed = url === _artCachedUrl ? _artCachedSource : url
         let derived = youtubeThumbnail(_artVideoId)
         // With no derivation left, holding the url would keep the previous track's art on screen.
-        if (derived === "" || derived === url) {
-            _artBroken = url
+        if (derived === "" || derived === failed) {
+            _artBroken = failed
             wantArt("")
             return
         }
@@ -217,6 +220,7 @@ QtObject {
             if (exitCode === 0 && path !== "") {
                 musicManager.artRetryTimer.interval = 2000
                 if (musicManager._artWanted === source) {
+                    musicManager._artCachedSource = source
                     musicManager._artCachedUrl = "file://" + path
                     musicManager.artUrl = musicManager._artCachedUrl
                 }
