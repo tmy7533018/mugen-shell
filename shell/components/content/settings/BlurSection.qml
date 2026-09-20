@@ -13,7 +13,7 @@ Rectangle {
     signal previewBlur(var params)
     signal applyBlur(var params)
 
-    readonly property bool enabled: settingsManager ? settingsManager.blurEnabled : true
+    readonly property bool blurOn: settingsManager ? settingsManager.blurEnabled : true
 
     width: parent ? parent.width : 420
     height: column.implicitHeight + 24
@@ -58,7 +58,7 @@ Rectangle {
             }
 
             Common.Switch {
-                checked: section.enabled
+                checked: section.blurOn
                 theme: section.theme
                 onToggled: value => {
                     if (!section.settingsManager) return
@@ -70,7 +70,7 @@ Rectangle {
 
         Common.SliderRow {
             rowTheme: section.theme
-            active: section.enabled
+            active: section.blurOn
             label: "Size"
             value: section.settingsManager ? (section.settingsManager.blurSize - 1) / 49 : 0
             display: (section.settingsManager ? section.settingsManager.blurSize : 0) + " px"
@@ -80,7 +80,7 @@ Rectangle {
 
         Common.SliderRow {
             rowTheme: section.theme
-            active: section.enabled
+            active: section.blurOn
             label: "Passes"
             value: section.settingsManager ? (section.settingsManager.blurPasses - 1) / 4 : 0
             display: String(section.settingsManager ? section.settingsManager.blurPasses : 0)
@@ -90,7 +90,7 @@ Rectangle {
 
         Common.SliderRow {
             rowTheme: section.theme
-            active: section.enabled
+            active: section.blurOn
             label: "Noise"
             value: section.settingsManager ? section.settingsManager.blurNoise / 0.3 : 0
             display: (section.settingsManager ? section.settingsManager.blurNoise : 0).toFixed(3)
@@ -100,7 +100,7 @@ Rectangle {
 
         Common.SliderRow {
             rowTheme: section.theme
-            active: section.enabled
+            active: section.blurOn
             label: "Contrast"
             value: section.settingsManager ? (section.settingsManager.blurContrast - 0.5) / 1.5 : 0
             display: (section.settingsManager ? section.settingsManager.blurContrast : 0).toFixed(2)
@@ -110,7 +110,7 @@ Rectangle {
 
         Common.SliderRow {
             rowTheme: section.theme
-            active: section.enabled
+            active: section.blurOn
             label: "Brightness"
             value: section.settingsManager ? section.settingsManager.blurBrightness - 0.5 : 0
             display: (section.settingsManager ? section.settingsManager.blurBrightness : 0).toFixed(2)
@@ -120,7 +120,7 @@ Rectangle {
 
         Common.SliderRow {
             rowTheme: section.theme
-            active: section.enabled
+            active: section.blurOn
             label: "Vibrancy"
             value: section.settingsManager ? section.settingsManager.blurVibrancy : 0
             display: (section.settingsManager ? section.settingsManager.blurVibrancy : 0).toFixed(2)
@@ -132,7 +132,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 24
             spacing: 12
-            enabled: section.enabled
+            enabled: section.blurOn
             opacity: enabled ? 1 : 0.35
 
             Text {
@@ -155,7 +155,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 24
             spacing: 12
-            enabled: section.enabled
+            enabled: section.blurOn
             opacity: enabled ? 1 : 0.35
 
             Text {
