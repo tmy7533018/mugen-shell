@@ -176,12 +176,22 @@ restart_running() {
   done
 }
 
+# A Lua Hyprland config evaluates `hyprctl dispatch` args as Lua and rejects the legacy string form.
+hypr_exec() {
+  if [[ "${HYPR_CONFIG_LUA:-}" == "1" ]] || hyprctl systeminfo 2> /dev/null | grep -qE '^configProvider:\s*lua\s*$'; then
+    hyprctl dispatch "hl.dsp.exec_cmd('$1')" > /dev/null
+  else
+    hyprctl dispatch exec "$1" > /dev/null
+  fi
+}
+
 # The Yura window is Hyprland's exec-once child, not a unit, and keeps the old QML loaded.
 restart_yura_window() {
   local qml="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/mugen-shell/yura-shell.qml"
   qs kill -p "$qml" 2> /dev/null || return 0
   printf '  restarting the Yura window onto the new files\n'
-  hyprctl dispatch "hl.dsp.exec_cmd('$(dirname "$qml")/scripts/yura-window.sh')" > /dev/null
+  hypr_exec "$(dirname "$qml")/scripts/yura-window.sh" \
+    || warn "could not relaunch the Yura window; run $(dirname "$qml")/scripts/yura-window.sh yourself"
 }
 
 build_core() {
