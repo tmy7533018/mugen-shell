@@ -15,8 +15,10 @@ defaults = {"enabled": True, "size": 5, "passes": 3, "noise": 0.02, "contrast": 
             "brightness": 1.2, "vibrancy": 0.0, "xray": False, "ignoreOpacity": True}
 try:
     with open(settings_file) as f:
-        saved = json.load(f).get("blur", {})
-except (OSError, ValueError):
+        saved = json.load(f).get("blur")
+except (OSError, ValueError, AttributeError):
+    saved = None
+if not isinstance(saved, dict):
     saved = {}
 if override:
     saved.update(json.loads(override))
@@ -55,7 +57,9 @@ print("} } })")
 }
 
 apply() {
-    write_blur_lua "$(blur_params "${1:-}")"
+    local params
+    params=$(blur_params "${1:-}")
+    write_blur_lua "$params"
     # `hyprctl keyword` is rejected under a Lua config; a reload re-dofiles blur.lua.
     hyprctl reload >/dev/null 2>&1 || true
 }
