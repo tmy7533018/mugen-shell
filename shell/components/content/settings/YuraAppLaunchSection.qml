@@ -157,10 +157,18 @@ Rectangle {
                     let first = tokens[0]
                     let slash = first.lastIndexOf("/")
                     let bin = slash >= 0 ? first.substring(slash + 1) : first
-                    if (!bin || seen[bin]) continue
-                    seen[bin] = true
-                    pool.push({ binary: bin, display: app.name || bin })
+                    if (!bin) continue
+                    let name = app.name || bin
+                    // One allowlist entry covers every app behind a shared launcher, so the row names them all.
+                    if (bin in seen) {
+                        let names = pool[seen[bin]].names
+                        if (names.indexOf(name) < 0) names.push(name)
+                        continue
+                    }
+                    seen[bin] = pool.length
+                    pool.push({ binary: bin, names: [name] })
                 }
+                for (let i = 0; i < pool.length; i++) pool[i].display = pool[i].names.join(", ")
                 pool.sort((a, b) => a.display.toLowerCase().localeCompare(b.display.toLowerCase()))
                 section.installedApps = pool
             } catch (e) {}
