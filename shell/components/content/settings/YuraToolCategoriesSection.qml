@@ -166,15 +166,14 @@ Rectangle {
         saveProcess.running = true
     }
 
-    function allOn() {
-        section.disabledSet = ({})
-        section.dirtyTick++
-    }
-
-    function allOff() {
-        let m = {}
-        for (let i = 0; i < categories.length; i++) m[categories[i].id] = true
-        section.disabledSet = m
+    // Only the builtin ids are toggled: MCP server names are categories too and live in the same set.
+    function setAll(on) {
+        let next = Object.assign({}, section.disabledSet)
+        for (let i = 0; i < categories.length; i++) {
+            if (on) delete next[categories[i].id]
+            else next[categories[i].id] = true
+        }
+        section.disabledSet = next
         section.dirtyTick++
     }
 
@@ -283,7 +282,7 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: section.allOn()
+                    onClicked: section.setAll(true)
                 }
             }
 
@@ -307,7 +306,7 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: section.allOff()
+                    onClicked: section.setAll(false)
                 }
             }
         }
