@@ -37,7 +37,7 @@ Rectangle {
     property string formEnv: ""
 
     property var discoverCandidates: []
-    property bool discovered: false
+    readonly property var unaddedCandidates: discoverCandidates.filter(c => !servers.some(s => s.name === c.name))
 
     readonly property int expandedHeight: 64 + contentColumn.implicitHeight + 16
 
@@ -319,7 +319,6 @@ Rectangle {
             if (exitCode !== 0) { section.statusText = "discover failed"; return }
             try {
                 section.discoverCandidates = (JSON.parse(discoverProcess.buf).candidates) || []
-                section.discovered = true
                 if (section.discoverCandidates.length === 0)
                     section.statusText = "no installed MCP servers found (npm -g)"
                 section.bump()
@@ -420,7 +419,7 @@ Rectangle {
                 required property var modelData
 
                 readonly property var st: section.statusByName[modelData.name] || null
-                readonly property bool pending: st === null && !modelData.disabled
+                readonly property bool pending: (st === null || st.disabled) && !modelData.disabled
 
                 Layout.fillWidth: true
                 Layout.preferredHeight: serverBody.implicitHeight + 16
@@ -692,11 +691,11 @@ Rectangle {
 
         Flow {
             Layout.fillWidth: true
-            visible: !section.addingServer && section.discoverCandidates.length > 0
+            visible: !section.addingServer && section.unaddedCandidates.length > 0
             spacing: 6
 
             Repeater {
-                model: section.discoverCandidates
+                model: section.unaddedCandidates
 
                 Rectangle {
                     id: candidatePill

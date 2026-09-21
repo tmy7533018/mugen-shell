@@ -76,7 +76,7 @@ Rectangle {
             try {
                 section.memories = JSON.parse(listProcess.buf).memories || []
                 section.loaded = true
-                section.statusText = ""
+                if (section.statusText === "load failed") section.statusText = ""
                 section.bump()
             } catch (e) {
                 section.statusText = "parse failed"

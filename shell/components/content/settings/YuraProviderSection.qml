@@ -92,8 +92,8 @@ Rectangle {
                     },
                     {
                         name: "OpenAI",
-                        active: !!key.openai || (openai.base_url && openai.base_url.indexOf("localhost") >= 0),
-                        keyLabel: key.openai ? "OPENAI_API_KEY set" : (openai.base_url ? "local server (no key needed)" : "OPENAI_API_KEY missing"),
+                        active: !!key.openai || !!openai.base_url,
+                        keyLabel: key.openai ? "OPENAI_API_KEY set" : (openai.base_url ? "base_url set, no key" : "OPENAI_API_KEY missing"),
                         detail: openai.base_url || "(no base_url)",
                         models: openai.models || []
                     }

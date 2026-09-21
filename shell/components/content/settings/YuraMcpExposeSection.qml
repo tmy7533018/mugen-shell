@@ -437,7 +437,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.topMargin: 4
             visible: section.exposeEnabled
-            text: "HTTP endpoint: " + aiBackend.baseUrl + "/mcp\nClaude Desktop config (claude_desktop_config.json):"
+            text: "Unix socket: " + aiBackend.socketPath + " (HTTP path /mcp)\nClaude Desktop config (claude_desktop_config.json):"
             color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70)
             font.pixelSize: 10
             font.family: "M PLUS 2"
