@@ -68,7 +68,8 @@ Item {
         focus: true
         Keys.onPressed: (event) => {
             if (event.key === Qt.Key_Escape) {
-                Qt.quit()
+                if (surface.activeFocus) Qt.quit()
+                else surface.forceActiveFocus()
                 event.accepted = true
             } else if (event.key === Qt.Key_Down) {
                 frame.selectCategoryAt(1)
