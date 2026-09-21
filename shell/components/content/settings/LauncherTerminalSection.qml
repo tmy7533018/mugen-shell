@@ -23,6 +23,7 @@ Rectangle {
     function commit() {
         if (!section.settingsManager) return
         const term = terminalInput.text.length > 0 ? terminalInput.text : "kitty"
+        terminalInput.text = term
         if (section.settingsManager.launcherTerminal !== term) {
             section.settingsManager.launcherTerminal = term
             section.settingsManager.saveSettings()

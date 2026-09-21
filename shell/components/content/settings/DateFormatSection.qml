@@ -32,6 +32,7 @@ Rectangle {
     function commit() {
         if (!section.settingsManager) return
         const fmt = formatInput.text.length > 0 ? formatInput.text : "ddd M/d"
+        formatInput.text = fmt
         if (section.settingsManager.dateFormat !== fmt) {
             section.settingsManager.dateFormat = fmt
             section.settingsManager.saveSettings()
