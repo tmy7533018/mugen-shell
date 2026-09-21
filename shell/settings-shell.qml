@@ -296,21 +296,23 @@ ShellRoot {
     }
 
     // Without this the first load's property-changed storm would rewrite hypridle.conf and restart it.
-    property bool _initialLoadDone: false
+    // Applied on save rather than on every slider step: each script restarts hypridle.
+    property var _appliedHyprIdle: null
 
     Connections {
         target: settingsManager
         function onSettingsChanged() {
-            root._initialLoadDone = true
-        }
-        function onLockTimerMinutesChanged() {
-            if (root._initialLoadDone) root.applyLockTimer(settingsManager.lockTimerMinutes)
-        }
-        function onIdleSuspendMinutesChanged() {
-            if (root._initialLoadDone) root.applyIdleSuspend(settingsManager.idleSuspendMinutes)
-        }
-        function onIdleDpmsMinutesChanged() {
-            if (root._initialLoadDone) root.applyIdleDpms(settingsManager.idleDpmsMinutes)
+            let now = {
+                lock: settingsManager.lockTimerMinutes,
+                suspend: settingsManager.idleSuspendMinutes,
+                dpms: settingsManager.idleDpmsMinutes
+            }
+            let prev = root._appliedHyprIdle
+            root._appliedHyprIdle = now
+            if (prev === null) return
+            if (now.lock !== prev.lock) root.applyLockTimer(now.lock)
+            if (now.suspend !== prev.suspend) root.applyIdleSuspend(now.suspend)
+            if (now.dpms !== prev.dpms) root.applyIdleDpms(now.dpms)
         }
     }
 
