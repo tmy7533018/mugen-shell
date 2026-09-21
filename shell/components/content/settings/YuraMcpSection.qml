@@ -166,11 +166,11 @@ Rectangle {
     }
 
 
-    // The usual failure is mugen-ai restarting after another section's save, so a retry lands within seconds.
+    // mugen-ai opens its socket only after the MCP handshakes, so a load right after a restart fails.
     Timer {
         id: loadRetry
         interval: 3000
-        onTriggered: if (!section.loaded) loadConfigProcess.running = true
+        onTriggered: if (!section.dirty && !loadConfigProcess.running) loadConfigProcess.running = true
     }
 
     Behavior on height {

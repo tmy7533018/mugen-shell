@@ -102,13 +102,14 @@ Rectangle {
         stdout: SplitParser { onRead: data => loadStatsProcess.buf += data }
         onRunningChanged: { if (running) buf = "" }
         onExited: (exitCode) => {
-            if (exitCode !== 0) { section.statusText = "load failed"; return }
+            if (exitCode !== 0) { section.statusText = "load failed"; loadRetry.restart(); return }
             try {
                 let o = JSON.parse(loadStatsProcess.buf)
                 section.dbPath = o.path || ""
                 section.convCount = o.count || 0
                 section.dbSize = o.size_bytes || 0
                 section.loaded = true
+                if (section.statusText === "load failed") section.statusText = ""
             } catch (e) {
                 section.statusText = "parse failed"
             }
@@ -174,6 +175,15 @@ Rectangle {
             section.savedRetainDays = section.retainDays
             section.statusText = exitCode === 0 ? "applied — reloading…" : "applied (restart pending)"
             reloadTimer.start()
+        }
+    }
+
+    Timer {
+        id: loadRetry
+        interval: 3000
+        onTriggered: {
+            loadStatsProcess.running = true
+            loadConfigProcess.running = true
         }
     }
 
