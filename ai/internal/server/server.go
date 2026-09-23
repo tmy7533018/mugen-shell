@@ -320,6 +320,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			s.events.broadcast("messages", map[string]any{"conversation_id": convID})
 		} else {
 			s.history.RemoveLastFrom(convID)
+			// A client that read the conversation back before the rollback still shows the message.
+			s.events.broadcast("messages", map[string]any{"conversation_id": convID})
 		}
 		sendEvent(map[string]any{"error": errMsg, "done": true})
 	}

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -137,6 +138,29 @@ func TestChatDropsTheUserMessageWhenNothingHappened(t *testing.T) {
 		if m.Role == "user" || m.Role == "assistant" {
 			t.Fatalf("expected an empty exchange, found %s: %q", m.Role, m.Content)
 		}
+	}
+}
+
+// A stopped client reads the conversation back while the rollback may still be
+// pending, so the rollback is announced on its own.
+func TestChatAnnouncesTheRollback(t *testing.T) {
+	s, _ := newChatServer(t, &scriptedProvider{failWith: errors.New("ollama unreachable")})
+	ch := s.events.subscribe()
+	defer s.events.unsubscribe(ch)
+
+	postChat(t, s, `{"message":"hi","conversation_id":0}`)
+
+	messages := 0
+	for len(ch) > 0 {
+		var evt struct {
+			Type string `json:"type"`
+		}
+		if err := json.Unmarshal(<-ch, &evt); err == nil && evt.Type == "messages" {
+			messages++
+		}
+	}
+	if messages != 2 {
+		t.Fatalf("got %d messages events, want one for the turn and one for its rollback", messages)
 	}
 }
 
