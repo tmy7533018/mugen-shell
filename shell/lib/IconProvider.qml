@@ -189,7 +189,7 @@ QtObject {
         case code === 0:                return "Clear"
         case code === 1:                return "Mostly clear"
         case code === 2:                return "Partly cloudy"
-        case code === 3:                return "Overcast"
+        case code === 3:                return "Cloudy"
         case code === 45 || code === 48: return "Fog"
         case code >= 51 && code <= 57:  return "Drizzle"
         case code >= 61 && code <= 65:  return "Rain"
