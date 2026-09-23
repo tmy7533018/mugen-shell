@@ -27,6 +27,13 @@ Item {
     readonly property int cols: Math.max(1, Math.floor((width - inset * 2) / grain))
     readonly property int rows: Math.max(1, Math.floor((height - inset * 2) / grain))
 
+    // A stride sharing a factor with cols only ever visits a fraction of the columns.
+    readonly property int scanStride: {
+        const gcd = (a, b) => b === 0 ? a : gcd(b, a % b)
+        for (const s of [7, 11, 13, 17, 19]) if (gcd(s, cols) === 1) return s
+        return 1
+    }
+
     property var grid: null
     property int filled: 0
     property int hour: -1
@@ -97,7 +104,7 @@ Item {
         for (let y = rows - 2; y >= 0; y--) {
             for (let k = 0; k < cols; k++) {
                 // Strided: scanning in order drags every pile to one side.
-                const x = (k * 7 + y) % cols
+                const x = (k * scanStride + y) % cols
                 const at = y * cols + x
                 const v = grid[at]
                 if (!v) continue
