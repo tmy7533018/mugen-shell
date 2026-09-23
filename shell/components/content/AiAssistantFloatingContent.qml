@@ -40,6 +40,18 @@ FocusScope {
     property bool streaming: false
     property bool stopRequested: false
     property bool discardStreamTail: false
+
+    // Kept for the turn in flight, so one the server rolled back can go back into the input.
+    property string sentText: ""
+    property var sentFiles: []
+    property bool sentToNewConv: false
+    property int turnConvId: 0
+    property bool turnOpened: false
+    property bool replyStarted: false
+    property string turnError: ""
+    property string rejectBody: ""
+    property string turnFailure: ""
+
     property bool aiAvailable: false
     property bool hasModel: false
     property bool healthChecked: false
@@ -245,6 +257,7 @@ FocusScope {
         const files = attachments || []
         if ((!text && files.length === 0) || streaming || chatProcess.running) return
         stopRequested = false
+        turnFailure = ""
         if (root.pendingRewindId !== 0) {
             truncateProcess.messageId = root.pendingRewindId
             truncateProcess.queuedText = text
@@ -253,6 +266,14 @@ FocusScope {
             truncateProcess.running = true
             return
         }
+        sentText = text
+        sentFiles = files
+        sentToNewConv = currentConvId === 0
+        turnConvId = 0
+        turnOpened = false
+        replyStarted = false
+        turnError = ""
+        rejectBody = ""
         appendMessage("user", text, files)
         appendMessage("assistant", "")
         streaming = true
@@ -324,18 +345,48 @@ FocusScope {
         freezeThinking()
         // A timeout or error can end the stream with a card still up for an abandoned prompt.
         pendingConfirm = null
+        // A refusal before the stream is a plain HTTP body, which curl without -f exits 0 on.
+        const refused = exitCode === 0 && !turnOpened
+        // The server keeps a turn only once text streamed or a tool ran, and rolls back anything less.
+        const unsent = !replyStarted && (stopRequested || refused || (exitCode === 0 && turnError !== ""))
         // A stop is a SIGTERM, so curl's non-zero exit says nothing about the connection.
         if (exitCode !== 0 && !stopRequested) {
             updateLastMessage("\n[connection failed]")
         }
         stopRequested = false
         refreshConversations()
+        // A failed first message would otherwise leave an empty conversation in the list.
+        if (unsent && sentToNewConv && turnConvId !== 0) {
+            abandonConvProcess.payload = String(turnConvId)
+            abandonConvProcess.running = true
+        }
         if (discardStreamTail) {
             discardStreamTail = false
             return
         }
+        if (turnError !== "") {
+            turnFailure = (replyStarted ? "Interrupted: " : "Couldn't send: ") + turnError
+        } else if (refused) {
+            turnFailure = "Couldn't send: " + (rejectBody !== "" ? rejectBody : "the backend refused it")
+        }
+        if (unsent) {
+            handBackUnsent()
+            if (sentToNewConv) {
+                currentConvId = 0
+                return
+            }
+        }
         // Message ids only exist server-side, so the turn that just landed must be read back.
         loadCurrentConversation()
+    }
+
+    function handBackUnsent() {
+        const n = messages.length
+        if (n >= 2 && messages[n - 2].role === "user") messages = messages.slice(0, n - 2)
+        inputField.text = inputField.text.trim() === "" ? sentText : sentText + "\n" + inputField.text
+        pendingAttachments = sentFiles.concat(pendingAttachments).slice(0, maxAttachments)
+        inputField.cursorPosition = inputField.length
+        inputField.forceActiveFocus()
     }
 
     function newChat() {
@@ -347,6 +398,7 @@ FocusScope {
         if (truncateProcess.running) truncateProcess.abandoned = true
         messages = []
         currentConvId = 0
+        turnFailure = ""
         userScrolled = false
         // Coming back from an old conversation leaves currentModel stuck on its bound model.
         if (defaultModel !== "") currentModel = defaultModel
@@ -363,6 +415,7 @@ FocusScope {
         if (truncateProcess.running) truncateProcess.abandoned = true
         currentConvId = convId
         messages = []
+        turnFailure = ""
         userScrolled = false
         selectConvProcess.payload = String(convId)
         selectConvProcess.running = true
@@ -1239,7 +1292,8 @@ FocusScope {
         visible: root.aiAvailable && root.hasModel
 
         readonly property real rowHeight: modeManager.scale(46)
-        height: attachStrip.height + Math.max(rowHeight, inputFlick.height + modeManager.scale(22))
+        height: failureStrip.height + attachStrip.height
+            + Math.max(rowHeight, inputFlick.height + modeManager.scale(22))
 
         Behavior on height { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
@@ -1265,8 +1319,39 @@ FocusScope {
         }
 
         Item {
-            id: attachStrip
+            id: failureStrip
             anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: root.turnFailure !== ""
+                ? failureText.implicitHeight + root.modeManager.scale(10)
+                : 0
+            clip: true
+
+            Behavior on height { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
+
+            Text {
+                id: failureText
+                anchors.left: parent.left
+                anchors.leftMargin: root.modeManager.scale(42)
+                anchors.right: parent.right
+                anchors.rightMargin: root.modeManager.scale(12)
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: root.modeManager.scale(6)
+                text: root.turnFailure
+                textFormat: Text.PlainText
+                wrapMode: Text.Wrap
+                maximumLineCount: 2
+                elide: Text.ElideRight
+                color: root.theme ? root.theme.danger : Qt.rgba(0.95, 0.55, 0.65, 1.0)
+                font.pixelSize: root.modeManager.scale(11)
+                font.family: "M PLUS 2"
+            }
+        }
+
+        Item {
+            id: attachStrip
+            anchors.top: failureStrip.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             height: root.pendingAttachments.length > 0
@@ -1299,7 +1384,7 @@ FocusScope {
             anchors.rightMargin: modeManager.scale(12)
             // Grows symmetrically, so a single line sits where it did before Shift+Enter existed.
             anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: attachStrip.height / 2
+            anchors.verticalCenterOffset: (failureStrip.height + attachStrip.height) / 2
             height: Math.min(inputField.implicitHeight, modeManager.scale(110))
             contentWidth: width
             contentHeight: inputField.implicitHeight
@@ -1772,21 +1857,29 @@ FocusScope {
             onRead: data => {
                 if (!data) return
                 let line = data.trim()
-                if (!line.startsWith("data:")) return
+                if (!line.startsWith("data:")) {
+                    if (!root.turnOpened && line !== "") {
+                        root.rejectBody += (root.rejectBody === "" ? "" : " ") + line
+                    }
+                    return
+                }
                 let jsonStr = line.substring(5).trim()
                 if (!jsonStr) return
                 try {
                     let obj = JSON.parse(jsonStr)
                     if (obj.conversation_id !== undefined) {
+                        root.turnOpened = true
+                        root.turnConvId = obj.conversation_id
                         root.currentConvId = obj.conversation_id
                         if (obj.model) root.currentModel = obj.model
                         return
                     }
                     if (obj.error) {
-                        root.updateLastMessage("\n[error: " + obj.error + "]")
+                        root.turnError = obj.error
                         return
                     }
                     if (obj.tool_calls) {
+                        root.replyStarted = true
                         root.appendToolCalls(obj.tool_calls)
                         return
                     }
@@ -1804,6 +1897,7 @@ FocusScope {
                         return
                     }
                     if (obj.content) {
+                        root.replyStarted = true
                         root.updateLastMessage(obj.content)
                     }
                 } catch (e) {
@@ -1812,6 +1906,17 @@ FocusScope {
         }
 
         onExited: (exitCode) => root.finishStream(exitCode)
+    }
+
+    // Deletes without following current_id: the user stays on the fresh chat they sent from.
+    Process {
+        id: abandonConvProcess
+        running: false
+        property string payload: ""
+        command: ["curl", ...root._transportArgs, "-sS", "--max-time", "2", "-X", "DELETE",
+                  root._baseUrl + "/conversations/" + payload]
+
+        onExited: root.refreshConversations()
     }
 
     Process {
