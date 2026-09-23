@@ -75,6 +75,7 @@ Item {
     signal powerActionRequested(int action)
 
     property int passwordLength: 0
+    property bool awaitingPassword: false
     property string faultText: ""
     property bool authenticating: false
     property bool unlocking: false
@@ -202,6 +203,9 @@ Item {
     readonly property real orbCX: contentX + colLeft(1) + orbBoxW / 2
     readonly property real orbCY: contentY + rowTop(0) + orbBoxH * 0.5
     readonly property int chargeLength: Math.min(passwordLength, 14)
+    // PAM re-arms before the failure shake settles, so the hint waits for the orb.
+    readonly property bool passwordHintShown: awaitingPassword && passwordLength === 0
+        && !authenticating && !unlocking && faultText === "" && !failMurk.running
 
     // Outside the glow, which grows with charge and wobble to about 1.07x.
     readonly property real moteInner:
@@ -538,6 +542,22 @@ Item {
                         wrapMode: Text.WordWrap
                         font.family: root.faceFontFamily
                         font.pixelSize: Math.round(root.cellH * 0.13)
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: root.cellH * 0.17
+                        text: "PASSWORD"
+                        color: root.clockColor
+                        opacity: root.passwordHintShown ? lockIcon.glyphOpacity : 0
+                        font.family: root.faceFontFamily
+                        font.pixelSize: Math.round(root.cellH * 0.09)
+                        font.letterSpacing: root.cellH * 0.09 * 0.18
+
+                        Behavior on opacity {
+                            NumberAnimation { duration: 400; easing.type: Easing.InOutCubic }
+                        }
                     }
                 }
 

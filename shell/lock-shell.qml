@@ -587,6 +587,7 @@ ShellRoot {
                 calendarEvents: root.calendarEvents
 
                 passwordLength: root.password.length
+                awaitingPassword: root.armed
                 faultText: root.pamFaulted
                     ? "Authentication is unavailable — retrying" : ""
                 authenticating: root.authenticating
