@@ -41,8 +41,8 @@ ShellRoot {
         visible: true
         title: "Mugen Calendar"
         color: "transparent"
-        width: 900
-        height: 560
+        implicitWidth: 900
+        implicitHeight: 560
         minimumSize: Qt.size(800, 500)
 
         Content.CalendarFloatingContent {
