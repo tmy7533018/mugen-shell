@@ -31,9 +31,9 @@ ShellRoot {
         bodySupported: true
         bodyMarkupSupported: false
         bodyHyperlinksSupported: false
-        bodyImagesSupported: true
+        bodyImagesSupported: false
         actionsSupported: true
-        actionIconsSupported: true
+        actionIconsSupported: false
         imageSupported: true
         persistenceSupported: true
     }
