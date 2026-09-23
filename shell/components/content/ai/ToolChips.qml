@@ -92,6 +92,7 @@ Column {
                 anchors.top: parent.top
                 anchors.topMargin: chip.vPad
                 text: chip.label
+                textFormat: Text.PlainText
                 elide: chip.expanded ? Text.ElideNone : Text.ElideRight
                 wrapMode: chip.expanded ? Text.Wrap : Text.NoWrap
                 color: root.theme ? root.theme.textSecondary : Qt.rgba(0.85, 0.85, 0.90, 0.85)
