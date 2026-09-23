@@ -55,7 +55,9 @@ package_mugen-ai() {
   pkgdesc='AI backend service for mugen-shell'
   depends=('glibc')
   optdepends=('libnotify: calendar event notifications'
-              'gtk3: gtk-launch for the focus_app tool')
+              'gtk3: gtk-launch for the focus_app tool'
+              'hyprland: hyprctl for the hypr monitor and focus-or-launch commands'
+              'npm: finding globally installed MCP servers')
   local repo; repo=$(_tree)
   install -Dm755 "$srcdir/mugen-ai" "$pkgdir/usr/bin/mugen-ai"
   install -Dm644 "$repo/ai/.env.example" "$pkgdir/usr/share/mugen-ai/.env.example"
