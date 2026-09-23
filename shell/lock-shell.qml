@@ -585,6 +585,7 @@ ShellRoot {
                 today: root.today
                 calendarWeekStart: settingsManager.calendarWeekStart
                 calendarEvents: root.calendarEvents
+                showEvents: settingsManager.lockShowEvents
 
                 passwordLength: root.password.length
                 awaitingPassword: root.armed
@@ -611,7 +612,8 @@ ShellRoot {
                 weatherHighLow: root.weatherHighLow
                 weatherCondition: weatherManager.ready
                     ? icons.weatherText(weatherManager.weatherCode) : ""
-                weatherLocation: weatherManager.ready ? weatherManager.locationName : ""
+                weatherLocation: weatherManager.ready && settingsManager.lockShowLocation
+                    ? weatherManager.locationName : ""
                 weatherParticleType: weatherManager.ready
                     ? icons.weatherType(weatherManager.weatherCode, weatherManager.isDay)
                     : "clouds"

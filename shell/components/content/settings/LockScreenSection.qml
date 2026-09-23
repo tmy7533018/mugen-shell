@@ -1,0 +1,84 @@
+import QtQuick
+import QtQuick.Layouts
+import "../../common" as Common
+
+Rectangle {
+    id: section
+
+    required property var theme
+    required property var modeManager
+    required property var settingsManager
+
+    width: parent ? parent.width : 420
+    height: 104
+    color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
+    radius: 20
+    border.width: 1
+    border.color: theme ? Qt.rgba(theme.accent.r, theme.accent.g, theme.accent.b, 0.2) : Qt.rgba(0.65, 0.55, 0.85, 0.2)
+
+    function bump() {
+        if (modeManager && modeManager.isMode("settings")) modeManager.bump()
+    }
+
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 12
+        spacing: 8
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+                Layout.fillWidth: true
+                text: "Show events on lock screen"
+                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                font.pixelSize: 12
+                font.family: "M PLUS 2"
+                font.weight: Font.Normal
+                font.letterSpacing: 0.5
+            }
+
+            Common.Switch {
+                checked: section.settingsManager ? section.settingsManager.lockShowEvents : true
+                theme: section.theme
+
+                onToggled: value => {
+                    if (section.settingsManager) {
+                        section.settingsManager.lockShowEvents = value
+                        section.settingsManager.saveSettings()
+                        section.bump()
+                    }
+                }
+            }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Text {
+                Layout.fillWidth: true
+                text: "Show location on lock screen"
+                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                font.pixelSize: 12
+                font.family: "M PLUS 2"
+                font.weight: Font.Normal
+                font.letterSpacing: 0.5
+            }
+
+            Common.Switch {
+                checked: section.settingsManager ? section.settingsManager.lockShowLocation : true
+                theme: section.theme
+
+                onToggled: value => {
+                    if (section.settingsManager) {
+                        section.settingsManager.lockShowLocation = value
+                        section.settingsManager.saveSettings()
+                        section.bump()
+                    }
+                }
+            }
+        }
+    }
+}

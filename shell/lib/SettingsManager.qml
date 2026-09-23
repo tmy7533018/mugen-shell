@@ -32,6 +32,8 @@ QtObject {
     property int lockTimerMinutes: 10  // hypridle screen-lock idle timeout
     property int idleSuspendMinutes: 30  // hypridle suspend timeout, 0 = disabled
     property int idleDpmsMinutes: 0  // hypridle screen-off timeout, 0 = disabled
+    property bool lockShowEvents: true
+    property bool lockShowLocation: true
     property string dateFormat: "ddd M/d"  // Qt date tokens
     property bool clockShow24Hour: true
     property bool clockShowSeconds: false
@@ -186,6 +188,10 @@ QtObject {
             "idle": {
                 "suspendMinutes": idleSuspendMinutes,
                 "dpmsMinutes": idleDpmsMinutes
+            },
+            "lockScreen": {
+                "showEvents": lockShowEvents,
+                "showLocation": lockShowLocation
             },
             "date": {
                 "format": dateFormat
@@ -415,6 +421,19 @@ QtObject {
                 }
             } catch (e) {
                 console.error("Failed to apply settings.idle:", e)
+            }
+
+            try {
+                if (settings.lockScreen) {
+                    if (settings.lockScreen.showEvents !== undefined) {
+                        lockShowEvents = settings.lockScreen.showEvents
+                    }
+                    if (settings.lockScreen.showLocation !== undefined) {
+                        lockShowLocation = settings.lockScreen.showLocation
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to apply settings.lockScreen:", e)
             }
 
             try {

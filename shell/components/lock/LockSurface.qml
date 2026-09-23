@@ -47,6 +47,7 @@ Item {
 
     property int calendarWeekStart: 0
     property var calendarEvents: []
+    property bool showEvents: true
 
     property string iconsBase: ""
     property string texturesBase: ""
@@ -372,6 +373,7 @@ Item {
                         today: root.today
                         weekStart: root.calendarWeekStart
                         events: root.calendarEvents
+                        showEvents: root.showEvents
                     }
                 }
 

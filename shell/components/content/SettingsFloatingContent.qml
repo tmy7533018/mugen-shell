@@ -28,7 +28,7 @@ Item {
         { id: "appearance", label: "Appearance",   types: ["theme", "barSurface", "moduleBackground", "blur", "animation", "dateFormat", "clock", "weather", "calendarWeekStart", "barLayout"] },
         { id: "sound",      label: "Sound",        types: ["notificationSound", "timerSound"] },
         { id: "notifications", label: "Notifications", types: ["doNotDisturb", "notificationTimeout"] },
-        { id: "timer",      label: "Idle & Lock",  types: ["timer", "lockTimer", "idlePower"] },
+        { id: "timer",      label: "Idle & Lock",  types: ["timer", "lockTimer", "lockScreen", "idlePower"] },
         { id: "system",     label: "System",       types: ["battery", "workspaces", "launcherTerminal", "displayMonitor"] },
         { id: "keybinds",   label: "Keyboard",     types: ["keybinds"] },
         { id: "yura",       label: "Yura →",       action: "yura-settings" },
@@ -48,6 +48,7 @@ Item {
             case "notificationSound": return notificationSoundSection
             case "timerSound":        return timerSoundSection
             case "lockTimer":         return lockTimerSection
+            case "lockScreen":        return lockScreenSection
             case "idlePower":         return idlePowerSection
             case "dateFormat":        return dateFormatSection
             case "clock":             return clockSection
@@ -134,6 +135,11 @@ Item {
         onApplySound: name => root.applyTimerSound(name)
     }}
     Component { id: lockTimerSection; Settings.LockTimerSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: lockScreenSection; Settings.LockScreenSection {
         theme: root.theme
         modeManager: root.modeManager
         settingsManager: root.settingsManager

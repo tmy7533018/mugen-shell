@@ -15,6 +15,9 @@ Item {
     property date today: new Date()
     property int weekStart: 0
     property var events: []
+    property bool showEvents: true
+
+    readonly property var visibleEvents: showEvents ? events : []
 
     readonly property real designPx: height / 221
 
@@ -36,13 +39,13 @@ Item {
 
     readonly property var eventDays: {
         const seen = ({})
-        for (const e of events) if (e && e.date) seen[e.date] = true
+        for (const e of visibleEvents) if (e && e.date) seen[e.date] = true
         return seen
     }
 
     readonly property var todayEvents: {
         const out = []
-        for (const e of events) if (e && e.date === todayKey) out.push(e)
+        for (const e of visibleEvents) if (e && e.date === todayKey) out.push(e)
         out.sort((a, b) => String(a.time || "").localeCompare(String(b.time || "")))
         return out
     }
@@ -208,6 +211,7 @@ Item {
 
             Text {
                 id: countLabel
+                visible: root.showEvents
                 anchors.right: parent.right
                 anchors.baseline: dayNumber.baseline
                 text: root.todayEvents.length === 0
@@ -223,8 +227,8 @@ Item {
             Rectangle {
                 anchors.left: weekdayLabel.right
                 anchors.leftMargin: 9 * root.designPx
-                anchors.right: countLabel.left
-                anchors.rightMargin: 9 * root.designPx
+                anchors.right: countLabel.visible ? countLabel.left : parent.right
+                anchors.rightMargin: countLabel.visible ? 9 * root.designPx : 0
                 anchors.baseline: dayNumber.baseline
                 height: 1
                 color: root.faintTint
