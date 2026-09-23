@@ -141,21 +141,28 @@ Item {
     readonly property var colUnits: [2, 2, 2, 1]
     readonly property int rowCount: 4
 
-    readonly property real gridPadY: faceH * 0.172
-    readonly property real gutterX: faceW * 0.007
-    readonly property real gutterY: faceH * 0.012
-
-    readonly property real gridH: faceH - gridPadY * 2 - gutterY * (rowCount - 1)
-    readonly property real cellH: gridH / rowCount
-
-    readonly property real gridW: {
+    readonly property int unitCount: {
         let units = 0
         for (const u of colUnits) units += u
-        return cellH * units + gutterX * (colUnits.length - 1)
+        return units
     }
-    readonly property real gridPadX: (faceW - gridW) / 2
 
-    readonly property real boxRadius: Math.round(faceH * 0.022)
+    // Sized by height; a portrait or square face shrinks the whole grid to fit its width.
+    readonly property real naturalCellH:
+        faceH * (1 - 0.172 * 2 - 0.012 * (rowCount - 1)) / rowCount
+    readonly property real fitScale: Math.min(1, faceW * 0.92
+        / (naturalCellH * unitCount + faceH * 0.012 * (colUnits.length - 1)))
+
+    readonly property real cellH: naturalCellH * fitScale
+    readonly property real gutterY: faceH * 0.012 * fitScale
+    // A narrow face collapses the width-derived gap, so a fitted grid spaces columns like rows.
+    readonly property real gutterX: fitScale < 1 ? gutterY : faceW * 0.007
+
+    readonly property real gridW: cellH * unitCount + gutterX * (colUnits.length - 1)
+    readonly property real gridPadX: (faceW - gridW) / 2
+    readonly property real gridPadY: (faceH - cellH * rowCount - gutterY * (rowCount - 1)) / 2
+
+    readonly property real boxRadius: Math.round(faceH * 0.022 * fitScale)
 
     readonly property int levelsBarCount: 12
     readonly property real levelsBarWidth: Math.max(2, Math.min(
