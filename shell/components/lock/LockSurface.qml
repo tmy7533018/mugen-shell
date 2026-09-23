@@ -684,6 +684,8 @@ Item {
                             anchors.fill: parent
                             fontFamily: root.faceFontFamily
                             tint: root.clockColor
+                            fillColor: root.accentColor
+                            cornerRadius: root.boxRadius
                             unit: Math.round(root.cellH * 0.18)
                             source: root.iconsBase + powerBox.modelData.icon
                             label: powerBox.modelData.label
