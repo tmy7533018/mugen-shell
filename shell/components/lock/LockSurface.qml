@@ -58,6 +58,7 @@ Item {
     property string weatherText: ""
     property string weatherHighLow: ""
     property string weatherCondition: ""
+    property string weatherLocation: ""
     property string weatherParticleType: "clouds"
     property real weatherWind: 0
 
@@ -437,6 +438,7 @@ Item {
                         temperature: root.weatherText
                         highLow: root.weatherHighLow
                         condition: root.weatherCondition
+                        location: root.weatherLocation
                     }
                 }
 

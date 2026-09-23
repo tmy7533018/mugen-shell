@@ -15,6 +15,7 @@ Item {
     property string temperature: ""
     property string highLow: ""
     property string condition: ""
+    property string location: ""
 
     Item {
         id: glyph
@@ -70,6 +71,17 @@ Item {
             color: root.faintTint
             font.family: root.fontFamily
             font.pixelSize: root.unit * 0.68
+        }
+
+        Text {
+            visible: root.location !== ""
+            textFormat: Text.PlainText
+            text: root.location
+            color: root.faintTint
+            font.family: root.fontFamily
+            font.pixelSize: root.unit * 0.5
+            font.letterSpacing: root.unit * 0.5 * 0.2
+            font.capitalization: Font.AllUppercase
         }
     }
 }

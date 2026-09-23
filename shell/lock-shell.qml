@@ -610,9 +610,8 @@ ShellRoot {
                     ? Math.round(weatherManager.temperature) + "°" : ""
                 weatherHighLow: root.weatherHighLow
                 weatherCondition: weatherManager.ready
-                    ? icons.weatherText(weatherManager.weatherCode)
-                        + " · " + weatherManager.locationName
-                    : ""
+                    ? icons.weatherText(weatherManager.weatherCode) : ""
+                weatherLocation: weatherManager.ready ? weatherManager.locationName : ""
                 weatherParticleType: weatherManager.ready
                     ? icons.weatherType(weatherManager.weatherCode, weatherManager.isDay)
                     : "clouds"
