@@ -57,7 +57,7 @@ Item {
     // Closing the panel destroys the sweeper mid-flight, so its debt is paid here.
     Component.onDestruction: {
         if (root.isClearingAll) {
-            notificationManager.clearAll()
+            notificationManager.clearArrivedBefore(root.clearAllStartedAt)
             return
         }
         for (const key in root.pendingDismissals) {
