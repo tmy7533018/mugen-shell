@@ -22,7 +22,7 @@ convert_video () {
     return 1
   fi
 
-  ffmpeg -y -i "$INPUT" \
+  ffmpeg -nostdin -y -i "$INPUT" \
     -vf "scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=increase,\
 crop=${WIDTH}:${HEIGHT}:(in_w-${WIDTH})/2:(in_h-${HEIGHT})/2,\
 fps=${FPS}" \
