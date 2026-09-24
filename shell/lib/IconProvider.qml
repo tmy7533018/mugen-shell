@@ -63,6 +63,7 @@ QtObject {
     readonly property string clockSvg: basePath + "/clock.svg"
     readonly property string searchSvg: basePath + "/search.svg"
     readonly property string settingsSvg: basePath + "/settings.svg"
+    readonly property string wrenchSvg: basePath + "/wrench.svg"
     readonly property string arrowDownwardSvg: basePath + "/arrow-downward-fill.svg"
     readonly property string chevronDownSvg: basePath + "/chevron-down.svg"
     readonly property string refreshOutlineSvg: basePath + "/refresh-outline.svg"

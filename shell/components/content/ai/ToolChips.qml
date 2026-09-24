@@ -62,8 +62,8 @@ Column {
             readonly property real vPad: root.modeManager.scale(5)
             readonly property real iconGap: root.modeManager.scale(6)
 
-            width: Math.min(gear.width + iconGap + labelText.implicitWidth + hPad * 2, root.width)
-            height: Math.max(labelText.implicitHeight, gear.height) + vPad * 2
+            width: Math.min(toolIcon.width + iconGap + labelText.implicitWidth + hPad * 2, root.width)
+            height: Math.max(labelText.implicitHeight, toolIcon.height) + vPad * 2
             radius: root.modeManager.scale(9)
 
             property real pulse: 1.0
@@ -71,9 +71,7 @@ Column {
 
             color: chip.callError !== ""
                 ? Qt.rgba(0.85, 0.45, 0.45, 0.16)
-                : (chip.pending
-                    ? (root.theme ? root.theme.chipInactiveBg : Qt.rgba(0.55, 0.55, 0.68, 0.10))
-                    : (root.theme ? root.theme.chipActiveBg : Qt.rgba(0.55, 0.65, 0.85, 0.18)))
+                : (root.theme ? root.theme.chipInactiveBg : Qt.rgba(0.55, 0.55, 0.68, 0.10))
             border.width: 1
             border.color: chip.callError !== ""
                 ? Qt.rgba(0.85, 0.45, 0.45, 0.38)
@@ -89,14 +87,14 @@ Column {
             }
 
             UI.SvgIcon {
-                id: gear
+                id: toolIcon
                 anchors.left: parent.left
                 anchors.leftMargin: chip.hPad
                 anchors.top: parent.top
                 anchors.topMargin: chip.vPad + root.modeManager.scale(2)
                 width: root.modeManager.scale(11)
                 height: width
-                source: root.icons ? root.icons.settingsSvg : ""
+                source: root.icons ? root.icons.wrenchSvg : ""
                 color: chip.callError !== ""
                     ? Qt.rgba(0.94, 0.66, 0.66, 0.95)
                     : (root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.8))
@@ -104,7 +102,7 @@ Column {
 
             Text {
                 id: labelText
-                anchors.left: gear.right
+                anchors.left: toolIcon.right
                 anchors.leftMargin: chip.iconGap
                 anchors.right: parent.right
                 anchors.rightMargin: chip.hPad
