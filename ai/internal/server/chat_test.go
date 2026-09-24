@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -181,5 +182,30 @@ func TestChatMarksAToolOnlyTurnThatFailed(t *testing.T) {
 	last := lastStored(t, st, s.history.ConvID())
 	if last.Role != "assistant" || last.Content != "[interrupted]" {
 		t.Fatalf("stored %q as %q, want a bare marker", last.Content, last.Role)
+	}
+}
+
+type thinkingProvider struct{ scriptedProvider }
+
+func (p *thinkingProvider) Chat(_ context.Context, _ string, _ []provider.Message,
+	_ provider.ChatOptions, fn func(provider.ChatChunk) error) error {
+	p.turns++
+	if err := fn(provider.ChatChunk{ThinkingDelta: "step " + strconv.Itoa(p.turns)}); err != nil {
+		return err
+	}
+	if p.turns == 1 {
+		return fn(provider.ChatChunk{Done: true, ToolCalls: []provider.ToolCall{{ID: "1", Name: "no_such_tool", Arguments: map[string]any{}}}})
+	}
+	if err := fn(provider.ChatChunk{Content: "done"}); err != nil {
+		return err
+	}
+	return fn(provider.ChatChunk{Done: true})
+}
+
+func TestChatSeparatesThinkingAcrossToolIterations(t *testing.T) {
+	s, _ := newChatServer(t, &thinkingProvider{})
+	body := postChat(t, s, `{"message":"hi","conversation_id":0}`).Body.String()
+	if !strings.Contains(body, `"thinking":"step 1"`) || !strings.Contains(body, `"thinking":"\n\nstep 2"`) {
+		t.Fatalf("thinking events not separated per iteration:\n%s", body)
 	}
 }

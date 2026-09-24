@@ -326,10 +326,12 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		sendEvent(map[string]any{"error": errMsg, "done": true})
 	}
 
+	thinkingSent := false
 	for iteration := 0; iteration < maxIterations; iteration++ {
 		if iteration == 1 {
 			opts.Tools = fullTools
 		}
+		iterThinkingSent := false
 		var iterContent string
 		var iterToolCalls []provider.ToolCall
 		var iterThinking, iterThinkingSig string
@@ -337,7 +339,13 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		err := s.registry.ChatWith(r.Context(), model, msgs, opts, func(chunk provider.ChatChunk) error {
 			// Deliberately not sideEffected: reasoning alone is not a reply worth persisting.
 			if chunk.ThinkingDelta != "" {
-				sendEvent(map[string]any{"thinking": chunk.ThinkingDelta})
+				delta := chunk.ThinkingDelta
+				// The client appends every iteration's thinking to one bubble.
+				if thinkingSent && !iterThinkingSent {
+					delta = "\n\n" + delta
+				}
+				thinkingSent, iterThinkingSent = true, true
+				sendEvent(map[string]any{"thinking": delta})
 			}
 			if chunk.Content != "" {
 				iterContent += chunk.Content

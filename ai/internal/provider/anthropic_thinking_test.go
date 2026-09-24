@@ -237,7 +237,7 @@ func TestLegacyModelAsksForABudget(t *testing.T) {
 }
 
 func TestThinkingOffIsOmittedWhereItCannotBeSaid(t *testing.T) {
-	for _, model := range []string{"claude-fable-5", "claude-haiku-4-5"} {
+	for _, model := range []string{"claude-fable-5", "claude-opus-5-5", "claude-haiku-4-5"} {
 		var body []byte
 		srv := stubAnthropic(t, "data: {\"type\":\"message_stop\"}\n", &body)
 

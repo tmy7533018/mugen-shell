@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,7 +37,49 @@ func usesLegacyThinking(model string) bool {
 
 // These think unconditionally, and an explicit "disabled" is a 400.
 func thinkingAlwaysOn(model string) bool {
-	return strings.HasPrefix(model, "claude-fable-") || strings.HasPrefix(model, "claude-mythos-")
+	for _, p := range []string{"claude-fable-", "claude-mythos-", "claude-opus-5-5"} {
+		if strings.HasPrefix(model, p) {
+			return true
+		}
+	}
+	return false
+}
+
+const lowestEffort = "low"
+
+const thinkingSummaryBreak = "\n\n"
+
+// Per the preserved-thinking docs, Mythos 5.1 and every model before Fable 5.1 skip the check.
+func checksThinkingPrefix(model string) bool {
+	for _, p := range []string{"claude-3", "claude-haiku-4", "claude-sonnet-4", "claude-opus-4"} {
+		if strings.HasPrefix(model, p) {
+			return false
+		}
+	}
+	for _, id := range []string{"claude-opus-5", "claude-sonnet-5", "claude-fable-5", "claude-mythos-5", "claude-mythos-5-1", "claude-mythos-preview"} {
+		if isModelOrSnapshot(model, id) {
+			return false
+		}
+	}
+	return true
+}
+
+// A dated snapshot extends the ID with eight digits, where a later minor version adds one or two.
+func isModelOrSnapshot(model, id string) bool {
+	rest, ok := strings.CutPrefix(model, id)
+	if !ok || rest == "" {
+		return ok
+	}
+	date, ok := strings.CutPrefix(rest, "-")
+	if !ok || len(date) != 8 {
+		return false
+	}
+	for _, r := range date {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func rejectedThinkingField(body []byte) bool {
@@ -90,20 +134,127 @@ func (a *Anthropic) Models(_ context.Context) ([]string, error) {
 	return a.models, nil
 }
 
+// A reply as it streamed, block by block, so a tool round can send the turn back unaltered.
+type anthropicTurn struct {
+	blocks []anthropicBlock
+	prefix string
+}
+
+type anthropicBlock struct {
+	kind      string
+	text      string
+	thinking  string
+	signature string
+	data      string
+	toolUseID string
+}
+
+func (t *anthropicTurn) signed() bool {
+	for _, b := range t.blocks {
+		if (b.kind == "thinking" && b.signature != "") || (b.kind == "redacted_thinking" && b.data != "") {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *anthropicTurn) content(calls []ToolCall, withThinking bool) []map[string]any {
+	unsent := make(map[string]ToolCall, len(calls))
+	for _, tc := range calls {
+		unsent[tc.ID] = tc
+	}
+	var out []map[string]any
+	for _, b := range t.blocks {
+		switch b.kind {
+		case "thinking":
+			if withThinking && b.signature != "" {
+				out = append(out, map[string]any{"type": "thinking", "thinking": b.thinking, "signature": b.signature})
+			}
+		case "redacted_thinking":
+			if withThinking && b.data != "" {
+				out = append(out, map[string]any{"type": "redacted_thinking", "data": b.data})
+			}
+		case "text":
+			if b.text != "" {
+				out = append(out, map[string]any{"type": "text", "text": b.text})
+			}
+		case "tool_use":
+			if tc, ok := unsent[b.toolUseID]; ok {
+				out = append(out, toolUseBlock(tc))
+				delete(unsent, b.toolUseID)
+			}
+		}
+	}
+	for _, tc := range calls {
+		if _, ok := unsent[tc.ID]; ok {
+			out = append(out, toolUseBlock(tc))
+		}
+	}
+	return out
+}
+
+func toolUseBlock(tc ToolCall) map[string]any {
+	args := tc.Arguments
+	if args == nil {
+		args = map[string]any{}
+	}
+	return map[string]any{
+		"type":  "tool_use",
+		"id":    tc.ID,
+		"name":  tc.Name,
+		"input": args,
+	}
+}
+
+// Preserved thinking is bound to the system prompt and tools it was produced under.
+func prefixKey(system, tools []map[string]any) string {
+	b, _ := json.Marshal([]any{system, tools})
+	sum := sha256.Sum256(b)
+	return hex.EncodeToString(sum[:])
+}
+
 func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, opts ChatOptions, fn func(ChatChunk) error) error {
+	return a.chat(ctx, model, messages, opts, thinkingAlwaysOn(model), fn)
+}
+
+func (a *Anthropic) chat(ctx context.Context, model string, messages []Message, opts ChatOptions, alwaysOn bool, fn func(ChatChunk) error) error {
 	if a.apiKey == "" {
 		return fmt.Errorf("ANTHROPIC_API_KEY is not set")
 	}
 
 	var systemBlocks []map[string]any
-	msgs := make([]map[string]any, 0, len(messages))
-
 	for _, m := range messages {
 		if m.Role == "system" {
 			systemBlocks = append(systemBlocks, map[string]any{
 				"type": "text",
 				"text": m.Content,
 			})
+		}
+	}
+	if len(systemBlocks) > 0 {
+		// Persona + memories are stable, so the per-turn snapshot must sit after the breakpoint.
+		systemBlocks[0]["cache_control"] = map[string]any{"type": "ephemeral"}
+	}
+
+	var toolsPayload []map[string]any
+	for _, t := range opts.Tools {
+		toolsPayload = append(toolsPayload, map[string]any{
+			"name":         t.Name,
+			"description":  t.Description,
+			"input_schema": t.Parameters,
+		})
+	}
+	if len(toolsPayload) > 0 {
+		// cache_control on the last tool covers the whole preceding block: ~10% input cost on hits.
+		toolsPayload[len(toolsPayload)-1]["cache_control"] = map[string]any{"type": "ephemeral"}
+	}
+
+	prefix := prefixKey(systemBlocks, toolsPayload)
+	thinkingOn := opts.Thinking || alwaysOn
+	msgs := make([]map[string]any, 0, len(messages))
+
+	for _, m := range messages {
+		if m.Role == "system" {
 			continue
 		}
 		if m.Role == "tool" {
@@ -121,6 +272,13 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 
 		role := m.Role
 		if role != "user" && role != "assistant" {
+			continue
+		}
+
+		if len(m.ToolCalls) > 0 && m.ToolCalls[0].anthropic != nil {
+			turn := m.ToolCalls[0].anthropic
+			replay := thinkingOn && turn.signed() && (!checksThinkingPrefix(model) || turn.prefix == prefix)
+			msgs = append(msgs, map[string]any{"role": role, "content": turn.content(m.ToolCalls, replay)})
 			continue
 		}
 
@@ -147,16 +305,7 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 			content = append(content, map[string]any{"type": "text", "text": m.Content})
 		}
 		for _, tc := range m.ToolCalls {
-			args := tc.Arguments
-			if args == nil {
-				args = map[string]any{}
-			}
-			content = append(content, map[string]any{
-				"type":  "tool_use",
-				"id":    tc.ID,
-				"name":  tc.Name,
-				"input": args,
-			})
+			content = append(content, toolUseBlock(tc))
 		}
 		if len(content) == 0 {
 			continue
@@ -164,18 +313,12 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		msgs = append(msgs, map[string]any{"role": role, "content": content})
 	}
 
-	var toolsPayload []map[string]any
-	for _, t := range opts.Tools {
-		toolsPayload = append(toolsPayload, map[string]any{
-			"name":         t.Name,
-			"description":  t.Description,
-			"input_schema": t.Parameters,
-		})
-	}
-
 	maxTokens := a.maxTokens
-	if opts.Thinking {
+	switch {
+	case opts.Thinking:
 		maxTokens += effortHeadroom[a.effort]
+	case alwaysOn:
+		maxTokens += effortHeadroom[lowestEffort]
 	}
 	payload := map[string]any{
 		"model":      model,
@@ -184,24 +327,24 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		"stream":     true,
 	}
 	if len(systemBlocks) > 0 {
-		// Persona + memories are stable, so the per-turn snapshot must sit after the breakpoint.
-		systemBlocks[0]["cache_control"] = map[string]any{"type": "ephemeral"}
 		payload["system"] = systemBlocks
 	}
 	if opts.Thinking {
 		if usesLegacyThinking(model) {
 			payload["thinking"] = map[string]any{"type": "enabled", "budget_tokens": effortHeadroom[a.effort]}
 		} else {
-			payload["thinking"] = map[string]any{"type": "adaptive"}
+			// Newer models default to "omitted", which streams every thinking block empty.
+			payload["thinking"] = map[string]any{"type": "adaptive", "display": "summarized"}
 			payload["output_config"] = map[string]any{"effort": a.effort}
 		}
-	} else if !usesLegacyThinking(model) && !thinkingAlwaysOn(model) {
+	} else if alwaysOn {
+		// Thinking cannot be switched off here, so "off" is the least of it the model allows.
+		payload["output_config"] = map[string]any{"effort": lowestEffort}
+	} else if !usesLegacyThinking(model) {
 		// Omitting the field leaves thinking on for newer models, so "off" has to be said out loud.
 		payload["thinking"] = map[string]any{"type": "disabled"}
 	}
 	if len(toolsPayload) > 0 {
-		// cache_control on the last tool covers the whole preceding block: ~10% input cost on hits.
-		toolsPayload[len(toolsPayload)-1]["cache_control"] = map[string]any{"type": "ephemeral"}
 		payload["tools"] = toolsPayload
 	}
 
@@ -229,14 +372,22 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		// Not all Claude tiers support extended thinking, so a rejection is re-issued without it.
-		if resp.StatusCode == http.StatusBadRequest && opts.Thinking && rejectedThinkingField(b) {
-			// Silently dropping it turns a hard failure into thinking that never runs.
-			fmt.Fprintf(os.Stderr, "anthropic: %s rejected the thinking request, retrying without it: %s\n",
-				model, parseAnthropicError(b, resp.StatusCode))
-			retry := opts
-			retry.Thinking = false
-			return a.Chat(ctx, model, messages, retry, fn)
+		if resp.StatusCode == http.StatusBadRequest && rejectedThinkingField(b) {
+			switch {
+			// Not all Claude tiers support extended thinking, so a rejection is re-issued without it.
+			case opts.Thinking:
+				// Silently dropping it turns a hard failure into thinking that never runs.
+				fmt.Fprintf(os.Stderr, "anthropic: %s rejected the thinking request, retrying without it: %s\n",
+					model, parseAnthropicError(b, resp.StatusCode))
+				retry := opts
+				retry.Thinking = false
+				return a.chat(ctx, model, messages, retry, alwaysOn, fn)
+			// A model missing from thinkingAlwaysOn rejects "disabled" the same way.
+			case !alwaysOn && !usesLegacyThinking(model):
+				fmt.Fprintf(os.Stderr, "anthropic: %s rejected disabling thinking, retrying with it left on: %s\n",
+					model, parseAnthropicError(b, resp.StatusCode))
+				return a.chat(ctx, model, messages, opts, true, fn)
+			}
 		}
 		return fmt.Errorf("anthropic: %s", parseAnthropicError(b, resp.StatusCode))
 	}
@@ -261,10 +412,20 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 	var accumulated []ToolCall
 	var thinkingBuf strings.Builder
 	var thinkingSignature string
+	var blocks []*anthropicBlock
+	blockAt := map[int]*anthropicBlock{}
+	var shownThinking *anthropicBlock
 
 	finalChunk := func() ChatChunk {
 		c := ChatChunk{Done: true, Thinking: thinkingBuf.String(), ThinkingSignature: thinkingSignature}
 		if len(accumulated) > 0 {
+			turn := &anthropicTurn{prefix: prefix}
+			for _, b := range blocks {
+				turn.blocks = append(turn.blocks, *b)
+			}
+			for i := range accumulated {
+				accumulated[i].anthropic = turn
+			}
 			c.ToolCalls = accumulated
 		}
 		return c
@@ -285,11 +446,14 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 			Type         string `json:"type"`
 			Index        int    `json:"index"`
 			ContentBlock struct {
-				Type  string         `json:"type"`
-				Text  string         `json:"text"`
-				ID    string         `json:"id"`
-				Name  string         `json:"name"`
-				Input map[string]any `json:"input"`
+				Type      string         `json:"type"`
+				Text      string         `json:"text"`
+				Thinking  string         `json:"thinking"`
+				Signature string         `json:"signature"`
+				Data      string         `json:"data"`
+				ID        string         `json:"id"`
+				Name      string         `json:"name"`
+				Input     map[string]any `json:"input"`
 			} `json:"content_block"`
 			Delta struct {
 				Type        string `json:"type"`
@@ -308,6 +472,16 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 		case "error":
 			return fmt.Errorf("anthropic: %s", parseAnthropicError([]byte(data), resp.StatusCode))
 		case "content_block_start":
+			b := &anthropicBlock{
+				kind:      evt.ContentBlock.Type,
+				text:      evt.ContentBlock.Text,
+				thinking:  evt.ContentBlock.Thinking,
+				signature: evt.ContentBlock.Signature,
+				data:      evt.ContentBlock.Data,
+				toolUseID: evt.ContentBlock.ID,
+			}
+			blocks = append(blocks, b)
+			blockAt[evt.Index] = b
 			if evt.ContentBlock.Type == "tool_use" {
 				pending[evt.Index] = &pendingTool{
 					ID:   evt.ContentBlock.ID,
@@ -315,7 +489,13 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 				}
 			}
 		case "content_block_delta":
+			b := blockAt[evt.Index]
+			if b == nil {
+				b = &anthropicBlock{}
+				blockAt[evt.Index] = b
+			}
 			if evt.Delta.Type == "text_delta" && evt.Delta.Text != "" {
+				b.text += evt.Delta.Text
 				if err := fn(ChatChunk{Content: evt.Delta.Text}); err != nil {
 					return err
 				}
@@ -326,12 +506,19 @@ func (a *Anthropic) Chat(ctx context.Context, model string, messages []Message, 
 				}
 			}
 			if evt.Delta.Type == "thinking_delta" && evt.Delta.Thinking != "" {
-				thinkingBuf.WriteString(evt.Delta.Thinking)
-				if err := fn(ChatChunk{ThinkingDelta: evt.Delta.Thinking}); err != nil {
+				b.thinking += evt.Delta.Thinking
+				shown := evt.Delta.Thinking
+				if shownThinking != b && thinkingBuf.Len() > 0 {
+					shown = thinkingSummaryBreak + shown
+				}
+				shownThinking = b
+				thinkingBuf.WriteString(shown)
+				if err := fn(ChatChunk{ThinkingDelta: shown}); err != nil {
 					return err
 				}
 			}
 			if evt.Delta.Type == "signature_delta" {
+				b.signature = evt.Delta.Signature
 				thinkingSignature = evt.Delta.Signature
 			}
 		case "content_block_stop":

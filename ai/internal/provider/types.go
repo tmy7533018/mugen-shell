@@ -43,6 +43,9 @@ type ToolCall struct {
 	// Gemini 3+ rejects a resent functionCall whose thought signature is missing; other
 	// providers leave this empty and it is dropped by omitempty.
 	ThoughtSignature string `json:"thought_signature,omitempty"`
+
+	// Rides on the call because callers pass ToolCalls back into the next request untouched.
+	anthropic *anthropicTurn
 }
 
 type ChatOptions struct {
