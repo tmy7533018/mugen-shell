@@ -89,12 +89,12 @@ run_matugen() {
   "${args[@]}" 2>&1
 }
 
-SRC="$(matugen_source)"
-[[ -n "$SRC" ]] || exit 0
-
 mkdir -p "$WALLP_DIR"
 exec 9>"$LOCK"
 # change-wallpaper.sh holds this for a whole transition, so wait rather than bail.
 flock -w 5 9 || exit 0
+
+SRC="$(matugen_source)"
+[[ -n "$SRC" ]] || exit 0
 
 run_matugen "$SRC" >/dev/null
