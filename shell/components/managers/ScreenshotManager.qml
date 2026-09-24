@@ -69,17 +69,22 @@ QtObject {
     // Owned here, not by the menu: closing the menu destroys its loader mid-call.
     function capture(mode) {
         if (captureProcess.running) return
-        captureProcess.command = Theme.Hypr.execArgv(
-            Quickshell.shellDir + "/scripts/take-screenshot.sh " + mode)
-        captureProcess.running = true
+        Theme.Hypr.whenSettled(() => {
+            if (captureProcess.running) return
+            captureProcess.command = Theme.Hypr.execArgv(
+                Quickshell.shellDir + "/scripts/take-screenshot.sh " + mode)
+            captureProcess.running = true
+        })
     }
 
     function openScreenshot(filePath) {
         if (!filePath) return
         // The exec runs through /bin/sh, so quotes in the filename must be escaped.
         let escaped = filePath.replace(/'/g, "'\"'\"'")
-        openScreenshotProcess.command = Theme.Hypr.execArgv("imv '" + escaped + "'")
-        openScreenshotProcess.running = true
+        Theme.Hypr.whenSettled(() => {
+            openScreenshotProcess.command = Theme.Hypr.execArgv("imv '" + escaped + "'")
+            openScreenshotProcess.running = true
+        })
     }
 
     property Process deleteScreenshotProcess: Process {

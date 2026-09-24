@@ -15,9 +15,9 @@ Item {
     readonly property bool settled: root.isLua || root.probed
     property var deferred: []
 
-    function _run(dispatch) {
-        if (root.settled) dispatch()
-        else root.deferred.push(dispatch)
+    function whenSettled(fn) {
+        if (root.settled) fn()
+        else root.deferred.push(fn)
     }
 
     function _settle() {
@@ -32,25 +32,25 @@ Item {
     }
 
     function exec(cmd) {
-        root._run(() => root.isLua
+        root.whenSettled(() => root.isLua
             ? Hyprland.dispatch("hl.dsp.exec_cmd(\"" + root.esc(cmd) + "\")")
             : Hyprland.dispatch("exec " + cmd))
     }
 
-    // Callers keep their own Process (onExited, detached spawning), so this cannot defer; both are user-triggered long after settling.
+    // Reads isLua now; callers own the Process, so build the argv inside whenSettled.
     function execArgv(cmd) {
         if (root.isLua) return ["hyprctl", "dispatch", "hl.dsp.exec_cmd(\"" + root.esc(cmd) + "\")"]
         return ["hyprctl", "dispatch", "exec", cmd]
     }
 
     function workspace(id) {
-        root._run(() => root.isLua
+        root.whenSettled(() => root.isLua
             ? Hyprland.dispatch("hl.dsp.focus({ workspace = " + id + " })")
             : Hyprland.dispatch("workspace " + id))
     }
 
     function exit() {
-        root._run(() => root.isLua
+        root.whenSettled(() => root.isLua
             ? Hyprland.dispatch("hl.dsp.exit()")
             : Hyprland.dispatch("exit"))
     }
@@ -61,8 +61,10 @@ Item {
         running: true
         stdout: SplitParser {
             onRead: line => {
-                if (line.indexOf("configProvider:") !== -1 && line.split(":")[1].trim() === "lua")
+                if (line.indexOf("configProvider:") !== -1 && line.split(":")[1].trim() === "lua") {
                     root.isLua = true
+                    root._settle()
+                }
             }
         }
         onExited: root._settle()
@@ -77,12 +79,20 @@ Item {
 
     // Probed once at startup like isLua: starts false and only ever upgrades to true.
     property bool hasXdgTerminalExec: false
+    property bool terminalProbed: false
+    property var terminalDeferred: []
 
     Process {
         id: xdgTerminalExecProbe
         command: ["sh", "-c", "command -v xdg-terminal-exec"]
         running: true
-        onExited: (code) => { if (code === 0) root.hasXdgTerminalExec = true }
+        onExited: (code) => {
+            if (code === 0) root.hasXdgTerminalExec = true
+            root.terminalProbed = true
+            const queued = root.terminalDeferred
+            root.terminalDeferred = []
+            for (const launch of queued) launch()
+        }
     }
 
     // Only used when xdg-terminal-exec is missing; unlisted terminals default to "-e".
@@ -103,6 +113,10 @@ Item {
 
     // Runs cmd in the user's terminal for a Terminal=true .desktop entry; prefers xdg-terminal-exec.
     function execInTerminal(terminalCmd, cmd) {
+        if (!root.terminalProbed) {
+            root.terminalDeferred.push(() => root.execInTerminal(terminalCmd, cmd))
+            return
+        }
         let quoted = "'" + String(cmd).replace(/'/g, "'\\''") + "'"
         if (root.hasXdgTerminalExec) {
             root.exec("xdg-terminal-exec sh -c " + quoted)
