@@ -93,6 +93,8 @@ FocusScope {
     property var pendingAttachments: []
     // Matches the backend's per-message cap.
     readonly property int maxAttachments: 4
+    // Matches the backend's maxRequestBody; past ~128 KiB curl's argv could not even carry it.
+    readonly property int maxRequestBytes: 64 * 1024
 
     function addAttachments(urls) {
         let next = root.pendingAttachments.slice()
@@ -253,18 +255,48 @@ FocusScope {
         pendingConfirm = null
     }
 
+    function utf8Length(s) {
+        let n = 0
+        for (const ch of s) {
+            const c = ch.codePointAt(0)
+            n += c < 0x80 ? 1 : c < 0x800 ? 2 : c < 0x10000 ? 3 : 4
+        }
+        return n
+    }
+
+    function chatPayload(text, files) {
+        return JSON.stringify({
+            message: text,
+            attachments: files,
+            conversation_id: currentConvId,
+            model: currentModel,
+            thinking: currentThinking
+        })
+    }
+
+    function refuseOversized(text, files) {
+        if (utf8Length(chatPayload(text, files || [])) <= maxRequestBytes) return false
+        turnFailure = "Couldn't send: message too long"
+        return true
+    }
+
+    // Returns false when nothing was sent and the caller still holds the text.
     function sendMessage(text, attachments) {
         const files = attachments || []
-        if ((!text && files.length === 0) || streaming || chatProcess.running) return
+        if ((!text && files.length === 0) || streaming || chatProcess.running) return false
         stopRequested = false
         turnFailure = ""
+        if (refuseOversized(text, files)) {
+            root.pendingRewindId = 0
+            return false
+        }
         if (root.pendingRewindId !== 0) {
             truncateProcess.messageId = root.pendingRewindId
             truncateProcess.queuedText = text
             truncateProcess.queuedFiles = files
             root.pendingRewindId = 0
             truncateProcess.running = true
-            return
+            return true
         }
         sentText = text
         sentFiles = files
@@ -278,20 +310,15 @@ FocusScope {
         appendMessage("assistant", "")
         streaming = true
         userScrolled = false
-        chatProcess.payload = JSON.stringify({
-            message: text,
-            attachments: files,
-            conversation_id: currentConvId,
-            model: currentModel,
-            thinking: currentThinking
-        })
+        chatProcess.payload = chatPayload(text, files)
         chatProcess.running = true
+        return true
     }
 
     function sendComposed(text) {
-        const files = root.pendingAttachments
+        if (!root.sendMessage(text, root.pendingAttachments)) return false
         root.pendingAttachments = []
-        root.sendMessage(text, files)
+        return true
     }
 
     // Retry and edit are one server-side move: drop this message and everything after, then resend.
@@ -323,6 +350,8 @@ FocusScope {
     function submitEdit(text) {
         const index = root.editingIndex
         if (busy) return
+        // Closing the editor resets its text, so an oversized edit has to be refused while it is open.
+        if (index >= 0 && index < messages.length && refuseOversized(text, messages[index].attachments)) return
         root.editingIndex = -1
         if (index < 0 || index >= messages.length) return
         const msg = messages[index]
@@ -347,10 +376,13 @@ FocusScope {
         pendingConfirm = null
         // A refusal before the stream is a plain HTTP body, which curl without -f exits 0 on.
         const refused = exitCode === 0 && !turnOpened
-        // The server keeps a turn only once text streamed or a tool ran, and rolls back anything less.
-        const unsent = !replyStarted && (stopRequested || refused || (exitCode === 0 && turnError !== ""))
         // A stop is a SIGTERM, so curl's non-zero exit says nothing about the connection.
-        if (exitCode !== 0 && !stopRequested) {
+        const connectionLost = exitCode !== 0 && !stopRequested
+        // The server saves the message just before flushing the conversation id, so a drop before the id almost always kept nothing.
+        const unreachable = connectionLost && !turnOpened
+        // The server keeps a turn only once text streamed or a tool ran, and rolls back anything less.
+        const unsent = !replyStarted && (stopRequested || refused || unreachable || (exitCode === 0 && turnError !== ""))
+        if (connectionLost && !unreachable) {
             updateLastMessage("\n[connection failed]")
         }
         stopRequested = false
@@ -368,6 +400,8 @@ FocusScope {
             turnFailure = (replyStarted ? "Interrupted: " : "Couldn't send: ") + turnError
         } else if (refused) {
             turnFailure = "Couldn't send: " + (rejectBody !== "" ? rejectBody : "the backend refused it")
+        } else if (unreachable) {
+            turnFailure = "Couldn't send: connection failed"
         }
         if (unsent) {
             handBackUnsent()
@@ -383,8 +417,12 @@ FocusScope {
     function handBackUnsent() {
         const n = messages.length
         if (n >= 2 && messages[n - 2].role === "user") messages = messages.slice(0, n - 2)
-        inputField.text = inputField.text.trim() === "" ? sentText : sentText + "\n" + inputField.text
-        pendingAttachments = sentFiles.concat(pendingAttachments).slice(0, maxAttachments)
+        restoreDraft(sentText, sentFiles)
+    }
+
+    function restoreDraft(text, files) {
+        inputField.text = inputField.text.trim() === "" ? text : text + "\n" + inputField.text
+        pendingAttachments = files.concat(pendingAttachments).slice(0, maxAttachments)
         inputField.cursorPosition = inputField.length
         inputField.forceActiveFocus()
     }
@@ -1425,8 +1463,7 @@ FocusScope {
                         if (event.modifiers & Qt.ShiftModifier) return
                         let txt = inputField.text.trim()
                         if ((txt.length > 0 || root.pendingAttachments.length > 0) && !root.busy) {
-                            root.sendComposed(txt)
-                            inputField.text = ""
+                            if (root.sendComposed(txt)) inputField.text = ""
                         }
                         event.accepted = true
                     }
@@ -1538,8 +1575,7 @@ FocusScope {
                     } else if (!root.rewinding) {
                         let txt = inputField.text.trim()
                         if (txt.length > 0 || root.pendingAttachments.length > 0) {
-                            root.sendComposed(txt)
-                            inputField.text = ""
+                            if (root.sendComposed(txt)) inputField.text = ""
                         }
                     }
                 }
@@ -1906,6 +1942,8 @@ FocusScope {
         }
 
         onExited: (exitCode) => root.finishStream(exitCode)
+        // Quickshell reports a launch failure only by dropping running; exited never fires.
+        onRunningChanged: { if (!chatProcess.running && root.streaming) root.finishStream(-1) }
     }
 
     // Deletes without following current_id: the user stays on the fresh chat they sent from.
@@ -1963,9 +2001,9 @@ FocusScope {
             truncateProcess.queuedText = ""
             truncateProcess.queuedFiles = []
             if (exitCode !== 0) {
-                inputField.text = text
-                inputField.forceActiveFocus()
-                root.pendingAttachments = files
+                const curlHttpError = 22
+                root.turnFailure = "Couldn't send: " + (exitCode === curlHttpError ? "the backend refused it" : "connection failed")
+                root.restoreDraft(text, files)
                 return
             }
             // Drop the rewound tail locally too, so the resend can't append under forgotten messages.
