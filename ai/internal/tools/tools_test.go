@@ -6,12 +6,14 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/tmy7533018/mugen-ai/internal/apps"
+	"github.com/tmy7533018/mugen-ai/internal/mcp"
 )
 
 func TestExpandTemplate(t *testing.T) {
@@ -471,6 +473,92 @@ func TestCallReportsUnconfirmedChange(t *testing.T) {
 	if !strings.Contains(err.Error(), "did not take effect") {
 		t.Fatalf("error = %v, want it to say the change did not take effect", err)
 	}
+}
+
+func TestMcpToolNameIsIdentityForValidShortNames(t *testing.T) {
+	cases := []struct{ server, tool string }{
+		{"memory", "store"},
+		{"filesystem", "read_file"},
+		{"my-server", "do-thing"},
+	}
+	for _, tc := range cases {
+		want := tc.server + "__" + tc.tool
+		if got := mcpToolName(tc.server, tc.tool); got != want {
+			t.Errorf("mcpToolName(%q, %q) = %q, want %q unchanged", tc.server, tc.tool, got, want)
+		}
+	}
+}
+
+func TestMcpToolNameSanitizesInvalidCharacters(t *testing.T) {
+	got := mcpToolName("srv", "admin.tools.list")
+	if !regexp.MustCompile(`^srv__admin_tools_list_[0-9a-f]{8}$`).MatchString(got) {
+		t.Fatalf("mcpToolName = %q, want srv__admin_tools_list plus a hash suffix", got)
+	}
+	if a, b := mcpToolName("srv", "a.b"), mcpToolName("srv", "a_b"); a == b {
+		t.Fatalf("a.b and a_b both became %q, want distinct names", a)
+	}
+	if a, b := mcpToolName("srv", "予定"), mcpToolName("srv", "天気"); a == b {
+		t.Fatalf("two non-ASCII names both became %q, want distinct names", a)
+	}
+}
+
+func TestMcpToolNameTruncatesAndStaysUnique(t *testing.T) {
+	long := strings.Repeat("x", 70)
+	got := mcpToolName("srv", long)
+	if len(got) > maxMCPToolNameBytes {
+		t.Fatalf("len(%q) = %d, want <= %d", got, len(got), maxMCPToolNameBytes)
+	}
+	if !strings.HasPrefix(got, "srv__") {
+		t.Fatalf("got %q, want the srv__ prefix kept", got)
+	}
+
+	// Two names identical in their first 64 bytes must still end up distinct.
+	a := long + "AAAA"
+	b := long + "BBBB"
+	nameA := mcpToolName("srv", a)
+	nameB := mcpToolName("srv", b)
+	if nameA == nameB {
+		t.Fatalf("mcpToolName(%q) == mcpToolName(%q) == %q, want distinct names", a, b, nameA)
+	}
+	if len(nameA) > maxMCPToolNameBytes || len(nameB) > maxMCPToolNameBytes {
+		t.Fatalf("truncated names exceed %d bytes: %q (%d), %q (%d)",
+			maxMCPToolNameBytes, nameA, len(nameA), nameB, len(nameB))
+	}
+}
+
+func TestAttachMCPKeepsOriginalNameForDispatch(t *testing.T) {
+	ts := newFakeMCPServer(t, []fakeMCPTool{{name: "admin.tools.list"}})
+	defer ts.Close()
+	mgr := mcp.Connect(context.Background(), map[string]mcp.ServerConfig{"srv": {URL: ts.URL}})
+	defer mgr.Close()
+
+	r, _, _ := newTestRegistry(t, nil, nil)
+	r.AttachMCP(mgr, nil)
+
+	tool := r.Find(mcpToolName("srv", "admin.tools.list"))
+	if tool == nil {
+		t.Fatalf("sanitized name not registered; tools=%v", toolNames(r.tools))
+	}
+	if tool.mcpTool != "admin.tools.list" {
+		t.Errorf("mcpTool = %q, want the original %q", tool.mcpTool, "admin.tools.list")
+	}
+}
+
+func TestMcpToolNameLeavesTheServerHalfAsTheCategory(t *testing.T) {
+	for _, server := range []string{"google.cal", "カレンダー"} {
+		name := mcpToolName(server, "list")
+		if got := CategoryOf(name); got != strings.ToLower(server) {
+			t.Errorf("CategoryOf(%q) = %q, want the raw server name %q", name, got, strings.ToLower(server))
+		}
+	}
+}
+
+func toolNames(ts []Tool) []string {
+	out := make([]string, len(ts))
+	for i, t := range ts {
+		out[i] = t.Name
+	}
+	return out
 }
 
 func TestCallSkipsConfirmOnRejection(t *testing.T) {
