@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -49,6 +50,27 @@ const legacyMigrated = 1
 
 // Rows are ordered so all-day events lead the day, matching the shell's layout.
 const orderClause = `ORDER BY date, CASE WHEN time = '' THEN 0 ELSE 1 END, time`
+
+// Padded so orderClause and notify.go's exact-minute match both see "09:00".
+func normalizeTime(s string) (string, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "", nil
+	}
+	t, err := time.Parse("15:04", s)
+	if err != nil {
+		return "", fmt.Errorf("time %q: want HH:MM (24h) or empty", s)
+	}
+	return t.Format("15:04"), nil
+}
+
+func normalizeDate(s string) (string, error) {
+	t, err := time.Parse("2006-1-2", strings.TrimSpace(s))
+	if err != nil {
+		return "", fmt.Errorf("date %q: want YYYY-MM-DD", s)
+	}
+	return t.Format("2006-01-02"), nil
+}
 
 type Event struct {
 	ID    string `json:"id"`
@@ -106,6 +128,10 @@ func Open(path string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
+	if err := s.fixUnpaddedTimes(); err != nil {
+		db.Close()
+		return nil, err
+	}
 	return s, nil
 }
 
@@ -146,8 +172,18 @@ func (s *Store) migrateLegacy() error {
 		if e.ID == "" || e.Date == "" || e.Title == "" {
 			continue
 		}
+		date, err := normalizeDate(e.Date)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "calendar: skipping legacy event %s: %v\n", e.ID, err)
+			continue
+		}
+		eventTime, err := normalizeTime(e.Time)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "calendar: skipping legacy event %s: %v\n", e.ID, err)
+			continue
+		}
 		s.db.Exec("INSERT OR IGNORE INTO events (id, date, time, title) VALUES (?, ?, ?, ?)",
-			e.ID, e.Date, e.Time, e.Title)
+			e.ID, date, eventTime, e.Title)
 	}
 	return s.markMigrated()
 }
@@ -157,9 +193,31 @@ func (s *Store) markMigrated() error {
 	return err
 }
 
+// The notify timer opens the store every minute, so the common path stays a read-only SELECT.
+func (s *Store) fixUnpaddedTimes() error {
+	var found int
+	if err := s.db.QueryRow(
+		"SELECT EXISTS(SELECT 1 FROM events WHERE time GLOB '[0-9]:[0-5][0-9]')").Scan(&found); err != nil {
+		return err
+	}
+	if found == 0 {
+		return nil
+	}
+	_, err := s.db.Exec("UPDATE events SET time = '0' || time WHERE time GLOB '[0-9]:[0-5][0-9]'")
+	return err
+}
+
 func (s *Store) Path() string { return s.path }
 
 func (s *Store) ListRange(start, end string) ([]Event, error) {
+	start, err := normalizeDate(start)
+	if err != nil {
+		return nil, err
+	}
+	end, err = normalizeDate(end)
+	if err != nil {
+		return nil, err
+	}
 	return s.query("SELECT id, date, time, title FROM events WHERE date >= ? AND date <= ? "+orderClause, start, end)
 }
 
@@ -187,6 +245,14 @@ func (s *Store) query(q string, args ...any) ([]Event, error) {
 }
 
 func (s *Store) Add(date, eventTime, title string) (string, error) {
+	date, err := normalizeDate(date)
+	if err != nil {
+		return "", err
+	}
+	eventTime, err = normalizeTime(eventTime)
+	if err != nil {
+		return "", err
+	}
 	id, err := newID()
 	if err != nil {
 		return "", err
@@ -205,6 +271,10 @@ func (s *Store) Delete(id string) (int64, error) {
 }
 
 func (s *Store) Update(id, title, eventTime string) (int64, error) {
+	eventTime, err := normalizeTime(eventTime)
+	if err != nil {
+		return 0, err
+	}
 	res, err := s.db.Exec(
 		"UPDATE events SET title = ?, time = ?, modified_at = unixepoch() WHERE id = ?",
 		title, eventTime, id)

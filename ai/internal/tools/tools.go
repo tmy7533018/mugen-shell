@@ -874,12 +874,12 @@ func builtin() []Tool {
 		},
 		{
 			Name:        "calendar_add",
-			Description: "Add calendar event. date: YYYY-MM-DD, time: HH:MM (24h).",
+			Description: "Add calendar event. date: YYYY-MM-DD, time: HH:MM (24h), or \"\" for an all-day event.",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
 					"date":  map[string]any{"type": "string", "description": "Event date in YYYY-MM-DD."},
-					"time":  map[string]any{"type": "string", "description": "Event time in HH:MM (24h)."},
+					"time":  map[string]any{"type": "string", "description": "Event time in HH:MM (24h), or \"\" for an all-day event."},
 					"title": map[string]any{"type": "string", "description": "Event title."},
 				},
 				"required": []string{"date", "time", "title"},
