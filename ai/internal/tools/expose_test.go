@@ -11,7 +11,7 @@ func exposedNames(ts []Tool) map[string]bool {
 }
 
 func TestExposedToolsReadonlyOnly(t *testing.T) {
-	r := New("", "", nil, nil, NewAuditor(""))
+	r := New("", nil, nil, NewAuditor(""))
 	got := r.ExposedTools(true, nil)
 	if len(got) == 0 {
 		t.Fatal("expected read-only tools to be exposed")
@@ -35,7 +35,7 @@ func TestExposedToolsReadonlyOnly(t *testing.T) {
 }
 
 func TestExposedToolsCategoriesAddWrites(t *testing.T) {
-	r := New("", "", nil, nil, NewAuditor(""))
+	r := New("", nil, nil, NewAuditor(""))
 	got := r.ExposedTools(false, []string{"theme"})
 	names := exposedNames(got)
 	for _, want := range []string{"theme_set", "theme_toggle", "theme_get"} {
@@ -49,7 +49,7 @@ func TestExposedToolsCategoriesAddWrites(t *testing.T) {
 }
 
 func TestExposedToolsExcludesMCPTools(t *testing.T) {
-	r := New("", "", nil, nil, NewAuditor(""))
+	r := New("", nil, nil, NewAuditor(""))
 	r.tools = append(r.tools, Tool{Name: "somesrv__read_thing", kind: "mcp", readonly: true})
 	names := exposedNames(r.ExposedTools(true, []string{"somesrv"}))
 	if names["somesrv__read_thing"] {
@@ -58,7 +58,7 @@ func TestExposedToolsExcludesMCPTools(t *testing.T) {
 }
 
 func TestExposedToolsRespectsDisabledCategories(t *testing.T) {
-	r := New("", "", nil, []string{"theme"}, NewAuditor(""))
+	r := New("", nil, []string{"theme"}, NewAuditor(""))
 	names := exposedNames(r.ExposedTools(true, []string{"theme"}))
 	if names["theme_get"] || names["theme_set"] {
 		t.Error("disabled category must stay unexposed even when explicitly listed")

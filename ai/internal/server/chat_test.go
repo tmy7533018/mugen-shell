@@ -62,7 +62,7 @@ func newChatServer(t *testing.T, p provider.Provider) (*Server, *store.Store) {
 	}
 	// DesktopState off: on it would shell out to `qs` from the test.
 	s := New(provider.NewRegistry("test-model", p), hist, st,
-		tools.New("", "", nil, nil, nil), nil, config.Context{})
+		tools.New("", nil, nil, nil), nil, config.Context{})
 	return s, st
 }
 

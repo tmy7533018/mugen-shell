@@ -132,6 +132,25 @@ func TestLoadOverlaysOntoDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadToleratesALeftoverScriptsDirKey(t *testing.T) {
+	path := sandbox(t)
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	toml := "[shell]\nqs_config = \"mugen-shell\"\nscripts_dir = \"\"\n"
+	if err := os.WriteFile(path, []byte(toml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v, want a leftover scripts_dir key to be ignored", err)
+	}
+	if cfg.Shell.QsConfig != "mugen-shell" {
+		t.Errorf("Shell.QsConfig = %q, want mugen-shell", cfg.Shell.QsConfig)
+	}
+}
+
 func TestLoadOnBrokenTomlReturnsDefaultsAndAnError(t *testing.T) {
 	path := sandbox(t)
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {

@@ -16,87 +16,64 @@ import (
 
 func TestExpandTemplate(t *testing.T) {
 	tests := []struct {
-		name       string
-		tmpl       []string
-		args       map[string]any
-		scriptsDir string
-		want       []string
-		wantErr    bool
+		name    string
+		tmpl    []string
+		args    map[string]any
+		want    []string
+		wantErr bool
 	}{
 		{
-			name:       "scripts_dir replacement",
-			tmpl:       []string{"{{scripts_dir}}/cli.py", "list"},
-			args:       map[string]any{},
-			scriptsDir: "/path/to/scripts",
-			want:       []string{"/path/to/scripts/cli.py", "list"},
+			name: "arg replacement separated",
+			tmpl: []string{"cli", "--title", "{{title}}"},
+			args: map[string]any{"title": "hello"},
+			want: []string{"cli", "--title", "hello"},
 		},
 		{
-			name:       "arg replacement separated",
-			tmpl:       []string{"cli", "--title", "{{title}}"},
-			args:       map[string]any{"title": "hello"},
-			scriptsDir: "",
-			want:       []string{"cli", "--title", "hello"},
+			name: "arg replacement joined",
+			tmpl: []string{"cli", "--title={{title}}"},
+			args: map[string]any{"title": "hello"},
+			want: []string{"cli", "--title=hello"},
 		},
 		{
-			name:       "arg replacement joined",
-			tmpl:       []string{"cli", "--title={{title}}"},
-			args:       map[string]any{"title": "hello"},
-			scriptsDir: "",
-			want:       []string{"cli", "--title=hello"},
+			name: "integer arg",
+			tmpl: []string{"cli", "--id={{id}}"},
+			args: map[string]any{"id": 42},
+			want: []string{"cli", "--id=42"},
 		},
 		{
-			name:       "integer arg",
-			tmpl:       []string{"cli", "--id={{id}}"},
-			args:       map[string]any{"id": 42},
-			scriptsDir: "",
-			want:       []string{"cli", "--id=42"},
+			name: "flag-like value stays literal in joined form",
+			tmpl: []string{"cli", "--title={{title}}"},
+			args: map[string]any{"title": "--delete-all"},
+			want: []string{"cli", "--title=--delete-all"},
 		},
 		{
-			name:       "flag-like value stays literal in joined form",
-			tmpl:       []string{"cli", "--title={{title}}"},
-			args:       map[string]any{"title": "--delete-all"},
-			scriptsDir: "",
-			want:       []string{"cli", "--title=--delete-all"},
+			name: "empty template",
+			tmpl: []string{},
+			args: map[string]any{},
+			want: []string{},
 		},
 		{
-			name:       "empty template",
-			tmpl:       []string{},
-			args:       map[string]any{},
-			scriptsDir: "/x",
-			want:       []string{},
+			name:    "missing placeholder errors",
+			tmpl:    []string{"cli", "{{missing}}"},
+			args:    map[string]any{},
+			wantErr: true,
 		},
 		{
-			name:       "missing placeholder errors",
-			tmpl:       []string{"cli", "{{missing}}"},
-			args:       map[string]any{},
-			scriptsDir: "",
-			wantErr:    true,
+			name: "value containing another placeholder is not re-expanded",
+			tmpl: []string{"--title={{title}}", "--date={{date}}"},
+			args: map[string]any{"title": "{{date}}", "date": "2026-01-01"},
+			want: []string{"--title={{date}}", "--date=2026-01-01"},
 		},
 		{
-			name:       "scripts_dir empty leaves token unresolved and errors",
-			tmpl:       []string{"{{scripts_dir}}/cli.py"},
-			args:       map[string]any{},
-			scriptsDir: "",
-			wantErr:    true,
-		},
-		{
-			name:       "value containing another placeholder is not re-expanded",
-			tmpl:       []string{"--title={{title}}", "--date={{date}}"},
-			args:       map[string]any{"title": "{{date}}", "date": "2026-01-01"},
-			scriptsDir: "",
-			want:       []string{"--title={{date}}", "--date=2026-01-01"},
-		},
-		{
-			name:       "value with literal braces passes through, not rejected",
-			tmpl:       []string{"--title={{title}}"},
-			args:       map[string]any{"title": "meeting {{about}} stuff"},
-			scriptsDir: "",
-			want:       []string{"--title=meeting {{about}} stuff"},
+			name: "value with literal braces passes through, not rejected",
+			tmpl: []string{"--title={{title}}"},
+			args: map[string]any{"title": "meeting {{about}} stuff"},
+			want: []string{"--title=meeting {{about}} stuff"},
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := expandTemplate(tc.tmpl, tc.args, tc.scriptsDir)
+			got, err := expandTemplate(tc.tmpl, tc.args)
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("expected error, got nil (output=%v)", got)
@@ -164,7 +141,7 @@ func (f *fakeRun) run(_ context.Context, name string, args []string) (string, er
 func newTestRegistry(t *testing.T, allowedApps, disabledCategories []string) (*Registry, *fakeRun, string) {
 	t.Helper()
 	auditPath := filepath.Join(t.TempDir(), "audit.log")
-	r := New("mugen-shell", "/scripts", allowedApps, disabledCategories, NewAuditor(auditPath))
+	r := New("mugen-shell", allowedApps, disabledCategories, NewAuditor(auditPath))
 	r.apps = nil
 	fr := &fakeRun{result: "ok"}
 	r.run = fr.run
@@ -422,7 +399,7 @@ func TestCallAuditLog(t *testing.T) {
 
 func TestCallConcurrent(t *testing.T) {
 	// Stateless run, so -race flags the Registry's locking, not the fake.
-	r := New("mugen-shell", "/scripts", nil, nil, NewAuditor(filepath.Join(t.TempDir(), "audit.log")))
+	r := New("mugen-shell", nil, nil, NewAuditor(filepath.Join(t.TempDir(), "audit.log")))
 	r.apps = nil
 	r.run = func(context.Context, string, []string) (string, error) { return "ok", nil }
 

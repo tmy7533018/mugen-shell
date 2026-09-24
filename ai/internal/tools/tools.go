@@ -50,7 +50,6 @@ type Tool struct {
 
 type Registry struct {
 	qsConfig     string
-	scriptsDir   string
 	allowedApps  []string
 	disabledCats map[string]bool
 	auditor      *Auditor
@@ -67,7 +66,7 @@ type Registry struct {
 	run func(ctx context.Context, name string, args []string) (string, error)
 }
 
-func New(qsConfig, scriptsDir string, allowedApps, disabledCategories []string, auditor *Auditor) *Registry {
+func New(qsConfig string, allowedApps, disabledCategories []string, auditor *Auditor) *Registry {
 	if qsConfig == "" {
 		qsConfig = "mugen-shell"
 	}
@@ -77,7 +76,6 @@ func New(qsConfig, scriptsDir string, allowedApps, disabledCategories []string, 
 	}
 	return &Registry{
 		qsConfig:     qsConfig,
-		scriptsDir:   scriptsDir,
 		allowedApps:  allowedApps,
 		disabledCats: disabled,
 		auditor:      auditor,
@@ -387,7 +385,7 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 	var cmdArgs []string
 
 	if len(t.cmdTemplate) > 0 {
-		expanded, err := expandTemplate(t.cmdTemplate, args, r.scriptsDir)
+		expanded, err := expandTemplate(t.cmdTemplate, args)
 		if err != nil {
 			return "", fmt.Errorf("expand %s: %w", name, err)
 		}
@@ -461,7 +459,7 @@ func sanitizeForLLM(s string) string {
 var placeholderRe = regexp.MustCompile(`\{\{(\w+)\}\}`)
 
 // Substituted values are never re-scanned, so an argument containing "{{...}}" stays literal.
-func expandTemplate(tmpl []string, args map[string]any, scriptsDir string) ([]string, error) {
+func expandTemplate(tmpl []string, args map[string]any) ([]string, error) {
 	out := make([]string, 0, len(tmpl))
 	for _, tok := range tmpl {
 		var unresolved string
@@ -469,13 +467,6 @@ func expandTemplate(tmpl []string, args map[string]any, scriptsDir string) ([]st
 			key := m[2 : len(m)-2]
 			if key == "self" {
 				return selfPath()
-			}
-			if key == "scripts_dir" {
-				if scriptsDir == "" {
-					unresolved = key
-					return m
-				}
-				return scriptsDir
 			}
 			if v, ok := args[key]; ok {
 				return fmt.Sprint(v)

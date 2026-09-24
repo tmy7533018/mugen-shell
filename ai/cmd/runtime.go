@@ -133,7 +133,6 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 	}
 	toolReg := tools.New(
 		cfg.Shell.QsConfig,
-		resolveScriptsDir(cfg.Shell.ScriptsDir),
 		cfg.Tools.AppLaunch.AllowedCommands,
 		cfg.Tools.DisabledCategories,
 		tools.NewAuditor(auditPath),
@@ -216,18 +215,6 @@ func expandEnv(in map[string]string) map[string]string {
 		out[k] = os.Expand(v, os.Getenv)
 	}
 	return out
-}
-
-func resolveScriptsDir(configured string) string {
-	if configured != "" {
-		return configured
-	}
-	xdg := os.Getenv("XDG_CONFIG_HOME")
-	if xdg == "" {
-		home, _ := os.UserHomeDir()
-		xdg = filepath.Join(home, ".config")
-	}
-	return filepath.Join(xdg, "quickshell", "mugen-shell", "scripts")
 }
 
 // Ollama is returned separately because the tool filter needs its Embed, absent from Provider.
