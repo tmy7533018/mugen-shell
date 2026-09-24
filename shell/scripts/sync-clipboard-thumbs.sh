@@ -44,8 +44,10 @@ for id; do
   # Without this an entry ffmpeg cannot decode is retried every time the panel opens.
   [[ -f "$fail" ]] && continue
 
-  if cliphist decode "$id" | ffmpeg -y -v error -i pipe: -vf "$SCALE" -frames:v 1 "$out" >/dev/null 2>&1 &&
-      [[ -s "$out" ]]; then
+  cliphist decode "$id" | ffmpeg -y -v error -i pipe: -vf "$SCALE" -frames:v 1 "$out" >/dev/null 2>&1
+  status=("${PIPESTATUS[@]}")
+  # ffmpeg stops reading after the first frame of an animation, so cliphist can die of SIGPIPE (141).
+  if (( status[1] == 0 )) && (( status[0] == 0 || status[0] == 141 )) && [[ -s "$out" ]]; then
     rm -f "$fail"
     printf 'new\t%s\n' "$id"
   else
