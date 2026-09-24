@@ -521,9 +521,19 @@ FocusScope {
 
     // Qt fetches a markdown image target while rendering, so a model-authored URL phones home unclicked.
     function stripImages(text) {
-        return text.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
-                   .replace(/!\[([^\]]*)\]\[[^\]]*\]/g, "$1")
-                   .replace(/!\[([^\]]*)\]/g, "$1")
+        let prev
+        do {
+            prev = text
+            text = text.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+                       .replace(/!\[([^\]]*)\]\[[^\]]*\]/g, "$1")
+                       .replace(/!\[([^\]]*)\]/g, "$1")
+        } while (text !== prev)
+        return text
+    }
+
+    // md4c starts raw HTML (which fetches img/background/url() targets) only at '<' + [A-Za-z/!?]; a zero-width space defuses it.
+    function escapeRawHtml(text) {
+        return text.replace(/<(?=[A-Za-z\/!?])/g, "<\u200B")
     }
 
     // An unclosed ``` mid-stream still yields a code block, so partial code shows while it streams.
@@ -534,7 +544,7 @@ FocusScope {
         for (let i = 0; i < parts.length; i++) {
             let part = parts[i]
             if (i % 2 === 0) {
-                if (part.length > 0) blocks.push({ type: "text", content: root.stripImages(part) })
+                if (part.length > 0) blocks.push({ type: "text", content: root.escapeRawHtml(root.stripImages(part)) })
             } else {
                 let nl = part.indexOf("\n")
                 let lang = ""
