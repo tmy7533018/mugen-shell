@@ -131,7 +131,7 @@ func (c *Client) call(ctx context.Context, method string, params any) (json.RawM
 		c.clearPending(id)
 		return nil, err
 	}
-	if err := c.tr.send(data); err != nil {
+	if err := c.tr.send(ctx, data); err != nil {
 		c.clearPending(id)
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func (c *Client) call(ctx context.Context, method string, params any) (json.RawM
 	}
 }
 
-func (c *Client) notify(method string, params any) error {
+func (c *Client) notify(ctx context.Context, method string, params any) error {
 	raw, err := marshalParams(params)
 	if err != nil {
 		return err
@@ -157,7 +157,7 @@ func (c *Client) notify(method string, params any) error {
 	if err != nil {
 		return err
 	}
-	return c.tr.send(data)
+	return c.tr.send(ctx, data)
 }
 
 func marshalParams(params any) (json.RawMessage, error) {
@@ -178,7 +178,7 @@ func (c *Client) Initialize(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.notify("notifications/initialized", nil)
+	return c.notify(ctx, "notifications/initialized", nil)
 }
 
 // ListTools fetches the server's full tool catalog, following pagination

@@ -29,7 +29,7 @@ func newScriptedTransport(handler func(rpcMessage) (rpcMessage, bool)) *scripted
 	}
 }
 
-func (s *scriptedTransport) send(data []byte) error {
+func (s *scriptedTransport) send(_ context.Context, data []byte) error {
 	var req rpcMessage
 	if err := json.Unmarshal(data, &req); err != nil {
 		return err

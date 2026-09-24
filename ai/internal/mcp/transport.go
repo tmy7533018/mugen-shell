@@ -5,6 +5,8 @@ package mcp
 import (
 	"bufio"
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,9 +17,14 @@ import (
 	"time"
 )
 
+const maxMessageBytes = 32 << 20
+
+// Overridable in tests so an over-cap message doesn't require generating maxMessageBytes of data.
+var recvCap int64 = maxMessageBytes
+
 type transport interface {
 	// send writes one message; the implementation adds its own framing.
-	send(data []byte) error
+	send(ctx context.Context, data []byte) error
 	// recv blocks until the next message, returning io.EOF once the server has exited.
 	recv() ([]byte, error)
 	close() error
@@ -87,7 +94,7 @@ func newStdioTransport(name, command string, args []string, env map[string]strin
 	}, nil
 }
 
-func (t *stdioTransport) send(data []byte) error {
+func (t *stdioTransport) send(_ context.Context, data []byte) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	_, err := t.stdin.Write(append(data, '\n'))
@@ -95,12 +102,24 @@ func (t *stdioTransport) send(data []byte) error {
 }
 
 func (t *stdioTransport) recv() ([]byte, error) {
-	// ReadBytes has no size cap, unlike Scanner, so a large tool result can't truncate.
-	line, err := t.stdout.ReadBytes('\n')
-	if err != nil && len(line) == 0 {
-		return nil, err
+	var msg []byte
+	for {
+		chunk, err := t.stdout.ReadSlice('\n')
+		msg = append(msg, chunk...)
+		if int64(len(msg)) > recvCap {
+			return nil, fmt.Errorf("mcp stdio: message exceeds %d bytes", recvCap)
+		}
+		switch {
+		case err == nil:
+			return msg, nil
+		case errors.Is(err, bufio.ErrBufferFull):
+			continue
+		case len(msg) == 0:
+			return nil, err
+		default:
+			return msg, nil
+		}
 	}
-	return line, nil
 }
 
 func (t *stdioTransport) close() error {
@@ -118,6 +137,8 @@ func (t *stdioTransport) close() error {
 	return t.cmd.Wait()
 }
 
+const maxPrefixBufBytes = 64 << 10
+
 // Tags every complete line so several servers' diagnostics stay readable when interleaved.
 type prefixWriter struct {
 	prefix string
@@ -133,6 +154,10 @@ func (w *prefixWriter) Write(p []byte) (int, error) {
 		}
 		fmt.Fprintf(os.Stderr, "%s%s\n", w.prefix, w.buf[:i])
 		w.buf = w.buf[i+1:]
+	}
+	if len(w.buf) > maxPrefixBufBytes {
+		fmt.Fprintf(os.Stderr, "%s%s …(split)\n", w.prefix, w.buf)
+		w.buf = nil
 	}
 	return len(p), nil
 }

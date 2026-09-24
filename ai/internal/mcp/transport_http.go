@@ -29,7 +29,7 @@ type httpTransport struct {
 	session string // Mcp-Session-Id, when the server issues one
 	failErr error
 
-	outbound  chan []byte
+	outbound  chan outMsg
 	queue     chan []byte
 	done      chan struct{}
 	broken    chan struct{}
@@ -50,7 +50,7 @@ func newHTTPTransport(name, rawURL string) (*httpTransport, error) {
 		cancel: cancel,
 		// Bounds a single hung POST; close() cancels ctx to abort an in-flight SSE read.
 		client:   &http.Client{Timeout: 5 * time.Minute},
-		outbound: make(chan []byte, 32),
+		outbound: make(chan outMsg, 32),
 		queue:    make(chan []byte, 32),
 		done:     make(chan struct{}),
 		broken:   make(chan struct{}),
@@ -59,12 +59,19 @@ func newHTTPTransport(name, rawURL string) (*httpTransport, error) {
 	return t, nil
 }
 
+type outMsg struct {
+	ctx  context.Context
+	data []byte
+}
+
 // send enqueues a message for the worker; it never blocks on the network.
-func (t *httpTransport) send(data []byte) error {
-	msg := append([]byte(nil), data...)
+func (t *httpTransport) send(ctx context.Context, data []byte) error {
+	msg := outMsg{ctx, append([]byte(nil), data...)}
 	select {
 	case t.outbound <- msg:
 		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	case <-t.done:
 		return errors.New("transport closed")
 	}
@@ -74,21 +81,31 @@ func (t *httpTransport) sendLoop() {
 	for {
 		select {
 		case msg := <-t.outbound:
-			t.post(msg)
+			// The caller already gave up; posting now would only be a stale side effect.
+			if msg.ctx.Err() != nil {
+				continue
+			}
+			t.post(msg.ctx, msg.data)
 		case <-t.done:
 			return
 		}
 	}
 }
 
-func (t *httpTransport) post(data []byte) {
+func (t *httpTransport) post(callCtx context.Context, data []byte) {
+	// t.ctx bounds the request too, so close() still aborts it once callCtx outlives the transport.
+	reqCtx, cancel := context.WithCancel(callCtx)
+	defer cancel()
+	stop := context.AfterFunc(t.ctx, cancel)
+	defer stop()
+
 	var probe struct {
 		ID json.RawMessage `json:"id"`
 	}
 	_ = json.Unmarshal(data, &probe)
 	hasID := len(probe.ID) > 0 && string(probe.ID) != "null"
 
-	req, err := http.NewRequestWithContext(t.ctx, http.MethodPost, t.url, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodPost, t.url, bytes.NewReader(data))
 	if err != nil {
 		t.deliverError(probe.ID, hasID, err.Error())
 		return
@@ -103,6 +120,10 @@ func (t *httpTransport) post(data []byte) {
 
 	resp, err := t.client.Do(req)
 	if err != nil {
+		// A caller-side timeout, not a broken connection: aborting the request must not force a redial.
+		if callCtx.Err() != nil {
+			return
+		}
 		t.fail(fmt.Errorf("http transport: %w", err))
 		return
 	}
@@ -133,7 +154,7 @@ func (t *httpTransport) post(data []byte) {
 		t.pumpSSE(resp.Body, probe.ID, hasID)
 		return
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 32<<20))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxMessageBytes))
 	if err != nil {
 		t.deliverError(probe.ID, hasID, fmt.Sprintf("http transport: reading response: %v", err))
 		return
@@ -146,7 +167,7 @@ func (t *httpTransport) post(data []byte) {
 // A scanner error surfaces as a JSON-RPC error rather than a truncated fragment.
 func (t *httpTransport) pumpSSE(r io.Reader, id json.RawMessage, hasID bool) {
 	sc := bufio.NewScanner(r)
-	sc.Buffer(make([]byte, 64*1024), 32<<20)
+	sc.Buffer(make([]byte, 64*1024), maxMessageBytes)
 	var data []byte
 	flush := func() {
 		if len(data) > 0 {
