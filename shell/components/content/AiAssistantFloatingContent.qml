@@ -134,15 +134,26 @@ FocusScope {
     }
 
     // An index only means something against the conversation it came from.
-    onCurrentConvIdChanged: { editingIndex = -1; openReasoning = ({}) }
+    onCurrentConvIdChanged: { editingIndex = -1; openDetails = ({}) }
 
-    // Held here by message index: every streamed chunk reassigns `messages`, which rebuilds the delegates.
-    property var openReasoning: ({})
-    function toggleReasoning(index) {
-        let next = Object.assign({}, openReasoning)
-        if (next[index]) delete next[index]
-        else next[index] = true
-        openReasoning = next
+    // By message index (":<chip index>" added for a tool chip): each chunk rebuilds the delegates, and call ids may differ on reload.
+    property var openDetails: ({})
+    function toggleDetail(key) {
+        let next = Object.assign({}, openDetails)
+        if (next[key]) delete next[key]
+        else next[key] = true
+        openDetails = next
+    }
+
+    // A cut tail's indices get reused by the next messages, which must not inherit its open state.
+    onMessagesChanged: {
+        let next = null
+        for (const key in openDetails) {
+            if (parseInt(key) < messages.length) continue
+            if (!next) next = Object.assign({}, openDetails)
+            delete next[key]
+        }
+        if (next) openDetails = next
     }
 
     Timer {
@@ -982,7 +993,9 @@ FocusScope {
                 }
                 readonly property string reasoning: modelData.thinking || ""
                 readonly property real reasoningMs: modelData.thinkingMs || 0
-                readonly property bool reasoningOpen: !!root.openReasoning[index]
+                readonly property var openDetails: root.openDetails
+                readonly property string detailKey: String(index)
+                readonly property bool reasoningOpen: !!openDetails[detailKey]
                 readonly property string reasoningLabel: reasoningMs > 0
                     ? "Thought for " + (reasoningMs / 1000).toFixed(1) + "s"
                     : "Thinking\u2026"
@@ -1176,7 +1189,7 @@ FocusScope {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.toggleReasoning(index)
+                                    onClicked: root.toggleDetail(delegateRoot.detailKey)
                                 }
                             }
 
@@ -1200,6 +1213,9 @@ FocusScope {
                         theme: root.theme
                         icons: root.icons
                         toolCalls: delegateRoot.toolCalls
+                        openKeys: delegateRoot.openDetails
+                        keyPrefix: delegateRoot.detailKey
+                        onToggleRequested: key => root.toggleDetail(key)
                     }
 
                     Repeater {
