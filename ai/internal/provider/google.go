@@ -196,9 +196,13 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 			} `json:"content"`
 			FinishReason string `json:"finishReason"`
 		} `json:"candidates"`
+		PromptFeedback struct {
+			BlockReason string `json:"blockReason"`
+		} `json:"promptFeedback"`
 	}
 
 	var accumulated []ToolCall
+	var sawText bool
 
 	for scanner.Scan() {
 		stall.Reset(streamStallTimeout)
@@ -212,13 +216,18 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 		}
 
 		chunk.Candidates = nil
+		chunk.PromptFeedback.BlockReason = ""
 		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
 			continue
+		}
+		if r := chunk.PromptFeedback.BlockReason; r != "" && r != "BLOCK_REASON_UNSPECIFIED" {
+			return fmt.Errorf("google: prompt blocked (%s)", r)
 		}
 
 		for _, c := range chunk.Candidates {
 			for _, p := range c.Content.Parts {
 				if p.Text != "" {
+					sawText = true
 					if err := fn(ChatChunk{Content: p.Text}); err != nil {
 						return err
 					}
@@ -234,6 +243,9 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 			}
 			if c.FinishReason == "MAX_TOKENS" {
 				return truncatedStream("google")
+			}
+			if c.FinishReason != "" && c.FinishReason != "STOP" && !sawText && len(accumulated) == 0 {
+				return fmt.Errorf("google: reply stopped (%s)", c.FinishReason)
 			}
 			if c.FinishReason != "" {
 				final := ChatChunk{Done: true}
