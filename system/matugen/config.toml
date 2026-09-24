@@ -1,7 +1,4 @@
-[config.wallpaper]
-command = "swww"
-arguments = ["img", "--transition-type", "any", "--transition-fps", "60"]
-set = false
+[config]
 
 [templates.hyprland]
 input_path  = '~/.config/matugen/templates/hyprland-colors.lua'
