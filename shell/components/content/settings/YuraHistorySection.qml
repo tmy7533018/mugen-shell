@@ -201,20 +201,14 @@ Rectangle {
         id: exportProcess
         running: false
         property string outPath: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "20", "-o", outPath,
+        command: ["sh", "-c", "umask 077; exec curl \"$@\"", "sh", ...aiBackend.transportArgs,
+                  "-fsS", "--max-time", "20", "--remove-on-error", "-o", outPath,
                   aiBackend.baseUrl + "/conversations/export"]
         onExited: (exitCode) => {
             section.statusText = exitCode === 0
                 ? "exported to " + exportProcess.outPath
                 : "export failed"
-            if (exitCode === 0) chmodExportProcess.running = true
         }
-    }
-
-    Process {
-        id: chmodExportProcess
-        running: false
-        command: ["chmod", "600", exportProcess.outPath]
     }
 
     Process {
