@@ -132,6 +132,26 @@ func TestLoadOverlaysOntoDefaults(t *testing.T) {
 	}
 }
 
+func TestHistoryRetentionDefaultsToThirtyDaysButKeepsAnExplicitZero(t *testing.T) {
+	if got := Default().History.RetainDays; got != 30 {
+		t.Fatalf("Default().History.RetainDays = %d, want 30", got)
+	}
+	path := sandbox(t)
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("[history]\nretain_days = 0\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.History.RetainDays != 0 {
+		t.Fatalf("RetainDays = %d, want an explicit 0 (keep everything) to survive", cfg.History.RetainDays)
+	}
+}
+
 func TestLoadToleratesALeftoverScriptsDirKey(t *testing.T) {
 	path := sandbox(t)
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {

@@ -170,7 +170,7 @@ func Default() Config {
 		},
 		Shell:   Shell{QsConfig: "mugen-shell"},
 		Context: Context{DesktopState: true, DesktopStateRemote: true},
-		History: History{MaxContextTokens: 8000},
+		History: History{RetainDays: 30, MaxContextTokens: 8000},
 		Logging: Logging{Audit: true},
 		Tools: Tools{
 			ContextFilter: ContextFilter{
