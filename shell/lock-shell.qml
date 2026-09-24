@@ -111,21 +111,26 @@ ShellRoot {
     property var calendarEvents: []
     property string pendingCalendarDay: ""
     property string calendarDay: ""
+    property real calendarAttemptMinute: -1
 
     // The lock can outlast midnight, so the grid reloads off the clock tick.
     function reloadCalendar() {
         const key = Qt.formatDate(today, "yyyy-MM-dd")
         if (key === calendarDay || calendarProcess.running) return
+        const minute = Math.floor(today.getTime() / 60000)
+        if (minute === calendarAttemptMinute) return
+        calendarAttemptMinute = minute
         pendingCalendarDay = key
 
         calendarProcess.command =
             Theme.CalendarCli.rangeArgv(today.getFullYear(), today.getMonth())
         calendarProcess.running = true
+        calendarKillTimer.restart()
     }
 
     function applyCalendar(parsed) {
         calendarEvents = Array.isArray(parsed.events) ? parsed.events : []
-        // Latched only on a real answer; the clock tick is what retries a failed fetch.
+        // Latched only on a real answer; the clock tick retries a failed fetch at most once a minute.
         calendarDay = pendingCalendarDay
     }
 
@@ -386,6 +391,12 @@ ShellRoot {
                 }
             }
         }
+    }
+
+    Timer {
+        id: calendarKillTimer
+        interval: 15000
+        onTriggered: if (calendarProcess.running) calendarProcess.signal(9)
     }
 
     Process {
