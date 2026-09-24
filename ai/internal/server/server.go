@@ -302,7 +302,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var fullResponse string
-	var turnToolCalls []provider.ToolCall
+	var turnToolCalls []storedToolCall
 	// Once content has streamed or a tool fired, the user message can no longer be dropped.
 	var sideEffected bool
 
@@ -388,10 +388,13 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			ThinkingSignature: iterThinkingSig,
 		})
 
-		turnToolCalls = append(turnToolCalls, iterToolCalls...)
+		firstOfIter := len(turnToolCalls)
+		for _, tc := range iterToolCalls {
+			turnToolCalls = append(turnToolCalls, storedToolCall{ToolCall: tc})
+		}
 		sendEvent(map[string]any{"tool_calls": iterToolCalls})
 
-		for _, tc := range iterToolCalls {
+		for i, tc := range iterToolCalls {
 			// Noted even for denied or failed calls, so follow-ups keep the same tools visible.
 			s.recent.note(convID, tools.CategoryOf(tc.Name))
 
@@ -406,6 +409,8 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			}
 			sideEffected = true
 			resultPayload := tools.ResultPayload(result, callErr)
+			turnToolCalls[firstOfIter+i].Result = resultPayload
+			turnToolCalls[firstOfIter+i].Error = errString(callErr)
 
 			sendEvent(map[string]any{
 				"tool_result": map[string]any{
@@ -468,7 +473,14 @@ func firstN(s string, n int) string {
 	return string(rs[:n]) + "…"
 }
 
-func encodeToolCalls(calls []provider.ToolCall) string {
+// Kept with the call so a reloaded conversation shows what the chip showed live; the model never reads it back.
+type storedToolCall struct {
+	provider.ToolCall
+	Result string `json:"result,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
+func encodeToolCalls(calls []storedToolCall) string {
 	if len(calls) == 0 {
 		return ""
 	}

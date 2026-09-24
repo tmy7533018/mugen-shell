@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -187,5 +188,53 @@ func TestChatBoundsAHugeMCPErrorForTheProvider(t *testing.T) {
 	}
 	if !strings.HasPrefix(m.Content, "error: fake__huge failed: mcp error -32000: ") {
 		t.Fatalf("tool message = %q, want it to start with the mcp error prefix", m.Content[:min(60, len(m.Content))])
+	}
+}
+
+func storedToolCalls(t *testing.T, s *Server) []map[string]any {
+	t.Helper()
+	msgs, err := s.store.ListMessages(s.history.ConvID())
+	if err != nil {
+		t.Fatalf("list messages: %v", err)
+	}
+	for _, m := range msgs {
+		if m.Role == "assistant" && len(m.ToolCalls) > 0 {
+			var calls []map[string]any
+			if err := json.Unmarshal(m.ToolCalls, &calls); err != nil {
+				t.Fatalf("decode tool_calls: %v", err)
+			}
+			return calls
+		}
+	}
+	t.Fatal("no assistant row with tool_calls")
+	return nil
+}
+
+func TestChatStoresEachToolResultWithItsCall(t *testing.T) {
+	ts := newFakeMCPServer(t, "sunny\nwarm", "")
+	defer ts.Close()
+	s := newMCPBoundServer(t, &capturingProvider{}, ts)
+
+	postChat(t, s, `{"message":"hi","conversation_id":0}`)
+
+	calls := storedToolCalls(t, s)
+	if len(calls) != 1 || calls[0]["name"] != "fake__huge" || calls[0]["result"] != "sunny\nwarm" {
+		t.Fatalf("stored tool_calls = %v, want the result kept with the call", calls)
+	}
+	if _, ok := calls[0]["error"]; ok {
+		t.Fatalf("stored an error for a call that succeeded: %v", calls[0])
+	}
+}
+
+func TestChatStoresAToolErrorWithItsCall(t *testing.T) {
+	ts := newFakeMCPServer(t, "", "boom")
+	defer ts.Close()
+	s := newMCPBoundServer(t, &capturingProvider{}, ts)
+
+	postChat(t, s, `{"message":"hi","conversation_id":0}`)
+
+	calls := storedToolCalls(t, s)
+	if len(calls) != 1 || !strings.Contains(fmt.Sprint(calls[0]["error"]), "boom") {
+		t.Fatalf("stored tool_calls = %v, want the error kept with the call", calls)
 	}
 }
