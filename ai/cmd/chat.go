@@ -39,6 +39,7 @@ func runChat(_ *cobra.Command, _ []string) error {
 	defer rt.MCP.Close()
 
 	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Buffer(make([]byte, 0, 64*1024), 4<<20)
 	fmt.Printf("Chat with %s  (commands: exit, new)\n\n", rt.Model)
 
 	for {
@@ -98,6 +99,9 @@ func runChat(_ *cobra.Command, _ []string) error {
 		_ = rt.History.Add("assistant", fullResponse, rt.Registry.Model(), false)
 	}
 
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("read stdin: %w", err)
+	}
 	return nil
 }
 
