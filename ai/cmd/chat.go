@@ -140,10 +140,7 @@ func runChatTurn(rt *runtimeContext, scanner *bufio.Scanner, msgs []provider.Mes
 				rt.Tools.Audit(tc.Name, tc.Arguments, result, nil)
 			} else {
 				res, callErr := rt.Tools.Call(ctx, tc.Name, tc.Arguments)
-				result = res
-				if callErr != nil {
-					result = fmt.Sprintf("error: %v (output: %s)", callErr, res)
-				}
+				result = tools.ResultPayload(res, callErr)
 				fmt.Printf("\n[tool %s]\n", tc.Name)
 			}
 			msgs = append(msgs, provider.Message{

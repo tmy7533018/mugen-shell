@@ -149,6 +149,31 @@ func TestUnknownMethodAndBatch(t *testing.T) {
 	}
 }
 
+// The expose bridge dispatches straight through ToolSource.Call, with no ForLLM bound applied.
+func TestToolsCallReturnsAHugeResultUnbounded(t *testing.T) {
+	huge := `{"events":[` + strings.Repeat(`{"id":"e","date":"2026-09-24","time":"09:00","title":"x"},`, 3000) + `{"id":"last","date":"2026-09-24","time":"09:00","title":"x"}]}`
+	if len(huge) <= tools.MaxLLMResultBytes {
+		t.Fatalf("test setup: huge (%d bytes) must exceed the chat-loop cap (%d)", len(huge), tools.MaxLLMResultBytes)
+	}
+	h, _ := newTestHandler(huge, nil)
+	raw := h.HandleMessage(context.Background(), []byte(`{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"theme_get","arguments":{}}}`))
+	if !json.Valid(raw) {
+		t.Fatalf("response is not valid JSON (%d bytes)", len(raw))
+	}
+	var resp map[string]any
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	content := resp["result"].(map[string]any)["content"].([]any)[0].(map[string]any)
+	text := content["text"].(string)
+	if text != huge {
+		t.Fatalf("content.text was altered: got %d bytes, want %d unchanged", len(text), len(huge))
+	}
+	if !json.Valid([]byte(text)) {
+		t.Fatal("content.text is not itself valid JSON")
+	}
+}
+
 func TestServeHTTP(t *testing.T) {
 	h, _ := newTestHandler("", nil)
 

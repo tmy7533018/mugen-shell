@@ -397,10 +397,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 				result, callErr = s.tools.Call(r.Context(), tc.Name, tc.Arguments)
 			}
 			sideEffected = true
-			resultPayload := result
-			if callErr != nil {
-				resultPayload = fmt.Sprintf("error: %v (output: %s)", callErr, result)
-			}
+			resultPayload := tools.ResultPayload(result, callErr)
 
 			sendEvent(map[string]any{
 				"tool_result": map[string]any{
