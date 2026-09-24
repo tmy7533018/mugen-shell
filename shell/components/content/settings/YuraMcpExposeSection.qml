@@ -195,7 +195,7 @@ Rectangle {
         id: reloadTimer
         // Wait for mugen-ai to come back up after the restart.
         interval: 4000
-        onTriggered: if (!section.dirty) loadProcess.running = true
+        onTriggered: if ((!section.loaded || !section.dirty) && !loadProcess.running) loadProcess.running = true
     }
 
     Component.onCompleted: loadProcess.running = true

@@ -170,7 +170,7 @@ Rectangle {
     Timer {
         id: loadRetry
         interval: 3000
-        onTriggered: if (!section.dirty && !loadConfigProcess.running) loadConfigProcess.running = true
+        onTriggered: if ((!section.loaded || !section.dirty) && !loadConfigProcess.running) loadConfigProcess.running = true
     }
 
     Behavior on height {
