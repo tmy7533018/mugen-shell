@@ -154,6 +154,7 @@ Item {
 
     // Point in Home coordinates -> the tile under it, across the three bands (scroll included).
     function tileAt(px, py) {
+        if (px < 0 || py < 0 || px >= width || py >= height) return null
         for (let s = 0; s < 3; s++) {
             let g = grid(s)
             if (!g.visible) continue
