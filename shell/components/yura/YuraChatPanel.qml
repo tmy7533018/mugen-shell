@@ -244,6 +244,8 @@ PanelWindow {
             to: yuraState.panelRestX
             duration: Theme.Motion.drift
             easing.type: Easing.InOutCubic
+            // A running animation keeps the 'to' it started with, so a width or side change mid-slide lands here.
+            onFinished: chatBox.x = chatWindow.yuraState.panelRestX
         }
         NumberAnimation {
             id: panelSlideOut
@@ -252,6 +254,7 @@ PanelWindow {
             to: yuraState.panelHiddenX
             duration: Theme.Motion.drift
             easing.type: Easing.InOutCubic
+            onFinished: chatBox.x = chatWindow.yuraState.panelHiddenX
         }
         NumberAnimation {
             id: panelFadeIn
@@ -283,6 +286,13 @@ PanelWindow {
                     panelSlideOut.restart()
                     panelFadeOut.restart()
                 }
+            }
+            function onPanelRestXChanged() {
+                if (chatWindow.yuraState.expanded && chatWindow._sizeReady && !panelSlideIn.running && !panelSlideOut.running)
+                    chatBox.x = chatWindow.yuraState.panelRestX
+            }
+            function onPanelHiddenXChanged() {
+                if (!chatWindow.yuraState.expanded && !panelSlideOut.running) chatBox.x = chatWindow.yuraState.panelHiddenX
             }
         }
 
