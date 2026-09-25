@@ -62,7 +62,6 @@ func loadRuntimeContext(modelOverride, systemOverride string) (*runtimeContext, 
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "warning: config load failed, using defaults: %v\n", err)
-		cfg = config.Default()
 	}
 
 	model := modelOverride

@@ -152,6 +152,76 @@ func TestHistoryRetentionDefaultsToThirtyDaysButKeepsAnExplicitZero(t *testing.T
 	}
 }
 
+func TestLoadKeepsEverythingForAnExistingConfigWithoutRetainDays(t *testing.T) {
+	cases := []string{
+		"[provider.ollama]\nhost = \"http://127.0.0.1:1\"\n",
+		"[history]\nmax_context_tokens = 4000\n",
+	}
+	for _, toml := range cases {
+		path := sandbox(t)
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(toml), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("Load() error = %v", err)
+		}
+		if cfg.History.RetainDays != 0 {
+			t.Errorf("config %q: RetainDays = %d, want 0 (an existing config predates the 30-day default)",
+				toml, cfg.History.RetainDays)
+		}
+	}
+}
+
+func TestLoadSeedsThirtyDayRetentionOnFirstRun(t *testing.T) {
+	path := sandbox(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.History.RetainDays != 30 {
+		t.Fatalf("RetainDays = %d, want 30 on first run", cfg.History.RetainDays)
+	}
+
+	written, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(written), "retain_days = 30") {
+		t.Errorf("written config does not contain %q: %s", "retain_days = 30", written)
+	}
+
+	cfg, err = Load()
+	if err != nil {
+		t.Fatalf("second Load() error = %v", err)
+	}
+	if cfg.History.RetainDays != 30 {
+		t.Fatalf("second Load() RetainDays = %d, want 30", cfg.History.RetainDays)
+	}
+}
+
+func TestLoadTurnsPruningOffWhenTheFileIsUnreadable(t *testing.T) {
+	path := sandbox(t)
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("[history]\nretain_days = 0\n\n[personality]\nname = \"Yura\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load()
+	if err == nil {
+		t.Fatal("Load() error = nil, want a decode error")
+	}
+	if cfg.History.RetainDays != 0 {
+		t.Fatalf("RetainDays = %d, want 0 so a typo can't override an explicit retain_days = 0", cfg.History.RetainDays)
+	}
+}
+
 func TestLoadToleratesALeftoverScriptsDirKey(t *testing.T) {
 	path := sandbox(t)
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
@@ -257,5 +327,25 @@ func TestSaveKeepsSecretsOffOtherUsersAndLeavesNoTempFile(t *testing.T) {
 		if strings.HasSuffix(e.Name(), ".tmp") {
 			t.Errorf("Save() left %s behind", e.Name())
 		}
+	}
+}
+
+func TestLoadTurnsPruningOffWhenTheDefaultCannotBeWritten(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root writes through a read-only directory")
+	}
+	path := sandbox(t)
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o700) })
+
+	cfg, err := Load()
+	if err == nil {
+		t.Fatal("Load() error = nil, want the write error")
+	}
+	if cfg.History.RetainDays != 0 {
+		t.Fatalf("RetainDays = %d, want 0 when Load could not read or seed the file", cfg.History.RetainDays)
 	}
 }

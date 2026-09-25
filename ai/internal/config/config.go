@@ -185,6 +185,8 @@ func Default() Config {
 	}
 }
 
+// Load overlays config.toml onto Default(), but retain_days stays 0 unless the file sets it or Load just wrote it.
+// On error it still returns a usable config, with pruning off.
 func Load() (Config, error) {
 	cfg := Default()
 	path := filePath()
@@ -192,7 +194,7 @@ func Load() (Config, error) {
 	info, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		if err := writeDefault(path, cfg); err != nil {
-			return cfg, err
+			return fallback(), err
 		}
 		return cfg, nil
 	}
@@ -201,10 +203,22 @@ func Load() (Config, error) {
 		_ = os.Chmod(path, 0o600)
 	}
 
-	if _, err := toml.DecodeFile(path, &cfg); err != nil {
-		return Default(), err
+	md, err := toml.DecodeFile(path, &cfg)
+	if err != nil {
+		return fallback(), err
+	}
+	// Only writeDefault seeds retain_days = 30, so a file without the key never asked for pruning.
+	if !md.IsDefined("history", "retain_days") {
+		cfg.History.RetainDays = 0
 	}
 	return cfg, nil
+}
+
+// An error means Load never saw the user's retain_days, and pruning on a guess deletes history.
+func fallback() Config {
+	cfg := Default()
+	cfg.History.RetainDays = 0
+	return cfg
 }
 
 func filePath() string {

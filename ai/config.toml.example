@@ -75,8 +75,9 @@
 
 # [history]
 #   # Auto-delete conversations idle longer than this many days, pruned at
-#   # mugen-ai startup. 0 keeps every conversation forever. Default: 30. Edit
-#   # via Settings → AI / Yura → Conversation history.
+#   # mugen-ai startup. 0 keeps every conversation forever. New installs
+#   # get 30; a config.toml without this key keeps everything. Edit via
+#   # Settings → AI / Yura → Conversation history.
 #   retain_days = 30
 #   # Cap the estimated token footprint of the history sent per turn
 #   # (oldest messages drop first), leaving context-window room for tools
