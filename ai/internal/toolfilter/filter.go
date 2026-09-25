@@ -57,6 +57,11 @@ func New(cfg Config, embed EmbedFunc) *Filter {
 	if cfg.MinScore <= 0 {
 		cfg.MinScore = 0.4
 	}
+	always := make([]string, 0, len(cfg.AlwaysInclude))
+	for _, c := range cfg.AlwaysInclude {
+		always = append(always, strings.ToLower(strings.TrimSpace(c)))
+	}
+	cfg.AlwaysInclude = always
 	return &Filter{cfg: cfg, embed: embed}
 }
 

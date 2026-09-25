@@ -309,3 +309,10 @@ func TestNilFilterPassesThrough(t *testing.T) {
 		t.Fatalf("nil filter must pass everything through")
 	}
 }
+
+func TestAlwaysIncludeMatchesTheLowercasedCategory(t *testing.T) {
+	f := New(Config{AlwaysInclude: []string{" My_Srv ", "panel"}}, nil)
+	if got := strings.Join(f.cfg.AlwaysInclude, ","); got != "my_srv,panel" {
+		t.Fatalf("AlwaysInclude = %q, want %q", got, "my_srv,panel")
+	}
+}
