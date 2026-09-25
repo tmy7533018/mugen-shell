@@ -338,6 +338,12 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 				thinkingSent, iterThinkingSent = true, true
 				sendEvent(map[string]any{"thinking": delta})
 			}
+			// A chunk read after the client left was never shown, so it must not keep the turn or run tools.
+			if chunk.Content != "" || len(chunk.ToolCalls) > 0 {
+				if err := r.Context().Err(); err != nil {
+					return err
+				}
+			}
 			if chunk.Content != "" {
 				iterContent += chunk.Content
 				fullResponse += chunk.Content

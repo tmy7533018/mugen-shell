@@ -209,3 +209,49 @@ func TestChatSeparatesThinkingAcrossToolIterations(t *testing.T) {
 		t.Fatalf("thinking events not separated per iteration:\n%s", body)
 	}
 }
+
+type lateChunkProvider struct {
+	scriptedProvider
+	cancel context.CancelFunc
+	late   provider.ChatChunk
+	calls  int
+}
+
+func (p *lateChunkProvider) Chat(ctx context.Context, _ string, _ []provider.Message,
+	_ provider.ChatOptions, fn func(provider.ChatChunk) error) error {
+	p.calls++
+	p.cancel()
+	<-ctx.Done()
+	return fn(p.late)
+}
+
+func TestChatDropsTheTurnWhenAChunkArrivesAfterTheClientLeft(t *testing.T) {
+	for name, late := range map[string]provider.ChatChunk{
+		"text":      {Content: "never shown"},
+		"tool call": {Done: true, ToolCalls: []provider.ToolCall{{ID: "t1", Name: "no_such_tool"}}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			p := &lateChunkProvider{late: late}
+			s, st := newChatServer(t, p)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			p.cancel = cancel
+			req := httptest.NewRequest(http.MethodPost, "/chat", strings.NewReader(`{"message":"hi","conversation_id":0}`)).WithContext(ctx)
+			req.Header.Set("Content-Type", "application/json")
+			s.handleChat(httptest.NewRecorder(), req)
+
+			if p.calls != 1 {
+				t.Errorf("provider called %d times, want 1 (the late tool call must not run)", p.calls)
+			}
+			msgs, err := st.ListMessages(s.history.ConvID())
+			if err != nil {
+				t.Fatalf("list messages: %v", err)
+			}
+			for _, m := range msgs {
+				if m.Role == "user" || m.Role == "assistant" {
+					t.Fatalf("expected an empty exchange, found %s: %q", m.Role, m.Content)
+				}
+			}
+		})
+	}
+}
