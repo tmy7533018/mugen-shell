@@ -52,6 +52,8 @@ FocusScope {
     property string rejectBody: ""
     property string turnFailure: ""
 
+    property int turnSeq: 0
+
     property bool aiAvailable: false
     property bool hasModel: false
     property bool healthChecked: false
@@ -317,6 +319,7 @@ FocusScope {
         replyStarted = false
         turnError = ""
         rejectBody = ""
+        turnSeq += 1
         appendMessage("user", text, files)
         appendMessage("assistant", "")
         streaming = true
@@ -2047,13 +2050,17 @@ FocusScope {
         id: loadCurrentProcess
         running: false
         property string buf: ""
+        property int startedTurn: 0
+        property bool startedMidTurn: false
         command: ["curl", ...root._transportArgs, "-sS", "--max-time", "2", root._baseUrl + "/conversations/current"]
 
         stdout: SplitParser { onRead: data => { loadCurrentProcess.buf += data } }
-        onRunningChanged: { if (running) buf = "" }
+        onRunningChanged: { if (running) { buf = ""; startedTurn = root.turnSeq; startedMidTurn = root.streaming } }
 
         onExited: (exitCode) => {
             if (exitCode !== 0) return
+            // Quickshell starts a Process asynchronously and reruns one set running mid-run, so a read can begin after a send.
+            if (startedMidTurn || startedTurn !== root.turnSeq) return
             try {
                 let obj = JSON.parse(loadCurrentProcess.buf)
                 let sameConv = (root.currentConvId === (obj.id || 0))
