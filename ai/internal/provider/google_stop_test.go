@@ -64,6 +64,55 @@ func TestGoogleNamesWhyAReplyNeverCame(t *testing.T) {
 	}
 }
 
+func TestGoogleNamesWhyAReplyWasCutOff(t *testing.T) {
+	textChunk := `data: {"candidates":[{"content":{"parts":[{"text":"half an ans"}]}}]}`
+	cases := []struct {
+		name    string
+		sse     string
+		want    string
+		content string
+	}{
+		{
+			name:    "safety after text",
+			sse:     sseLines(textChunk, `data: {"candidates":[{"content":{"parts":[]},"finishReason":"SAFETY"}]}`),
+			want:    "google: reply stopped (SAFETY)",
+			content: "half an ans",
+		},
+		{
+			name:    "recitation after text",
+			sse:     sseLines(textChunk, `data: {"candidates":[{"finishReason":"RECITATION"}]}`),
+			want:    "google: reply stopped (RECITATION)",
+			content: "half an ans",
+		},
+		{
+			name:    "unexpected tool call",
+			sse:     sseLines(`data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"audio_set_volume","args":{"volume":30}}}]},"finishReason":"UNEXPECTED_TOOL_CALL"}]}`),
+			want:    "google: reply stopped (UNEXPECTED_TOOL_CALL)",
+			content: "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var content strings.Builder
+			err := googleWithStream(tc.sse).Chat(context.Background(), "gemini-x",
+				[]Message{{Role: "user", Content: "hi"}}, ChatOptions{},
+				func(c ChatChunk) error {
+					if c.Done {
+						t.Fatalf("got a Done chunk, want the stream to error instead: %+v", c)
+					}
+					content.WriteString(c.Content)
+					return nil
+				})
+			if err == nil || err.Error() != tc.want {
+				t.Fatalf("err = %v, want %q", err, tc.want)
+			}
+			if content.String() != tc.content {
+				t.Fatalf("content = %q, want %q", content.String(), tc.content)
+			}
+		})
+	}
+}
+
 func TestGoogleUnspecifiedBlockReasonIsNotABlock(t *testing.T) {
 	sse := `data: {"promptFeedback":{"blockReason":"BLOCK_REASON_UNSPECIFIED"},"candidates":[{"content":{"parts":[{"text":"hi"}]},"finishReason":"STOP"}]}` + "\n\n"
 	var got strings.Builder

@@ -202,7 +202,6 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 	}
 
 	var accumulated []ToolCall
-	var sawText bool
 
 	for scanner.Scan() {
 		stall.Reset(streamStallTimeout)
@@ -227,7 +226,6 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 		for _, c := range chunk.Candidates {
 			for _, p := range c.Content.Parts {
 				if p.Text != "" {
-					sawText = true
 					if err := fn(ChatChunk{Content: p.Text}); err != nil {
 						return err
 					}
@@ -244,7 +242,7 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 			if c.FinishReason == "MAX_TOKENS" {
 				return truncatedStream("google")
 			}
-			if c.FinishReason != "" && c.FinishReason != "STOP" && !sawText && len(accumulated) == 0 {
+			if c.FinishReason != "" && c.FinishReason != "STOP" {
 				return fmt.Errorf("google: reply stopped (%s)", c.FinishReason)
 			}
 			if c.FinishReason != "" {

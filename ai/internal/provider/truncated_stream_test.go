@@ -51,6 +51,34 @@ func TestOpenAIReportsATruncatedStream(t *testing.T) {
 	}
 }
 
+func TestOpenAIContentFilterAfterTextIsNotADone(t *testing.T) {
+	srv := stubTruncated(t,
+		`data: {"choices":[{"delta":{"content":"half an ans"}}]}`+"\n\n"+
+			`data: {"choices":[{"delta":{},"finish_reason":"content_filter"}]}`+"\n\n")
+	defer srv.Close()
+
+	var sawDone bool
+	var content strings.Builder
+	err := NewOpenAI(srv.URL, "test-key", []string{"stub"}).Chat(context.Background(), "stub",
+		[]Message{{Role: "user", Content: "hi"}}, ChatOptions{},
+		func(c ChatChunk) error {
+			if c.Done {
+				sawDone = true
+			}
+			content.WriteString(c.Content)
+			return nil
+		})
+	if err == nil || !strings.Contains(err.Error(), "content_filter") {
+		t.Fatalf("err = %v, want a content_filter error", err)
+	}
+	if sawDone {
+		t.Error("a content_filter finish reason must not deliver a Done chunk")
+	}
+	if content.String() != "half an ans" {
+		t.Errorf("content = %q, want the streamed text preserved", content.String())
+	}
+}
+
 // A stream that does finish must stay a success — the guard must not fire on
 // the normal path.
 func TestOllamaCompleteStreamIsStillSuccess(t *testing.T) {

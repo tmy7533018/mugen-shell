@@ -527,8 +527,11 @@ func (a *Anthropic) chat(ctx context.Context, model string, messages []Message, 
 				delete(pending, evt.Index)
 			}
 		case "message_delta":
-			if evt.Delta.StopReason == "max_tokens" {
+			if evt.Delta.StopReason == "max_tokens" || evt.Delta.StopReason == "model_context_window_exceeded" {
 				return truncatedStream("anthropic")
+			}
+			if evt.Delta.StopReason == "refusal" {
+				return fmt.Errorf("anthropic: reply refused")
 			}
 			if evt.Delta.StopReason != "" {
 				return fn(finalChunk())

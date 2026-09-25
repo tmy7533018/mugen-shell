@@ -210,6 +210,9 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opt
 			if c.FinishReason == "length" {
 				return truncatedStream("openai")
 			}
+			if c.FinishReason == "content_filter" {
+				return fmt.Errorf("openai: reply stopped (content_filter)")
+			}
 			if c.FinishReason != "" {
 				final := ChatChunk{Done: true}
 				if len(calls) > 0 {
