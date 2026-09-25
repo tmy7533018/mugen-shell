@@ -28,6 +28,12 @@ install_dir() {
   done < <(find "$src" -type f -print0)
 }
 
+# A tree mugen never synced into holds the user's own configs, so the first overwrite keeps a copy.
+first_sync=1
+[[ -e "$CONFIG/hypr/configs/mugen-shell.lua" ]] && first_sync=0
+
+same_content() { [[ "$(cksum < "$1")" == "$(cksum < "$2")" ]]; }
+
 # Trailing names are seeded once: the machine or the user owns them afterwards.
 install_product_tree() {
   local src="$1" dst="$2"; shift 2
@@ -49,6 +55,11 @@ install_product_tree() {
     # link-configs.sh links hypr entry by entry, so a write can leave $dst through a subtree symlink.
     if [[ "$(realpath -m "$dst/$rel")" != "$dstReal"/* ]]; then
       continue
+    fi
+    if (( first_sync )) && [[ -f "$dst/$rel" && ! -e "$dst/$rel.pre-mugen-shell" ]] \
+        && ! same_content "$f" "$dst/$rel"; then
+      "${RUN[@]}" cp -p "$dst/$rel" "$dst/$rel.pre-mugen-shell"
+      (( ${#RUN[@]} )) || echo "mugen-shell: kept the existing $dst/$rel as $rel.pre-mugen-shell" >&2
     fi
     mode=644
     [[ -x "$f" ]] && mode=755
