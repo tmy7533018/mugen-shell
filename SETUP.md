@@ -85,6 +85,10 @@ programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
 
 </details>
 
+Hyprland の個人設定は `~/.config/hypr/configs/user-overrides.lua` (キーバインドは `keybind-overrides.lua`) に書きます。`~/.config/hypr` (`hypridle.conf` を除く) と `~/.config/matugen` にある同梱のファイルは編集しても元に戻ります。mugen-shell が最初に置き換えた自分のファイルは `*.pre-mugen-shell` として残ります。
+
+`~/.config/gtk-3.0/gtk.css` や `~/.config/gtk-4.0/gtk.css` を元から持っていた場合は、先頭に `@import url("colors.css");` を足してください。足さないと GTK アプリが壁紙の配色に追従しません。
+
 ---
 
 ## mugen-ai の設定
@@ -141,7 +145,7 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 
 ## キーバインド
 
-一覧は `Super + /`。定義は `system/hypr/configs/keybinds.lua`。
+一覧は `Super + /`。変更は `~/.config/hypr/configs/keybind-overrides.lua` に書きます (書き方は一覧の下に出ます)。
 
 | キー | 動作 |
 |---|---|

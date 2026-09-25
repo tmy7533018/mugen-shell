@@ -85,6 +85,10 @@ programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
 
 </details>
 
+Personal Hyprland settings go in `~/.config/hypr/configs/user-overrides.lua` (keybindings in `keybind-overrides.lua`). Edits to the files mugen-shell ships under `~/.config/hypr` (except `hypridle.conf`) and `~/.config/matugen` get reverted; a file of your own that mugen-shell replaced the first time is kept as `*.pre-mugen-shell`.
+
+If you already had `~/.config/gtk-3.0/gtk.css` or `~/.config/gtk-4.0/gtk.css`, add `@import url("colors.css");` at the top of each; without it GTK apps do not follow the wallpaper colors.
+
 ---
 
 ## Configuring mugen-ai
@@ -141,7 +145,7 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 
 ## Keybindings
 
-Full list: `Super + /`. Definitions: `system/hypr/configs/keybinds.lua`.
+Full list: `Super + /`. To rebind, edit `~/.config/hypr/configs/keybind-overrides.lua` (the list shows how).
 
 | Key | Action |
 |---|---|
