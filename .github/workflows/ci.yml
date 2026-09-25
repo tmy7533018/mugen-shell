@@ -93,9 +93,12 @@ jobs:
             bsdtar tf $1 | grep -qx "$2" || { echo "missing in $1: $2" >&2; exit 1; }
           }
           check 'mugen-audio-*.pkg.tar.zst' 'usr/lib/qt6/qml/Mugen/Audio/qmldir'
+          check 'mugen-audio-*.pkg.tar.zst' 'usr/lib/qt6/qml/Mugen/Audio/libmugen-audio.so'
+          check 'mugen-audio-*.pkg.tar.zst' 'usr/lib/qt6/qml/Mugen/Audio/libmugen-audioplugin.so'
           check 'mugen-ai-*.pkg.tar.zst'    'usr/bin/mugen-ai'
           check 'mugen-ai-*.pkg.tar.zst'    'usr/lib/systemd/user/mugen-ai.service'
           check 'mugen-ai-*.pkg.tar.zst'    'usr/share/mugen-ai/config.toml.example'
+          check 'mugen-ai-*.pkg.tar.zst'    'usr/share/mugen-ai/.env.example'
           check 'mugen-ai-*.pkg.tar.zst'    'usr/lib/systemd/user/mugen-event-notifier.service'
           check 'mugen-ai-*.pkg.tar.zst'    'usr/lib/systemd/user/mugen-event-notifier.timer'
           check 'mugen-shell-*.pkg.tar.zst' 'usr/bin/mugen-shell-session'
@@ -122,4 +125,8 @@ jobs:
           }
           absent 'mugen-shell-*.pkg.tar.zst' 'user-overrides.lua'
           absent 'mugen-shell-*.pkg.tar.zst' 'test-shell.qml'
+          executable() {
+            bsdtar tvf $1 | awk -v pkg="$1" -v re="$2" '/^-/ && $NF ~ re && substr($1, 4, 1) != "x" { print "not executable in " pkg ": " $NF; bad = 1 } END { exit bad }' >&2 || exit 1
+          }
+          executable 'mugen-shell-*.pkg.tar.zst' '^usr/share/mugen-shell/(qml|hypr)/scripts/'
 
