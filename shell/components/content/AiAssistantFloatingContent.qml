@@ -542,9 +542,9 @@ FocusScope {
         return text
     }
 
-    // md4c starts raw HTML (which fetches img/background/url() targets) only at '<' + [A-Za-z/!?]; a zero-width space defuses it.
+    // md4c opens raw HTML (which fetches img/url() targets) at '<' + [A-Za-z/!?] but never at '<http(s)://'; a word joiner defuses it without a line break.
     function escapeRawHtml(text) {
-        return text.replace(/<(?=[A-Za-z\/!?])/g, "<\u200B")
+        return text.replace(/<(?!https?:\/\/[^\x00-\x20<>]*>)(?=[a-z\/!?])/gi, "<\u2060")
     }
 
     // An unclosed ``` mid-stream still yields a code block, so partial code shows while it streams.
