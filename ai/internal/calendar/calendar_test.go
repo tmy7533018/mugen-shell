@@ -3,6 +3,7 @@ package calendar
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -207,6 +208,54 @@ func TestOpenFixesUnpaddedTimes(t *testing.T) {
 	}
 	if got := readTime(); got != "09:00" {
 		t.Fatalf("time after a second Open = %q, want 09:00 (fix must be idempotent)", got)
+	}
+}
+
+func TestOpenFixesUnpaddedDates(t *testing.T) {
+	t.Setenv("XDG_DATA_HOME", t.TempDir())
+	path := filepath.Join(t.TempDir(), "events.db")
+
+	st, err := Open(path)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	seed := []struct{ id, date string }{
+		{"a", "2026-9-3"},
+		{"b", "2026-10-5"},
+		{"c", "2026-9-30"},
+		{"d", "2026-09-03"},
+	}
+	for _, row := range seed {
+		if _, err := st.db.Exec(
+			"INSERT INTO events (id, date, time, title) VALUES (?, ?, '', 'legacy')", row.id, row.date,
+		); err != nil {
+			t.Fatalf("seed %s: %v", row.id, err)
+		}
+	}
+	st.Close()
+
+	want := map[string]string{"a": "2026-09-03", "b": "2026-10-05", "c": "2026-09-30", "d": "2026-09-03"}
+
+	for i := 0; i < 2; i++ {
+		st, err := Open(path)
+		if err != nil {
+			t.Fatalf("open #%d: %v", i, err)
+		}
+		events, err := st.ListRange("2026-09-01", "2026-10-31")
+		st.Close()
+		if err != nil {
+			t.Fatalf("ListRange #%d: %v", i, err)
+		}
+		if len(events) != len(want) {
+			t.Fatalf("Open #%d: got %d events, want %d", i, len(events), len(want))
+		}
+		got := map[string]string{}
+		for _, e := range events {
+			got[e.ID] = e.Date
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("Open #%d: dates = %v, want %v", i, got, want)
+		}
 	}
 }
 

@@ -128,7 +128,7 @@ func Open(path string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
-	if err := s.fixUnpaddedTimes(); err != nil {
+	if err := s.fixUnpaddedRows(); err != nil {
 		db.Close()
 		return nil, err
 	}
@@ -193,17 +193,32 @@ func (s *Store) markMigrated() error {
 	return err
 }
 
+const (
+	unpaddedTime  = "time GLOB '[0-9]:[0-5][0-9]'"
+	unpaddedMonth = "(date GLOB '[0-9][0-9][0-9][0-9]-[0-9]-[0-9]' OR date GLOB '[0-9][0-9][0-9][0-9]-[0-9]-[0-9][0-9]')"
+	unpaddedDay   = "date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9]'"
+)
+
 // The notify timer opens the store every minute, so the common path stays a read-only SELECT.
-func (s *Store) fixUnpaddedTimes() error {
+func (s *Store) fixUnpaddedRows() error {
 	var found int
 	if err := s.db.QueryRow(
-		"SELECT EXISTS(SELECT 1 FROM events WHERE time GLOB '[0-9]:[0-5][0-9]')").Scan(&found); err != nil {
+		"SELECT EXISTS(SELECT 1 FROM events WHERE " + unpaddedTime + " OR " + unpaddedMonth + " OR " + unpaddedDay + ")",
+	).Scan(&found); err != nil {
 		return err
 	}
 	if found == 0 {
 		return nil
 	}
-	_, err := s.db.Exec("UPDATE events SET time = '0' || time WHERE time GLOB '[0-9]:[0-5][0-9]'")
+	if _, err := s.db.Exec("UPDATE events SET time = '0' || time WHERE " + unpaddedTime); err != nil {
+		return err
+	}
+	if _, err := s.db.Exec(
+		"UPDATE events SET date = substr(date, 1, 5) || '0' || substr(date, 6) WHERE " + unpaddedMonth,
+	); err != nil {
+		return err
+	}
+	_, err := s.db.Exec("UPDATE events SET date = substr(date, 1, 8) || '0' || substr(date, 9) WHERE " + unpaddedDay)
 	return err
 }
 
