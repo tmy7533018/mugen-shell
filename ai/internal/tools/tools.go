@@ -459,17 +459,18 @@ func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (
 	}
 
 	res, err := r.run(ctx, cmdName, cmdArgs)
+	out := sanitizeForLLM(res)
 	var callErr error
 	switch {
 	case err != nil:
-		callErr = fmt.Errorf("%s failed: %w (output: %s)", name, err, res)
+		callErr = fmt.Errorf("%s failed: %w (output: %s)", name, err, out)
 	case t.confirmFn != "" && !strings.HasPrefix(res, "error:"):
 		if got, ok := r.confirm(ctx, t, res); !ok {
 			callErr = fmt.Errorf("%s did not take effect: %s reports %q. Tell the user it failed; do not claim it worked", name, t.target, got)
 		}
 	}
 	r.auditor.Log(name, args, res, callErr)
-	return sanitizeForLLM(res), callErr
+	return out, callErr
 }
 
 // Substrings that make a follow-up turn likely to misread untrusted tool output as instructions.
