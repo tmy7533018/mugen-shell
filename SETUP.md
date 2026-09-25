@@ -131,7 +131,7 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 
 - `command` はサービスの `PATH` から見える必要があります。`npx` 系なら Node.js、`uvx` 系なら [uv](https://docs.astral.sh/uv/) を別途入れてください。Nix なら `home.packages` に足します
 - リモートサーバは `command` の代わりに `url = "https://example.com/mcp"`
-- サーバ名は短く・小文字・アンダースコア無しにします。ツール名が `<name>__<tool>` になるためです。変更したら `mugen-ai.service` を再起動
+- サーバ名は英小文字で始め、英小文字・数字・`-` だけにします。ツール名が `<name>__<tool>` になるためで、数字で始まる名前や `.`・`__` を含む名前のサーバは起動時にスキップされ、設定画面にエラーが出ます。変更したら `mugen-ai.service` を再起動
 - 信用するサーバは `trusted = true` で承認プロンプトを省略できます
 - トークンは `~/.config/mugen-ai/.env` に置き、`env = { GITHUB_TOKEN = "${GITHUB_TOKEN}" }` のように参照します
 

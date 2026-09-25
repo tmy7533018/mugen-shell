@@ -131,7 +131,7 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 
 - `command` has to be on the service's `PATH`. Install Node.js for `npx` servers or [uv](https://docs.astral.sh/uv/) for `uvx` ones yourself. On Nix, add them to `home.packages`
 - For a remote server, use `url = "https://example.com/mcp"` instead of `command`
-- Keep server names short, lowercase and without underscores, because tools are named `<name>__<tool>`. Restart `mugen-ai.service` after changes
+- Start server names with a lowercase letter and use only lowercase letters, digits and `-`, because tools are named `<name>__<tool>`; a name that starts with a digit or contains `.` or `__` is skipped at startup and shows an error in Settings. Restart `mugen-ai.service` after changes
 - `trusted = true` skips the approval prompt for a server you trust
 - Keep tokens in `~/.config/mugen-ai/.env` and reference them as `env = { GITHUB_TOKEN = "${GITHUB_TOKEN}" }`
 

@@ -172,9 +172,6 @@ func (r *Registry) AttachMCP(m *mcp.Manager, trusted map[string]bool) {
 	}
 	r.mcp = m
 	for server, client := range m.Clients() {
-		if sanitizeMCPToolName(server) != server || strings.Contains(server, "__") {
-			fmt.Fprintf(os.Stderr, "mcp[%s]: providers reject some characters in this server name; rename it to [a-z0-9-]\n", server)
-		}
 		for _, def := range client.Tools() {
 			name := mcpToolName(server, def.Name)
 			if name == "" {

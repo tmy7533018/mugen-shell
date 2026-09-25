@@ -317,7 +317,7 @@ func enabledCapabilities(cfg config.Config) string {
 	sort.Strings(names)
 	for _, name := range names {
 		s := cfg.MCP.Servers[name]
-		if !s.Disabled && !disabled[strings.ToLower(name)] {
+		if !s.Disabled && mcp.ValidServerName(name) && !disabled[strings.ToLower(name)] {
 			parts = append(parts, name)
 		}
 	}

@@ -103,7 +103,7 @@ Rectangle {
     function addServer() {
         let name = formName.trim().toLowerCase()
         if (name.length === 0) { section.statusText = "name is required"; return }
-        if (/[^a-z0-9-]/.test(name)) { section.statusText = "name: lowercase letters, digits and - only"; return }
+        if (!/^[a-z][a-z0-9-]*$/.test(name)) { section.statusText = "name: a-z first, then a-z, 0-9 or -"; return }
         for (let i = 0; i < servers.length; i++) {
             if (servers[i].name === name) { section.statusText = "\"" + name + "\" already exists"; return }
         }

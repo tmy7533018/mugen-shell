@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -61,6 +62,9 @@ func Connect(ctx context.Context, servers map[string]ServerConfig) *Manager {
 		switch {
 		case sc.Disabled:
 			// Recorded but not spawned.
+		case !ValidServerName(name):
+			st.Error = "invalid server name: start with a letter, then use only letters, digits and -"
+			fmt.Fprintf(os.Stderr, "mcp[%s]: %s, skipping\n", name, st.Error)
 		case sc.Command == "" && sc.URL == "":
 			st.Error = "no command or url configured"
 			fmt.Fprintf(os.Stderr, "mcp[%s]: %s, skipping\n", name, st.Error)
@@ -79,6 +83,22 @@ func Connect(ctx context.Context, servers map[string]ServerConfig) *Manager {
 	}
 	return m
 }
+
+// ValidServerName reports whether name can prefix every tool as "<name>__<tool>": providers must accept it and CategoryOf must split it back out.
+func ValidServerName(name string) bool {
+	if name == "" || !isASCIILetter(name[0]) || strings.Contains(name, "__") || strings.HasSuffix(name, "_") {
+		return false
+	}
+	for i := 1; i < len(name); i++ {
+		c := name[i]
+		if !isASCIILetter(c) && !(c >= '0' && c <= '9') && c != '_' && c != '-' {
+			return false
+		}
+	}
+	return true
+}
+
+func isASCIILetter(c byte) bool { return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' }
 
 func dial(ctx context.Context, name string, sc ServerConfig) (*Client, error) {
 	var tr transport
