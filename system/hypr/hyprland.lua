@@ -39,18 +39,18 @@ if not dataDirs:find(flatpakShare, 1, true) then
 end
 hl.env("XDG_DATA_DIRS", dataDirs)
 
--- IME (fcitx5). Drop this line if you don't use an IME. Only XMODIFIERS:
--- XWayland clients still go through XIM, while Wayland ones use fcitx5's
--- text-input frontend. Setting GTK_IM_MODULE forces GTK back onto the legacy
--- module path, which fcitx5 warns about on startup.
+-- Only XMODIFIERS: XWayland still reaches fcitx over XIM, and GTK_IM_MODULE would force GTK onto the legacy module fcitx5 warns about.
 hl.env("XMODIFIERS", "@im=fcitx")
 
 -----------------
 ---- AUTOSTART --
 -----------------
+-- Global and read at start, so user-overrides.lua (dofiled last) can switch an entry off.
+MUGEN_AUTOSTART = { fcitx5 = true, thunar = true }
 hl.on("hyprland.start", function()
-    hl.exec_cmd("fcitx5 -d --replace") -- IME; drop with the env block above
-    hl.exec_cmd("thunar --daemon")     -- file-manager daemon
+    local autostart = MUGEN_AUTOSTART or {}
+    if autostart.fcitx5 ~= false then hl.exec_cmd("fcitx5 -d --replace") end
+    if autostart.thunar ~= false then hl.exec_cmd("thunar --daemon") end
 end)
 
 -- mugen-shell autostart + HYPR_CONFIG_LUA (the shell's bar, Yura, blur, etc.)
