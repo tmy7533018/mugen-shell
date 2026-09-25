@@ -38,7 +38,7 @@ hl.on("hyprland.start", function()
     -- bound to it come up only once something else pulls it up.
     -- One shell: exec_cmd does not wait, and a bar started before the import has no display.
     hl.exec_cmd("sh -c 'systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE && systemctl --user start mugen-shell-session.target'")
-    hl.exec_cmd("sh -lc 'sleep 1; " .. configHome .. "/hypr/scripts/wallp-restore.sh'")
+    hl.exec_cmd("sh -lc 'sleep 1; " .. configHome .. "/quickshell/mugen-shell/scripts/wallp-restore.sh'")
     hl.exec_cmd(configHome .. "/quickshell/mugen-shell/scripts/yura-window.sh")
     hl.exec_cmd(configHome .. "/quickshell/mugen-shell/scripts/blur.sh boot")
     hl.exec_cmd(configHome .. "/hypr/scripts/hypridle-auto-start.sh")

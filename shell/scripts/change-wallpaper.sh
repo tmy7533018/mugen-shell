@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SHELL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 THUMB_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/mugen-shell/wallp"
 mkdir -p "$THUMB_DIR"
+source "$SCRIPT_DIR/mpvpaper-opts.sh"
 
 DEBUG_LOG="$THUMB_DIR/debug.log"
 
@@ -37,7 +38,6 @@ WALLPAPER_ABS="$(cd "$(dirname "$WALLPAPER")" && pwd)/$(basename "$WALLPAPER")"
 
 THUMB_FILE="$THUMB_DIR/current_wallpaper_thumb.png"
 CURRENT_WALLPAPER_FILE="$THUMB_DIR/current_wallpaper_path.txt"
-MPV_SOCKET="$THUMB_DIR/mpvpaper.sock"
 LOCK="$THUMB_DIR/.wallp.lock"
 THEME_MODE_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/mugen-shell/theme-mode"
 
@@ -62,14 +62,6 @@ STILL_COMMIT_SEC=0.35
 
 # A mapped layer stays off screen until its first frame, so this hides mpvpaper's start-up.
 MPV_WARMUP_SEC=0.4
-
-# vaapi surfaces can't be read back, failing every mpv screenshot; auto-copy lands frames in memory.
-MPV_OPTS="no-config no-audio loop cache=yes profile=low-latency \
-vo=gpu-next gpu-context=wayland \
-hwdec=auto-copy \
-keep-open=yes \
-input-ipc-server=${MPV_SOCKET} \
-screenshot-format=png screenshot-high-bit-depth=no screenshot-png-compression=1"
 
 # awww-daemon and mpvpaper are spawned with 9>&-: an inherited fd holds the flock for their whole life.
 exec 9>"$LOCK"
