@@ -68,6 +68,7 @@ func (c *Client) readLoop() {
 		data, err := c.tr.recv()
 		if err != nil {
 			c.fail(err)
+			_ = c.tr.close()
 			return
 		}
 		data = bytes.TrimSpace(data)

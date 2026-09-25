@@ -27,6 +27,7 @@ type transport interface {
 	send(ctx context.Context, data []byte) error
 	// recv blocks until the next message, returning io.EOF once the server has exited.
 	recv() ([]byte, error)
+	// close is idempotent: the read loop and the owner may both call it.
 	close() error
 }
 
@@ -36,6 +37,9 @@ type stdioTransport struct {
 	stdin  io.WriteCloser
 	stdout *bufio.Reader
 	mu     sync.Mutex // serialises writes; recv runs on one goroutine only
+
+	closeOnce sync.Once
+	closeErr  error
 }
 
 // Name-shaped rather than a fixed list, so a provider added later is covered too.
@@ -122,11 +126,9 @@ func (t *stdioTransport) recv() ([]byte, error) {
 	}
 }
 
-func (t *stdioTransport) close() error {
+func (t *stdioTransport) kill() error {
 	_ = t.stdin.Close()
-	// Closing stdin only asks; Kill makes sure, and Wait reaps the stderr goroutine too.
-	// Signal the whole process group (negative pid), not just the direct child, so a
-	// launcher's grandchild dies with it instead of orphaning and holding the pipe open.
+	// Closing stdin only asks; SIGKILL to the group (see Setpgid) makes sure, and Wait reaps the stderr goroutine too.
 	if t.cmd.Process != nil {
 		if pgid, err := syscall.Getpgid(t.cmd.Process.Pid); err == nil {
 			_ = syscall.Kill(-pgid, syscall.SIGKILL)
@@ -135,6 +137,11 @@ func (t *stdioTransport) close() error {
 		}
 	}
 	return t.cmd.Wait()
+}
+
+func (t *stdioTransport) close() error {
+	t.closeOnce.Do(func() { t.closeErr = t.kill() })
+	return t.closeErr
 }
 
 const maxPrefixBufBytes = 64 << 10
