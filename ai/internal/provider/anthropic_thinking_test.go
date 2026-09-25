@@ -45,36 +45,6 @@ func thinkingThenToolCall() string {
 	}, "\n")
 }
 
-// Without the signed block the next round is rejected, so it has to survive
-// the stream alongside the tool call it justifies.
-func TestThinkingReachesTheFinalChunk(t *testing.T) {
-	srv := stubAnthropic(t, thinkingThenToolCall(), nil)
-	defer srv.Close()
-
-	var final ChatChunk
-	err := testAnthropic(srv.URL).Chat(context.Background(), "claude-x",
-		[]Message{{Role: "user", Content: "what is the volume"}},
-		ChatOptions{Thinking: true},
-		func(c ChatChunk) error {
-			if c.Done {
-				final = c
-			}
-			return nil
-		})
-	if err != nil {
-		t.Fatalf("chat: %v", err)
-	}
-	if final.Thinking != "check the mixer before answering" {
-		t.Errorf("thinking = %q", final.Thinking)
-	}
-	if final.ThinkingSignature != "sig-abc" {
-		t.Errorf("signature = %q", final.ThinkingSignature)
-	}
-	if len(final.ToolCalls) != 1 || final.ToolCalls[0].ID != "tu_1" {
-		t.Errorf("tool calls = %+v", final.ToolCalls)
-	}
-}
-
 func assistantContent(t *testing.T, body []byte) []map[string]any {
 	t.Helper()
 	var payload struct {
@@ -93,43 +63,6 @@ func assistantContent(t *testing.T, body []byte) []map[string]any {
 	}
 	t.Fatal("no assistant message in the request")
 	return nil
-}
-
-func toolRoundMessages() []Message {
-	return []Message{
-		{Role: "user", Content: "what is the volume"},
-		{
-			Role:              "assistant",
-			Thinking:          "check the mixer",
-			ThinkingSignature: "sig-abc",
-			ToolCalls:         []ToolCall{{ID: "tu_1", Name: "audio_get_volume"}},
-		},
-		{Role: "tool", ToolCallID: "tu_1", Content: "54"},
-	}
-}
-
-func TestThinkingIsReplayedAheadOfTheToolCall(t *testing.T) {
-	var body []byte
-	srv := stubAnthropic(t, "data: {\"type\":\"message_stop\"}\n", &body)
-	defer srv.Close()
-
-	err := testAnthropic(srv.URL).Chat(context.Background(), "claude-x",
-		toolRoundMessages(), ChatOptions{Thinking: true},
-		func(ChatChunk) error { return nil })
-	if err != nil {
-		t.Fatalf("chat: %v", err)
-	}
-
-	content := assistantContent(t, body)
-	if len(content) == 0 || content[0]["type"] != "thinking" {
-		t.Fatalf("thinking must lead the assistant turn, got %+v", content)
-	}
-	if content[0]["signature"] != "sig-abc" {
-		t.Errorf("signature = %v", content[0]["signature"])
-	}
-	if content[len(content)-1]["type"] != "tool_use" {
-		t.Errorf("tool_use must still be present, got %+v", content)
-	}
 }
 
 func thinkingField(t *testing.T, body []byte) (map[string]any, map[string]any) {
@@ -186,27 +119,6 @@ func TestThinkingOffIsStatedExplicitly(t *testing.T) {
 	thinking, _ := thinkingField(t, body)
 	if thinking["type"] != "disabled" {
 		t.Errorf("thinking = %+v, want type disabled", thinking)
-	}
-}
-
-// Replaying a thinking block into a request that never asked for thinking is
-// itself a 400, so the guard has to hold in both directions.
-func TestThinkingIsNotReplayedWhenDisabled(t *testing.T) {
-	var body []byte
-	srv := stubAnthropic(t, "data: {\"type\":\"message_stop\"}\n", &body)
-	defer srv.Close()
-
-	err := testAnthropic(srv.URL).Chat(context.Background(), "claude-x",
-		toolRoundMessages(), ChatOptions{Thinking: false},
-		func(ChatChunk) error { return nil })
-	if err != nil {
-		t.Fatalf("chat: %v", err)
-	}
-
-	for _, block := range assistantContent(t, body) {
-		if block["type"] == "thinking" {
-			t.Fatalf("thinking block leaked into a non-thinking request: %+v", block)
-		}
 	}
 }
 

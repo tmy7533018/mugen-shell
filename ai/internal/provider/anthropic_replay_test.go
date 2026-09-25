@@ -60,13 +60,7 @@ func toolRound(t *testing.T, model string, first, second ChatOptions, sse string
 	if err != nil {
 		t.Fatalf("first round: %v", err)
 	}
-	msgs = append(msgs, Message{
-		Role:              "assistant",
-		Content:           text,
-		ToolCalls:         final.ToolCalls,
-		Thinking:          final.Thinking,
-		ThinkingSignature: final.ThinkingSignature,
-	})
+	msgs = append(msgs, Message{Role: "assistant", Content: text, ToolCalls: final.ToolCalls})
 	for _, tc := range final.ToolCalls {
 		msgs = append(msgs, Message{Role: "tool", ToolCallID: tc.ID, ToolName: tc.Name, Content: "ok"})
 	}
@@ -119,8 +113,8 @@ func interleavedReply() string {
 func TestInterleavedThinkingRoundTripsBlockByBlock(t *testing.T) {
 	final, content := toolRound(t, "claude-sonnet-4-6", ChatOptions{Thinking: true}, ChatOptions{Thinking: true}, interleavedReply())
 
-	if final.Thinking != "weigh both\n\nthen the screen" || final.ThinkingSignature != "s3" {
-		t.Errorf("final chunk thinking = %q / %q", final.Thinking, final.ThinkingSignature)
+	if final.Thinking != "weigh both\n\nthen the screen" {
+		t.Errorf("final chunk thinking = %q", final.Thinking)
 	}
 
 	want := []string{"thinking", "text", "thinking", "tool_use", "thinking", "tool_use"}

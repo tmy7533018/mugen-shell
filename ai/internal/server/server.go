@@ -276,7 +276,6 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Tool calls / results stay in-memory; history persists just the assistant text.
 	const maxIterations = 5
 	allTools := s.tools.List()
 	selTools := allTools
@@ -334,7 +333,6 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		iterThinkingSent := false
 		var iterContent string
 		var iterToolCalls []provider.ToolCall
-		var iterThinking, iterThinkingSig string
 
 		err := s.registry.ChatWith(r.Context(), model, msgs, opts, func(chunk provider.ChatChunk) error {
 			// Deliberately not sideEffected: reasoning alone is not a reply worth persisting.
@@ -355,8 +353,6 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			}
 			if chunk.Done {
 				iterToolCalls = chunk.ToolCalls
-				iterThinking = chunk.Thinking
-				iterThinkingSig = chunk.ThinkingSignature
 			}
 			return nil
 		})
@@ -381,11 +377,9 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 		}
 
 		msgs = append(msgs, provider.Message{
-			Role:              "assistant",
-			Content:           iterContent,
-			ToolCalls:         iterToolCalls,
-			Thinking:          iterThinking,
-			ThinkingSignature: iterThinkingSig,
+			Role:      "assistant",
+			Content:   iterContent,
+			ToolCalls: iterToolCalls,
 		})
 
 		firstOfIter := len(turnToolCalls)

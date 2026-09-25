@@ -283,14 +283,6 @@ func (a *Anthropic) chat(ctx context.Context, model string, messages []Message, 
 		}
 
 		var content []map[string]any
-		// Has to lead the turn, and only counts when signed.
-		if opts.Thinking && m.Thinking != "" && m.ThinkingSignature != "" {
-			content = append(content, map[string]any{
-				"type":      "thinking",
-				"thinking":  m.Thinking,
-				"signature": m.ThinkingSignature,
-			})
-		}
 		for _, img := range m.Images {
 			content = append(content, map[string]any{
 				"type": "image",
@@ -411,13 +403,12 @@ func (a *Anthropic) chat(ctx context.Context, model string, messages []Message, 
 	pending := map[int]*pendingTool{}
 	var accumulated []ToolCall
 	var thinkingBuf strings.Builder
-	var thinkingSignature string
 	var blocks []*anthropicBlock
 	blockAt := map[int]*anthropicBlock{}
 	var shownThinking *anthropicBlock
 
 	finalChunk := func() ChatChunk {
-		c := ChatChunk{Done: true, Thinking: thinkingBuf.String(), ThinkingSignature: thinkingSignature}
+		c := ChatChunk{Done: true, Thinking: thinkingBuf.String()}
 		if len(accumulated) > 0 {
 			turn := &anthropicTurn{prefix: prefix}
 			for _, b := range blocks {
@@ -519,7 +510,6 @@ func (a *Anthropic) chat(ctx context.Context, model string, messages []Message, 
 			}
 			if evt.Delta.Type == "signature_delta" {
 				b.signature = evt.Delta.Signature
-				thinkingSignature = evt.Delta.Signature
 			}
 		case "content_block_stop":
 			if p, ok := pending[evt.Index]; ok {

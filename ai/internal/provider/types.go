@@ -13,10 +13,6 @@ type Message struct {
 
 	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
 
-	// Anthropic rejects a tool result if the signed thinking block that produced the call is missing.
-	Thinking          string `json:"thinking,omitempty"`
-	ThinkingSignature string `json:"thinking_signature,omitempty"`
-
 	// Must match the ToolCall.ID the provider assigned in the prior assistant
 	// message.
 	ToolCallID string `json:"tool_call_id,omitempty"`
@@ -64,9 +60,8 @@ type ChatChunk struct {
 	// Streamed as it arrives: reasoning precedes the answer and must render there.
 	ThinkingDelta string
 
-	// Set on the final chunk only, for replay alongside ToolCalls.
-	Thinking          string
-	ThinkingSignature string
+	// Set on the final chunk only.
+	Thinking string
 }
 
 // Reporting a cut-off stream as success would persist the fragment as a finished answer.
