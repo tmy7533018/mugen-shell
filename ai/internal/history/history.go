@@ -2,6 +2,7 @@ package history
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/tmy7533018/mugen-ai/internal/attach"
@@ -10,6 +11,14 @@ import (
 )
 
 const defaultMaxMessages = 100
+
+// MarkInterrupted tags a cut-off reply, even an empty one, so it does not read back as complete.
+func MarkInterrupted(reply string) string {
+	if text := strings.TrimRight(reply, "\n"); text != "" {
+		return text + "\n\n[interrupted]"
+	}
+	return "[interrupted]"
+}
 
 type History struct {
 	mu           sync.Mutex

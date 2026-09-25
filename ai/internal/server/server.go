@@ -305,16 +305,9 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	// Once content has streamed or a tool fired, the user message can no longer be dropped.
 	var sideEffected bool
 
-	// Stored as-is a cut-off reply reads back as complete, so mark it even when there is no text.
-	const interruptedMarker = "[interrupted]"
-
 	persistOnError := func(errMsg string) {
 		if sideEffected {
-			marked := interruptedMarker
-			if text := strings.TrimRight(fullResponse, "\n"); text != "" {
-				marked = text + "\n\n" + interruptedMarker
-			}
-			_ = s.history.AddAssistantTo(convID, marked, encodeToolCalls(turnToolCalls))
+			_ = s.history.AddAssistantTo(convID, history.MarkInterrupted(fullResponse), encodeToolCalls(turnToolCalls))
 			s.events.broadcast("conversations", nil)
 			s.events.broadcast("messages", map[string]any{"conversation_id": convID})
 		} else {

@@ -1,11 +1,16 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tmy7533018/mugen-ai/internal/store"
 )
 
 // Desktop state must stay off: its calendar gather execs selfPath(), which here is this test binary.
@@ -84,5 +89,44 @@ func TestChatAcceptsALineTheOldDefaultBufferWouldHaveRejected(t *testing.T) {
 	// "no model configured" proves the 200 KiB line reached the chat turn, not dropped by the scan.
 	if !strings.Contains(string(captured), "no model configured") {
 		t.Fatalf("stderr = %q, want the 200 KiB line to have reached the chat turn", captured)
+	}
+}
+
+func TestChatMarksAReplyThatWasCutOff(t *testing.T) {
+	sandboxRuntime(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/chat" {
+			fmt.Fprintln(w, `{"message":{"content":"half an ans"},"done":false}`)
+			return
+		}
+		fmt.Fprint(w, `{"models":[{"name":"stub"}]}`)
+	}))
+	defer srv.Close()
+	toml := "[provider.ollama]\nhost = \"" + srv.URL + "\"\n\n[context]\ndesktop_state = false\n"
+	if err := os.WriteFile(filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "mugen-ai", "config.toml"), []byte(toml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	withStdin(t, "hi\nexit\n")
+
+	if err := runChat(nil, nil); err != nil {
+		t.Fatalf("runChat() error = %v", err)
+	}
+
+	st, err := store.Open(filepath.Join(os.Getenv("XDG_STATE_HOME"), "mugen-ai", "history.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	convs, err := st.ListConversations()
+	if err != nil || len(convs) != 1 {
+		t.Fatalf("conversations = %v, %v; want exactly one", convs, err)
+	}
+	msgs, err := st.ListMessages(convs[0].ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	last := msgs[len(msgs)-1]
+	if last.Role != "assistant" || last.Content != "half an ans\n\n[interrupted]" {
+		t.Fatalf("last message = %s %q, want the partial reply marked [interrupted]", last.Role, last.Content)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/tmy7533018/mugen-ai/internal/history"
 	"github.com/tmy7533018/mugen-ai/internal/provider"
 	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
@@ -91,7 +92,7 @@ func runChat(_ *cobra.Command, _ []string) error {
 			if fullResponse == "" {
 				rt.History.RemoveLast()
 			} else {
-				_ = rt.History.Add("assistant", fullResponse, rt.Registry.Model(), false)
+				_ = rt.History.Add("assistant", history.MarkInterrupted(fullResponse), rt.Registry.Model(), false)
 			}
 			continue
 		}
