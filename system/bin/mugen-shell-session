@@ -26,4 +26,10 @@ if command -v fcitx5 > /dev/null; then
 fi
 
 # start-hyprland sets up the session env and the crash-restart watchdog that bare Hyprland skips.
-exec start-hyprland "$@"
+status=0
+start-hyprland "$@" || status=$?
+
+# Nothing else ends the session units, and the bar's restart loop would reach whichever compositor starts next.
+systemctl --user stop graphical-session.target || true
+systemctl --user unset-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE || true
+exit "$status"

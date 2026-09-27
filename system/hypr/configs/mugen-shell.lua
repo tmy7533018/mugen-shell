@@ -33,11 +33,9 @@ hl.config({
 })
 
 hl.on("hyprland.start", function()
-    -- Hand the compositor's address to systemd, then pull up the session
-    -- target: graphical-session.target refuses a manual start, so the services
-    -- bound to it come up only once something else pulls it up.
-    -- One shell: exec_cmd does not wait, and a bar started before the import has no display.
-    hl.exec_cmd("sh -c 'systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE && systemctl --user start mugen-shell-session.target'")
+    -- One shell so the import lands first; graphical-session.target refuses a manual start, so the session target pulls it up.
+    -- A bar that outlived the previous compositor keeps its address, and an active target won't pull one stuck at the start limit; a disabled bar stays off.
+    hl.exec_cmd("sh -c 'systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE && { systemctl --user reset-failed mugen-shell.service; systemctl --user try-restart mugen-shell.service; systemctl --user start mugen-shell-session.target; systemctl --user is-enabled --quiet mugen-shell.service && systemctl --user start mugen-shell.service; }'")
     hl.exec_cmd("sh -lc 'sleep 1; " .. configHome .. "/quickshell/mugen-shell/scripts/wallp-restore.sh'")
     hl.exec_cmd(configHome .. "/quickshell/mugen-shell/scripts/yura-window.sh")
     hl.exec_cmd(configHome .. "/quickshell/mugen-shell/scripts/blur.sh boot")
