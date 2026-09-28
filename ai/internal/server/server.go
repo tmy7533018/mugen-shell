@@ -120,6 +120,14 @@ func (s *Server) Routes() http.Handler {
 	return guardMiddleware(mux)
 }
 
+// NewHTTPServer serves Routes and ends the /events streams as soon as Shutdown starts.
+func (s *Server) NewHTTPServer() *http.Server {
+	hs := &http.Server{Handler: s.Routes()}
+	// Shutdown waits for handlers without cancelling them, so an open /events stream would hold it to the deadline.
+	hs.RegisterOnShutdown(s.events.closeAll)
+	return hs
+}
+
 // Host (DNS-rebinding) and Origin checks keep the loopback API unreachable from a browser page.
 func guardMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

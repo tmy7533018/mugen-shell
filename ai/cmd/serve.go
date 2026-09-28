@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,9 +14,10 @@ import (
 )
 
 var serveCmd = &cobra.Command{
-	Use:   "serve",
-	Short: "Start the mugen-ai HTTP server for mugen-shell integration",
-	RunE:  runServe,
+	Use:          "serve",
+	Short:        "Start the mugen-ai HTTP server for mugen-shell integration",
+	RunE:         runServe,
+	SilenceUsage: true,
 }
 
 var (
@@ -55,7 +55,7 @@ func runServe(_ *cobra.Command, _ []string) error {
 	}
 	defer os.Remove(serveSocket)
 
-	httpSrv := &http.Server{Handler: srv.Routes()}
+	httpSrv := srv.NewHTTPServer()
 
 	done := make(chan error, 1)
 	go func() { done <- httpSrv.Serve(ln) }()

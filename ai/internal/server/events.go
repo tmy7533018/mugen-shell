@@ -10,6 +10,7 @@ import (
 type eventBus struct {
 	mu          sync.RWMutex
 	subscribers map[chan []byte]struct{}
+	closed      bool
 }
 
 func newEventBus() *eventBus {
@@ -19,9 +20,23 @@ func newEventBus() *eventBus {
 func (b *eventBus) subscribe() chan []byte {
 	ch := make(chan []byte, 16)
 	b.mu.Lock()
-	b.subscribers[ch] = struct{}{}
+	if b.closed {
+		close(ch)
+	} else {
+		b.subscribers[ch] = struct{}{}
+	}
 	b.mu.Unlock()
 	return ch
+}
+
+func (b *eventBus) closeAll() {
+	b.mu.Lock()
+	b.closed = true
+	for ch := range b.subscribers {
+		delete(b.subscribers, ch)
+		close(ch)
+	}
+	b.mu.Unlock()
 }
 
 func (b *eventBus) unsubscribe(ch chan []byte) {
