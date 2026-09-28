@@ -11,6 +11,7 @@ Rectangle {
     property bool selected: false
     property bool isAddCell: false
     property bool isVideo: false
+    property int imageInset: 0
 
     signal activated()
 
@@ -19,7 +20,7 @@ Rectangle {
 
     Rectangle {
         anchors.fill: parent
-        anchors.margins: root.modeManager.scale(4)
+        anchors.margins: root.imageInset
         color: root.theme ? root.theme.surfaceGlass : Qt.rgba(0.15, 0.15, 0.20, 0.5)
         radius: root.modeManager.scale(18)
         border.width: root.isAddCell ? root.modeManager.scale(2) : 0
@@ -65,7 +66,7 @@ Rectangle {
     Image {
         id: thumb
         anchors.fill: parent
-        anchors.margins: root.modeManager.scale(4)
+        anchors.margins: root.imageInset
         source: root.isAddCell || !root.wallpaperManager ? "" : root.wallpaperManager.thumbnailSource(root.path)
         fillMode: Image.PreserveAspectCrop
         asynchronous: true

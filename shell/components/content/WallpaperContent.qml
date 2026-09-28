@@ -20,10 +20,14 @@ FocusScope {
     readonly property int expandedMargin: 340
     readonly property int collapsedMargin: 550
     readonly property int layerInset: 10
+    readonly property int tileInset: 8
+    readonly property int tileImageInset: 4
 
     // Pinning the grid to this keeps its column count fixed while the panel widens.
     readonly property int expandedContentWidth:
         root.width - 2 * (modeManager.scale(root.expandedMargin) + modeManager.scale(root.layerInset))
+    readonly property int gridLeftGap: Math.floor((root.expandedContentWidth - gridView.width) / 2)
+    readonly property int gridRightGap: root.expandedContentWidth - gridView.width - root.gridLeftGap
 
     readonly property var requiredBarSize: ({
         "height": modeManager.scale(root.expanded ? 560 : 240),
@@ -306,6 +310,7 @@ FocusScope {
                 UI.SearchField {
                     id: searchField
                     anchors.right: parent.right
+                    anchors.rightMargin: root.gridRightGap + modeManager.scale(root.tileInset) + modeManager.scale(root.tileImageInset)
                     anchors.verticalCenter: parent.verticalCenter
                     width: root.expanded ? modeManager.scale(260) : 0
                     enabled: root.expanded
@@ -459,7 +464,8 @@ FocusScope {
 
                         WallpaperTile {
                             anchors.fill: parent
-                            anchors.margins: modeManager.scale(8)
+                            anchors.margins: modeManager.scale(root.tileInset)
+                            imageInset: modeManager.scale(root.tileImageInset)
 
                             scale: cellRoot.isCurrent ? 1.0 : 0.75
                             opacity: cellRoot.isCurrent ? 1.0 : 0.7
@@ -494,8 +500,8 @@ FocusScope {
                     anchors.top: parent.top
                     anchors.bottom: parent.bottom
                     // Centred on the bar, not the panel: the panel's width rounds to whole pixels and re-centring against it jitters.
-                    x: (root.width - width) / 2 - wallpaperLayer.anchors.leftMargin
-                    width: root.expandedContentWidth
+                    x: (root.width - root.expandedContentWidth) / 2 + root.gridLeftGap - wallpaperLayer.anchors.leftMargin
+                    width: Math.max(1, Math.floor(root.expandedContentWidth / cellWidth)) * cellWidth
                     visible: root.expanded
 
                     model: root.listModel
@@ -595,7 +601,8 @@ FocusScope {
 
                         WallpaperTile {
                             anchors.fill: parent
-                            anchors.margins: modeManager.scale(8)
+                            anchors.margins: modeManager.scale(root.tileInset)
+                            imageInset: modeManager.scale(root.tileImageInset)
 
                             theme: root.theme
                             modeManager: root.modeManager
