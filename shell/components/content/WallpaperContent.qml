@@ -290,7 +290,7 @@ FocusScope {
 
                 Common.GlowText {
                     anchors.centerIn: parent
-                    text: "select wallpaper"
+                    text: "Wallpaper"
                     color: (theme ? theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95))
                     font.pixelSize: modeManager.scale(20)
                     font.family: "M PLUS 2"
@@ -303,47 +303,30 @@ FocusScope {
                     glowSpread: 0.5
                 }
 
-                RowLayout {
+                UI.SearchField {
+                    id: searchField
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    spacing: modeManager.scale(12)
+                    width: root.expanded ? modeManager.scale(260) : 0
+                    enabled: root.expanded
+                    opacity: root.expanded ? 1 : 0
+                    theme: root.theme
+                    icons: root.icons
+                    typo: typography
+                    placeholder: "Search wallpapers"
+                    resultCount: wallpaperManager.visibleWallpapers.length
+                    fieldHeight: modeManager.scale(34)
 
-                    UI.SearchField {
-                        id: searchField
-                        enabled: root.expanded
-                        opacity: root.expanded ? 1 : 0
-                        theme: root.theme
-                        icons: root.icons
-                        typo: typography
-                        placeholder: "Search wallpapers"
-                        resultCount: wallpaperManager.visibleWallpapers.length
-                        Layout.preferredWidth: root.expanded ? modeManager.scale(260) : 0
-                        Layout.alignment: Qt.AlignVCenter
-                        fieldHeight: modeManager.scale(34)
-
-                        Behavior on opacity {
-                            NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
-                        }
-
-                        Behavior on Layout.preferredWidth {
-                            NumberAnimation { duration: Theme.Motion.sweep; easing.type: Easing.OutExpo }
-                        }
-                        onSearchTextChanged: text => wallpaperManager.searchQuery = text
-                        onRequestActivateSelected: root.activateCurrent()
-                        onRequestFocusResults: backwards => root.focusResults(backwards)
+                    Behavior on opacity {
+                        NumberAnimation { duration: Theme.Motion.gentle; easing.type: Easing.OutCubic }
                     }
 
-                    Common.Chip {
-                        theme: root.theme
-                        label: root.expanded ? "less" : "more"
-                        chipHeight: modeManager.scale(34)
-                        hPadding: modeManager.scale(24)
-                        fontSize: modeManager.scale(11)
-                        iconSource: Quickshell.shellDir + "/assets/icons/chevron-down.svg"
-                        iconRotation: root.expanded ? 180 : 0
-                        Layout.alignment: Qt.AlignVCenter
-                        onClicked: root.expanded = !root.expanded
+                    Behavior on width {
+                        NumberAnimation { duration: Theme.Motion.sweep; easing.type: Easing.OutExpo }
                     }
+                    onSearchTextChanged: text => wallpaperManager.searchQuery = text
+                    onRequestActivateSelected: root.activateCurrent()
+                    onRequestFocusResults: backwards => root.focusResults(backwards)
                 }
             }
 
@@ -636,19 +619,61 @@ FocusScope {
                 }
             }
 
-            Text {
+            Item {
+                id: countToggle
                 Layout.alignment: Qt.AlignHCenter
-                text: wallpaperManager.isLoading
-                    ? "loading..."
-                    : (wallpaperManager.wallpapers.length === 0
-                        ? "no wallpapers yet, press + to open the folder"
-                        : (wallpaperManager.searchQuery.length > 0
-                            ? wallpaperManager.visibleWallpapers.length + " of " + wallpaperManager.wallpapers.length + " wallpapers"
-                            : wallpaperManager.wallpapers.length + " wallpapers"))
-                color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
-                font.pixelSize: modeManager.scale(10)
-                font.family: "M PLUS 2"
-                opacity: 0.6
+                implicitWidth: countRow.implicitWidth + modeManager.scale(24)
+                implicitHeight: countRow.implicitHeight + modeManager.scale(8)
+
+                readonly property bool canToggle: wallpaperManager.wallpapers.length > 0
+                readonly property color textColor: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
+
+                RowLayout {
+                    id: countRow
+                    anchors.centerIn: parent
+                    spacing: modeManager.scale(4)
+                    opacity: countMouse.containsMouse ? 1.0 : 0.6
+
+                    Behavior on opacity { NumberAnimation { duration: Theme.Motion.micro } }
+
+                    Text {
+                        text: wallpaperManager.isLoading
+                            ? "loading..."
+                            : (wallpaperManager.wallpapers.length === 0
+                                ? "no wallpapers yet, press + to open the folder"
+                                : (wallpaperManager.searchQuery.length > 0
+                                    ? wallpaperManager.visibleWallpapers.length + " of " + wallpaperManager.wallpapers.length + " wallpapers"
+                                    : wallpaperManager.wallpapers.length + " wallpapers"))
+                        color: countToggle.textColor
+                        font.pixelSize: modeManager.scale(10)
+                        font.family: "M PLUS 2"
+                    }
+
+                    UI.SvgIcon {
+                        Layout.preferredWidth: modeManager.scale(10)
+                        Layout.preferredHeight: modeManager.scale(10)
+                        visible: countToggle.canToggle
+                        source: Quickshell.shellDir + "/assets/icons/chevron-down.svg"
+                        color: countToggle.textColor
+                        rotation: root.expanded ? 180 : 0
+
+                        Behavior on rotation {
+                            NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic }
+                        }
+                    }
+                }
+
+                MouseArea {
+                    id: countMouse
+                    anchors.fill: parent
+                    enabled: countToggle.canToggle
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        root.expanded = !root.expanded
+                        root.resetAutoCloseTimer()
+                    }
+                }
             }
         }
     }
