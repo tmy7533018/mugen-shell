@@ -106,3 +106,57 @@ if [[ -d "$SHARE/qml" ]]; then
     "${RUN[@]}" ln -sfn "$SHARE/qml" "$link"
   fi
 fi
+
+# kitty's desktop entry also claims folders, so with nothing chosen `xdg-open <dir>` opened a terminal.
+IFS=: read -ra config_dirs <<< "${XDG_CONFIG_DIRS:-/etc/xdg}"
+IFS=: read -ra data_dirs <<< "${XDG_DATA_HOME:-$HOME/.local/share}:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
+lists_default_for() {
+  awk -v key="$1=" '
+    { line = $0; gsub(/[ \t\r]/, "", line) }
+    index(line, "[") == 1 { in_defaults = index(line, "[DefaultApplications]") == 1; next }
+    in_defaults && index(line, key) == 1 && length(line) > length(key) { found = 1; exit }
+    END { exit !found }
+  ' "$2"
+}
+
+# Reads every list xdg-mime reads, spaced the way GLib also accepts, so no choice is ever overridden.
+folder_handler_chosen() {
+  local desktops dirs=("$CONFIG" "${config_dirs[@]}") dir name list
+  IFS=: read -ra desktops <<< "${XDG_CURRENT_DESKTOP:-}"
+  for dir in "${data_dirs[@]}"; do dirs+=("$dir/applications"); done
+  for dir in "${dirs[@]}"; do
+    for name in "${desktops[@],,}" ""; do
+      list="$dir/${name:+$name-}mimeapps.list"
+      [[ -f "$list" ]] && lists_default_for inode/directory "$list" && return 0
+    done
+    list="$dir/defaults.list"
+    [[ -f "$list" ]] && lists_default_for inode/directory "$list" && return 0
+  done
+  return 1
+}
+
+thunar_installed() {
+  local dir
+  for dir in "${data_dirs[@]}"; do
+    [[ -f "$dir/applications/thunar.desktop" ]] && return 0
+  done
+  return 1
+}
+
+if command -v xdg-mime > /dev/null && thunar_installed && ! folder_handler_chosen; then
+  # xdg-mime writes through the link, and a dangling one leaves a stray .new in the working directory.
+  if [[ -L "$CONFIG/mimeapps.list" && ! -e "$CONFIG/mimeapps.list" ]]; then
+    echo "mugen-shell: $CONFIG/mimeapps.list is a broken link, leaving the folder handler alone" >&2
+  else
+    # xdg-mime exits 0 even when it could not write, and its mv prompts on a tty.
+    "${RUN[@]}" xdg-mime default thunar.desktop inode/directory < /dev/null || true
+    if (( ! ${#RUN[@]} )); then
+      if folder_handler_chosen; then
+        echo "mugen-shell: made Thunar the folder handler, nothing had claimed it" >&2
+      else
+        echo "mugen-shell: could not make Thunar the folder handler" >&2
+      fi
+    fi
+  fi
+fi
