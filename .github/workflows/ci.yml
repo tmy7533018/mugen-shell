@@ -12,7 +12,7 @@ jobs:
     name: nix
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v30
         with:
           extra_nix_config: |
@@ -29,7 +29,7 @@ jobs:
     name: go
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v30
         with:
           extra_nix_config: |
@@ -66,7 +66,7 @@ jobs:
           useradd -m builder
           echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Hand the checkout to the build user
         run: chown -R builder "$GITHUB_WORKSPACE"
