@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -145,8 +146,7 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 		"model":    model,
 		"messages": msgs,
 		"stream":   true,
-		// Safe to always send: models without a thinking channel ignore it.
-		"think": opts.Thinking,
+		"think":    opts.Thinking,
 	}
 	if tw := toolsAsOpenAI(opts.Tools); len(tw) > 0 {
 		payload["tools"] = tw
@@ -183,6 +183,17 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		bodyStr := string(bodyBytes)
+		// Ollama 400s think:true on a model without the thinking capability instead of ignoring it.
+		if resp.StatusCode == http.StatusBadRequest &&
+			strings.Contains(bodyStr, "does not support thinking") &&
+			opts.Thinking {
+			fmt.Fprintf(os.Stderr, "ollama: %s rejected the thinking request, retrying without it: %s\n",
+				model, strings.TrimSpace(bodyStr))
+			retry := opts
+			retry.Thinking = false
+			resp.Body.Close()
+			return o.Chat(ctx, model, messages, retry, fn)
+		}
 		// Older / smaller models reject tools with a 400; retry without them so chat still works.
 		if resp.StatusCode == http.StatusBadRequest &&
 			strings.Contains(bodyStr, "does not support tools") &&

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -127,8 +128,11 @@ func (o *OpenAI) Chat(ctx context.Context, model string, messages []Message, opt
 		// Some compat servers reject reasoning_effort on non-reasoning models.
 		if resp.StatusCode == http.StatusBadRequest && opts.Thinking &&
 			strings.Contains(strings.ToLower(string(b)), "reasoning") {
+			fmt.Fprintf(os.Stderr, "openai: %s rejected the thinking request, retrying without it: %s\n",
+				model, parseOpenAIError(b, resp.StatusCode))
 			retry := opts
 			retry.Thinking = false
+			resp.Body.Close()
 			return o.Chat(ctx, model, messages, retry, fn)
 		}
 		return fmt.Errorf("openai: %s", parseOpenAIError(b, resp.StatusCode))

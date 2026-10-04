@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -165,8 +166,11 @@ func (g *Google) Chat(ctx context.Context, model string, messages []Message, opt
 		// Older Gemini models reject thinkingConfig; retry once without it so the turn completes.
 		if resp.StatusCode == http.StatusBadRequest && opts.Thinking &&
 			strings.Contains(strings.ToLower(string(b)), "thinking") {
+			fmt.Fprintf(os.Stderr, "google: %s rejected the thinking request, retrying without it: %s\n",
+				model, parseGoogleError(b, resp.StatusCode))
 			retry := opts
 			retry.Thinking = false
+			resp.Body.Close()
 			return g.Chat(ctx, model, messages, retry, fn)
 		}
 		return fmt.Errorf("gemini: %s", parseGoogleError(b, resp.StatusCode))
