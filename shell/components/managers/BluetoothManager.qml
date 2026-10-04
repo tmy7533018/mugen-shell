@@ -255,7 +255,7 @@ QtObject {
     }
 
     property Process pairedDevicesProcess: Process {
-        command: ["bash", "-c", "bluetoothctl devices | while read dev; do if [ -n \"$dev\" ]; then addr=$(echo $dev | awk '{print $2}'); name=$(echo $dev | cut -d' ' -f3-); connected=$(bluetoothctl info $addr 2>/dev/null | grep -q 'Connected: yes' && echo 'true' || echo 'false'); printf \"%s|%s|%s\\n\" \"$name\" \"$addr\" \"$connected\"; fi; done"]
+        command: ["bash", "-c", "bluetoothctl devices Paired | while read dev; do if [ -n \"$dev\" ]; then addr=$(echo $dev | awk '{print $2}'); name=$(echo $dev | cut -d' ' -f3-); connected=$(bluetoothctl info $addr 2>/dev/null | grep -q 'Connected: yes' && echo 'true' || echo 'false'); printf \"%s|%s|%s\\n\" \"$name\" \"$addr\" \"$connected\"; fi; done"]
         running: false
 
         property var devices: []
@@ -263,7 +263,7 @@ QtObject {
 
         stdout: SplitParser {
             onRead: data => {
-                pairedDevicesProcess.allOutput += data
+                pairedDevicesProcess.allOutput += data + "\n"
             }
         }
 
