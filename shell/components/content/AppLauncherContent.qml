@@ -1240,6 +1240,7 @@ FocusScope {
                     horizontalAlignment: TextInput.AlignHCenter
                     activeFocusOnPress: true
                     selectByMouse: true
+                    onTextEdited: root.modeManager.bump()
 
                     Keys.onPressed: (event) => {
                         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Escape) {
@@ -1249,7 +1250,7 @@ FocusScope {
                     }
                     // Whatever is in the field when it loses focus is the name; there is no cancel.
                     onActiveFocusChanged: {
-                        if (!activeFocus && root.openGroupId !== "") root.renameGroup(root.openGroupId, text)
+                        if (!activeFocus && root.shownGroupId !== "") root.renameGroup(root.shownGroupId, text)
                     }
                 }
 
