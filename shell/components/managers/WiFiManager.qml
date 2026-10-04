@@ -86,7 +86,7 @@ QtObject {
     }
 
     property Process wifiStatusProcess: Process {
-        command: ["bash", "-c", "LANG=C nmcli -t -f ACTIVE,SSID,SIGNAL dev wifi | grep '^yes'"]
+        command: ["bash", "-c", "LANG=C nmcli -t -f ACTIVE,SSID,SIGNAL dev wifi list --rescan no | grep '^yes'"]
         running: false
 
         property string outputData: ""
