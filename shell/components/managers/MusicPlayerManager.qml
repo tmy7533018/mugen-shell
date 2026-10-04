@@ -61,7 +61,7 @@ QtObject {
         property string outputData: ""
 
         stdout: SplitParser {
-            onRead: data => listPlayersProcess.outputData += data
+            onRead: data => listPlayersProcess.outputData += data + "\n"
         }
 
         onExited: (exitCode, exitStatus) => {
@@ -492,7 +492,8 @@ QtObject {
             "--session",
             "type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='org.mpris.MediaPlayer2.Player'",
             "type='signal',interface='org.freedesktop.DBus.ObjectManager',member='InterfacesAdded'",
-            "type='signal',interface='org.freedesktop.DBus.ObjectManager',member='InterfacesRemoved'"
+            "type='signal',interface='org.freedesktop.DBus.ObjectManager',member='InterfacesRemoved'",
+            "type='signal',sender='org.freedesktop.DBus',interface='org.freedesktop.DBus',member='NameOwnerChanged',arg0namespace='org.mpris.MediaPlayer2'"
         ]
         running: !musicManager.monitorRestartTimer.running
 
