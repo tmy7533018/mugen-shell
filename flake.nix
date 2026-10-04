@@ -340,7 +340,7 @@
               in
               pkgs.runCommand "check-qml-link" { } ''
                 run() {
-                  MUGEN_SHELL_SHARE=${share} XDG_CONFIG_HOME="$1" \
+                  MUGEN_SHELL_SHARE=${share} XDG_CONFIG_HOME="$1" XDG_CACHE_HOME="$1/.cache" \
                     ${pkgs.bash}/bin/bash ${./system/bin/mugen-shell-sync}
                 }
 

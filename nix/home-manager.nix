@@ -332,6 +332,7 @@ in
         PATH=${lib.makeBinPath [ pkgs.coreutils pkgs.findutils pkgs.gnused ]}:$PATH \
         MUGEN_SHELL_SHARE=${share} \
         XDG_CONFIG_HOME=${config.xdg.configHome} \
+        XDG_CACHE_HOME=${config.xdg.cacheHome} \
           ${pkgs.bash}/bin/bash ${./../system/bin/mugen-shell-sync} $syncFlag
       '';
   };

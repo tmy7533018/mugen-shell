@@ -5,6 +5,7 @@ set -euo pipefail
 
 SHARE="${MUGEN_SHELL_SHARE:-/usr/share/mugen-shell}"
 CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}"
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}"
 
 RUN=()
 if [[ "${1:-}" == "--dry-run" ]]; then
@@ -97,6 +98,21 @@ rewrite_config_home "$CONFIG/matugen/config.toml" \
                     "$CONFIG/hypr/hypridle.conf" \
                     "$CONFIG/hypr/configs/mugen-shell.conf"
 
+# matugen expands ~ but not $XDG_CACHE_HOME either, and the bar reads the palette from the latter.
+rewrite_cache_home() {
+  if [[ "$CACHE" == "$HOME/.cache" ]]; then
+    return 0
+  fi
+  local f
+  for f in "$@"; do
+    [[ -f "$f" ]] || continue
+    # dev/link-configs.sh points matugen at the checkout, where this would rewrite a tracked file.
+    [[ "$(realpath -m "$f")" == "$(realpath -m "$CONFIG")"/* ]] || continue
+    "${RUN[@]}" sed -i "s|~/\.cache/|$CACHE/|g" "$f"
+  done
+}
+rewrite_cache_home "$CONFIG/matugen/config.toml"
+
 # `quickshell -c mugen-shell` resolves the config name through this path only.
 if [[ -d "$SHARE/qml" ]]; then
   link="$CONFIG/quickshell/mugen-shell"
@@ -106,6 +122,9 @@ if [[ -d "$SHARE/qml" ]]; then
     "${RUN[@]}" ln -sfn "$SHARE/qml" "$link"
   fi
 fi
+
+# Quickshell's FileView only watches a parent directory that exists when it starts, and never retries.
+"${RUN[@]}" mkdir -p "$CONFIG/mugen-shell" "$CACHE/mugen-shell/wallp"
 
 # kitty's desktop entry also claims folders, so with nothing chosen `xdg-open <dir>` opened a terminal.
 IFS=: read -ra config_dirs <<< "${XDG_CONFIG_DIRS:-/etc/xdg}"
