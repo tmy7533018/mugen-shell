@@ -29,7 +29,10 @@ Item {
     readonly property int todayMonth: new Date().getMonth() + 1
     readonly property int todayYear: new Date().getFullYear()
 
-    property string selectedDate: dateKey(currentYear, currentMonth, todayDay)
+    // Kept apart from the month so the 31st survives a pass through a shorter month.
+    property int selectedDay: todayDay
+    readonly property string selectedDate: dateKey(currentYear, currentMonth,
+        Math.min(selectedDay, new Date(currentYear, currentMonth, 0).getDate()))
 
     property var events: []
     property var eventsByDate: ({})
@@ -141,6 +144,7 @@ Item {
         id: monthFlip
         property int targetMonth: 0
         property int targetYear: 0
+        property int targetDay: 0
         property real shiftDir: 0
 
         ParallelAnimation {
@@ -149,6 +153,7 @@ Item {
         }
         ScriptAction {
             script: {
+                if (monthFlip.targetDay > 0) root.selectedDay = monthFlip.targetDay
                 root.currentMonth = monthFlip.targetMonth
                 root.currentYear = monthFlip.targetYear
                 root.gridShift = monthFlip.shiftDir * 18
@@ -168,19 +173,23 @@ Item {
         if (monthFlip.running) monthFlip.stop()
         monthFlip.targetMonth = m
         monthFlip.targetYear = y
+        monthFlip.targetDay = 0
         monthFlip.shiftDir = delta >= 0 ? 1 : -1
         monthFlip.start()
     }
 
     function jumpToToday() {
         let delta = (todayYear - currentYear) * 12 + (todayMonth - currentMonth)
-        if (delta === 0) return
+        if (delta === 0) {
+            selectedDay = todayDay
+            return
+        }
         if (monthFlip.running) monthFlip.stop()
         monthFlip.targetMonth = todayMonth
         monthFlip.targetYear = todayYear
+        monthFlip.targetDay = todayDay
         monthFlip.shiftDir = delta >= 0 ? 1 : -1
         monthFlip.start()
-        selectedDate = dateKey(todayYear, todayMonth, todayDay)
     }
 
     function formatSelectedDate(key) {
@@ -590,7 +599,7 @@ Item {
                                 cursorShape: dayNumber > 0 && isCurrentMonth ? Qt.PointingHandCursor : Qt.ArrowCursor
                                 enabled: dayNumber > 0 && isCurrentMonth
                                 onClicked: {
-                                    root.selectedDate = cellDateKey
+                                    root.selectedDay = dayNumber
                                 }
                             }
                         }
