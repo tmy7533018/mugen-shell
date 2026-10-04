@@ -18,9 +18,12 @@ QtObject {
     property var sources: []
     property string defaultSinkName: ""
     property string defaultSourceName: ""
+    // pactl translates its labels and yes/no, and every parser here matches the English text.
+    readonly property var cLocaleEnv: ({ "LC_ALL": "C" })
 
     property Process volumeProcess: Process {
         running: false
+        environment: audioManager.cLocaleEnv
         command: ["bash", "-c", "set -o pipefail; pactl get-sink-volume @DEFAULT_SINK@ | grep -oP '\\d+%' | head -1 | tr -d '%'"]
 
         property string outputData: ""
@@ -45,6 +48,7 @@ QtObject {
 
     property Process muteProcess: Process {
         running: false
+        environment: audioManager.cLocaleEnv
         command: ["bash", "-c", "pactl get-sink-mute @DEFAULT_SINK@ | grep -oP '(yes|no)'"]
 
         property string outputData: ""
@@ -113,6 +117,7 @@ QtObject {
 
     property Process micVolumeProcess: Process {
         running: false
+        environment: audioManager.cLocaleEnv
         command: ["bash", "-c", "set -o pipefail; pactl get-source-volume @DEFAULT_SOURCE@ | grep -oP '\\d+%' | head -1 | tr -d '%'"]
 
         property string outputData: ""
@@ -137,6 +142,7 @@ QtObject {
 
     property Process micMuteProcess: Process {
         running: false
+        environment: audioManager.cLocaleEnv
         command: ["bash", "-c", "pactl get-source-mute @DEFAULT_SOURCE@ | grep -oP '(yes|no)'"]
 
         property string outputData: ""
@@ -200,6 +206,7 @@ QtObject {
 
     property Process headphoneProcess: Process {
         running: false
+        environment: audioManager.cLocaleEnv
         command: ["bash", "-c", "DEFAULT_SINK=$(pactl info | grep 'Default Sink:' | cut -d' ' -f3); if [ -n \"$DEFAULT_SINK\" ]; then echo \"NAME:$DEFAULT_SINK\"; pactl list sinks | awk -v sink=\"$DEFAULT_SINK\" '/Name: / {flag=0} $0 ~ (\"Name: \" sink) {flag=1} flag {print}' | grep -i 'active port:' | tr '\\n' ' '; fi"]
 
         property string outputData: ""
@@ -234,6 +241,7 @@ QtObject {
 
     property Process sinksProcess: Process {
         running: false
+        environment: audioManager.cLocaleEnv
         command: ["bash", "-c", "pactl list sinks | grep -E '(Name:|Description:)' | paste - - | sed 's/\\tName: /|/g; s/\\tDescription: /|/g'"]
 
         property string outputData: ""
@@ -266,6 +274,7 @@ QtObject {
 
     property Process sourcesProcess: Process {
         running: false
+        environment: audioManager.cLocaleEnv
         command: ["bash", "-c", "pactl list sources | grep -E '(Name:|Description:)' | paste - - | sed 's/\\tName: /|/g; s/\\tDescription: /|/g'"]
 
         property string outputData: ""
@@ -300,6 +309,7 @@ QtObject {
 
     property Process defaultDevicesProcess: Process {
         running: false
+        environment: audioManager.cLocaleEnv
         command: ["bash", "-c", "pactl info | grep -E '(Default Sink:|Default Source:)'"]
 
         property string outputData: ""
@@ -378,6 +388,7 @@ QtObject {
     property Process pulseEventMonitor: Process {
         command: ["pactl", "subscribe"]
         running: !audioManager.monitorRestartTimer.running
+        environment: audioManager.cLocaleEnv
 
         stdout: SplitParser {
             onRead: data => {
