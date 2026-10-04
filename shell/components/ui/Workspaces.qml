@@ -25,6 +25,9 @@ Item {
         return id
     }
 
+    readonly property bool focusedIsShown: !Hyprland.focusedWorkspace
+        || (Hyprland.focusedWorkspace.id >= 1 && Hyprland.focusedWorkspace.id <= workspaceCount)
+
     property var modeManager: null
 
     function scaled(val) {
@@ -121,12 +124,12 @@ Item {
         id: activeSmokeContainer
         anchors.fill: parent
 
-        property real targetX: {
-            if (!Hyprland.focusedWorkspace) return scaled(25);
-            let wsId = Hyprland.focusedWorkspace.id;
-            if (wsId < 1 || wsId > workspacesRoot.workspaceCount) return scaled(25);
-            return scaled(25) + (wsId - 1) * scaled(45);
-        }
+        property real targetX: scaled(25) + (workspacesRoot.activeWorkspaceId - 1) * scaled(45)
+
+        opacity: workspacesRoot.focusedIsShown ? 1.0 : 0.0
+        visible: opacity > 0.01
+
+        Behavior on opacity { NumberAnimation { duration: Theme.Motion.drift; easing.type: Easing.InOutCubic } }
 
         property real currentX: scaled(25)
         property real previousX: scaled(25)
@@ -371,7 +374,7 @@ Item {
                     waveAmplitude: scaled(2) + index * scaled(2.0)
                     // Must match the inactive blobs' coefficient or the rings drift out of phase.
                     animationSpeed: 0.08 + index * 0.15 + workspacesRoot.activeWorkspaceId * 0.015
-                    running: workspacesRoot.visible
+                    running: activeSmokeContainer.visible
                 }
             }
         }
