@@ -30,6 +30,11 @@ ShellRoot {
     property bool pamPrompted: false
     property bool unlocking: false
     property bool pamFaulted: false
+    property string pamNotice: ""
+    property string pendingPamNotice: ""
+    property double pamStartedAt: 0
+    // A module that waits before the prompt (fprintd, u2f) would disarm the field on every refresh.
+    property bool pamNoticeRefreshable: false
 
     // xray shows the desktop until the face is opaque, and sleep does not wait for the fade.
     readonly property bool instantEntry: Quickshell.env("MUGEN_LOCK_INSTANT") === "1"
@@ -196,6 +201,8 @@ ShellRoot {
 
     function startPam() {
         pamPrompted = false
+        pendingPamNotice = ""
+        pamStartedAt = Date.now()
         pam.config = pamServices[pamService]
         if (!pam.start()) nextPamService()
     }
@@ -448,6 +455,9 @@ ShellRoot {
 
         onResponseRequiredChanged: {
             if (!responseRequired) return
+            // Ahead of armed, so the hint never sees a prompt before its notice.
+            root.pamNoticeRefreshable = Date.now() - root.pamStartedAt < 1000
+            root.pamNotice = root.pendingPamNotice
             root.pamPrompted = true
             root.pamFaulted = false
             root.armed = true
@@ -456,7 +466,12 @@ ShellRoot {
 
         // A second prompt leaves responseRequired true, so only this fires for it.
         onPamMessage: {
-            if (!responseRequired) return
+            if (!responseRequired) {
+                root.pendingPamNotice = root.pendingPamNotice === ""
+                    ? message : root.pendingPamNotice + " " + message
+                return
+            }
+            root.pamNotice = root.pendingPamNotice
             root.pamPrompted = true
             root.pamFaulted = false
             root.authenticating = false
@@ -501,6 +516,20 @@ ShellRoot {
         id: pamRetryTimer
         interval: 2000
         onTriggered: root.startPam()
+    }
+
+    // pam_faillock judges a lockout once per conversation, so only a new one counts down or lifts it.
+    Timer {
+        interval: 10000
+        repeat: true
+        running: root.pamNotice !== "" && root.pamNoticeRefreshable
+            && root.armed && !root.unlocking
+        onTriggered: {
+            if (root.authenticating || root.password !== "") return
+            root.armed = false
+            pam.abort()
+            root.startPam()
+        }
     }
 
     Timer {
@@ -602,6 +631,7 @@ ShellRoot {
                 awaitingPassword: root.armed
                 faultText: root.pamFaulted
                     ? "Authentication is unavailable — retrying" : ""
+                noticeText: root.pamNotice
                 authenticating: root.authenticating
                 unlocking: root.unlocking
                 unlockGrace: root.unlockGrace

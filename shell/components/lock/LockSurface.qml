@@ -79,6 +79,7 @@ Item {
     property int passwordLength: 0
     property bool awaitingPassword: false
     property string faultText: ""
+    property string noticeText: ""
     property bool authenticating: false
     property bool unlocking: false
     property int unlockGrace: 0
@@ -214,7 +215,10 @@ Item {
     readonly property int chargeLength: Math.min(passwordLength, 14)
     // PAM re-arms before the failure shake settles, so the hint waits for the orb.
     readonly property bool passwordHintShown: awaitingPassword && passwordLength === 0
-        && !authenticating && !unlocking && faultText === "" && !failMurk.running
+        && !authenticating && !unlocking && faultText === "" && noticeText === ""
+        && !failMurk.running
+    readonly property bool noticeShown:
+        noticeText !== "" && faultText === "" && passwordLength === 0 && !unlocking
 
     // Outside the glow, which grows with charge and wobble to about 1.07x.
     readonly property real moteInner:
@@ -553,6 +557,24 @@ Item {
                         wrapMode: Text.WordWrap
                         font.family: root.faceFontFamily
                         font.pixelSize: Math.round(root.cellH * 0.13)
+                    }
+
+                    Text {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: root.cellH * 0.17
+                        width: parent.width * 0.9
+                        text: root.noticeText
+                        color: root.errorColor
+                        opacity: root.noticeShown ? 0.9 : 0
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.WordWrap
+                        font.family: root.faceFontFamily
+                        font.pixelSize: Math.round(root.cellH * 0.09)
+
+                        Behavior on opacity {
+                            NumberAnimation { duration: 400; easing.type: Easing.InOutCubic }
+                        }
                     }
 
                     Text {
