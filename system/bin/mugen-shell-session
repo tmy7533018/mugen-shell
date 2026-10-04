@@ -4,6 +4,18 @@ set -euo pipefail
 
 mugen-shell-sync || echo "mugen-shell: config sync failed, starting anyway" >&2
 
+# The user manager never reads the login profile, and default.target already started mugen-ai without these.
+manager_base_dirs() {
+  local env pair
+  env=$(systemctl --user show-environment 2> /dev/null || true)
+  for pair in XDG_CONFIG_HOME:.config XDG_CACHE_HOME:.cache XDG_STATE_HOME:.local/state XDG_DATA_HOME:.local/share; do
+    grep -m1 "^${pair%%:*}=" <<< "$env" || echo "${pair%%:*}=$HOME/${pair#*:}"
+  done
+}
+base_dirs_before=$(manager_base_dirs)
+systemctl --user import-environment XDG_CONFIG_HOME XDG_CACHE_HOME XDG_STATE_HOME XDG_DATA_HOME 2> /dev/null || true
+[[ "$(manager_base_dirs)" == "$base_dirs_before" ]] || systemctl --user try-restart mugen-ai.service || true
+
 # Stamped per unit, so a deliberate `systemctl --user disable` survives the next login.
 stamps="${XDG_STATE_HOME:-$HOME/.local/state}/mugen-shell/enabled"
 mkdir -p "$stamps"
