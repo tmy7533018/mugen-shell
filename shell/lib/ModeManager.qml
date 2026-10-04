@@ -61,6 +61,7 @@ QtObject {
             return
         }
         currentMode = newMode === currentMode ? "normal" : newMode
+        interaction()
     }
     
     function closeAllModes() {
@@ -134,7 +135,7 @@ QtObject {
                 closeAllModes()
                 return
             }
-            if (isMode(modeName)) return
+            if (isMode(modeName)) { bump(); return }
             switchMode(modeName)
         }
 

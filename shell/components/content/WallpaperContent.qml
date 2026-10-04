@@ -329,7 +329,10 @@ FocusScope {
                     Behavior on width {
                         NumberAnimation { duration: Theme.Motion.sweep; easing.type: Easing.OutExpo }
                     }
-                    onSearchTextChanged: text => wallpaperManager.searchQuery = text
+                    onSearchTextChanged: text => {
+                        wallpaperManager.searchQuery = text
+                        root.resetAutoCloseTimer()
+                    }
                     onRequestActivateSelected: root.activateCurrent()
                     onRequestFocusResults: backwards => root.focusResults(backwards)
                 }

@@ -81,6 +81,8 @@ PanelWindow {
                 return
             }
 
+            modeManager.bump()
+
             // Per-panel Keys handlers never fire: escKeyHandler owns focus while a panel is open.
             if (modeManager.isMode("music") && musicPlayerManager) {
                 if (event.key === Qt.Key_Space) {

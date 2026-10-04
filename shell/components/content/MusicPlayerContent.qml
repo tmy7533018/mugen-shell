@@ -121,32 +121,6 @@ Item {
         anchors.rightMargin: modeManager.scale(32)
         z: 3
 
-        focus: modeManager.isMode("music")
-        Keys.onPressed: (event) => {
-            if (modeManager.isMode("music")) {
-                root.resetAutoCloseTimer()
-            }
-            if (event.key === Qt.Key_Escape) {
-                modeManager.closeAllModes()
-                event.accepted = true
-            } else if (event.key === Qt.Key_Space) {
-                if (root.musicManager) {
-                    root.musicManager.playPause()
-                }
-                event.accepted = true
-            } else if (event.key === Qt.Key_Left) {
-                if (root.musicManager) {
-                    root.musicManager.previous()
-                }
-                event.accepted = true
-            } else if (event.key === Qt.Key_Right) {
-                if (root.musicManager) {
-                    root.musicManager.next()
-                }
-                event.accepted = true
-            }
-        }
-        
         opacity: 0
         visible: true
         
