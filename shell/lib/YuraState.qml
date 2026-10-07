@@ -15,7 +15,7 @@ QtObject {
         }
         return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null
     }
-    readonly property var boundScreen: screenByName(settingsManager ? settingsManager.displayMonitor : "")
+    readonly property var boundScreen: screenByName(settingsManager ? settingsManager.initialDisplayMonitor : "")
 
     // Overwritten by YuraChatPanel.qml once the window is sized; these are only the initial defaults.
     property int screenWidth: boundScreen ? boundScreen.width : 1920

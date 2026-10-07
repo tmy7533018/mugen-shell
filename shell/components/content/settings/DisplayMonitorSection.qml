@@ -42,6 +42,12 @@ Rectangle {
         section.bump()
     }
 
+    // The Yura window is Hyprland's exec-once child, not part of the bar's unit.
+    function restartYuraWindow() {
+        const dir = Quickshell.shellDir
+        Theme.Hypr.exec("qs kill -p '" + dir + "/yura-shell.qml' && '" + dir + "/scripts/yura-window.sh'")
+    }
+
     ColumnLayout {
         id: optionsColumn
         anchors.fill: parent
@@ -50,7 +56,7 @@ Rectangle {
 
         Text {
             Layout.fillWidth: true
-            text: "Bar monitor"
+            text: "Bar & Yura monitor"
             color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
             font.pixelSize: 12
             font.family: "M PLUS 2"
@@ -128,7 +134,11 @@ Rectangle {
                 theme: section.theme
                 label: "Restart shell"
                 buttonWidth: 104
-                onClicked: { restartShellProcess.running = true; section.bump() }
+                onClicked: {
+                    section.restartYuraWindow()
+                    restartShellProcess.running = true
+                    section.bump()
+                }
             }
         }
     }
