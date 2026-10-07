@@ -8,7 +8,9 @@
 <p align="center"><i>Quickshell + Hyprland で組んだ、夢幻シェル。</i></p>
 
 
-https://github.com/user-attachments/assets/cd9e2538-a30f-4c8c-a143-9f8c2c7b3a8f
+
+https://github.com/user-attachments/assets/bb69bbe1-e069-4ca7-a48d-6ac7036e9d77
+
 
 
 Hyprland + Quickshell デスクトップ向けの私の dotfiles を、Arch のパッケージと Nix flake で入れられる形にまとめたものです。
