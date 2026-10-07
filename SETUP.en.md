@@ -1,4 +1,4 @@
-<p align="right"><b>English</b> | <a href="SETUP.md">日本語</a></p>
+<p align="right"><b>🇺🇸 English</b> | <a href="SETUP.md">🇯🇵 日本語</a></p>
 
 # mugen-shell: Setup Guide
 

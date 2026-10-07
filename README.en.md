@@ -1,4 +1,4 @@
-<p align="right"><b>English</b> | <a href="README.md">日本語</a></p>
+<p align="right"><b>🇺🇸 English</b> | <a href="README.md">🇯🇵 日本語</a></p>
 
 <h1 align="center">
   <img src="shell/assets/branding/mugen-shell_logo.png" width="200" alt="mugen-shell logo" /><br/>
