@@ -1634,7 +1634,7 @@ FocusScope {
         Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
 
         radius: modeManager.scale(16)
-        color: root.theme ? root.theme.surfaceInsetSubtle : Qt.rgba(0.07, 0.06, 0.11, 0.97)
+        color: root.theme ? root.theme.popupFace : Qt.rgba(0.07, 0.06, 0.11, 0.97)
         border.width: 1
         border.color: Qt.rgba(0.95, 0.74, 0.42, 0.55)
 
