@@ -169,7 +169,8 @@ PanelWindow {
     readonly property int targetHeight: modeManager.currentBarSize.height
     onTargetHeightChanged: if (targetHeight > implicitHeight) implicitHeight = targetHeight
 
-    Theme.ModeManager { id: modeManager; screenWidth: barWindow.width; settingsManager: settingsManager }
+    // The screen, not the window: hidden over a fullscreen app the window is 0 wide, and panels opened from there would lay out at scale 0.
+    Theme.ModeManager { id: modeManager; screenWidth: barWindow.screen ? barWindow.screen.width : barWindow.width; settingsManager: settingsManager }
 
     readonly property Component defaultModuleBackground: Component {
         Common.ModuleBackdrop {
