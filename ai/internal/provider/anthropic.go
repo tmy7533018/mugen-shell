@@ -232,7 +232,7 @@ func (a *Anthropic) chat(ctx context.Context, model string, messages []Message, 
 		}
 	}
 	if len(systemBlocks) > 0 {
-		// Persona + memories are stable, so the per-turn snapshot must sit after the breakpoint.
+		// Persona + memories are stable, so the breakpoint closes the first block.
 		systemBlocks[0]["cache_control"] = map[string]any{"type": "ephemeral"}
 	}
 

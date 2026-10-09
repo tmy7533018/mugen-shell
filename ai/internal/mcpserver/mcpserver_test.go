@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/tmy7533018/mugen-ai/internal/store"
 	"github.com/tmy7533018/mugen-ai/internal/tools"
 )
 
@@ -75,6 +77,52 @@ func TestToolsListShape(t *testing.T) {
 	if tool["annotations"].(map[string]any)["readOnlyHint"] != false {
 		// fake tools have no readonly flag set; the annotation must still exist
 		t.Errorf("expected readOnlyHint annotation, got %v", tool["annotations"])
+	}
+}
+
+func TestToolsListMarksTheToolsChatHoldsForApproval(t *testing.T) {
+	st, err := store.Open(filepath.Join(t.TempDir(), "history.db"))
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	t.Cleanup(func() { st.Close() })
+	reg := tools.New("", nil, nil, nil)
+	reg.AttachMemory(st)
+
+	h := New(reg, false, []string{"calendar", "notification", "memory"}, "1")
+	resp := handle(t, h, `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`)
+
+	marked := map[string]bool{}
+	listed := map[string]bool{}
+	for _, item := range resp["result"].(map[string]any)["tools"].([]any) {
+		tool := item.(map[string]any)
+		name := tool["name"].(string)
+		listed[name] = true
+		annotations := tool["annotations"].(map[string]any)
+		if annotations["readOnlyHint"] == nil {
+			t.Errorf("%s: readOnlyHint dropped: %v", name, annotations)
+		}
+		if hint, present := annotations["destructiveHint"]; present {
+			if hint != true {
+				t.Errorf("%s: destructiveHint = %v, want it present only as true", name, hint)
+			}
+			marked[name] = true
+		}
+	}
+
+	for _, name := range []string{"calendar_add", "calendar_list_today", "notification_unread", "memory_save", "memory_list"} {
+		if !listed[name] || marked[name] {
+			t.Errorf("%s: listed = %v, marked = %v, want listed and unmarked", name, listed[name], marked[name])
+		}
+	}
+	want := map[string]bool{"calendar_delete": true, "notification_clear_all": true, "memory_delete": true}
+	if len(marked) != len(want) {
+		t.Errorf("marked %v, want %v", marked, want)
+	}
+	for name := range want {
+		if !marked[name] {
+			t.Errorf("%s must be advertised as destructive", name)
+		}
 	}
 }
 

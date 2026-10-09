@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/tmy7533018/mugen-ai/internal/config"
@@ -66,5 +67,13 @@ func TestMCPServerURLExpandsEnv(t *testing.T) {
 	}}, nil)
 	if want := "https://example.com/s/s3cr3t/mcp?$select=name&a=$$b"; got["zap"].URL != want {
 		t.Errorf("URL = %q, want %q", got["zap"].URL, want)
+	}
+}
+
+func TestToolingPromptNamesTheTagsTheToolsEmit(t *testing.T) {
+	for _, tag := range []string{"<desktop_state>", "[CONFIRM]", "[DESTRUCTIVE"} {
+		if !strings.Contains(toolingSystemPrompt, tag) {
+			t.Errorf("tooling prompt never mentions %s", tag)
+		}
 	}
 }

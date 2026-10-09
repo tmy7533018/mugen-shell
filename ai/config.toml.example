@@ -90,8 +90,8 @@
 # [context]
 #   # Inject a live desktop-state snapshot (active window, playing media,
 #   # volume, unread notifications, running timer, today's events, theme)
-#   # into every chat turn as a transient system message, so Yura knows
-#   # what's on screen right now. Never stored in conversation history.
+#   # ahead of your message in every chat turn, so Yura knows what's on
+#   # screen right now. Never stored in conversation history.
 #   # Categories hidden via [tools].disabled_categories are excluded from
 #   # the snapshot too. Default: on.
 #   desktop_state = true

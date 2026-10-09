@@ -45,7 +45,7 @@ type Tool struct {
 
 	fn func(ctx context.Context, args map[string]any) (string, error)
 
-	// Set for destructive tools from untrusted MCP servers; handleChat blocks on the approval.
+	// Irreversible effects: the chat loop blocks on the user's approval first.
 	needsConfirm bool
 }
 
@@ -785,11 +785,12 @@ func builtin() []Tool {
 			readonly:    true,
 		},
 		{
-			Name:        "notification_clear_all",
-			Description: "[DESTRUCTIVE] Clear all notification history. Returns count cleared.",
-			Parameters:  emptyParams(),
-			target:      "notification",
-			function:    "clear_all",
+			Name:         "notification_clear_all",
+			Description:  "[CONFIRM] Clear all notification history. Returns count cleared.",
+			Parameters:   emptyParams(),
+			target:       "notification",
+			function:     "clear_all",
+			needsConfirm: true,
 		},
 		{
 			Name:        "notification_unread",
@@ -886,7 +887,7 @@ func builtin() []Tool {
 		},
 		{
 			Name:        "calendar_delete",
-			Description: "[DESTRUCTIVE] Delete a calendar event by id.",
+			Description: "[CONFIRM] Delete a calendar event by id.",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -894,7 +895,8 @@ func builtin() []Tool {
 				},
 				"required": []string{"id"},
 			},
-			cmdTemplate: []string{"{{self}}", "calendar", "delete", "--id={{id}}"},
+			cmdTemplate:  []string{"{{self}}", "calendar", "delete", "--id={{id}}"},
+			needsConfirm: true,
 		},
 		{
 			Name:        "calendar_list_today",

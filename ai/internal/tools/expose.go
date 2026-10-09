@@ -6,6 +6,10 @@ import "strings"
 // advertises it as the readOnlyHint annotation.
 func (t Tool) IsReadOnly() bool { return t.readonly }
 
+// NeedsConfirm reports whether chat holds the tool for the user's approval. The MCP expose
+// layer advertises it as the destructiveHint annotation.
+func (t Tool) NeedsConfirm() bool { return t.needsConfirm }
+
 // ExposedTools returns the publishable subset: read-only tools when readonly is set, plus
 // every tool of the listed categories. External MCP tools are never re-exported.
 func (r *Registry) ExposedTools(readonly bool, categories []string) []Tool {

@@ -77,13 +77,12 @@ func runChat(_ *cobra.Command, _ []string) error {
 		if rt.Cfg.Context.DesktopState && len(msgs) > 0 &&
 			(rt.Cfg.Context.DesktopStateRemote || rt.Registry.ProviderNameFor(context.Background(), rt.Registry.Model()) == "ollama") {
 			if blk := rt.Tools.DesktopContext(context.Background()); blk != "" {
-				userMsg := msgs[len(msgs)-1]
-				msgs = append(msgs[:len(msgs)-1:len(msgs)-1],
-					provider.Message{Role: "system", Content: blk}, userMsg)
+				last := len(msgs) - 1
+				msgs[last].Content = blk + "\n\n" + msgs[last].Content
 			}
 		}
 
-		fullResponse, err := runChatTurn(rt, scanner, msgs)
+		fullResponse, err := runChatTurn(rt, scanner, msgs, input)
 		fmt.Println()
 
 		if err != nil {
@@ -106,10 +105,11 @@ func runChat(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func runChatTurn(rt *runtimeContext, scanner *bufio.Scanner, msgs []provider.Message) (string, error) {
+func runChatTurn(rt *runtimeContext, scanner *bufio.Scanner, msgs []provider.Message, userText string) (string, error) {
 	const maxIterations = 5
 	opts := provider.ChatOptions{Tools: cliProviderTools(rt.Tools.List())}
 	ctx := context.Background()
+	gate := rt.Tools.ChatGate(userText)
 
 	var fullResponse string
 	for iteration := 0; iteration < maxIterations; iteration++ {
@@ -140,7 +140,7 @@ func runChatTurn(rt *runtimeContext, scanner *bufio.Scanner, msgs []provider.Mes
 
 		for _, tc := range iterToolCalls {
 			var result string
-			if rt.Tools.NeedsConfirm(tc.Name) && !cliConfirm(scanner, tc) {
+			if gate.Needs(tc.Name) && !cliConfirm(scanner, tc) {
 				result = "error: the user declined this action. Do not retry it; acknowledge their choice and move on."
 				rt.Tools.Audit(tc.Name, tc.Arguments, result, nil)
 			} else {

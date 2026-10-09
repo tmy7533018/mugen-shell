@@ -278,11 +278,12 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 	if s.ctxCfg.DesktopState && len(msgs) > 0 &&
 		(s.ctxCfg.DesktopStateRemote || providerName == "ollama") {
 		if blk := s.tools.DesktopContext(r.Context()); blk != "" {
-			userMsg := msgs[len(msgs)-1]
-			msgs = append(msgs[:len(msgs)-1:len(msgs)-1],
-				provider.Message{Role: "system", Content: blk}, userMsg)
+			last := len(msgs) - 1
+			msgs[last].Content = blk + "\n\n" + msgs[last].Content
 		}
 	}
+
+	gate := s.tools.ChatGate(req.Message)
 
 	const maxIterations = 5
 	allTools := s.tools.List()
@@ -402,7 +403,7 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			var result string
 			var callErr error
 			// A denial is fed back as an ordinary result, without the action having happened.
-			if s.tools.NeedsConfirm(tc.Name) && !s.awaitConfirm(r.Context(), tc, sendEvent) {
+			if gate.Needs(tc.Name) && !s.awaitConfirm(r.Context(), tc, sendEvent) {
 				result = "error: the user declined this action. Do not retry it; acknowledge their choice and move on."
 				s.tools.Audit(tc.Name, tc.Arguments, result, nil)
 			} else {
