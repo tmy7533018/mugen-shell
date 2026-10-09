@@ -5,6 +5,9 @@
 # Yura settings panel in mugen-shell edits this file through the HTTP API
 # (GET / PUT /config), and the same panel exposes a "Edit toml" button if
 # you'd rather hand-edit.
+#
+# Saving from the panel rewrites this whole file: these comments and any key
+# mugen-ai does not know are dropped. Keep a copy if you need them.
 
 [personality]
   # Optional auto-header fields. When any of name/tone/language is set,
