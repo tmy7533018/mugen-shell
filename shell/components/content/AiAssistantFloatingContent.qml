@@ -530,7 +530,11 @@ FocusScope {
         id: eventsReconnectTimer
         interval: 2000
         repeat: false
-        onTriggered: eventsSubscriber.running = true
+        onTriggered: {
+            eventsSubscriber.running = true
+            // The stream drops when the backend restarts, which can change its default model and model list.
+            if (!healthProcess.running) healthProcess.running = true
+        }
     }
 
     // Qt fetches a markdown image target while rendering, so a model-authored URL phones home unclicked.
@@ -2162,7 +2166,8 @@ FocusScope {
             if (exitCode === 0) {
                 try {
                     let obj = JSON.parse(buf)
-                    root.currentModel = obj.model || ""
+                    // An open conversation stays on the model it is bound to.
+                    if (root.currentConvId === 0 && !root.streaming) root.currentModel = obj.model || ""
                     root.defaultModel = obj.model || ""
                     root.healthStatus = obj.status || ""
                     root.hasModel = obj.status === "ok"
