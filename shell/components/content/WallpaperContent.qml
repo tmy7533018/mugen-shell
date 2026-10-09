@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
 import "../common" as Common
 import "../ui" as UI
 import "../../lib" as Theme
@@ -117,15 +116,7 @@ FocusScope {
     readonly property var listModel: ["__add__"].concat(wallpaperManager.visibleWallpapers || [])
 
     function openWallpaperFolder() {
-        openWallpaperDirProcess.running = false
-        openWallpaperDirProcess.command = ["xdg-open", wallpaperManager.wallpaperDir]
-        openWallpaperDirProcess.running = true
-    }
-
-    Process {
-        id: openWallpaperDirProcess
-        command: []
-        running: false
+        Quickshell.execDetached(["xdg-open", wallpaperManager.wallpaperDir])
     }
 
     // Kept as a path, not an index, so the selection survives a file appearing or disappearing.
