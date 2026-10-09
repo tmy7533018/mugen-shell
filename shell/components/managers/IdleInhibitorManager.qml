@@ -171,16 +171,12 @@ QtObject {
         command: [
             "dbus-monitor",
             "--session",
-            "sender='org.freedesktop.systemd1'"
+            "type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',path='/org/freedesktop/systemd1/unit/hypridle_2eservice'"
         ]
         running: idleInhibitorManager.isInitialized && !idleInhibitorManager.monitorRestartTimer.running
 
         stdout: SplitParser {
-            onRead: data => {
-                if (data.includes("hypridle") || data.includes("ActiveState")) {
-                    idleDebounceTimer.restart()
-                }
-            }
+            onRead: idleDebounceTimer.restart()
         }
 
         // The stream ends when the process does, so this is where a dead monitor shows up.
@@ -202,6 +198,14 @@ QtObject {
                 refreshStatus()
             }
         }
+    }
+
+    // systemd only broadcasts unit changes while some client is subscribed, so the monitor alone can stay silent.
+    property Timer statusPollTimer: Timer {
+        interval: 30000
+        repeat: true
+        running: idleInhibitorManager.isInitialized
+        onTriggered: idleInhibitorManager.refreshStatus()
     }
 
     // Delay D-Bus monitor start to let state restoration complete first
