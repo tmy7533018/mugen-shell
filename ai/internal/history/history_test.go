@@ -135,7 +135,7 @@ func TestAttachmentsDroppedWhenFileIsGone(t *testing.T) {
 		t.Fatalf("new conversation: %v", err)
 	}
 	missing := filepath.Join(t.TempDir(), "deleted.png")
-	if err := s.AppendMessage(convID, "user", "look", []string{missing}, ""); err != nil {
+	if _, err := s.AppendMessage(convID, "user", "look", []string{missing}, ""); err != nil {
 		t.Fatalf("append: %v", err)
 	}
 
@@ -287,5 +287,85 @@ func TestDropCountMatchesTruncation(t *testing.T) {
 	}
 	if want == 0 {
 		t.Fatal("the fixture must actually overflow the budget")
+	}
+}
+
+func TestSwitchToTheCurrentConversationPicksUpAnotherWritersRows(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "history.db")
+	daemonStore, err := store.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer daemonStore.Close()
+	daemon, err := New(daemonStore, "", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	convID, _ := daemon.NewConversation("m", false)
+	_ = daemon.Add("user", "gui-q", "m", false)
+	_ = daemon.AddAssistantTo(convID, "gui-a", "")
+
+	cliStore, err := store.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cli, err := New(cliStore, "", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = cli.Add("user", "cli-q", "m", false)
+	_ = cli.Add("assistant", "cli-a", "m", false)
+	cliStore.Close()
+
+	if err := daemon.Switch(convID); err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, m := range daemon.Messages() {
+		got = append(got, m.Content)
+	}
+	if want := []string{"gui-q", "gui-a", "cli-q", "cli-a"}; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("messages = %v, want %v", got, want)
+	}
+}
+
+func TestSwitchPicksUpRowsWrittenDuringATurn(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "history.db")
+	daemonStore, err := store.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer daemonStore.Close()
+	daemon, err := New(daemonStore, "", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	convID, _ := daemon.NewConversation("m", false)
+	_ = daemon.Add("user", "gui-q1", "m", false)
+	_ = daemon.AddAssistantTo(convID, "gui-a1", "")
+	_ = daemon.Add("user", "gui-q2", "m", false)
+
+	cliStore, err := store.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cli, err := New(cliStore, "", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = cli.Add("user", "cli-q", "m", false)
+	_ = cli.Add("assistant", "cli-a", "m", false)
+	cliStore.Close()
+
+	_ = daemon.AddAssistantTo(convID, "gui-a2", "")
+	if err := daemon.Switch(convID); err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, m := range daemon.Messages() {
+		got = append(got, m.Content)
+	}
+	if want := []string{"gui-q1", "gui-a1", "gui-q2", "cli-q", "cli-a", "gui-a2"}; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("messages = %v, want %v", got, want)
 	}
 }

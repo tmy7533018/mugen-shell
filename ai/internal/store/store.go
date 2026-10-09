@@ -339,27 +339,44 @@ func (s *Store) SizeBytes() int64 {
 	return info.Size()
 }
 
-func (s *Store) AppendMessage(convID int64, role, content string, attachments []string, toolCalls string) error {
+func (s *Store) AppendMessage(convID int64, role, content string, attachments []string, toolCalls string) (int64, error) {
 	encoded, err := encodeAttachments(attachments)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	tx, err := s.db.Begin()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer tx.Rollback()
 	now := nowUnix()
-	if _, err := tx.Exec(
+	res, err := tx.Exec(
 		`INSERT INTO messages (conversation_id, role, content, attachments, tool_calls, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		convID, role, content, encoded, toolCalls, now,
-	); err != nil {
-		return err
+	)
+	if err != nil {
+		return 0, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
 	}
 	if _, err := tx.Exec(`UPDATE conversations SET updated_at = ? WHERE id = ?`, now, convID); err != nil {
-		return err
+		return 0, err
 	}
-	return tx.Commit()
+	return id, tx.Commit()
+}
+
+// LastMessageID is 0 for a conversation with no messages.
+func (s *Store) LastMessageID(convID int64) (int64, error) {
+	var id int64
+	err := s.db.QueryRow(`SELECT COALESCE(MAX(id), 0) FROM messages WHERE conversation_id = ?`, convID).Scan(&id)
+	return id, err
+}
+
+func (s *Store) MessageStamp(convID int64) (count, last int64, err error) {
+	err = s.db.QueryRow(`SELECT COUNT(*), COALESCE(MAX(id), 0) FROM messages WHERE conversation_id = ?`, convID).Scan(&count, &last)
+	return
 }
 
 func (s *Store) ListMessages(convID int64) ([]Message, error) {

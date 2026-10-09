@@ -26,10 +26,13 @@ type History struct {
 	convID       int64
 	convModel    string
 	convThinking bool
-	messages     []provider.Message
-	system       string
-	max          int
-	maxTokens    int
+	// Another process (the CLI) appends to the same store, so Switch compares this against it.
+	lastMsgID int64
+	msgCount  int64
+	messages  []provider.Message
+	system    string
+	max       int
+	maxTokens int
 }
 
 // New builds the history layer. maxTokens caps the estimated token footprint
@@ -78,6 +81,8 @@ func (h *History) switchLocked(id int64) error {
 		h.convID = 0
 		h.convModel = ""
 		h.convThinking = false
+		h.lastMsgID = 0
+		h.msgCount = 0
 		h.messages = nil
 		return nil
 	}
@@ -97,8 +102,11 @@ func (h *History) switchLocked(id int64) error {
 		h.convModel = ""
 		h.convThinking = false
 	}
+	h.lastMsgID = 0
+	h.msgCount = int64(len(msgs))
 	h.messages = h.messages[:0]
 	for _, m := range msgs {
+		h.lastMsgID = max(h.lastMsgID, m.ID)
 		att := attach.LoadBestEffort(m.Attachments)
 		h.messages = append(h.messages, provider.Message{
 			Role:    m.Role,
@@ -164,7 +172,16 @@ func (h *History) Switch(id int64) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if id == h.convID {
-		return nil
+		if id == 0 {
+			return nil
+		}
+		count, last, err := h.store.MessageStamp(id)
+		if err != nil {
+			return err
+		}
+		if last == h.lastMsgID && count == h.msgCount {
+			return nil
+		}
 	}
 	if id != 0 {
 		conv, err := h.store.GetConversation(id)
@@ -213,9 +230,12 @@ func (h *History) AddWithAttachments(role, content, model string, thinking bool,
 			_ = h.store.UpdateConversationTitle(h.convID, store.DeriveTitle(content))
 		}
 	}
-	if err := h.store.AppendMessage(h.convID, role, content, paths, ""); err != nil {
+	msgID, err := h.store.AppendMessage(h.convID, role, content, paths, "")
+	if err != nil {
 		return err
 	}
+	h.lastMsgID = msgID
+	h.msgCount++
 	h.messages = append(h.messages, provider.Message{
 		Role:    role,
 		Content: att.Prompt(content),
@@ -233,7 +253,10 @@ func (h *History) RemoveLast() {
 		return
 	}
 	h.messages = h.messages[:len(h.messages)-1]
-	_ = h.store.RemoveLastMessage(h.convID)
+	if h.store.RemoveLastMessage(h.convID) == nil {
+		h.lastMsgID, _ = h.store.LastMessageID(h.convID)
+		h.msgCount--
+	}
 }
 
 // AddAssistantTo targets a conversation explicitly so a long streaming turn lands where it started.
@@ -243,10 +266,13 @@ func (h *History) AddAssistantTo(convID int64, content, toolCalls string) error 
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if err := h.store.AppendMessage(convID, "assistant", content, nil, toolCalls); err != nil {
+	msgID, err := h.store.AppendMessage(convID, "assistant", content, nil, toolCalls)
+	if err != nil {
 		return err
 	}
 	if convID == h.convID {
+		h.lastMsgID = msgID
+		h.msgCount++
 		h.messages = append(h.messages, provider.Message{Role: "assistant", Content: content})
 		h.truncateLocked()
 	}
@@ -266,6 +292,8 @@ func (h *History) RemoveLastFrom(convID int64) {
 	}
 	if convID == h.convID && len(h.messages) > 0 {
 		h.messages = h.messages[:len(h.messages)-1]
+		h.lastMsgID, _ = h.store.LastMessageID(convID)
+		h.msgCount--
 	}
 }
 
@@ -319,6 +347,8 @@ func (h *History) NewConversation(model string, thinking bool) (int64, error) {
 	h.convID = id
 	h.convModel = model
 	h.convThinking = thinking
+	h.lastMsgID = 0
+	h.msgCount = 0
 	h.messages = h.messages[:0]
 	return id, nil
 }
