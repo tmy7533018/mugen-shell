@@ -274,6 +274,7 @@ PanelWindow {
     Managers.MusicPlayerManager {
         id: musicPlayerManager
         fallbackAccent: theme.accent
+        positionWanted: modeManager.isMode("music")
     }
 
     Theme.IpcRouter {

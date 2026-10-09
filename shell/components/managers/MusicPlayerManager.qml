@@ -53,6 +53,7 @@ QtObject {
     property real position: 0
     property real duration: 0
     property bool seekingSuspended: false
+    property bool positionWanted: true
 
     property Process listPlayersProcess: Process {
         running: false
@@ -597,7 +598,7 @@ QtObject {
     property Timer positionTimer: Timer {
         interval: 1000
         repeat: true
-        running: musicManager.isPlaying && musicManager.activePlayer !== ""
+        running: musicManager.isPlaying && musicManager.activePlayer !== "" && musicManager.positionWanted
         triggeredOnStart: true
         onTriggered: {
             if (musicManager.activePlayer === "" || musicManager.seekingSuspended) return
