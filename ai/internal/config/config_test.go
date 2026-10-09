@@ -349,3 +349,26 @@ func TestLoadTurnsPruningOffWhenTheDefaultCannotBeWritten(t *testing.T) {
 		t.Fatalf("RetainDays = %d, want 0 when Load could not read or seed the file", cfg.History.RetainDays)
 	}
 }
+
+func TestLoadNamesThePersonaOnlyOnFirstRun(t *testing.T) {
+	path := sandbox(t)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.Personality.Name != "Yura" {
+		t.Errorf("first run Personality.Name = %q, want %q", cfg.Personality.Name, "Yura")
+	}
+
+	if err := os.WriteFile(path, []byte("[personality]\nsystem_prompt = \"mine\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err = Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.Personality.Name != "" {
+		t.Errorf("existing file without a name: Personality.Name = %q, want it left empty", cfg.Personality.Name)
+	}
+}

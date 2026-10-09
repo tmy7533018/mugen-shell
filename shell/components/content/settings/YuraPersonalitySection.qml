@@ -165,7 +165,7 @@ Rectangle {
             try {
                 let obj = JSON.parse(loadProcess.buf)
                 let p = obj.config && obj.config.personality ? obj.config.personality : {}
-                section.formName = p.name || "Yura"
+                section.formName = p.name || ""
                 section.formTone = p.tone || ""
                 section.formLanguage = p.language || ""
                 section.formSystemPrompt = p.system_prompt || ""
@@ -345,6 +345,16 @@ Rectangle {
                     verticalAlignment: TextInput.AlignVCenter
                     clip: true
                     onTextChanged: section.formName = text
+
+                    Text {
+                        anchors.fill: parent
+                        verticalAlignment: Text.AlignVCenter
+                        text: "Yura"
+                        color: section.theme ? section.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.60)
+                        font: nameInput.font
+                        visible: nameInput.text.length === 0 && !nameInput.activeFocus
+                        opacity: 0.5
+                    }
                 }
             }
         }

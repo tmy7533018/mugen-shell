@@ -193,6 +193,8 @@ func Load() (Config, error) {
 
 	info, err := os.Stat(path)
 	if os.IsNotExist(err) {
+		// Seeded here rather than in Default() so an existing file without the key keeps its verbatim prompt.
+		cfg.Personality.Name = "Yura"
 		if err := writeDefault(path, cfg); err != nil {
 			return fallback(), err
 		}
