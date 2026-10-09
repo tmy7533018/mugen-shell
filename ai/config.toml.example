@@ -113,9 +113,10 @@
 #
 # A tool that may make an irreversible change is held for a one-tap
 # approval in the chat UI before it runs; set `trusted = true` to skip
-# that prompt for a server you fully control. `env` values support ${VAR}
-# references resolved from mugen-ai's environment, so a token can stay in
-# ~/.config/mugen-ai/.env instead of being written here in plaintext.
+# that prompt for a server you fully control. `env` and `url` values
+# support ${VAR} references resolved from mugen-ai's environment, so a
+# token can stay in ~/.config/mugen-ai/.env instead of being written here
+# in plaintext.
 
 # [mcp.servers.memory]
 #   command = "npx"

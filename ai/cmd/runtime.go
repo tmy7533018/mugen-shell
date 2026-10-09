@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -196,7 +197,7 @@ func mcpServerConfigs(c config.MCP, trusted map[string]bool) map[string]mcp.Serv
 			Command:  s.Command,
 			Args:     s.Args,
 			Env:      expandEnv(s.Env),
-			URL:      s.URL,
+			URL:      expandURLEnv(s.URL),
 			Disabled: s.Disabled,
 			Trusted:  trusted[name],
 		}
@@ -214,6 +215,15 @@ func expandEnv(in map[string]string) map[string]string {
 		out[k] = os.Expand(v, os.Getenv)
 	}
 	return out
+}
+
+var urlEnvRef = regexp.MustCompile(`\$\{([A-Za-z_][A-Za-z0-9_]*)\}`)
+
+// Only the ${NAME} form: a URL may carry a literal $ (OData's ?$select=).
+func expandURLEnv(s string) string {
+	return urlEnvRef.ReplaceAllStringFunc(s, func(ref string) string {
+		return os.Getenv(ref[2 : len(ref)-1])
+	})
 }
 
 // Ollama is returned separately because the tool filter needs its Embed, absent from Provider.

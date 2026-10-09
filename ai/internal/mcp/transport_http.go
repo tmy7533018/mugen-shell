@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+const sseDrainWait = 500 * time.Millisecond
+
 // Streamable HTTP; a single POSTing worker keeps initialize → initialized → tools/list ordered.
 type httpTransport struct {
 	name   string
@@ -40,7 +42,7 @@ type httpTransport struct {
 func newHTTPTransport(name, rawURL string) (*httpTransport, error) {
 	u, err := url.Parse(rawURL)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
-		return nil, fmt.Errorf("invalid MCP server url %q (need http:// or https://)", rawURL)
+		return nil, errors.New("invalid MCP server url (need http:// or https://)")
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &httpTransport{
@@ -107,7 +109,7 @@ func (t *httpTransport) post(callCtx context.Context, data []byte) {
 
 	req, err := http.NewRequestWithContext(reqCtx, http.MethodPost, t.url, bytes.NewReader(data))
 	if err != nil {
-		t.deliverError(probe.ID, hasID, err.Error())
+		t.deliverError(probe.ID, hasID, withoutURL(err).Error())
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -124,7 +126,7 @@ func (t *httpTransport) post(callCtx context.Context, data []byte) {
 		if callCtx.Err() != nil {
 			return
 		}
-		t.fail(fmt.Errorf("http transport: %w", err))
+		t.fail(fmt.Errorf("http transport: %w", withoutURL(err)))
 		return
 	}
 	defer resp.Body.Close()
@@ -140,7 +142,7 @@ func (t *httpTransport) post(callCtx context.Context, data []byte) {
 		return // notification/response accepted, nothing comes back
 	case resp.StatusCode >= 400:
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		text := fmt.Sprintf("http transport: server returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		text := fmt.Sprintf("http transport: server returned status %d: %s", resp.StatusCode, t.redactURL(strings.TrimSpace(string(body))))
 		// A rejected session cannot be re-initialized in place, so hand the whole transport back to re-dial.
 		if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusUnauthorized {
 			t.fail(errors.New(text))
@@ -152,6 +154,10 @@ func (t *httpTransport) post(callCtx context.Context, data []byte) {
 
 	if strings.HasPrefix(resp.Header.Get("Content-Type"), "text/event-stream") {
 		t.pumpSSE(resp.Body, probe.ID, hasID)
+		// Reading on to the server's end of stream keeps an HTTP/1.1 connection reusable.
+		drain := time.AfterFunc(sseDrainWait, cancel)
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+		drain.Stop()
 		return
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxMessageBytes))
@@ -164,27 +170,56 @@ func (t *httpTransport) post(callCtx context.Context, data []byte) {
 	}
 }
 
+// net/http's *url.Error prints the full URL, and a hosted server's secret often rides in its path or query.
+func withoutURL(err error) error {
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		return fmt.Errorf("%s: %w", ue.Op, ue.Err)
+	}
+	return err
+}
+
+// Error pages often echo the request path (Express: "Cannot POST /s/<secret>/mcp").
+func (t *httpTransport) redactURL(s string) string {
+	u, err := url.Parse(t.url)
+	if err != nil {
+		return s
+	}
+	for _, part := range []string{u.RawQuery, u.Query().Encode(), u.EscapedPath(), u.Path} {
+		if len(part) > 1 {
+			s = strings.ReplaceAll(s, part, "<redacted>")
+		}
+	}
+	return s
+}
+
 // A scanner error surfaces as a JSON-RPC error rather than a truncated fragment.
 func (t *httpTransport) pumpSSE(r io.Reader, id json.RawMessage, hasID bool) {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 64*1024), maxMessageBytes)
 	var data []byte
-	flush := func() {
-		if len(data) > 0 {
-			t.deliver(data)
-			data = nil
-		}
-	}
 	for sc.Scan() {
 		line := sc.Text()
 		if line == "" {
-			flush()
+			if len(data) == 0 {
+				continue
+			}
+			t.deliver(data)
+			// The spec only says a server SHOULD close the stream after the response; one that doesn't would stall the worker.
+			if hasID && isResponseTo(data, id) {
+				return
+			}
+			data = nil
 			continue
 		}
 		if v, ok := strings.CutPrefix(line, "data:"); ok {
 			v = strings.TrimPrefix(v, " ")
 			if len(data) > 0 {
 				data = append(data, '\n')
+			}
+			if int64(len(data)+len(v)) > recvCap {
+				t.deliverError(id, hasID, fmt.Sprintf("http transport: SSE event exceeds %d bytes", recvCap))
+				return
 			}
 			data = append(data, v...)
 		}
@@ -193,7 +228,18 @@ func (t *httpTransport) pumpSSE(r io.Reader, id json.RawMessage, hasID bool) {
 		t.deliverError(id, hasID, fmt.Sprintf("http transport: SSE stream error: %v", err))
 		return
 	}
-	flush()
+	if len(data) > 0 {
+		t.deliver(data)
+	}
+}
+
+// A server request on the stream carries its own id space, so a matching number alone is not the reply.
+func isResponseTo(frame, id json.RawMessage) bool {
+	var probe struct {
+		ID     json.RawMessage `json:"id"`
+		Method string          `json:"method"`
+	}
+	return json.Unmarshal(frame, &probe) == nil && probe.Method == "" && bytes.Equal(probe.ID, id)
 }
 
 func (t *httpTransport) deliver(msg []byte) {

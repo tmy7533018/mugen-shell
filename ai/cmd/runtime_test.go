@@ -58,3 +58,13 @@ func TestGoogleStaysOffWithoutAKey(t *testing.T) {
 		t.Fatalf("want no models offered, got %v", models)
 	}
 }
+
+func TestMCPServerURLExpandsEnv(t *testing.T) {
+	t.Setenv("ZAP_SECRET", "s3cr3t")
+	got := mcpServerConfigs(config.MCP{Servers: map[string]config.MCPServer{
+		"zap": {URL: "https://example.com/s/${ZAP_SECRET}/mcp?$select=name&a=$$b"},
+	}}, nil)
+	if want := "https://example.com/s/s3cr3t/mcp?$select=name&a=$$b"; got["zap"].URL != want {
+		t.Errorf("URL = %q, want %q", got["zap"].URL, want)
+	}
+}

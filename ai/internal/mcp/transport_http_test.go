@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -409,3 +410,146 @@ func TestHTTPTransportSkipsQueuedCallWhoseCtxExpiredWaiting(t *testing.T) {
 }
 
 func itoa(n int64) string { b, _ := json.Marshal(n); return string(b) }
+
+func TestHTTPTransportDialErrorOmitsURLPathAndQuery(t *testing.T) {
+	tr, err := newHTTPTransport("test", "http://127.0.0.1:1/s/PATHSECRET/mcp?key=QUERYSECRET")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tr.close()
+
+	if err := tr.send(context.Background(), []byte(`{"jsonrpc":"2.0","id":9,"method":"ping"}`)); err != nil {
+		t.Fatal(err)
+	}
+	_, err = recvResult(t, tr)
+	if err == nil {
+		t.Fatal("expected recv to report the dead connection")
+	}
+	if strings.Contains(err.Error(), "SECRET") {
+		t.Errorf("error leaks the URL: %v", err)
+	}
+	if !strings.Contains(err.Error(), "connection refused") {
+		t.Errorf("error lost its cause: %v", err)
+	}
+}
+
+func TestHTTPTransportBadURLErrorOmitsTheURL(t *testing.T) {
+	_, err := newHTTPTransport("test", "ftp://example.com/s/PATHSECRET")
+	if err == nil || strings.Contains(err.Error(), "SECRET") {
+		t.Errorf("err = %v, want an error without the URL", err)
+	}
+}
+
+func TestHTTPTransportHandshakeSurvivesAHeldOpenSSEStream(t *testing.T) {
+	release := make(chan struct{})
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req struct {
+			ID     *int64 `json:"id"`
+			Method string `json:"method"`
+		}
+		_ = json.Unmarshal(body, &req)
+		if req.ID == nil {
+			w.WriteHeader(http.StatusAccepted)
+			return
+		}
+		result := `{}`
+		if req.Method == "tools/list" {
+			result = `{"tools":[{"name":"get_x","inputSchema":{"type":"object"}}]}`
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		io.WriteString(w, `data: {"jsonrpc":"2.0","id":`+itoa(*req.ID)+`,"method":"sampling/createMessage"}`+"\n\n")
+		io.WriteString(w, `data: {"jsonrpc":"2.0","id":`+itoa(*req.ID)+`,"result":`+result+`}`+"\n\n")
+		w.(http.Flusher).Flush()
+		select {
+		case <-r.Context().Done():
+		case <-release:
+		}
+	}))
+	defer ts.Close()
+	defer close(release)
+
+	m := Connect(context.Background(), map[string]ServerConfig{"held": {URL: ts.URL}})
+	defer m.Close()
+	if st := m.Statuses()[0]; !st.Connected || st.ToolCount != 1 {
+		t.Fatalf("status = %+v, want connected with 1 tool", st)
+	}
+}
+
+func TestHTTPTransportCapsAnSSEEvent(t *testing.T) {
+	old := recvCap
+	recvCap = 200
+	defer func() { recvCap = old }()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		for i := 0; i < 10; i++ {
+			io.WriteString(w, "data: "+strings.Repeat("x", 50)+"\n")
+		}
+	}))
+	defer ts.Close()
+
+	tr, err := newHTTPTransport("test", ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tr.close()
+	if err := tr.send(context.Background(), []byte(`{"jsonrpc":"2.0","id":9,"method":"tools/call"}`)); err != nil {
+		t.Fatal(err)
+	}
+	got := recvWithTimeout(t, tr)
+	if !strings.Contains(string(got), `"error"`) || !strings.Contains(string(got), `"id":9`) {
+		t.Errorf("expected a synthesized error for id 9, got: %.200s", got)
+	}
+}
+
+func TestHTTPTransportErrorPageOmitsURLPathAndQuery(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		io.WriteString(w, "<pre>Cannot POST "+r.URL.RequestURI()+"</pre>")
+	}))
+	defer ts.Close()
+
+	m := Connect(context.Background(), map[string]ServerConfig{"x": {URL: ts.URL + "/s/PATHSECRET/mcp?key=QUERYSECRET"}})
+	defer m.Close()
+	st := m.Statuses()[0]
+	if st.Error == "" || strings.Contains(st.Error, "SECRET") {
+		t.Errorf("status error = %q, want an error without the URL secret", st.Error)
+	}
+}
+
+func TestHTTPTransportReusesTheConnectionAfterAnSSEReply(t *testing.T) {
+	var conns atomic.Int32
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req struct {
+			ID *int64 `json:"id"`
+		}
+		_ = json.Unmarshal(body, &req)
+		w.Header().Set("Content-Type", "text/event-stream")
+		io.WriteString(w, `data: {"jsonrpc":"2.0","id":`+itoa(*req.ID)+`,"result":{}}`+"\n\n")
+		w.(http.Flusher).Flush()
+		time.Sleep(5 * time.Millisecond)
+	}))
+	ts.Config.ConnState = func(_ net.Conn, s http.ConnState) {
+		if s == http.StateNew {
+			conns.Add(1)
+		}
+	}
+	ts.Start()
+	defer ts.Close()
+
+	tr, err := newHTTPTransport("test", ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tr.close()
+	for i := int64(1); i <= 5; i++ {
+		if err := tr.send(context.Background(), []byte(`{"jsonrpc":"2.0","id":`+itoa(i)+`,"method":"ping"}`)); err != nil {
+			t.Fatal(err)
+		}
+		recvWithTimeout(t, tr)
+	}
+	if n := conns.Load(); n != 1 {
+		t.Errorf("5 requests used %d connections, want 1", n)
+	}
+}
