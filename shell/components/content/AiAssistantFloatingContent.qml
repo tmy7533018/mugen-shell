@@ -2032,7 +2032,9 @@ FocusScope {
             if (exitCode !== 0) {
                 const curlHttpError = 22
                 root.turnFailure = "Couldn't send: " + (exitCode === curlHttpError ? "the backend refused it" : "connection failed")
-                root.restoreDraft(text, files)
+                const rewound = root.messages.find(m => m.id === truncateProcess.messageId)
+                const textStillShown = rewound !== undefined && rewound.content === text
+                if (!textStillShown) root.restoreDraft(text, files)
                 return
             }
             // Drop the rewound tail locally too, so the resend can't append under forgotten messages.
