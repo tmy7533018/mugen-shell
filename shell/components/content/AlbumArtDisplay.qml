@@ -48,6 +48,8 @@ Item {
             asynchronous: true
             cache: true
             mipmap: true
+            sourceSize.width: artBackground.width * 2
+            sourceSize.height: artBackground.height * 2
 
             onStatusChanged: {
                 if (status === Image.Error && root.musicManager) {
