@@ -204,6 +204,14 @@ QtObject {
         artCacheProcess.running = true
     }
 
+    // A fetch right after the switch can still see the previous cover, so a second look follows.
+    function refetchFirefoxArt() {
+        _artUnreachable = ""
+        artRetryTimer.interval = 2000
+        cacheRemoteArt()
+        artRetryTimer.restart()
+    }
+
     property Process artCacheProcess: Process {
         running: false
         command: []
@@ -217,7 +225,8 @@ QtObject {
             let source = musicManager._artFetching
             musicManager._artCacheOutput = ""
             musicManager._artFetching = ""
-            if (exitCode === 0 && path !== "") {
+            const fetched = exitCode === 0 && path !== ""
+            if (fetched) {
                 musicManager.artRetryTimer.interval = 2000
                 if (musicManager._artWanted === source) {
                     musicManager._artCachedSource = source
@@ -228,7 +237,9 @@ QtObject {
                 musicManager._artUnreachable = source
                 musicManager.artRetryTimer.restart()
             }
-            Qt.callLater(() => musicManager.cacheRemoteArt())
+            if (!fetched || musicManager._artWanted !== source) {
+                Qt.callLater(() => musicManager.cacheRemoteArt())
+            }
         }
     }
 
@@ -377,6 +388,7 @@ QtObject {
                     musicManager.artist = newArtist || ""
                     musicManager.album = newAlbum || ""
                     musicManager.wantArt(newArtUrl || "")
+                    if (trackChanged && newArtUrl === musicManager.firefoxArtSource) musicManager.refetchFirefoxArt()
                     musicManager.status = newStatus || "Stopped"
                 } else {
                     if (parts.length > 0) {
