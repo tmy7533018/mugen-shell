@@ -198,7 +198,7 @@ func TestLegacyModelStillLeadsWithItsThinkingBlock(t *testing.T) {
 func TestThinkingIsNotReplayedAcrossAToolChange(t *testing.T) {
 	first := ChatOptions{Thinking: true, Tools: []Tool{{Name: "audio_get_volume"}}}
 	second := ChatOptions{Thinking: true, Tools: []Tool{{Name: "audio_get_volume"}, {Name: "brightness_get"}}}
-	for _, model := range []string{"claude-opus-5-5", "claude-fable-5-1", "claude-opus-6"} {
+	for _, model := range []string{"claude-opus-5-5", "claude-fable-5-1", "claude-opus-6", "claude-haiku-5-5"} {
 		_, content := toolRound(t, model, first, second, interleavedReply())
 
 		if got := strings.Join(blockTypes(content), ","); got != "text,tool_use,tool_use" {
@@ -235,6 +235,7 @@ func TestPrefixCheckTellsSnapshotsFromLaterVersions(t *testing.T) {
 		"claude-mythos-5-1":      false,
 		"claude-haiku-4-5":       false,
 		"claude-sonnet-5-5":      true,
+		"claude-haiku-5-5":       true,
 	} {
 		if got := checksThinkingPrefix(model); got != want {
 			t.Errorf("checksThinkingPrefix(%q) = %v, want %v", model, got, want)
@@ -289,7 +290,7 @@ func TestThinkingAsksForReadableSummariesWhereAccepted(t *testing.T) {
 
 // Thinking still spends from max_tokens when it cannot be switched off.
 func TestAlwaysOnModelsTurnThinkingDownWhenOff(t *testing.T) {
-	for _, model := range []string{"claude-opus-5-5", "claude-fable-5-1"} {
+	for _, model := range []string{"claude-opus-5-5", "claude-fable-5-1", "claude-sonnet-5-5"} {
 		var body []byte
 		srv := stubAnthropic(t, "data: {\"type\":\"message_stop\"}\n", &body)
 		err := testAnthropic(srv.URL).Chat(context.Background(), model,

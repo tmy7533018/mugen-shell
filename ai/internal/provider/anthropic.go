@@ -37,7 +37,7 @@ func usesLegacyThinking(model string) bool {
 
 // These think unconditionally, and an explicit "disabled" is a 400.
 func thinkingAlwaysOn(model string) bool {
-	for _, p := range []string{"claude-fable-", "claude-mythos-", "claude-opus-5-5"} {
+	for _, p := range []string{"claude-fable-", "claude-mythos-", "claude-opus-5-5", "claude-sonnet-5-5"} {
 		if strings.HasPrefix(model, p) {
 			return true
 		}
@@ -103,7 +103,7 @@ type Anthropic struct {
 
 func NewAnthropic(apiKey string, models []string, maxTokens int, effort string) *Anthropic {
 	if len(models) == 0 {
-		models = []string{"claude-haiku-4-5"}
+		models = []string{"claude-haiku-5-5"}
 	}
 	if maxTokens <= 0 {
 		maxTokens = 2048

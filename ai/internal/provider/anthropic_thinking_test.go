@@ -105,25 +105,36 @@ func TestThinkingAsksForAdaptiveDepth(t *testing.T) {
 
 // Leaving the field out reads as adaptive on newer models, so off has to be explicit.
 func TestThinkingOffIsStatedExplicitly(t *testing.T) {
-	var body []byte
-	srv := stubAnthropic(t, "data: {\"type\":\"message_stop\"}\n", &body)
-	defer srv.Close()
+	for _, model := range []string{"claude-x", "claude-haiku-5-5"} {
+		var body []byte
+		srv := stubAnthropic(t, "data: {\"type\":\"message_stop\"}\n", &body)
 
-	err := testAnthropic(srv.URL).Chat(context.Background(), "claude-x",
-		[]Message{{Role: "user", Content: "hi"}}, ChatOptions{Thinking: false},
-		func(ChatChunk) error { return nil })
-	if err != nil {
-		t.Fatalf("chat: %v", err)
-	}
+		err := testAnthropic(srv.URL).Chat(context.Background(), model,
+			[]Message{{Role: "user", Content: "hi"}}, ChatOptions{Thinking: false},
+			func(ChatChunk) error { return nil })
+		srv.Close()
+		if err != nil {
+			t.Fatalf("%s: chat: %v", model, err)
+		}
 
-	thinking, _ := thinkingField(t, body)
-	if thinking["type"] != "disabled" {
-		t.Errorf("thinking = %+v, want type disabled", thinking)
+		thinking, output := thinkingField(t, body)
+		if thinking["type"] != "disabled" {
+			t.Errorf("%s: thinking = %+v, want type disabled", model, thinking)
+		}
+		if output != nil {
+			t.Errorf("%s: output_config = %+v, want none alongside disabled", model, output)
+		}
 	}
 }
 
-// Adaptive and output_config both 400 on pre-4.6 tiers, and claude-haiku-4-5 is
-// the default fallback model, so this path is the common one, not the exotic one.
+func TestFallbackModelIsHaiku55(t *testing.T) {
+	models, err := NewAnthropic("test-key", nil, 0, "").Models(context.Background())
+	if err != nil || len(models) != 1 || models[0] != "claude-haiku-5-5" {
+		t.Fatalf("Models() = %v, %v; want only claude-haiku-5-5", models, err)
+	}
+}
+
+// Adaptive and output_config both 400 on pre-4.6 tiers.
 func TestLegacyModelAsksForABudget(t *testing.T) {
 	var body []byte
 	srv := stubAnthropic(t, "data: {\"type\":\"message_stop\"}\n", &body)
@@ -149,7 +160,7 @@ func TestLegacyModelAsksForABudget(t *testing.T) {
 }
 
 func TestThinkingOffIsOmittedWhereItCannotBeSaid(t *testing.T) {
-	for _, model := range []string{"claude-fable-5", "claude-opus-5-5", "claude-haiku-4-5"} {
+	for _, model := range []string{"claude-fable-5", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-4-5"} {
 		var body []byte
 		srv := stubAnthropic(t, "data: {\"type\":\"message_stop\"}\n", &body)
 
