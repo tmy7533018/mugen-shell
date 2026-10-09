@@ -45,7 +45,7 @@ Rectangle {
     // The Yura window is Hyprland's exec-once child, not part of the bar's unit.
     function restartYuraWindow() {
         const dir = Quickshell.shellDir
-        Theme.Hypr.exec("qs kill -p '" + dir + "/yura-shell.qml' && '" + dir + "/scripts/yura-window.sh'")
+        Theme.Hypr.exec("quickshell kill -p '" + dir + "/yura-shell.qml'; '" + dir + "/scripts/yura-window.sh'")
     }
 
     ColumnLayout {
@@ -146,6 +146,6 @@ Rectangle {
     Process {
         id: restartShellProcess
         running: false
-        command: ["systemctl", "--user", "restart", "mugen-shell.service"]
+        command: ["sh", "-c", "systemctl --user reset-failed mugen-shell.service; if systemctl --user is-enabled --quiet mugen-shell.service; then systemctl --user restart mugen-shell.service; else systemctl --user try-restart mugen-shell.service; fi"]
     }
 }
