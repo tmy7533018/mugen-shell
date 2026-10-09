@@ -41,7 +41,7 @@ for _ in {1..10}; do
 done
 
 if is_video "$TARGET"; then
-  spawn_daemon mpvpaper -o "$MPV_OPTS" '*' "$TARGET"
+  spawn_daemon mpvpaper "${MPVPAPER_FLAGS[@]}" -o "$MPV_OPTS" '*' "$TARGET"
 else
   ensure_swww
   awww img --resize crop "$TARGET" "${TRANS_OPTS[@]}"

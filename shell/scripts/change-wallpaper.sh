@@ -324,7 +324,7 @@ elif is_video "$WALLPAPER_ABS"; then
 
   echo "Starting mpvpaper..."
   debug_log "Starting mpvpaper with: $WALLPAPER_ABS"
-  spawn_daemon mpvpaper -o "$MPV_OPTS" '*' "$WALLPAPER_ABS" >"$THUMB_DIR/mpvpaper.log" 2>&1
+  spawn_daemon mpvpaper "${MPVPAPER_FLAGS[@]}" -o "$MPV_OPTS" '*' "$WALLPAPER_ABS" >"$THUMB_DIR/mpvpaper.log" 2>&1
 
   for i in {1..20}; do
     if pgrep mpvpaper >/dev/null 2>&1; then

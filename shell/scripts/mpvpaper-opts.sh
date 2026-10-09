@@ -1,3 +1,6 @@
+# -p pauses decoding while nothing shows the wallpaper; -a (mpvpaper 1.9+) also behind a fullscreen window on any output or workspace.
+MPVPAPER_FLAGS=(-p)
+[[ "$(mpvpaper --help 2>&1)" == *--auto-mode* ]] && MPVPAPER_FLAGS+=(-a FULL)
 MPV_SOCKET="${XDG_CACHE_HOME:-$HOME/.cache}/mugen-shell/wallp/mpvpaper.sock"
 # vaapi surfaces can't be read back, failing every mpv screenshot; auto-copy lands frames in memory.
 MPV_OPTS="no-config no-audio loop cache=yes profile=low-latency \
