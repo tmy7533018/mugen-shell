@@ -16,39 +16,17 @@ QtObject {
     property string previousDisplayText: "--"
     signal textChanged()
     
-    property Process dbusMonitor: Process {
-        id: monitor
+    property bool active: true
 
-        command: [
-            "dbus-monitor",
-            "--session",
-            "sender='org.fcitx.Fcitx5'"
-        ]
+    property int consecutiveFailures: 0
+    property bool queryAnswered: false
 
-        running: !root.monitorRestartTimer.running
-
-        stdout: SplitParser {
-            onRead: data => {
-                debounceTimer.restart()
-            }
-        }
-
-        // The stream ends when the process does, so this is where a dead monitor shows up.
-        stderr: StdioCollector {
-            onStreamFinished: root.monitorRestartTimer.restart()
-        }
-    }
-
-    // A bus hiccup would otherwise leave the IME indicator frozen until the shell restarts.
-    property Timer monitorRestartTimer: Timer {
-        interval: 2000
-    }
-    
-    property Timer debounceTimer: Timer {
-        interval: 100
-        repeat: false
+    property Timer pollTimer: Timer {
+        interval: root.consecutiveFailures >= 3 ? 10000 : 1000
+        repeat: true
+        running: root.active
         onTriggered: {
-            queryProcess.running = true
+            if (!queryProc.running) queryProc.running = true
         }
     }
     
@@ -75,9 +53,17 @@ QtObject {
             onRead: data => {
                 let trimmed = data.trim()
                 if (trimmed.length > 0) {
+                    root.queryAnswered = true
                     root.updateDisplayText(trimmed)
                 }
             }
+        }
+
+        // A binary that cannot be spawned never emits exited, so the outcome is judged when running drops.
+        onRunningChanged: {
+            if (running) return
+            root.consecutiveFailures = root.queryAnswered ? 0 : root.consecutiveFailures + 1
+            root.queryAnswered = false
         }
     }
     
@@ -129,11 +115,5 @@ QtObject {
     Component.onCompleted: {
         // Delay initial query to wait for fcitx5 to start
         initTimer.start()
-    }
-    
-    Component.onDestruction: {
-        if (dbusMonitor.running) {
-            dbusMonitor.running = false
-        }
     }
 }
