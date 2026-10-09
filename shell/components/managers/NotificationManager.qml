@@ -11,30 +11,43 @@ QtObject {
     property bool notificationsEnabled: settingsManager ? settingsManager.notificationsEnabled : true
     property var settingsManager
     signal notificationReceived(var notification)
+    signal notificationUpdated(var notification)
 
     readonly property string soundsDir: Theme.Paths.soundsDir
     readonly property string stateFile: Theme.Paths.stateDir + "/notifications.json"
 
-    function addNotification(n) {
-        if (!n.summary && !n.body) {
-            return
-        }
+    property int keySeq: 0
+    property var pendingRefresh: ({})
+    property bool stateRead: false
+    property bool saveQueued: false
 
-        let newNotif = {
-            id: n.id || Date.now(),
+    function newKey() {
+        return Date.now().toString(36) + "-" + (++keySeq)
+    }
+
+    function fieldsFrom(n) {
+        return {
             title: n.summary || n.appName || "Notification",
             message: n.body || n.summary || "",
-            time: "just now",
-            timestamp: Date.now(),
             desktopEntry: n.desktopEntry || "",
             appIcon: n.appIcon || "",
             appName: n.appName || "",
             image: n.image || "",
-            // Live objects: an action cannot outlive its sending process, so neither is persisted.
-            source: n,
             actions: n.actions || [],
             resident: n.resident === true
         }
+    }
+
+    function addNotification(n) {
+        let newNotif = Object.assign({
+            id: n.id || Date.now(),
+            // Stable across hot reloads (live notifications are re-emitted) but unique per launch (server ids restart).
+            key: Quickshell.instanceId + "-" + n.id,
+            time: "just now",
+            timestamp: Date.now(),
+            // Live objects: an action cannot outlive its sending process, so neither is persisted.
+            source: n
+        }, fieldsFrom(n))
 
         let newNotifications = [newNotif]
         for (let i = 0; i < root.notifications.length && i < 49; i++) {
@@ -43,20 +56,57 @@ QtObject {
         for (let i = 49; i < root.notifications.length; i++) {
             release(root.notifications[i])
         }
-        n.closed.connect(() => root.forgetSource(newNotif.id))
+        const key = newNotif.key
+        n.closed.connect(() => root.forgetSource(key))
+        const refresh = () => root.scheduleRefresh(key)
+        for (const changed of [n.summaryChanged, n.bodyChanged, n.appNameChanged, n.appIconChanged,
+                               n.imageChanged, n.desktopEntryChanged, n.residentChanged]) {
+            changed.connect(refresh)
+        }
+        // Quickshell frees the replaced actions right after this signal returns, so refresh before it does.
+        n.actionsChanged.connect(() => {
+            root.pendingRefresh[key] = true
+            root.flushRefresh()
+        })
 
         root.notifications = newNotifications
         root.unreadCount++
-        root.notificationReceived(newNotif)
-        playSound()
+        // A reload re-emits every live notification; only a new arrival should pop up and chime.
+        if (!n.lastGeneration) {
+            root.notificationReceived(newNotif)
+            playSound()
+        }
         save()
     }
 
+    function scheduleRefresh(key) {
+        pendingRefresh[key] = true
+        Qt.callLater(root.flushRefresh)
+    }
+
+    function flushRefresh() {
+        const keys = pendingRefresh
+        pendingRefresh = ({})
+        let next = null
+        const updated = []
+        for (let i = 0; i < notifications.length; i++) {
+            const entry = notifications[i]
+            if (!keys[entry.key] || !entry.source) continue
+            if (!next) next = notifications.slice(0)
+            next[i] = Object.assign({}, entry, fieldsFrom(entry.source))
+            updated.push(next[i])
+        }
+        if (!next) return
+        notifications = next
+        for (const entry of updated) root.notificationUpdated(entry)
+        saveDebounce.restart()
+    }
+
     // Once closed, the object is gone but the reference stays truthy, so drop it here.
-    function forgetSource(notifId) {
+    function forgetSource(key) {
         let next = notifications.slice(0)
         for (let i = 0; i < next.length; i++) {
-            if (next[i].id === notifId) {
+            if (next[i].key === key) {
                 next[i] = Object.assign({}, next[i], { source: null, actions: [] })
                 notifications = next
                 return
@@ -75,12 +125,21 @@ QtObject {
         notif.source = null
     }
 
-    function invokeAction(notifId, action) {
-        if (!action) return false
+    function invokeAction(key, action) {
+        // An action dropped by a replacement lingers as an object with no invoke().
+        if (!action || typeof action.invoke !== "function") return false
         action.invoke()
-        let notif = notifications.find(n => n.id === notifId)
+        let notif = notifications.find(n => n.key === key)
         // A resident notification is meant to outlive its own action.
         return !notif || !notif.resident
+    }
+
+    function defaultAction(notif) {
+        let actions = notif && notif.actions ? notif.actions : []
+        for (let i = 0; i < actions.length; i++) {
+            if (actions[i] && typeof actions[i].identifier === "string" && actions[i].identifier === "default") return actions[i]
+        }
+        return null
     }
 
     property real soundThrottleMs: 1000
@@ -143,9 +202,8 @@ QtObject {
         }
     }
     
-    // Server ids restart near 1 each session, so a restored entry can share one with a live notification.
-    function removeNotification(notifId) {
-        let i = notifications.findIndex(n => n.id === notifId)
+    function removeNotification(key) {
+        let i = notifications.findIndex(n => n.key === key)
         if (i < 0) return
         release(notifications[i])
         let next = notifications.slice(0)
@@ -179,8 +237,15 @@ QtObject {
     }
     
     function save() {
+        // A reload re-emits live notifications before the history is read, and saving then would overwrite it.
+        if (!stateRead) {
+            saveQueued = true
+            return
+        }
+        saveQueued = false
         let payload = notifications.map(n => ({
             id: n.id,
+            key: n.key,
             title: n.title,
             message: n.message,
             timestamp: n.timestamp,
@@ -200,11 +265,13 @@ QtObject {
             if (!Array.isArray(restored) || restored.length === 0) return
             // The read is async, so a notification arriving first must not be replaced by it.
             let known = {}
-            for (let i = 0; i < notifications.length; i++) known[String(notifications[i].id)] = true
+            for (let i = 0; i < notifications.length; i++) known[notifications[i].key] = true
             let merged = notifications.slice(0)
             for (let i = 0; i < restored.length; i++) {
-                if (known[String(restored[i].id)]) continue
-                merged.push(Object.assign({}, restored[i], { time: "", actions: [] }))
+                if (restored[i].key && known[restored[i].key]) continue
+                let key = restored[i].key || newKey()
+                known[key] = true
+                merged.push(Object.assign({}, restored[i], { key: key, time: "", actions: [] }))
             }
             notifications = merged
             updateTimeLabels()
@@ -216,6 +283,11 @@ QtObject {
     property Process saveProcess: Process {
         command: []
         running: false
+    }
+
+    property Timer saveDebounce: Timer {
+        interval: 1000
+        onTriggered: root.save()
     }
 
     property Process readProcess: Process {
@@ -236,6 +308,8 @@ QtObject {
                 root.applyFromJson(stateReader.output)
             }
             stateReader.output = ""
+            root.stateRead = true
+            if (root.saveQueued) root.save()
         }
     }
 

@@ -28,21 +28,33 @@ Item {
     property var removingNotifications: ({})
     
     onNotificationsChanged: {
-        if (!isClearingAll) {
+        if (isClearingAll) {
+            refreshRows()
+        } else {
             syncNotificationsToModel()
         }
     }
+
+    // The sweep owns inserts and removals, but a row left stale until it ends holds actions Quickshell has freed.
+    function refreshRows() {
+        for (let i = 0; i < notificationListModel.count; i++) {
+            const key = notificationListModel.get(i).key
+            const entry = notifications.find(n => n.key === key)
+            if (entry) notificationListModel.set(i, { "key": entry.key, "modelData": entry })
+        }
+    }
     
-    // Reconciled by id so surviving rows keep their delegates (reuseItems is off).
+    // Reconciled by key so surviving rows keep their delegates (reuseItems is off).
     function syncNotificationsToModel() {
         const wanted = {}
-        for (let i = 0; i < notifications.length; i++) wanted[notifications[i].id] = true
+        for (let i = 0; i < notifications.length; i++) wanted[notifications[i].key] = true
         for (let i = notificationListModel.count - 1; i >= 0; i--) {
-            if (!wanted[notificationListModel.get(i).modelData.id]) notificationListModel.remove(i)
+            if (!wanted[notificationListModel.get(i).key]) notificationListModel.remove(i)
         }
         for (let i = 0; i < notifications.length; i++) {
-            const row = { "modelData": notifications[i] }
-            if (i < notificationListModel.count && notificationListModel.get(i).modelData.id === notifications[i].id) {
+            // Own role, so reconciling never converts a row's modelData and the raw action pointers inside it.
+            const row = { "key": notifications[i].key, "modelData": notifications[i] }
+            if (i < notificationListModel.count && notificationListModel.get(i).key === notifications[i].key) {
                 // The relative "x mins ago" label mutates each tick, so delegates freeze without a re-push.
                 notificationListModel.set(i, row)
             } else {
@@ -64,7 +76,7 @@ Item {
             const entry = root.pendingDismissals[key]
             if (entry.dispatched) continue
             entry.dispatched = true
-            notificationManager.removeNotification(isNaN(key) ? key : Number(key))
+            notificationManager.removeNotification(key)
         }
     }
 
@@ -72,31 +84,28 @@ Item {
     readonly property int dismissFlagClearMs: 950
 
     // The swiped card is already hidden, so dropping it at once lets displaced close the whole gap.
-    function removeNotificationImmediate(notificationId) {
-        let notifIdStr = String(notificationId)
-        if (root.removingNotifications[notifIdStr] !== undefined) return
+    function removeNotificationImmediate(key) {
+        if (root.removingNotifications[key] !== undefined) return
 
         let newRemoving = Object.assign({}, root.removingNotifications)
-        newRemoving[notifIdStr] = Date.now()
+        newRemoving[key] = Date.now()
         root.removingNotifications = newRemoving
 
-        root.pendingDismissals[notifIdStr] = { at: Date.now(), dispatched: true }
+        root.pendingDismissals[key] = { at: Date.now(), dispatched: true }
         dismissSweeper.start()
-        root.notificationManager.removeNotification(isNaN(notifIdStr) ? notifIdStr : Number(notifIdStr))
+        root.notificationManager.removeNotification(key)
     }
 
-    function removeNotification(notificationId) {
-        let notifIdStr = String(notificationId)
-
-        if (removingNotifications[notifIdStr] !== undefined) {
+    function removeNotification(key) {
+        if (removingNotifications[key] !== undefined) {
             return
         }
 
         let newRemoving = Object.assign({}, removingNotifications)
-        newRemoving[notifIdStr] = Date.now()
+        newRemoving[key] = Date.now()
         removingNotifications = newRemoving
 
-        pendingDismissals[notifIdStr] = { at: Date.now(), dispatched: false }
+        pendingDismissals[key] = { at: Date.now(), dispatched: false }
         dismissSweeper.start()
     }
 
@@ -115,12 +124,12 @@ Item {
 
                 if (age >= root.dismissAnimationMs && !entry.dispatched) {
                     entry.dispatched = true
-                    notificationManager.removeNotification(isNaN(key) ? key : Number(key))
+                    notificationManager.removeNotification(key)
                 }
 
                 if (age < root.dismissFlagClearMs) continue
 
-                if (!root.notifications.some(n => String(n.id) === key)) {
+                if (!root.notifications.some(n => n.key === key)) {
                     delete root.pendingDismissals[key]
                     delete stillRemoving[key]
                     flagsChanged = true
@@ -174,9 +183,9 @@ Item {
         repeat: true
         onTriggered: {
             if (clearAllCurrentIndex < notificationListModel.count) {
-                let notifId = String(notificationListModel.get(clearAllCurrentIndex).modelData.id)
+                let key = notificationListModel.get(clearAllCurrentIndex).key
                 let newRemoving = Object.assign({}, removingNotifications)
-                newRemoving[notifId] = Date.now()
+                newRemoving[key] = Date.now()
                 removingNotifications = newRemoving
                 
                 clearAllCurrentIndex++
@@ -230,6 +239,19 @@ Item {
     
     function resetAutoCloseTimer() {
         if (modeManager.isMode("notification")) modeManager.bump()
+    }
+
+    function openNotification(notif) {
+        if (!notif) return
+        let action = notificationManager.defaultAction(notif)
+        let keep = action !== null && !notificationManager.invokeAction(notif.key, action)
+        // Hyprland's focus_on_activate is off, so the app's own activation only marks it urgent.
+        if (notif.desktopEntry && notif.desktopEntry.length > 0) {
+            launchAppProcess.command = ["mugen-ai", "hypr", "focus-or-launch", notif.desktopEntry]
+            launchAppProcess.running = true
+        }
+        if (!keep) removeNotification(notif.key)
+        resetAutoCloseTimer()
     }
 
     function toggleNotificationsAndPreview() {
@@ -326,23 +348,14 @@ Item {
                 event.accepted = true
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                 let idx = notificationList.currentIndex
-                if (idx >= 0 && idx < notifications.length) {
-                    let notif = notifications[idx]
-                    if (notif && notif.desktopEntry && notif.desktopEntry.length > 0) {
-                        launchAppProcess.command = ["mugen-ai", "hypr", "focus-or-launch", notif.desktopEntry]
-                        launchAppProcess.running = true
-                    }
-                    if (notif && notif.id !== undefined) {
-                        root.removeNotification(notif.id)
-                    }
-                }
+                if (idx >= 0 && idx < notifications.length) root.openNotification(notifications[idx])
                 event.accepted = true
             } else if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
                 let idx = notificationList.currentIndex
                 if (idx >= 0 && idx < notifications.length) {
                     let notif = notifications[idx]
-                    if (notif && notif.id !== undefined) {
-                        root.removeNotification(notif.id)
+                    if (notif && notif.key !== undefined) {
+                        root.removeNotification(notif.key)
                     }
                 }
                 event.accepted = true
@@ -625,31 +638,24 @@ Item {
                         notifications: root.notifications
                         index: model.index
                         
-                        onRemoveRequested: (notificationId) => {
-                            root.removeNotification(notificationId)
+                        onRemoveRequested: (key) => {
+                            root.removeNotification(key)
                             root.resetAutoCloseTimer()
                         }
 
-                        onSwipeRemoved: (notificationId) => {
-                            root.removeNotificationImmediate(notificationId)
+                        onSwipeRemoved: (key) => {
+                            root.removeNotificationImmediate(key)
                             root.resetAutoCloseTimer()
                         }
                         
-                        onActionInvoked: (notificationId, action) => {
-                            if (root.notificationManager.invokeAction(notificationId, action)) {
-                                root.removeNotification(notificationId)
+                        onActionInvoked: (key, action) => {
+                            if (root.notificationManager.invokeAction(key, action)) {
+                                root.removeNotification(key)
                             }
                             root.resetAutoCloseTimer()
                         }
 
-                        onActionRequested: (notif) => {
-                            if (notif.desktopEntry && notif.desktopEntry.length > 0) {
-                                launchAppProcess.command = ["mugen-ai", "hypr", "focus-or-launch", notif.desktopEntry]
-                                launchAppProcess.running = true
-                            }
-                            root.removeNotification(notif.id)
-                            root.resetAutoCloseTimer()
-                        }
+                        onActionRequested: (notif) => root.openNotification(notif)
                     }
                 }
                 

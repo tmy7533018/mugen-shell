@@ -15,10 +15,10 @@ Rectangle {
     property var notifications
     property int index
 
-    signal removeRequested(var notificationId)
-    signal swipeRemoved(var notificationId)
+    signal removeRequested(var key)
+    signal swipeRemoved(var key)
     signal actionRequested(var notif)
-    signal actionInvoked(var notificationId, var action)
+    signal actionInvoked(var key, var action)
     
     width: parent ? parent.width : 0
     height: shouldCollapseHeight ? 0 : (isExpanded && !notificationItem.isRemoving ? contentColumn.implicitHeight + 24 : 65)
@@ -51,11 +51,11 @@ Rectangle {
     }
     
     property bool isRemoving: modelData
-        && removingNotifications[String(modelData.id)] !== undefined
+        && removingNotifications[modelData.key] !== undefined
     property int removalIndex: {
         if (!isRemoving) return 0
         for (let i = 0; i < notifications.length; i++) {
-            if (notifications[i].id === modelData.id) return i
+            if (notifications[i].key === modelData.key) return i
         }
         return 0
     }
@@ -135,7 +135,7 @@ Rectangle {
             if (notificationItem.ListView.view)
                 notificationItem.ListView.view.currentIndex = -1
             if (notificationItem.modelData)
-                notificationItem.swipeRemoved(notificationItem.modelData.id)
+                notificationItem.swipeRemoved(notificationItem.modelData.key)
         }
     }
     
@@ -264,14 +264,23 @@ Rectangle {
             Item { Layout.fillWidth: true }
 
             Repeater {
-                model: notificationItem.modelData ? notificationItem.modelData.actions : []
+                // The spec reserves "default" for clicking the notification itself.
+                model: {
+                    let actions = notificationItem.modelData ? notificationItem.modelData.actions : []
+                    let buttons = []
+                    for (let i = 0; i < actions.length; i++) {
+                        // An action dropped by a replacement lingers as an object with no identifier.
+                        if (actions[i] && typeof actions[i].identifier === "string" && actions[i].identifier !== "default") buttons.push(actions[i])
+                    }
+                    return buttons
+                }
 
                 delegate: NotificationPill {
                     required property var modelData
 
                     theme: notificationItem.theme
                     label: modelData.text
-                    onClicked: notificationItem.actionInvoked(notificationItem.modelData.id, modelData)
+                    onClicked: notificationItem.actionInvoked(notificationItem.modelData.key, modelData)
                 }
             }
 
@@ -350,7 +359,7 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: notificationItem.removeRequested(modelData.id)
+                    onClicked: notificationItem.removeRequested(modelData.key)
                 }
             }
         }
@@ -420,7 +429,7 @@ Rectangle {
             if (mouse.button === Qt.LeftButton) {
                 actionRequested(modelData)
             } else if (mouse.button === Qt.RightButton) {
-                removeRequested(modelData.id)
+                removeRequested(modelData.key)
             }
         }
     }

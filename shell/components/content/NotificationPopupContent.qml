@@ -43,15 +43,19 @@ Item {
         }
     }
 
+    function suppressed() {
+        if (!notificationManager.notificationsEnabled) {
+            return true
+        }
+        // Held back from the screen only; the notification is already in the list.
+        return root.fullscreenActive && root.settingsManager
+            && root.settingsManager.notificationSuppressOnFullscreen
+    }
+
     Connections {
         target: notificationManager
         function onNotificationReceived(notification) {
-            if (!notificationManager.notificationsEnabled) {
-                return
-            }
-            // Held back from the screen only; the notification is already in the list.
-            if (root.fullscreenActive && root.settingsManager
-                    && root.settingsManager.notificationSuppressOnFullscreen) {
+            if (root.suppressed()) {
                 return
             }
 
@@ -64,6 +68,17 @@ Item {
                 // Otherwise a burst's later arrivals inherit the first one's deadline.
                 root.restartAutoClose()
             }
+        }
+
+        function onNotificationUpdated(entry) {
+            if (root.suppressed()) {
+                return
+            }
+            if (!root.currentNotification || root.currentNotification.key !== entry.key) {
+                return
+            }
+
+            root.currentNotification = entry
         }
     }
 
