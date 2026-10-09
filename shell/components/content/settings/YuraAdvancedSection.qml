@@ -174,7 +174,7 @@ Rectangle {
             font.letterSpacing: 0.5
         }
 
-        InfoRow { title: "Backend address"; value: aiBackend.baseUrl }
+        InfoRow { title: "Backend socket"; value: aiBackend.socketPath || "—" }
         InfoRow { title: "Quickshell config"; value: section.qsConfig || "—" }
 
         RowLayout {
