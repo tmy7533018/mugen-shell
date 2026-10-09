@@ -347,7 +347,12 @@ Item {
 
                                 Text {
                                     Layout.alignment: Qt.AlignHCenter
-                                    text: index === 0 ? "Today" : Qt.formatDateTime(new Date(modelData.date), "ddd")
+                                    text: {
+                                        if (index === 0) return "Today"
+                                        let ymd = modelData.date.split("-")
+                                        // Noon local: a date-only ISO string parses as UTC, and local midnight can fall in a DST gap.
+                                        return Qt.formatDateTime(new Date(Number(ymd[0]), Number(ymd[1]) - 1, Number(ymd[2]), 12), "ddd")
+                                    }
                                     font.family: "M PLUS 2"; font.pixelSize: root.scaled(12.5); color: root.cDim
                                 }
                                 UI.SvgIcon {
