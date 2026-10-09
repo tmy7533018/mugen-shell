@@ -328,6 +328,18 @@ PanelWindow {
         value: barWindow.lockOpacity
     }
 
+    IdleMonitor {
+        id: ambientIdle
+        timeout: 90
+        respectInhibitors: false
+    }
+
+    Binding {
+        target: Theme.Motion
+        property: "ambientPaused"
+        value: ambientIdle.isIdle || barWindow.barHidden
+    }
+
     NumberAnimation {
         id: lockFadeOut
         target: barWindow

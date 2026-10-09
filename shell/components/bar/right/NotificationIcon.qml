@@ -22,8 +22,10 @@ Item {
     property real highlightPulse: 0.0
 
     SequentialAnimation on highlightPulse {
+        id: unreadPulse
         loops: Animation.Infinite
         running: notificationIconContainer.hasUnreadNotifications && !notificationMouseArea.containsMouse
+        paused: unreadPulse.running && !Theme.Motion.ambient
 
         NumberAnimation { from: 0.0; to: 1.0; duration: 1200; easing.type: Easing.InOutSine }
         NumberAnimation { from: 1.0; to: 0.0; duration: 1200; easing.type: Easing.InOutSine }
@@ -38,7 +40,7 @@ Item {
         let accentBase = theme.accent
         let themedH = (accentBase.hsvHue - 0.35 + 1.0) % 1.0
         let themed = Qt.hsva(themedH, accentBase.hsvSaturation, Math.min(1.0, accentBase.hsvValue + 0.5), accentBase.a)
-        let t = highlightPulse
+        let t = Theme.Motion.reduced ? 1.0 : highlightPulse
         return Qt.rgba(base.r + (themed.r - base.r) * t,
                        base.g + (themed.g - base.g) * t,
                        base.b + (themed.b - base.b) * t,
@@ -75,7 +77,7 @@ Item {
         borderWidth: 1
         maxScale: 2.0
         cycleMs: 4000
-        running: notificationIconContainer.hasUnreadNotifications
+        running: notificationIconContainer.hasUnreadNotifications && Theme.Motion.ambient
     }
 
     Component {

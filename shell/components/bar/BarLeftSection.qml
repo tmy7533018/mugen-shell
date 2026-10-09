@@ -317,7 +317,7 @@ RowLayout {
             haloPointCount: 24
             haloWaveAmplitude: 1.2
             breathEnabled: root.settingsManager ? root.settingsManager.yuraIdleBreath : true
-            active: true
+            active: !root.aiPanelOpen
             scale: aiMouseArea.containsMouse ? 1.08 : 1.0
             opacity: root.aiPanelOpen ? 0 : 1
 

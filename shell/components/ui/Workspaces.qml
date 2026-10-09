@@ -15,7 +15,6 @@ Item {
     property var existingWorkspaces: []
     property var settingsManager: null
     readonly property int workspaceCount: settingsManager ? settingsManager.workspaceCount : 5
-    readonly property bool reduceMotion: settingsManager ? settingsManager.reduceMotion : false
 
     property int activeWorkspaceId: {
         if (!Hyprland.focusedWorkspace) return 1
@@ -251,8 +250,10 @@ Item {
                 }
 
                 SequentialAnimation on pulseScale {
+                    id: activePulse
                     loops: Animation.Infinite
-                    running: !activeSmokeContainer.isMoving && !workspacesRoot.reduceMotion
+                    running: !activeSmokeContainer.isMoving
+                    paused: activePulse.running && !Theme.Motion.ambient
 
                     NumberAnimation {
                         to: 1.3
@@ -425,8 +426,10 @@ Item {
                     property real pulseScale: 1.0
 
                     SequentialAnimation on pulseScale {
+                        id: inactivePulse
                         loops: Animation.Infinite
-                        running: workspacesRoot.visible && parent.visible && !workspacesRoot.reduceMotion
+                        running: workspacesRoot.visible && parent.visible
+                        paused: inactivePulse.running && !Theme.Motion.ambient
 
                         NumberAnimation {
                             to: 1.5

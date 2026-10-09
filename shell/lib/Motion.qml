@@ -7,6 +7,10 @@ QtObject {
     property var settings: null
     readonly property real speed: settings && isFinite(settings.animationDurationMultiplier) ? settings.animationDurationMultiplier : 1.0
 
+    property bool ambientPaused: false
+    readonly property bool reduced: !!(settings && settings.reduceMotion)
+    readonly property bool ambient: !reduced && !ambientPaused
+
     readonly property int instant: 0
     readonly property int micro: Math.round(150 * speed)      // color / opacity ticks: hover tint, focus borders
     readonly property int fast: Math.round(200 * speed)       // hover scale, chip toggles, small reveals

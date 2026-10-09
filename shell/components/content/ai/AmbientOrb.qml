@@ -28,6 +28,7 @@ Item {
     SequentialAnimation {
         id: idleBreath
         loops: Animation.Infinite
+        paused: idleBreath.running && !Theme.Motion.ambient
         NumberAnimation { target: root; property: "pulseScale"; to: root.idleBreathPeak; duration: root.idleBreathDuration; easing.type: Easing.InOutSine }
         NumberAnimation { target: root; property: "pulseScale"; to: 1.0; duration: root.idleBreathDuration; easing.type: Easing.InOutSine }
     }
@@ -77,6 +78,7 @@ Item {
         pointCount: root.haloPointCount
         edgeAlpha: root.haloEdgeAlpha
         running: root.active && root.showHalo
+        ambient: !root.streaming
 
         Behavior on baseOpacity { NumberAnimation { duration: Theme.Motion.slow; easing.type: Theme.Motion.easeMove } }
     }
@@ -91,5 +93,6 @@ Item {
         pointCount: root.corePointCount
         edgeAlpha: root.coreEdgeAlpha
         running: root.active
+        ambient: !root.streaming
     }
 }

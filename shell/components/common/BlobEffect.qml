@@ -1,4 +1,5 @@
 import QtQuick
+import "../../lib" as Theme
 
 // One ShaderEffect quad per layer; the edge is evaluated in assets/shaders/blob.frag.
 // pointCount is accepted but ignored, so callers that still set it keep working.
@@ -12,12 +13,16 @@ Item {
     property real animationSpeed: 0.08
     property int pointCount: 16
     property bool running: true
+    property bool ambient: true
     property real edgeAlpha: 0.0
 
     // Shared clock in seconds, gated on visibility so hidden blobs stop churning uniforms.
     property real time: 0
     NumberAnimation on time {
+        id: clock
         running: root.running && root.visible
+        // Qt rejects paused on a stopped animation and does not re-apply it on restart, hence the clock.running term.
+        paused: clock.running && root.ambient && !Theme.Motion.ambient
         loops: Animation.Infinite
         from: 0
         to: 3600
