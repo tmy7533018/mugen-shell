@@ -253,22 +253,24 @@ func (a *Anthropic) chat(ctx context.Context, model string, messages []Message, 
 	thinkingOn := opts.Thinking || alwaysOn
 	msgs := make([]map[string]any, 0, len(messages))
 
+	lastWasTool := false
 	for _, m := range messages {
 		if m.Role == "system" {
 			continue
 		}
 		if m.Role == "tool" {
-			// Anthropic has no tool role: results ride on a user message referencing the tool_use id.
-			msgs = append(msgs, map[string]any{
-				"role": "user",
-				"content": []map[string]any{{
-					"type":        "tool_result",
-					"tool_use_id": m.ToolCallID,
-					"content":     m.Content,
-				}},
-			})
+			result := map[string]any{"type": "tool_result", "tool_use_id": m.ToolCallID, "content": m.Content}
+			// One user message per tool round: split results teach the model to stop calling tools in parallel.
+			if lastWasTool {
+				last := msgs[len(msgs)-1]
+				last["content"] = append(last["content"].([]map[string]any), result)
+			} else {
+				msgs = append(msgs, map[string]any{"role": "user", "content": []map[string]any{result}})
+			}
+			lastWasTool = true
 			continue
 		}
+		lastWasTool = false
 
 		role := m.Role
 		if role != "user" && role != "assistant" {

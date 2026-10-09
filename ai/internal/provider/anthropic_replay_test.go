@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -345,5 +346,48 @@ func TestDisabledRejectionRetriesWithThinkingLeftOn(t *testing.T) {
 	}
 	if output["effort"] != "low" || maxTokens != 2048+effortHeadroom["low"] {
 		t.Errorf("retry effort = %v, max_tokens = %d", output["effort"], maxTokens)
+	}
+}
+
+func TestParallelToolResultsShareOneUserMessage(t *testing.T) {
+	var body []byte
+	srv := stubAnthropic(t, "data: {\"type\":\"message_stop\"}\n", &body)
+	defer srv.Close()
+
+	msgs := []Message{
+		{Role: "user", Content: "volume and brightness?"},
+		{Role: "assistant", ToolCalls: []ToolCall{{ID: "tu_1", Name: "a"}, {ID: "tu_2", Name: "b"}}},
+		{Role: "tool", ToolCallID: "tu_1", Content: "40"},
+		{Role: "tool", ToolCallID: "tu_2", Content: "70"},
+		{Role: "assistant", ToolCalls: []ToolCall{{ID: "tu_3", Name: "c"}}},
+		{Role: "tool", ToolCallID: "tu_3", Content: "ok"},
+	}
+	if err := testAnthropic(srv.URL).Chat(context.Background(), "claude-x", msgs, ChatOptions{},
+		func(ChatChunk) error { return nil }); err != nil {
+		t.Fatalf("chat: %v", err)
+	}
+
+	var payload struct {
+		Messages []struct {
+			Role    string           `json:"role"`
+			Content []map[string]any `json:"content"`
+		} `json:"messages"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("request body: %v", err)
+	}
+	var shape []string
+	for _, m := range payload.Messages {
+		var ids []string
+		for _, c := range m.Content {
+			if id, ok := c["tool_use_id"].(string); ok {
+				ids = append(ids, id)
+			}
+		}
+		shape = append(shape, m.Role+fmt.Sprint(ids))
+	}
+	want := []string{"user[]", "assistant[]", "user[tu_1 tu_2]", "assistant[]", "user[tu_3]"}
+	if fmt.Sprint(shape) != fmt.Sprint(want) {
+		t.Errorf("messages = %v, want %v", shape, want)
 	}
 }
