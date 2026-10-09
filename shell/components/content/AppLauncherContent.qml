@@ -1298,7 +1298,7 @@ FocusScope {
                         if (currentIndex >= 0 && root.openGroupMembers[currentIndex]) root.launchApp(root.openGroupMembers[currentIndex])
                         event.accepted = true
                     } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.key === Qt.Key_Backtab) {
-                        currentIndex = count === 0 ? -1 : (currentIndex - 1 + count) % count
+                        currentIndex = count === 0 ? -1 : (currentIndex < 0 ? count - 1 : (currentIndex - 1 + count) % count)
                         event.accepted = true
                     } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L || event.key === Qt.Key_Tab) {
                         currentIndex = count === 0 ? -1 : (currentIndex + 1) % count
