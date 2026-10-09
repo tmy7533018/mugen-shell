@@ -393,9 +393,7 @@ ShellRoot {
             onStreamFinished: {
                 try {
                     root.applyCalendar(JSON.parse(this.text))
-                } catch (e) {
-                    root.calendarEvents = []
-                }
+                } catch (e) {}
             }
         }
     }
