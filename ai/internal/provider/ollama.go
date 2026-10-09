@@ -233,7 +233,8 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 				Thinking  string           `json:"thinking"`
 				ToolCalls []ollamaToolCall `json:"tool_calls,omitempty"`
 			} `json:"message"`
-			Done bool `json:"done"`
+			Done       bool   `json:"done"`
+			DoneReason string `json:"done_reason"`
 		}
 		if err := json.Unmarshal(line, &raw); err != nil {
 			continue
@@ -250,13 +251,17 @@ func (o *Ollama) Chat(ctx context.Context, model string, messages []Message, opt
 
 		thinkingBuf.WriteString(raw.Message.Thinking)
 
-		chunk := ChatChunk{Content: raw.Message.Content, ThinkingDelta: raw.Message.Thinking, Done: raw.Done}
-		if raw.Done {
+		cutOff := raw.Done && raw.DoneReason == "length"
+		chunk := ChatChunk{Content: raw.Message.Content, ThinkingDelta: raw.Message.Thinking, Done: raw.Done && !cutOff}
+		if chunk.Done {
 			chunk.ToolCalls = toolCalls
 			chunk.Thinking = thinkingBuf.String()
 		}
 		if err := fn(chunk); err != nil {
 			return err
+		}
+		if cutOff {
+			return truncatedStream("ollama")
 		}
 		if raw.Done {
 			finished = true

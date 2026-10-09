@@ -93,3 +93,30 @@ func TestOllamaCompleteStreamIsStillSuccess(t *testing.T) {
 		t.Fatalf("complete stream reported an error: %v", err)
 	}
 }
+
+// num_predict or the context window ran out: Ollama still sends done:true, with done_reason "length".
+func TestOllamaReportsALengthStop(t *testing.T) {
+	srv := stubTruncated(t,
+		`{"message":{"content":"half an ans"},"done":false}`+"\n"+
+			`{"message":{"content":""},"done":true,"done_reason":"length"}`+"\n")
+	defer srv.Close()
+
+	var sawDone bool
+	var got strings.Builder
+	err := testOllama(srv.URL).Chat(context.Background(), "stub",
+		[]Message{{Role: "user", Content: "hi"}}, ChatOptions{},
+		func(c ChatChunk) error {
+			sawDone = sawDone || c.Done
+			got.WriteString(c.Content)
+			return nil
+		})
+	if err == nil {
+		t.Fatal("a reply cut off at the length limit was reported as success")
+	}
+	if sawDone {
+		t.Error("a length stop must not deliver a Done chunk")
+	}
+	if got.String() != "half an ans" {
+		t.Errorf("partial content should still reach the caller, got %q", got.String())
+	}
+}
