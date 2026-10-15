@@ -44,11 +44,36 @@ PanelWindow {
     property real lockOpacity: 1.0
     property int lockClientPid: 0
 
+    // Keep the top edge available as a small reveal target on compact displays.
+    property bool autoHideRevealed: false
+    property bool pointerInRevealStrip: false
+    property bool pointerInBarBody: false
+
     readonly property bool barHidden: fullscreenHidden || lockHidden
+    readonly property bool autoHideActive: modeManager.isMode("normal") && !autoHideRevealed
+
+    function updateAutoHidePointer() {
+        if (pointerInRevealStrip || pointerInBarBody) {
+            autoHideRevealed = true
+            autoHideTimer.stop()
+        } else {
+            autoHideTimer.restart()
+        }
+    }
+
+    Timer {
+        id: autoHideTimer
+        interval: 650
+        repeat: false
+        onTriggered: {
+            if (!barWindow.pointerInRevealStrip && !barWindow.pointerInBarBody)
+                barWindow.autoHideRevealed = false
+        }
+    }
 
     implicitHeight: modeManager.normalBarSize.height
     // Not lock-aware: dropping the zone reflows tiled windows, which session_lock_xray makes visible.
-    exclusiveZone: fullscreenHidden ? 0 : modeManager.normalBarSize.height
+    exclusiveZone: fullscreenHidden || autoHideActive ? 0 : modeManager.normalBarSize.height
     // The lock path fades to zero instead of unmapping: an unmapped layer has no exclusive zone.
     visible: !fullscreenHidden
     // Release keyboard focus in normal mode so launched apps can receive it.
@@ -163,7 +188,22 @@ PanelWindow {
 
     // Input follows the animated body, not the stepped window, so the gap left while shrinking
     // stays click-through instead of swallowing presses meant for the app underneath.
-    mask: Region { item: barBody }
+    mask: Region { item: barWindow.autoHideActive ? revealStrip : barBody }
+
+    Item {
+        id: revealStrip
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: 4
+
+        HoverHandler {
+            onHoveredChanged: {
+                barWindow.pointerInRevealStrip = hovered
+                barWindow.updateAutoHidePointer()
+            }
+        }
+    }
 
     // The layer only ever grows: every resize shifts the bar content for two frames, and a shrink would do that on each close.
     readonly property int targetHeight: modeManager.currentBarSize.height
@@ -504,8 +544,22 @@ PanelWindow {
         id: barBody
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.top: parent.top
+        y: barWindow.autoHideActive ? -(modeManager.normalBarSize.height - revealStrip.height) : 0
         height: modeManager.currentBarSize.height
+
+        Behavior on y {
+            NumberAnimation {
+                duration: Theme.Motion.sweep
+                easing.type: Easing.OutExpo
+            }
+        }
+
+        HoverHandler {
+            onHoveredChanged: {
+                barWindow.pointerInBarBody = hovered
+                barWindow.updateAutoHidePointer()
+            }
+        }
 
         Behavior on height {
             NumberAnimation {
