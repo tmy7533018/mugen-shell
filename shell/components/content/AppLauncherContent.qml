@@ -695,6 +695,10 @@ FocusScope {
                         }
                     })
                 }
+                if (modeManager.pendingLauncherText !== "") {
+                    searchField.text = modeManager.pendingLauncherText
+                    modeManager.pendingLauncherText = ""
+                }
             }
         }
     }

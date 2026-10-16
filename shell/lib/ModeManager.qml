@@ -5,6 +5,7 @@ QtObject {
     id: manager
     
     property string currentMode: "normal"
+    property string pendingLauncherText: ""
     property var modes: ({})
     property var settingsManager
 
@@ -66,6 +67,7 @@ QtObject {
     
     function closeAllModes() {
         currentMode = "normal"
+        pendingLauncherText = ""
     }
     
     function isMode(modeName) {
@@ -140,6 +142,16 @@ QtObject {
         }
 
         switch(cmd) {
+            case "typecode":
+                // Printable-key binds are non-consuming. Only turn them into launcher
+                // input when the desktop has no focused app; the helper does that probe.
+                if (currentMode !== "normal" || parts.length < 2) break
+                const code = Number(parts[1])
+                if (!Number.isInteger(code) || code < 32 || code > 126) break
+                pendingLauncherText = String.fromCharCode(code)
+                currentMode = "launcher"
+                interaction()
+                break
             case "open":
                 if (parts.length > 1) safeOpen(parts[1])
                 break

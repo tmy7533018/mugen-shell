@@ -190,6 +190,46 @@ for _, b in ipairs(binds) do
     end
 end
 
+-- Type-to-search on an empty desktop. These binds are non-consuming so
+-- application typing is preserved; the helper ignores events while a client
+-- owns focus and seeds the launcher with the first printable ASCII character.
+local function shellQuote(value)
+    return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
+local function bindDesktopCharacter(key, char)
+    local code = string.byte(char)
+    hl.bind(key,
+        hl.dsp.exec_cmd(shellQuote(scripts .. "/desktop-type-char.sh") .. " " .. code),
+        { non_consuming = true })
+end
+
+for code = string.byte("a"), string.byte("z") do
+    local lower = string.char(code)
+    bindDesktopCharacter(lower, lower)
+    bindDesktopCharacter("SHIFT + " .. string.upper(lower), string.upper(lower))
+end
+
+local desktopDigitKeys = {
+    { "1", "!" }, { "2", "@" }, { "3", "#" }, { "4", "$" }, { "5", "%" },
+    { "6", "^" }, { "7", "&" }, { "8", "*" }, { "9", "(" }, { "0", ")" },
+}
+for _, pair in ipairs(desktopDigitKeys) do
+    bindDesktopCharacter(pair[1], pair[1])
+    bindDesktopCharacter("SHIFT + " .. pair[1], pair[2])
+end
+
+local desktopPunctuation = {
+    { "space", " " }, { "minus", "-", "_" }, { "equal", "=", "+" },
+    { "bracketleft", "[", "{" }, { "bracketright", "]", "}" },
+    { "backslash", "\\", "|" }, { "semicolon", ";", ":" },
+    { "apostrophe", "'", '"' }, { "grave", "`", "~" },
+    { "comma", ",", "<" }, { "period", ".", ">" }, { "slash", "/", "?" },
+}
+for _, row in ipairs(desktopPunctuation) do
+    bindDesktopCharacter(row[1], row[2])
+    if row[3] then bindDesktopCharacter("SHIFT + " .. row[1], row[3]) end
+end
+
 -- Exported so Settings -> Keyboard reads what is actually bound, not a copy that can drift.
 local function jsonString(v)
     return '"' .. tostring(v):gsub('[\\"]', '\\%0'):gsub('\n', '\\n') .. '"'
