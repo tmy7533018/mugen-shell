@@ -156,12 +156,6 @@ ShellRoot {
     }
 
     Process {
-        id: openYuraSettingsProcess
-        command: []
-        running: false
-    }
-
-    Process {
         id: openUrlProcess
         command: []
         running: false
@@ -280,11 +274,6 @@ ShellRoot {
             onApplyBlur: params => root.applyBlur(params)
             onApplySound: name => root.applyNotificationSound(name)
             onApplyTimerSound: name => root.applyTimerSound(name)
-            onOpenYuraSettings: {
-                openYuraSettingsProcess.command =
-                    ["bash", Quickshell.shellDir + "/scripts/toggle-yura-settings.sh"]
-                openYuraSettingsProcess.running = true
-            }
             onOpenUrl: url => {
                 openUrlProcess.command = ["xdg-open", url]
                 openUrlProcess.running = true

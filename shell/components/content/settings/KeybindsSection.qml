@@ -121,16 +121,6 @@ Rectangle {
                 { keys: "Enter", desc: "Apply / Open / Paste" }
             ]}
         ]},
-        { id: "yura", label: "Yura", sections: [
-            { name: "Yura", rows: [
-                { keys: "Enter", desc: "Send message" },
-                { keys: "←→", desc: "Scroll the response (≈25 chars per press)" },
-                { keys: "Home / End", desc: "Jump to start / end of response" },
-                { keys: "Ctrl+C / Ctrl+A", desc: "Copy / select all of the response" },
-                { keys: "Type a letter", desc: "Discard the response and start a new question" },
-                { keys: "Click the icon", desc: "Detach into the corner pop-up" }
-            ]}
-        ]}
     ]
 
     property string mode: "system"

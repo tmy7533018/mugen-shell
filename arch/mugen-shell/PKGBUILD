@@ -3,7 +3,7 @@
 pkgbase=mugen-shell
 pkgname=(mugen-shell mugen-ai mugen-audio)
 pkgver=0.1.0
-pkgrel=1
+pkgrel=3
 pkgdesc='A Quickshell + Hyprland desktop with a 夢幻 aesthetic'
 arch=('x86_64')
 url='https://github.com/tmy7533018/mugen-shell'
@@ -87,7 +87,7 @@ package_mugen-shell() {
     'ttf-jetbrains-mono-nerd' 'noto-fonts-emoji' 'qt6-declarative'
     # quickshell does not pull qt5compat, and 34 QML files import it.
     'qt6-5compat'
-    'mugen-audio' 'mugen-ai'
+    'mugen-audio'
   )
   optdepends=(
     'kitty: the default $terminal'

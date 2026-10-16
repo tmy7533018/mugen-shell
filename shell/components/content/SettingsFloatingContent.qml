@@ -17,7 +17,6 @@ Item {
     signal applyBlur(var params)
     signal applySound(string name)
     signal applyTimerSound(string name)
-    signal openYuraSettings()
     signal openUrl(string url)
 
     function openCategory(id) {
@@ -34,7 +33,6 @@ Item {
         { id: "timer",      label: "Idle & Lock",  types: ["timer", "lockTimer", "lockScreen", "idlePower"] },
         { id: "system",     label: "System",       types: ["battery", "workspaces", "launcherTerminal", "displayMonitor"] },
         { id: "keybinds",   label: "Keyboard",     types: ["keybinds"] },
-        { id: "yura",       label: "Yura →",       action: "yura-settings" },
         { id: "about",      label: "About",        types: ["about"] },
         { id: "reset",      label: "Reset",        types: ["reset"], danger: true }
     ]
@@ -77,9 +75,6 @@ Item {
         categories: root.categories
         initialCategory: root.initialCategory
         resolveSection: root.sectionFor
-        onCategoryAction: action => {
-            if (action === "yura-settings") root.openYuraSettings()
-        }
     }
 
     Component { id: themeSection; Settings.ThemeSection {
