@@ -82,6 +82,9 @@ QtObject {
     // Bar.qml restarts the central autoCloseTimer when this fires.
     signal interaction()
 
+    // Seed or extend app search from desktop keyboard input.
+    signal launcherQueryRequested(string text, bool append)
+
     function bump() {
         interaction()
     }
@@ -147,6 +150,13 @@ QtObject {
         }
 
         switch(cmd) {
+            case "launcher-query": {
+                if (parts.length < 2) break
+                const wasOpen = isMode("launcher")
+                safeOpen("launcher")
+                launcherQueryRequested(parts.slice(1).join(" "), wasOpen)
+                break
+            }
             case "open":
                 if (parts.length > 1) safeOpen(parts[1])
                 break

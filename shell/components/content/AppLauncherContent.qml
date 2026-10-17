@@ -654,6 +654,11 @@ FocusScope {
 
     Connections {
         target: modeManager
+        function onLauncherQueryRequested(text, append) {
+            const nextText = append ? (root.searchText + text) : text
+            if (searchField) searchField.text = nextText
+            focusTimer.restart()
+        }
         function onCurrentModeChanged() {
             contextMenu.shown = false
             root.openGroupId = ""

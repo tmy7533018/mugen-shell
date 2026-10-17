@@ -48,6 +48,22 @@ local dirOf   = { h = "left", j = "down", k = "up", l = "right" }
 local vimKeys = { "h", "j", "k", "l" }
 local wsNums  = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
 
+-- Plasma-style type-to-search on an empty desktop. With a focused application,
+-- auto_consuming passes the key through untouched. The launcher receives the
+-- opening letter over IPC because that keystroke predates its keyboard focus.
+local function bindDesktopSearchKey(key, text)
+    hl.bind(key, function()
+        if hl.get_active_window() then return { ok = false } end
+        hl.dispatch(hl.dsp.exec_cmd(scripts .. "/mugen-shell-ipc.sh launcher-query " .. text))
+    end, { auto_consuming = true, description = "Type to search apps on desktop" })
+end
+
+for byte = string.byte("a"), string.byte("z") do
+    local letter = string.char(byte)
+    -- Hyprland treats case variants as the same no-modifier bind.
+    bindDesktopSearchKey(letter, letter)
+end
+
 -- `each` binds one row many times; keybind-overrides.lua can't target a family by id, only a plain bind.
 local binds = {
     { id = "app.terminal", cat = "apps", desc = "Terminal",
