@@ -176,6 +176,15 @@ PanelWindow {
         else flyAnim.restart()
     }
 
+    function cancelFlight() {
+        flyAnim.stop()
+        returnAnim.stop()
+        flyOrb.shown = false
+        flyOrb.opacity = 1
+        flyOrb.returning = false
+        chatWindow.flying = false
+    }
+
     function startReturnFlight() {
         if (chatWindow.yuraState.expanded) return
         chatWindow.beginFlight(true)
@@ -595,13 +604,13 @@ PanelWindow {
             chatWindow.beginFlight(false)
         }
         function onExpandedChanged() {
-            if (yuraState.expanded) return
+            if (yuraState.expanded) {
+                // Left to land, the return flight would tell the bar the panel closed while it is open again.
+                if (returnAnim.running) chatWindow.cancelFlight()
+                return
+            }
             if (chatWindow.flying) {
-                flyAnim.stop()
-                flyOrb.shown = false
-                flyOrb.opacity = 1
-                flyOrb.returning = false
-                chatWindow.flying = false
+                chatWindow.cancelFlight()
                 chatWindow.setBarPanelOpen(false)
                 return
             }
