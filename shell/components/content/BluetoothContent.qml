@@ -456,6 +456,7 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
+                        enabled: root.bluetoothManager.isPowered
                         onClicked: {
                             root.showAvailableDevices = false
                             modeManager.bump()
@@ -489,6 +490,7 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
+                        enabled: root.bluetoothManager.isPowered
                         onClicked: {
                             root.showAvailableDevices = true
                             if (bluetoothManager.availableDevices.length === 0 && !bluetoothManager.isScanning) {
@@ -649,7 +651,7 @@ Item {
 
                 Text {
                     anchors.centerIn: parent
-                    text: bluetoothManager.isScanning ? "Scanning..." : "No devices"
+                    text: "No devices"
                     color: (theme ? theme.textFaint : Qt.rgba(0.72, 0.72, 0.82, 0.50))
                     font.pixelSize: 14
                     font.weight: Font.Light
