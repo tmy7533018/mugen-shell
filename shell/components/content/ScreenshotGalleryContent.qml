@@ -209,9 +209,7 @@ FocusScope {
                         ? filePath
                         : (root.screenshotManager ? root.screenshotManager.filePath(index) : "")
                     property string fileNameValue: fileName && fileName.length > 0 ? fileName : ""
-                    property string imageSource: filePathValue
-                        ? (filePathValue.startsWith("file://") ? filePathValue : "file://" + filePathValue)
-                        : ""
+                    property string imageSource: filePathValue ? Theme.Paths.fileUrl(filePathValue) : ""
 
                     Rectangle {
                         anchors.fill: parent

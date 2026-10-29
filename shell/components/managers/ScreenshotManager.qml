@@ -38,7 +38,7 @@ QtObject {
         running: false
         onExited: {
             if (folderModel) {
-                folderModel.folder = "file://" + screenshotManager.screenshotDir.split("/").map(encodeURIComponent).join("/")
+                folderModel.folder = Theme.Paths.fileUrl(screenshotManager.screenshotDir)
                 folderModel.sortField = FolderListModel.Time
                 folderModel.sortReversed = false
             }

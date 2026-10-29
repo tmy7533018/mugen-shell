@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Usage: sync-wallpaper-thumbs.sh <thumb-dir> [file...]
+# Usage: sync-wallpaper-thumbs.sh <thumb-dir> <wallpaper-dir> [file...]
 # Prints "<state><TAB><path>[<TAB>hue<TAB>chroma<TAB>lightness]" — Qt only reloads an image whose URL changed.
 set -uo pipefail
 
 THUMB_DIR="${1:-}"
-[[ -z "$THUMB_DIR" ]] && { echo "Usage: $0 <thumb-dir> [file...]" >&2; exit 1; }
-shift
+WALL_DIR="${2:-}"
+[[ -z "$THUMB_DIR" || -z "$WALL_DIR" ]] && { echo "Usage: $0 <thumb-dir> <wallpaper-dir> [file...]" >&2; exit 1; }
+shift 2
 
 mkdir -p "$THUMB_DIR"
 
@@ -37,6 +38,13 @@ hsl_of() {
   }'
 }
 
+thumb_name() {
+  name=$1
+  [[ $name == "$WALL_DIR"/* ]] && name=${name#"$WALL_DIR"}
+  name=${name//"%"/%25}
+  name=${name//\//%2F}.png
+}
+
 emit() {
   local state=$1 src=$2 out=$3
   if [[ -s "$out.color" ]]; then
@@ -48,7 +56,8 @@ emit() {
 
 declare -A keep=()
 for src; do
-  keep["${src##*/}.png"]=1
+  thumb_name "$src"
+  keep["$name"]=1
 done
 
 for f in "$THUMB_DIR"/*; do
@@ -65,7 +74,8 @@ command -v ffmpeg >/dev/null 2>&1 || {
 }
 
 for src; do
-  out="$THUMB_DIR/${src##*/}.png"
+  thumb_name "$src"
+  out="$THUMB_DIR/$name"
   fail="$out.failed"
 
   if [[ -f "$out" && ! "$src" -nt "$out" ]]; then
@@ -82,13 +92,13 @@ for src; do
   case "${src,,}" in
   *.mp4|*.webm|*.mkv|*.gif)
     # A clip shorter than 2s yields no frame there, so the first-frame pass below catches it.
-    ffmpeg -y -v error -ss 2 -i "$src" -vf "$SCALE" -frames:v 1 "$out" >/dev/null 2>&1 &&
+    ffmpeg -y -v error -ss 2 -i "$src" -vf "$SCALE" -frames:v 1 -update 1 "$out" >/dev/null 2>&1 &&
       [[ -s "$out" ]] && ok=1
     ;;
   esac
 
   if [[ $ok -eq 0 ]]; then
-    ffmpeg -y -v error -i "$src" -vf "$SCALE" -frames:v 1 "$out" >/dev/null 2>&1 &&
+    ffmpeg -y -v error -i "$src" -vf "$SCALE" -frames:v 1 -update 1 "$out" >/dev/null 2>&1 &&
       [[ -s "$out" ]] && ok=1
   fi
 

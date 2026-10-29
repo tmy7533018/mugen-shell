@@ -32,7 +32,7 @@ Row {
             Image {
                 id: image
                 anchors.fill: parent
-                source: thumb.isImage ? "file://" + thumb.modelData : ""
+                source: thumb.isImage ? Theme.Paths.fileUrl(thumb.modelData) : ""
                 fillMode: Image.PreserveAspectCrop
                 sourceSize.width: root.thumbSize * 2
                 asynchronous: true

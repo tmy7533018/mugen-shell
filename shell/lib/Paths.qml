@@ -23,4 +23,8 @@ QtObject {
     readonly property string timerSoundsDir: dataDir + "/timer-sounds"
 
     readonly property string runtimeDir: Quickshell.env("XDG_RUNTIME_DIR") || ""
+
+    function fileUrl(path) {
+        return "file://" + path.split("/").map(encodeURIComponent).join("/")
+    }
 }

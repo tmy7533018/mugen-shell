@@ -139,17 +139,19 @@ QtObject {
                lower.endsWith('.mkv') || lower.endsWith('.gif')
     }
 
+    // sync-wallpaper-thumbs.sh names the file the same way, so change both together.
     function thumbnailPathFor(path) {
-        return thumbDir + "/" + path.split('/').pop() + ".png"
+        let rel = path.startsWith(wallpaperDir + "/") ? path.slice(wallpaperDir.length) : path
+        return thumbDir + "/" + rel.replace(/%/g, "%25").replace(/\//g, "%2F") + ".png"
     }
 
     // A video has nothing to show until its thumbnail renders; an image can stand in for itself.
     function thumbnailSource(path) {
         let token = thumbTokens[path]
         if (token === undefined)
-            return isVideoFile(path) ? "" : "file://" + path
+            return isVideoFile(path) ? "" : Theme.Paths.fileUrl(path)
 
-        let url = "file://" + thumbnailPathFor(path)
+        let url = Theme.Paths.fileUrl(thumbnailPathFor(path))
         return token > 0 ? url + "#" + token : url
     }
 
@@ -199,7 +201,8 @@ QtObject {
         thumbSyncProcess.command = [
             "bash",
             Quickshell.shellDir + "/scripts/sync-wallpaper-thumbs.sh",
-            thumbDir
+            thumbDir,
+            wallpaperDir
         ].concat(wallpapers || [])
         thumbSyncProcess.running = true
     }
