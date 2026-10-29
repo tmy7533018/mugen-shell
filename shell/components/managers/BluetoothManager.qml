@@ -97,7 +97,8 @@ QtObject {
         devicePairProcess.deviceAddress = deviceAddress
         devicePairProcess.deviceName = deviceName
         // A device wanting passkey confirmation leaves bluetoothctl on stdin, and nothing else clears isPairing.
-        devicePairProcess.command = ["bash", "-c", "timeout 60 bluetoothctl pair '" + escapedAddress + "'"]
+        devicePairProcess.command = ["bash", "-c",
+            "bluetoothctl pairable on && timeout 60 bluetoothctl pair '" + escapedAddress + "'; result=$?; bluetoothctl pairable off; exit $result"]
         devicePairProcess.running = true
     }
 

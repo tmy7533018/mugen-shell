@@ -83,6 +83,14 @@ RowLayout {
         brightnessManager: root.brightnessManager
     }
 
+    Right.BatteryIndicator {
+        theme: root.theme
+        typo: root.typo
+        modeManager: root.modeManager
+        batteryManager: root.batteryManager
+        settingsManager: root.settingsManager
+    }
+
     Separator {}
 
     Right.AirplaneToggle {
