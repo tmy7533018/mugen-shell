@@ -12,7 +12,14 @@ if [[ "${1:-}" == "--open" ]]; then
 fi
 category="${1:-}"
 
+# The check and the launch are one step, or two callers both start a window.
+LOCK_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/mugen-shell/toggle-settings.lock"
+mkdir -p "$(dirname "$LOCK_FILE")"
+exec 9>"$LOCK_FILE"
+flock 9
+
 if pgrep -f "/settings-shell\.qml" >/dev/null 2>&1; then
+    exec 9>&-
     if [[ -n "$category" ]]; then
         qs -p "$SHELL_PATH" ipc call settings openCategory "$category"
         "$(dirname "$0")/raise-window.sh" "Mugen Settings"
@@ -25,8 +32,8 @@ if pgrep -f "/settings-shell\.qml" >/dev/null 2>&1; then
 fi
 
 if [[ -n "$category" ]]; then
-    MUGEN_SETTINGS_CATEGORY="$category" setsid nohup quickshell -p "$SHELL_PATH" -d >/dev/null 2>&1 &
+    MUGEN_SETTINGS_CATEGORY="$category" setsid nohup quickshell -p "$SHELL_PATH" -d >/dev/null 2>&1 9>&- &
 else
-    setsid nohup quickshell -p "$SHELL_PATH" -d >/dev/null 2>&1 &
+    setsid nohup quickshell -p "$SHELL_PATH" -d >/dev/null 2>&1 9>&- &
 fi
 disown 2>/dev/null || true
