@@ -75,9 +75,10 @@ FocusScope {
         return idlePlaceholder
     }
 
+    // Returns false when nothing was sent and the caller still holds the text.
     function sendMessage(text) {
-        if (!text || streaming || chatProcess.running) return
-        if (!aiAvailable || !hasModel) return
+        if (!text || streaming || chatProcess.running) return false
+        if (!aiAvailable || !hasModel) return false
         responseDisplay = ""
         displayingResponse = false
         stopRequested = false
@@ -92,6 +93,7 @@ FocusScope {
             thinking: thinking
         })
         chatProcess.running = true
+        return true
     }
 
     function stopStreaming() {
@@ -101,6 +103,26 @@ FocusScope {
         streaming = false
         // The backend reads the disconnect as a denial, so the strip goes too.
         pendingConfirm = null
+    }
+
+    function finishStream(exitCode) {
+        streaming = false
+        // A timed-out stream can leave the strip up on a prompt the backend already abandoned.
+        pendingConfirm = null
+        // A stop is a SIGTERM, so curl's non-zero exit says nothing about the connection.
+        if (exitCode !== 0 && !stopRequested) {
+            responseDisplay = responseDisplay.length === 0
+                ? "[connection failed]"
+                : responseDisplay + " [connection failed]"
+        }
+        stopRequested = false
+        // Parked in the input field so it can be scrolled / copied.
+        if (responseDisplay.length > 0) {
+            inputField.text = mdFlat(responseDisplay)
+            inputField.cursorPosition = 0
+            displayingResponse = true
+            inputField.forceActiveFocus()
+        }
     }
 
     // Fire-and-forget: a lapsed prompt just 404s harmlessly.
@@ -339,8 +361,7 @@ FocusScope {
                         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                             let txt = inputField.text.trim()
                             if (txt.length > 0 && !root.streaming) {
-                                root.sendMessage(txt)
-                                inputField.text = ""
+                                if (root.sendMessage(txt)) inputField.text = ""
                             }
                             event.accepted = true
                         }
@@ -440,8 +461,7 @@ FocusScope {
                             } else {
                                 let txt = inputField.text.trim()
                                 if (txt.length > 0) {
-                                    root.sendMessage(txt)
-                                    inputField.text = ""
+                                    if (root.sendMessage(txt)) inputField.text = ""
                                 }
                             }
                         }
@@ -629,25 +649,9 @@ FocusScope {
             }
         }
 
-        onExited: (exitCode) => {
-            root.streaming = false
-            // A timed-out stream can leave the strip up on a prompt the backend already abandoned.
-            root.pendingConfirm = null
-            // A stop is a SIGTERM, so curl's non-zero exit says nothing about the connection.
-            if (exitCode !== 0 && !root.stopRequested) {
-                root.responseDisplay = root.responseDisplay.length === 0
-                    ? "[connection failed]"
-                    : root.responseDisplay + " [connection failed]"
-            }
-            root.stopRequested = false
-            // Parked in the input field so it can be scrolled / copied.
-            if (root.responseDisplay.length > 0) {
-                inputField.text = root.mdFlat(root.responseDisplay)
-                inputField.cursorPosition = 0
-                root.displayingResponse = true
-                inputField.forceActiveFocus()
-            }
-        }
+        onExited: (exitCode) => root.finishStream(exitCode)
+        // Quickshell reports a launch failure only by dropping running; exited never fires.
+        onRunningChanged: { if (!chatProcess.running && root.streaming) root.finishStream(-1) }
     }
 
     Process {
