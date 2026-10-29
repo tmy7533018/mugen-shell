@@ -86,6 +86,7 @@ RowLayout {
     Right.BatteryIndicator {
         theme: root.theme
         typo: root.typo
+        icons: root.icons
         modeManager: root.modeManager
         batteryManager: root.batteryManager
         settingsManager: root.settingsManager
@@ -119,12 +120,9 @@ RowLayout {
 
     UI.PowerMenu {
         modeManager: root.modeManager
-        accentColor: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9)
         textColor: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
         icons: root.icons
         theme: root.theme
-        batteryManager: root.batteryManager
-        settingsManager: root.settingsManager
         onClicked: {
             if (root.modeManager) {
                 root.modeManager.switchMode("powermenu")

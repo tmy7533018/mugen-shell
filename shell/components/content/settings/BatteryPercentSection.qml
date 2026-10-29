@@ -27,7 +27,7 @@ Rectangle {
 
         Text {
             Layout.fillWidth: true
-            text: "Battery indicator"
+            text: "Always show the battery percentage"
             color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
             font.pixelSize: 12
             font.family: "M PLUS 2"
@@ -36,12 +36,12 @@ Rectangle {
         }
 
         Common.Switch {
-            checked: section.settingsManager ? section.settingsManager.batteryIndicatorEnabled : false
+            checked: section.settingsManager ? section.settingsManager.batteryShowPercent : false
             theme: section.theme
 
             onToggled: value => {
                 if (section.settingsManager) {
-                    section.settingsManager.batteryIndicatorEnabled = value
+                    section.settingsManager.batteryShowPercent = value
                     section.settingsManager.saveSettings()
                     section.bump()
                 }

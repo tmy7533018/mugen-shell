@@ -31,6 +31,7 @@ Item {
     }
 
     readonly property bool hasAirplane: !!airplaneManager && airplaneManager.active
+    property bool hasBattery: false
 
     readonly property var categories: [
         { id: "appearance", label: "Appearance",   types: ["theme", "barSurface", "moduleBackground", "blur", "animation", "dateFormat", "clock", "weather", "calendarWeekStart", "barLayout"] },
@@ -39,7 +40,7 @@ Item {
         { id: "connectivity", label: "Connectivity", types: root.hasAirplane ? ["airplaneMode", "wifi", "knownNetworks", "bluetooth"] : ["wifi", "knownNetworks", "bluetooth"] },
         { id: "notifications", label: "Notifications", types: ["doNotDisturb", "notificationTimeout"] },
         { id: "timer",      label: "Idle & Lock",  types: ["timer", "lockTimer", "lockScreen", "idlePower"] },
-        { id: "system",     label: "System",       types: ["battery", "workspaces", "launcherTerminal", "launcherTypeToSearch", "displayMonitor", "yuraEnabled"] },
+        { id: "system",     label: "System",       types: root.hasBattery ? ["batteryPercent", "workspaces", "launcherTerminal", "launcherTypeToSearch", "displayMonitor", "yuraEnabled"] : ["workspaces", "launcherTerminal", "launcherTypeToSearch", "displayMonitor", "yuraEnabled"] },
         { id: "keybinds",   label: "Keyboard",     types: ["keybinds"] },
         { id: "yura",       label: "Yura →",       action: "yura-settings" },
         { id: "about",      label: "About",        types: ["about"] },
@@ -53,7 +54,6 @@ Item {
             case "blur":              return blurSection
             case "timer":             return timerSection
             case "moduleBackground":  return moduleBackgroundSection
-            case "battery":           return batterySection
             case "animation":         return animationSection
             case "notificationSound": return notificationSoundSection
             case "timerSound":        return timerSoundSection
@@ -79,6 +79,7 @@ Item {
             case "notificationTimeout": return notificationTimeoutSection
             case "launcherTerminal":  return launcherTerminalSection
             case "launcherTypeToSearch": return launcherTypeToSearchSection
+            case "batteryPercent":    return batteryPercentSection
             case "workspaces":        return workspaceSection
             case "yuraEnabled":       return yuraEnabledSection
             case "displayMonitor":    return displayMonitorSection
@@ -125,11 +126,6 @@ Item {
         settingsManager: root.settingsManager
     }}
     Component { id: moduleBackgroundSection; Settings.ModuleBackgroundSection {
-        theme: root.theme
-        modeManager: root.modeManager
-        settingsManager: root.settingsManager
-    }}
-    Component { id: batterySection; Settings.BatterySection {
         theme: root.theme
         modeManager: root.modeManager
         settingsManager: root.settingsManager
@@ -263,6 +259,11 @@ Item {
         settingsManager: root.settingsManager
     }}
     Component { id: launcherTypeToSearchSection; Settings.LauncherTypeToSearchSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: batteryPercentSection; Settings.BatteryPercentSection {
         theme: root.theme
         modeManager: root.modeManager
         settingsManager: root.settingsManager

@@ -22,8 +22,8 @@
     "xray": false,
     "ignoreOpacity": true
   },
-  "batteryIndicator": {
-    "enabled": true
+  "battery": {
+    "showPercent": false
   },
   "animations": {
     "speed": "normal",

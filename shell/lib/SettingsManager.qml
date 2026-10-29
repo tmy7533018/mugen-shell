@@ -20,7 +20,7 @@ QtObject {
     property bool moduleBackdropEnabled: true
     property string moduleBackdropPalette: "harmony"
     property real moduleBackdropSpread: 0.06
-    property bool batteryIndicatorEnabled: false
+    property bool batteryShowPercent: false
     property string animationSpeed: "normal"  // "slow" | "normal" | "fast" | "instant"
     property real animationDurationMultiplier: 1.0
     property string notificationSound: "None"  // filename in Paths.soundsDir, or "None"
@@ -174,8 +174,8 @@ QtObject {
                 "palette": moduleBackdropPalette,
                 "spread": moduleBackdropSpread
             },
-            "batteryIndicator": {
-                "enabled": batteryIndicatorEnabled
+            "battery": {
+                "showPercent": batteryShowPercent
             },
             "glass": {
                 "opacityDark": glassOpacityDark,
@@ -380,13 +380,13 @@ QtObject {
             }
 
             try {
-                if (settings.batteryIndicator) {
-                    if (settings.batteryIndicator.enabled !== undefined) {
-                        batteryIndicatorEnabled = settings.batteryIndicator.enabled
+                if (settings.battery) {
+                    if (settings.battery.showPercent !== undefined) {
+                        batteryShowPercent = settings.battery.showPercent
                     }
                 }
             } catch (e) {
-                console.error("Failed to apply settings.batteryIndicator:", e)
+                console.error("Failed to apply settings.battery:", e)
             }
 
             try {

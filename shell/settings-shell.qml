@@ -32,11 +32,16 @@ ShellRoot {
     Managers.BluetoothManager { id: bluetoothManager }
     Managers.AirplaneManager { id: airplaneManager; active: false }
 
-    // The bar shows its airplane toggle only on machines with a battery; Settings follows suit.
+    property bool hasBattery: false
+
+    // The bar shows its battery and airplane toggle only on machines with a battery; Settings follows suit.
     Process {
         command: ["sh", "-c", "for d in /sys/class/power_supply/BAT*; do [ -d \"$d\" ] && exit 0; done; exit 1"]
         running: true
-        onExited: code => { airplaneManager.active = code === 0 }
+        onExited: code => {
+            root.hasBattery = code === 0
+            airplaneManager.active = code === 0
+        }
     }
 
     QtObject {
@@ -297,6 +302,7 @@ ShellRoot {
             wifiManager: wifiManager
             bluetoothManager: bluetoothManager
             airplaneManager: airplaneManager
+            hasBattery: root.hasBattery
             soundsDir: root.soundsDir
             timerSoundsDir: root.timerSoundsDir
             initialCategory: Quickshell.env("MUGEN_SETTINGS_CATEGORY") || ""
