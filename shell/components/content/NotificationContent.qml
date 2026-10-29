@@ -241,6 +241,13 @@ Item {
         if (modeManager.isMode("notification")) modeManager.bump()
     }
 
+    // During the clear-all sweep the rows lag notifications, so only a row's key says which one it shows.
+    function rowNotification(idx) {
+        if (idx < 0 || idx >= notificationListModel.count) return null
+        const key = notificationListModel.get(idx).key
+        return notifications.find(n => n.key === key) || null
+    }
+
     function openNotification(notif) {
         if (!notif) return
         let action = notificationManager.defaultAction(notif)
@@ -350,17 +357,12 @@ Item {
                 notificationList.positionViewAtIndex(count - 1, ListView.Contain)
                 event.accepted = true
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                let idx = notificationList.currentIndex
-                if (idx >= 0 && idx < notifications.length) root.openNotification(notifications[idx])
+                let notif = root.rowNotification(notificationList.currentIndex)
+                if (notif) root.openNotification(notif)
                 event.accepted = true
             } else if (event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace) {
-                let idx = notificationList.currentIndex
-                if (idx >= 0 && idx < notifications.length) {
-                    let notif = notifications[idx]
-                    if (notif && notif.key !== undefined) {
-                        root.removeNotification(notif.key)
-                    }
-                }
+                let notif = root.rowNotification(notificationList.currentIndex)
+                if (notif) root.removeNotification(notif.key)
                 event.accepted = true
             }
         }
