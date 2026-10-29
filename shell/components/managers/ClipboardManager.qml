@@ -56,7 +56,8 @@ QtObject {
     property bool reloadQueued: false
 
     function loadHistory() {
-        if (isLoading) {
+        // A listing that overtakes a queued delete would bring the deleted entry back.
+        if (isLoading || deleteProcess.running) {
             reloadQueued = true
             return
         }
@@ -219,7 +220,7 @@ QtObject {
         }
     }
     
-    // No reload here: replacing the model mid-collapse resets the view and the rows below jump.
+    // Reloads only for a listing that waited on it: replacing the model mid-collapse resets the view and the rows below jump.
     property Process deleteProcess: Process {
         command: []
         running: false
@@ -227,6 +228,10 @@ QtObject {
         onExited: (exitCode) => {
             if (exitCode !== 0) console.warn("clipboard: cliphist delete exited " + exitCode)
             root._drainDeletes()
+            if (!root.deleteProcess.running && root.reloadQueued) {
+                root.reloadQueued = false
+                root.loadHistory()
+            }
         }
     }
 
