@@ -139,10 +139,15 @@ FocusScope {
         commitGroups(next)
     }
 
-    function renameGroup(id, name) {
+    function renamedGroups(id, name) {
         let trimmed = (name || "").trim()
-        if (trimmed === "") return
-        commitGroups(groups.map(g => ({ id: g.id, name: g.id === id ? trimmed : g.name, items: g.items })))
+        if (trimmed === "") return null
+        return groups.map(g => ({ id: g.id, name: g.id === id ? trimmed : g.name, items: g.items }))
+    }
+
+    function renameGroup(id, name) {
+        let next = renamedGroups(id, name)
+        if (next) commitGroups(next)
     }
 
     function findApp(execKey) {
@@ -275,10 +280,14 @@ FocusScope {
         filterApps()
     }
 
-    function saveState() {
-        let json = JSON.stringify({ favorites: Object.keys(favoritesSet), groups: groups })
-        saveFavoritesProcess.command = Theme.JsonStore.atomicWriteArgv(
+    function stateWriteArgv(groupList) {
+        let json = JSON.stringify({ favorites: Object.keys(favoritesSet), groups: groupList })
+        return Theme.JsonStore.atomicWriteArgv(
             Theme.Paths.stateDir, Theme.Paths.stateDir + "/launcher.json", json)
+    }
+
+    function saveState() {
+        saveFavoritesProcess.command = stateWriteArgv(groups)
         saveFavoritesProcess.running = true
     }
 
@@ -1437,6 +1446,13 @@ FocusScope {
         hoverEnabled: true
         onClicked: modeManager.bump()
         onPositionChanged: modeManager.bump()
+    }
+
+    // The Loader tears this down without moving focus, and saveFavoritesProcess kills its child as it goes.
+    Component.onDestruction: {
+        let renamed = groupNameInput.activeFocus && root.shownGroupId !== ""
+            ? root.renamedGroups(root.shownGroupId, groupNameInput.text) : null
+        if (renamed) Quickshell.execDetached(root.stateWriteArgv(renamed))
     }
 
     Component.onCompleted: {
