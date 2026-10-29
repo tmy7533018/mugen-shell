@@ -28,9 +28,18 @@ FocusScope {
     signal conversationDeleteRequested(int convId)
     signal toggleRequested()
 
+    // Date.now() is not a binding dependency, so the row ages only move when this ticks.
+    property real now: Date.now()
+
+    Timer {
+        interval: 60000
+        running: true
+        repeat: true
+        onTriggered: root.now = Date.now()
+    }
+
     function relativeTime(unixSeconds) {
-        let now = Math.floor(Date.now() / 1000)
-        let diff = now - unixSeconds
+        let diff = Math.floor(root.now / 1000) - unixSeconds
         if (diff < 60) return "just now"
         if (diff < 3600) return Math.floor(diff / 60) + "m"
         if (diff < 86400) return Math.floor(diff / 3600) + "h"
