@@ -28,6 +28,7 @@ FocusScope {
     property var filteredApps: []
     property bool appsLoaded: false
     property bool isLoading: false
+    property bool appsFailed: false
 
     property string searchText: ""
 
@@ -577,6 +578,7 @@ FocusScope {
         running: false
 
         property string output: ""
+        property string lastError: ""
 
         stdout: SplitParser {
             onRead: data => {
@@ -584,7 +586,17 @@ FocusScope {
             }
         }
 
-        onExited: () => {
+        onRunningChanged: { if (running) lastError = "" }
+
+        onExited: (exitCode) => {
+            // list-apps.py prints [] when it fails, so only the exit code tells a broken listing from an empty one.
+            root.appsFailed = exitCode !== 0
+            if (root.appsFailed) {
+                console.warn("list-apps failed (" + exitCode + "): " + appsProcess.lastError)
+                root.isLoading = false
+                appsProcess.output = ""
+                return
+            }
             try {
                 let out = appsProcess.output || ""
                 if (out.trim().length === 0 || out === root.lastAppsJson) {
@@ -613,6 +625,9 @@ FocusScope {
         }
 
         stderr: SplitParser {
+            onRead: data => {
+                if (data.trim() !== "") appsProcess.lastError = data.trim()
+            }
         }
     }
 
@@ -1144,6 +1159,7 @@ FocusScope {
                 Layout.alignment: Qt.AlignHCenter
                 text: {
                     if (root.isLoading) return "Loading..."
+                    if (root.appsFailed) return "Listing apps failed"
                     if (root.searchText === "" && root.activeGenre === "" && Object.keys(root.favoritesSet).length === 0) {
                         return "Right-click for options"
                     }
