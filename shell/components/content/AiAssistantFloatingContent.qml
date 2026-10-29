@@ -474,6 +474,14 @@ FocusScope {
         selectConvProcess.running = true
     }
 
+    // Left alone, the emptied view stays marked as that chat and clicking it again is a no-op.
+    function failOpening(convId) {
+        const sentMeanwhile = messages.length > 0
+        if (convId !== currentConvId || sentMeanwhile) return
+        newChat()
+        turnFailure = "Couldn't open the chat: connection failed"
+    }
+
     function deleteConversation(convId) {
         // The stream would keep writing into whichever conversation becomes current.
         if (streaming && convId === currentConvId) stopStreaming()
@@ -2151,14 +2159,19 @@ FocusScope {
         running: false
         property string payload: ""
         property string buf: ""
+        property int startedId: 0
         command: ["curl", ...root._transportArgs, "-sS", "--max-time", "2", "-X", "POST",
                   root._baseUrl + "/conversations/" + payload + "/select"]
 
         stdout: SplitParser { onRead: data => { selectConvProcess.buf += data } }
-        onRunningChanged: { if (running) buf = "" }
+        // Quickshell reruns a busy Process with the newest payload, so match the id this run sent.
+        onRunningChanged: { if (running) { buf = ""; startedId = parseInt(payload) } }
 
         onExited: (exitCode) => {
-            if (exitCode !== 0) return
+            if (exitCode !== 0) {
+                root.failOpening(selectConvProcess.startedId)
+                return
+            }
             loadCurrentProcess.running = true
         }
     }
