@@ -93,12 +93,14 @@ QtObject {
         pairingError = ""
         pairingAddress = deviceAddress
 
-        let escapedAddress = deviceAddress.replace(/'/g, "'\\''")
         devicePairProcess.deviceAddress = deviceAddress
         devicePairProcess.deviceName = deviceName
         // A device wanting passkey confirmation leaves bluetoothctl on stdin, and nothing else clears isPairing.
         devicePairProcess.command = ["bash", "-c",
-            "bluetoothctl pairable on && timeout 60 bluetoothctl pair '" + escapedAddress + "'; result=$?; bluetoothctl pairable off; exit $result"]
+            "pairableBefore=off; bluetoothctl show | grep -q 'Pairable: yes' && pairableBefore=on; "
+            + "bluetoothctl pairable on > /dev/null && timeout 60 bluetoothctl pair \"$1\"; result=$?; "
+            + "bluetoothctl pairable \"$pairableBefore\" > /dev/null; exit $result",
+            "bash", deviceAddress]
         devicePairProcess.running = true
     }
 
