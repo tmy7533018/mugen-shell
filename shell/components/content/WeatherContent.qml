@@ -83,12 +83,24 @@ Item {
         return h >= 6 && h < 19
     }
 
+    // A binding reads Date.now() once, and the panel can stay open across the hour.
+    property real clockNow: Date.now()
+    readonly property string nowHour: {
+        let off = weatherManager ? weatherManager.utcOffsetSeconds : null
+        if (typeof off !== "number") off = -new Date().getTimezoneOffset() * 60
+        return new Date(clockNow + off * 1000).toISOString().substring(0, 13)
+    }
+
+    Timer {
+        interval: 60000
+        repeat: true
+        running: true
+        onTriggered: root.clockNow = Date.now()
+    }
+
     function hourlyStart() {
         let h = shownHourly
         if (!h || h.length === 0) return 0
-        let off = weatherManager.utcOffsetSeconds
-        if (typeof off !== "number") off = -new Date().getTimezoneOffset() * 60
-        let nowHour = new Date(Date.now() + off * 1000).toISOString().substring(0, 13)
         for (let i = 0; i < h.length; i++) {
             if (h[i].time.substring(0, 13) >= nowHour) return i
         }
