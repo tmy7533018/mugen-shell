@@ -675,7 +675,7 @@ FocusScope {
 
         Timer {
             interval: 60
-            running: Theme.Motion.ambient
+            running: Theme.Motion.ambient && particles.visible
             repeat: true
             onTriggered: {
                 let pts = particles.points

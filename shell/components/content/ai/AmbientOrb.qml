@@ -44,7 +44,7 @@ Item {
     function refresh() {
         idleBreath.stop()
         streamPulse.stop()
-        if (!active) {
+        if (!active || !visible) {
             pulseScale = 1.0
             return
         }
@@ -54,6 +54,7 @@ Item {
     }
 
     onActiveChanged: refresh()
+    onVisibleChanged: refresh()
     onStreamingChanged: refresh()
     onBreathEnabledChanged: refresh()
     Component.onCompleted: refresh()
