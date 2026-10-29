@@ -12,7 +12,6 @@ Rectangle {
     required property var modeManager
 
     signal editConfig()
-    signal restartService()
 
     width: parent ? parent.width : 420
     height: contentColumn.implicitHeight + 24
@@ -45,6 +44,7 @@ Rectangle {
     property bool auditBusy: false
     property bool auditTarget: true
     property string auditStatus: ""
+    property string restartStatus: ""
 
     function bump() {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
@@ -122,6 +122,22 @@ Rectangle {
             section.auditBusy = false
             section.auditStatus = exitCode === 0 ? "applied" : "applied (restart pending)"
         }
+    }
+
+    // systemd counts a Type=simple unit as started at fork, so a config that kills mugen-ai only shows in is-active.
+    Process {
+        id: serviceRestartProc
+        running: false
+        command: ["sh", "-c", "systemctl --user restart mugen-ai.service && sleep 1 && systemctl --user is-active --quiet mugen-ai.service && echo ok"]
+        stdout: StdioCollector {
+            onStreamFinished: section.restartStatus = this.text.trim() === "ok" ? "restarted" : "restart failed"
+        }
+    }
+
+    function restartService() {
+        if (serviceRestartProc.running) return
+        section.restartStatus = "restarting mugen-ai…"
+        serviceRestartProc.running = true
     }
 
     Process { id: openProc; running: false }
@@ -286,7 +302,9 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                text: "Restart the mugen-ai service to apply config changes"
+                text: section.restartStatus !== ""
+                    ? section.restartStatus
+                    : "Restart the mugen-ai service to apply config changes"
                 color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.60)
                 font.pixelSize: 10
                 font.family: "M PLUS 2"

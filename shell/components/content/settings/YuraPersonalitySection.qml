@@ -11,7 +11,6 @@ Rectangle {
     required property var modeManager
 
     signal editConfig()
-    signal restartService()
 
     Theme.AiBackend { id: aiBackend }
 
@@ -215,6 +214,22 @@ Rectangle {
             section.saving = false
             section.statusText = exitCode === 0 ? "applied" : "applied (restart pending)"
         }
+    }
+
+    // systemd counts a Type=simple unit as started at fork, so a config that kills mugen-ai only shows in is-active.
+    Process {
+        id: serviceRestartProcess
+        running: false
+        command: ["sh", "-c", "systemctl --user restart mugen-ai.service && sleep 1 && systemctl --user is-active --quiet mugen-ai.service && echo ok"]
+        stdout: StdioCollector {
+            onStreamFinished: section.statusText = this.text.trim() === "ok" ? "restarted" : "restart failed"
+        }
+    }
+
+    function restartService() {
+        if (serviceRestartProcess.running) return
+        section.statusText = "restarting mugen-ai…"
+        serviceRestartProcess.running = true
     }
 
     function reload() { loadProcess.running = true }

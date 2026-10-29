@@ -10,7 +10,6 @@ Item {
     required property var settingsManager
 
     signal editAiConfig()
-    signal restartAi()
 
     readonly property var categories: [
         { id: "model",    label: "Model",       types: ["yuraProvider", "aiBarModel", "yuraPersonality"] },
@@ -61,7 +60,6 @@ Item {
         theme: root.theme
         modeManager: root.modeManager
         onEditConfig: root.editAiConfig()
-        onRestartService: root.restartAi()
     }}
     Component { id: yuraToolCategoriesSection; Settings.YuraToolCategoriesSection {
         theme: root.theme
@@ -106,6 +104,5 @@ Item {
         theme: root.theme
         modeManager: root.modeManager
         onEditConfig: root.editAiConfig()
-        onRestartService: root.restartAi()
     }}
 }

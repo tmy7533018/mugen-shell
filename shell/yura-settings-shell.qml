@@ -53,19 +53,8 @@ ShellRoot {
         openAiConfigProcess.running = true
     }
 
-    function restartAi() {
-        restartAiProcess.command = ["systemctl", "--user", "restart", "mugen-ai.service"]
-        restartAiProcess.running = true
-    }
-
     Process {
         id: openAiConfigProcess
-        command: []
-        running: false
-    }
-
-    Process {
-        id: restartAiProcess
         command: []
         running: false
     }
@@ -89,7 +78,6 @@ ShellRoot {
             settingsManager: settingsManager
 
             onEditAiConfig: root.openAiConfig()
-            onRestartAi: root.restartAi()
         }
     }
 }
