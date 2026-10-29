@@ -39,8 +39,13 @@ Item {
     readonly property string currentLabel: isMicMode ? micLabel : speakerLabel
 
     function setCurrentVolume(v) {
-        if (isMicMode) audioManager.setMicVolume(v)
-        else audioManager.setVolume(v)
+        if (isMicMode) {
+            if (audioManager.micMuted) audioManager.unmuteMic()
+            audioManager.setMicVolume(v)
+        } else {
+            if (audioManager.isMuted) audioManager.unmute()
+            audioManager.setVolume(v)
+        }
     }
 
     function nudgeVolume(direction, coarse) {
@@ -349,13 +354,11 @@ Item {
             target: audioManager
             function onVolumeChanged() {
                 if (root.isMicMode) return
-                if (audioManager.isMuted) audioManager.toggleMute()
                 contentLayer.startInteraction()
                 root.startVolumeChangeTimer()
             }
             function onMicVolumeChanged() {
                 if (!root.isMicMode) return
-                if (audioManager.micMuted) audioManager.toggleMicMute()
                 contentLayer.startInteraction()
                 root.startVolumeChangeTimer()
             }

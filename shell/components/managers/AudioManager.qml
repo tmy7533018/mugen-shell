@@ -92,6 +92,11 @@ QtObject {
         }
     }
 
+    property Process unmuteProcess: Process {
+        running: false
+        command: ["pactl", "set-sink-mute", "@DEFAULT_SINK@", "0"]
+    }
+
     function setVolume(newVolume) {
         let clampedVolume = Math.max(0, Math.min(100, Math.round(newVolume)))
 
@@ -101,6 +106,10 @@ QtObject {
 
     function toggleMute() {
         toggleMuteProcess.running = true
+    }
+
+    function unmute() {
+        unmuteProcess.running = true
     }
 
     function updateVolume() {
@@ -182,6 +191,11 @@ QtObject {
         }
     }
 
+    property Process unmuteMicProcess: Process {
+        running: false
+        command: ["pactl", "set-source-mute", "@DEFAULT_SOURCE@", "0"]
+    }
+
     function setMicVolume(newVolume) {
         let clampedVolume = Math.max(0, Math.min(100, Math.round(newVolume)))
         setMicVolumeProcess.command = ["pactl", "set-source-volume", "@DEFAULT_SOURCE@", clampedVolume + "%"]
@@ -190,6 +204,10 @@ QtObject {
 
     function toggleMicMute() {
         toggleMicMuteProcess.running = true
+    }
+
+    function unmuteMic() {
+        unmuteMicProcess.running = true
     }
 
     function updateMicVolume() {
