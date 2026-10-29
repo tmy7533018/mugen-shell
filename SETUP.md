@@ -157,7 +157,9 @@ args = ["-y", "@modelcontextprotocol/server-memory"]
 | `Super + Backspace` | アクティブなウィンドウを閉じる |
 | `Super + 1-9` / `Super + 0` | ワークスペース 1-10 へ切替 |
 | `Super + hjkl` | フォーカス移動 (vim 風) |
-| `Print` / `Super + F12` | 範囲スクリーンショット、クリップボードへコピー |
+| `Print` / `Super + F12` | 画面全体のスクリーンショット、クリップボードへコピー |
+| `Shift + Print` / `Super + Shift + F12` | 範囲のスクリーンショット、クリップボードへコピー |
+| `Ctrl + Print` / `Super + Ctrl + F12` | スクリーンショットメニュー (ウィンドウ、ギャラリー) |
 
 ---
 

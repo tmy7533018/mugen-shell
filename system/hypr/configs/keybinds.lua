@@ -201,10 +201,18 @@ local binds = {
 
     { id = "sys.reload", cat = "system", desc = "Reload Hyprland config",
       keys = mainMod .. " + SHIFT + R", action = hl.dsp.exec_cmd("hyprctl reload") },
-    { id = "sys.screenshot", cat = "system", desc = "Take screenshot",
+    { id = "sys.screenshotScreen", cat = "system", desc = "Screenshot of the whole screen",
       each = { mainMod .. " + F12", "Print" }, display = mainMod .. " + F12 / Print",
       keys   = function(k) return k end,
-      action = function() return script("take-screenshot.sh") end },
+      action = function() return script("take-screenshot.sh", "screen") end },
+    { id = "sys.screenshot", cat = "system", desc = "Screenshot of a region",
+      each = { mainMod .. " + SHIFT + F12", "SHIFT + Print" }, display = mainMod .. " + SHIFT + F12 / SHIFT + Print",
+      keys   = function(k) return k end,
+      action = function() return script("take-screenshot.sh", "region") end },
+    { id = "sys.screenshotMenu", cat = "system", desc = "Screenshot menu (window, gallery)",
+      each = { mainMod .. " + CTRL + F12", "CTRL + Print" }, display = mainMod .. " + CTRL + F12 / CTRL + Print",
+      keys   = function(k) return k end,
+      action = function() return ipc("screenshot-menu") end },
 }
 
 -- b.keys/b.display stay the shipped default so Settings -> Keyboard can flag an overridden row.

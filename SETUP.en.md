@@ -157,7 +157,9 @@ Full list: `Super + /`. To rebind, edit `~/.config/hypr/configs/keybind-override
 | `Super + Backspace` | Close the active window |
 | `Super + 1-9` / `Super + 0` | Switch to workspace 1-10 |
 | `Super + hjkl` | Move focus, vim-style |
-| `Print` / `Super + F12` | Region screenshot, copied to the clipboard |
+| `Print` / `Super + F12` | Whole-screen screenshot, copied to the clipboard |
+| `Shift + Print` / `Super + Shift + F12` | Region screenshot, copied to the clipboard |
+| `Ctrl + Print` / `Super + Ctrl + F12` | Screenshot menu (window, gallery) |
 
 ---
 
