@@ -14,12 +14,12 @@ FocusScope {
     property var theme
     property var icons
     property var settingsManager
-    property var aiBackend
+    property var aiBackend: localBackend
     property bool isStandalone: false
 
-
-    readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://localhost"
-    readonly property var _transportArgs: aiBackend ? aiBackend.transportArgs : []
+    Theme.AiBackend { id: localBackend }
+    readonly property string _baseUrl: aiBackend.baseUrl
+    readonly property var _transportArgs: aiBackend.transportArgs
 
     readonly property var requiredBarSize: ({
         "height": modeManager.scale(60),

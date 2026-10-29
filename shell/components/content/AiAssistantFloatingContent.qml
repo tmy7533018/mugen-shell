@@ -15,11 +15,9 @@ FocusScope {
     required property var modeManager
     property var theme
     property var icons
-    property var aiBackend
+    property var aiBackend: localBackend
     property var settingsManager
     property bool showInternalOrb: true
-
-    // Private instance — the volume panel stops the shared one on its own schedule.
 
     // Lets a host count keyboard-only use as activity; the timer only sees taps and pointer motion.
     signal userActivity()
@@ -33,8 +31,9 @@ FocusScope {
     readonly property real orbExternalSize: orb.width
     readonly property bool orbExternalEmptyState: orb.isInEmptyState
 
-    readonly property string _baseUrl: aiBackend ? aiBackend.baseUrl : "http://localhost"
-    readonly property var _transportArgs: aiBackend ? aiBackend.transportArgs : []
+    Theme.AiBackend { id: localBackend }
+    readonly property string _baseUrl: aiBackend.baseUrl
+    readonly property var _transportArgs: aiBackend.transportArgs
 
     property var messages: []
     property bool streaming: false
