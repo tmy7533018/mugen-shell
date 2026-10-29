@@ -41,15 +41,6 @@ Common.IconButton {
         // It sits in a row of near-black icons, so it needs to go darker than a decorative fill would.
         return (theme && theme.onLightSurface) ? theme.onLightVariant(shifted, 0.22) : shifted
     }
-    iconSource: {
-        if (!idleToggleButton.icons || !idleToggleButton.idleInhibitorManager) return ""
-        if (isBlinking) {
-            return idleToggleButton.icons.iconData.eyeClosed.value
-        }
-        return idleToggleButton.idleInhibitorManager.isInhibited
-                ? idleToggleButton.icons.iconData.eyeOpen.value
-                : idleToggleButton.icons.iconData.eyeClosed.value
-    }
     iconColor: idleToggleButton.idleInhibitorManager && idleToggleButton.idleInhibitorManager.isInhibited
         ? accentLightColor
         : (idleToggleButton.theme ? idleToggleButton.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))

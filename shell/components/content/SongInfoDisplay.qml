@@ -91,12 +91,6 @@ ColumnLayout {
                 enabled: !titleText.needsScroll
                 NumberAnimation { duration: Theme.Motion.standard }
             }
-            
-            Component.onCompleted: {
-                if (!needsScroll) {
-                    x = 0
-                }
-            }
         }
     }
     

@@ -39,7 +39,6 @@ FocusScope {
     // /health status verbatim: "ok", "no_model" (nothing configured) or
     // "provider_unavailable" (a model is set but its backend did not answer).
     property string healthStatus: ""
-    property string currentModel: ""
     property int currentConvId: 0
 
     // A finished reply parks read-only so arrow keys scroll it; a printable key resumes typing.
@@ -266,7 +265,7 @@ FocusScope {
                 Layout.preferredHeight: modeManager.scale(40)
                 Layout.alignment: Qt.AlignVCenter
                 radius: height / 2
-                color: root.theme ? Qt.rgba(0.04, 0.03, 0.10, 0.55) : Qt.rgba(0.04, 0.03, 0.10, 0.55)
+                color: Qt.rgba(0.04, 0.03, 0.10, 0.55)
                 border.color: inputField.activeFocus
                     ? (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.55) : Qt.rgba(0.65, 0.55, 0.85, 0.55))
                     : Qt.rgba(0.55, 0.55, 0.75, 0.18)
@@ -670,7 +669,6 @@ FocusScope {
             if (exitCode === 0) {
                 try {
                     let obj = JSON.parse(buf)
-                    root.currentModel = obj.model || ""
                     root.healthStatus = obj.status || ""
                     root.hasModel = obj.status === "ok"
                 } catch (e) {}

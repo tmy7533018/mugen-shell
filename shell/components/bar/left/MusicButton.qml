@@ -30,8 +30,6 @@ Item {
         ColorAnimation { duration: Theme.Motion.slow; easing.type: Easing.InOutCubic }
     }
 
-    readonly property real visualizerWidth: scaled(6 * 3 + 5 * 3)
-
     Behavior on implicitWidth {
         NumberAnimation {
             duration: Theme.Motion.gentle;

@@ -514,11 +514,7 @@ Item {
                 onExited: {
                     contentLayer.isHovering = false
                     interactionTimer.stop()
-                    if (!contentLayer.isInteracting) {
-                        contentLayer.isInteracting = false
-                    } else {
-                        interactionTimer.restart()
-                    }
+                    if (contentLayer.isInteracting) interactionTimer.restart()
                 }
 
                 onClicked: {
@@ -558,9 +554,6 @@ Item {
                             root.startVolumeChangeTimer()
                         }
                     }
-                }
-
-                onReleased: {
                 }
 
                 onWheel: (wheel) => {

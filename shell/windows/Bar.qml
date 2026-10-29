@@ -88,7 +88,7 @@ PanelWindow {
 
             modeManager.bump()
 
-            // Per-panel Keys handlers never fire: escKeyHandler owns focus while a panel is open.
+            // Music and brightness never take focus, and the launcher takes it only when focusTimer fires.
             if (modeManager.isMode("launcher") && appLauncherLoader.item
                     && (appLauncherLoader.item as Content.AppLauncherContent).forwardKeyToSearch(event)) {
                 event.accepted = true
@@ -725,25 +725,12 @@ PanelWindow {
             anchors.leftMargin: 32
             anchors.rightMargin: 32
             spacing: 20
-            Layout.alignment: Qt.AlignVCenter
 
             property bool isFirstShow: true
 
             opacity: 0
             // Never bind visible here — it severs the binding and leaves the bar permanently empty.
             enabled: modeManager.isMode("normal")
-
-            Component.onCompleted: {
-                initialShowTimer.start();
-            }
-
-            Timer {
-                id: initialShowTimer
-                interval: 100
-                running: false
-                onTriggered: {
-                }
-            }
 
             states: [
                 State {
@@ -1158,9 +1145,5 @@ PanelWindow {
             theme: theme
             icons: icons
         }
-    }
-
-    Component.onCompleted: {
-        modeManager.listModes()
     }
 }

@@ -342,7 +342,7 @@ Item {
 
                         function seekFromX(x) {
                             if (!root.musicManager || root.musicManager.duration <= 0) return
-                            const clamped = Math.max(0, Math.min(progressSlider.width, x - (progressSlider.x - parent.x)))
+                            const clamped = Math.max(0, Math.min(progressSlider.width, x))
                             const r = clamped / progressSlider.width
                             root.musicManager.seek(root.musicManager.duration * r)
                         }

@@ -16,7 +16,6 @@ Common.IconButton {
 
     rig: Common.ShakeRig { source: airplaneToggleButton.icons ? airplaneToggleButton.icons.airplaneSvg : "" }
 
-    iconSource: airplaneToggleButton.icons ? airplaneToggleButton.icons.airplaneSvg : ""
     iconColor: (airplaneToggleButton.airplaneManager && airplaneToggleButton.airplaneManager.isEnabled)
         ? (airplaneToggleButton.theme ? airplaneToggleButton.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.9))
         : (airplaneToggleButton.theme ? airplaneToggleButton.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
