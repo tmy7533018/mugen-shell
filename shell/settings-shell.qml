@@ -215,7 +215,7 @@ ShellRoot {
 
     Process {
         id: listSoundsProcess
-        command: ["sh", "-c", "d=\"" + root.soundsDir + "\"; mkdir -p \"$d\"; ls -1 \"$d\" 2>/dev/null | grep -E '\\.(wav|ogg|mp3|oga|flac)$' || true"]
+        command: ["sh", "-c", "mkdir -p \"$1\"; ls -1 \"$1\" 2>/dev/null | grep -E '\\.(wav|ogg|mp3|oga|flac)$' || true", "sh", root.soundsDir]
         running: false
         property string output: ""
 
@@ -237,7 +237,7 @@ ShellRoot {
 
     Process {
         id: listTimerSoundsProcess
-        command: ["sh", "-c", "d=\"" + root.timerSoundsDir + "\"; mkdir -p \"$d\"; ls -1 \"$d\" 2>/dev/null | grep -E '\\.(wav|ogg|mp3|oga|flac)$' || true"]
+        command: ["sh", "-c", "mkdir -p \"$1\"; ls -1 \"$1\" 2>/dev/null | grep -E '\\.(wav|ogg|mp3|oga|flac)$' || true", "sh", root.timerSoundsDir]
         running: false
         property string output: ""
 
