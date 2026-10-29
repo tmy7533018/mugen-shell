@@ -166,6 +166,13 @@ QtObject {
     property Process soundPlayProcess: Process {
         command: []
         running: false
+
+        stderr: StdioCollector { id: soundPlayError }
+
+        onExited: (exitCode) => {
+            if (exitCode !== 0)
+                console.warn("notification sound: paplay exited " + exitCode + ": " + soundPlayError.text.trim())
+        }
     }
     
     property Timer timeUpdateTimer: Timer {

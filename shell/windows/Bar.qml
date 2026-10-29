@@ -276,6 +276,14 @@ PanelWindow {
         id: timerSoundProcess
         command: []
         running: false
+
+        stderr: StdioCollector { id: timerSoundError }
+
+        // Dismissing the alert ends paplay with SIGTERM, which is not a failure.
+        onExited: (exitCode) => {
+            if (exitCode !== 0 && timerManager.alerting)
+                console.warn("timer sound: paplay exited " + exitCode + ": " + timerSoundError.text.trim())
+        }
     }
 
     Timer {
