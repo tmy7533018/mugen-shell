@@ -24,12 +24,14 @@ Item {
     property int currentYear: new Date().getFullYear()
     property int currentMonth: new Date().getMonth() + 1
 
-    readonly property int todayDay: new Date().getDate()
-    readonly property int todayMonth: new Date().getMonth() + 1
-    readonly property int todayYear: new Date().getFullYear()
+    // A binding reads new Date() once, and the window can stay open past midnight.
+    property date today: new Date()
+    readonly property int todayDay: today.getDate()
+    readonly property int todayMonth: today.getMonth() + 1
+    readonly property int todayYear: today.getFullYear()
 
     // Kept apart from the month so the 31st survives a pass through a shorter month.
-    property int selectedDay: todayDay
+    property int selectedDay: new Date().getDate()
     readonly property string selectedDate: dateKey(currentYear, currentMonth,
         Math.min(selectedDay, new Date(currentYear, currentMonth, 0).getDate()))
 
@@ -39,6 +41,10 @@ Item {
     property string formTitle: ""
     property string formTime: ""
     property bool formAllDay: false
+    property bool timeRejected: false
+
+    property string loadError: ""
+    property string actionError: ""
 
     readonly property var monthNames: ["January", "February", "March", "April", "May", "June",
                                        "July", "August", "September", "October", "November", "December"]
@@ -47,9 +53,11 @@ Item {
 
     readonly property bool isTimeFieldInvalid: {
         if (!formTime) return false
-        if (formTime.length < 5) return false
+        if (formTime.length < 5 && !timeRejected) return false
         return !isValidTime(formTime)
     }
+
+    onFormTimeChanged: timeRejected = false
 
     function dateKey(year, month, day) {
         let m = month < 10 ? "0" + month : "" + month
@@ -110,16 +118,19 @@ Item {
 
     function submitEvent() {
         let title = formTitle.trim()
-        if (!title) return
-        let t = ""
-        if (!formAllDay) {
-            let raw = formTime.trim()
-            if (isValidTime(raw)) t = raw
+        if (!title || addEventProcess.running) return
+        let t = formAllDay ? "" : formTime.trim()
+        if (t && !isValidTime(t)) {
+            timeRejected = true
+            return
         }
         addEvent(selectedDate, title, t)
-        formTitle = ""
-        formTime = ""
-        if (timeInput) timeInput.text = ""
+    }
+
+    function failureText(what, stderr) {
+        let detail = ""
+        try { detail = JSON.parse(stderr.split("\n")[0]).error || "" } catch (e) {}
+        return detail ? what + ": " + detail : what
     }
 
     property real gridOpacity: 1.0
@@ -155,6 +166,7 @@ Item {
                 if (monthFlip.targetDay > 0) root.selectedDay = monthFlip.targetDay
                 root.currentMonth = monthFlip.targetMonth
                 root.currentYear = monthFlip.targetYear
+                root.reloadEvents()
                 root.gridShift = monthFlip.shiftDir * 18
             }
         }
@@ -199,9 +211,6 @@ Item {
         return monthName + " " + parseInt(parts[2]) + ", " + parts[0]
     }
 
-    onCurrentYearChanged: reloadEvents()
-    onCurrentMonthChanged: reloadEvents()
-
     Process {
         id: loadEventsProcess
         running: false
@@ -210,13 +219,17 @@ Item {
         stdout: SplitParser {
             onRead: data => { loadEventsProcess.output += data }
         }
+        stderr: StdioCollector { id: loadEventsErrors }
 
-        onExited: () => {
-            try {
-                let parsed = JSON.parse(loadEventsProcess.output || "{}")
-                root.events = Array.isArray(parsed.events) ? parsed.events : []
+        onExited: (exitCode) => {
+            let parsed = null
+            try { parsed = JSON.parse(loadEventsProcess.output) } catch (e) {}
+            if (exitCode === 0 && parsed && Array.isArray(parsed.events)) {
+                root.events = parsed.events
                 root.rebuildIndex()
-            } catch (e) {
+                root.loadError = ""
+            } else {
+                root.loadError = root.failureText("Couldn't load events", loadEventsErrors.text)
             }
             loadEventsProcess.output = ""
         }
@@ -225,13 +238,35 @@ Item {
     Process {
         id: addEventProcess
         running: false
-        onExited: () => root.reloadEvents()
+        stderr: StdioCollector { id: addEventErrors }
+        onExited: (exitCode) => {
+            if (exitCode === 0) {
+                root.actionError = ""
+                root.formTitle = ""
+                root.formTime = ""
+                timeInput.text = ""
+            } else {
+                root.actionError = root.failureText("Couldn't add the event", addEventErrors.text)
+            }
+            root.reloadEvents()
+        }
     }
 
     Process {
         id: deleteEventProcess
         running: false
-        onExited: () => root.reloadEvents()
+        stderr: StdioCollector { id: deleteEventErrors }
+        onExited: (exitCode) => {
+            root.actionError = exitCode === 0 ? "" : root.failureText("Couldn't delete the event", deleteEventErrors.text)
+            root.reloadEvents()
+        }
+    }
+
+    Timer {
+        interval: 60000
+        repeat: true
+        running: true
+        onTriggered: root.today = new Date()
     }
 
     Rectangle {
@@ -640,7 +675,7 @@ Item {
                         id: floatingTodayLabel
                         anchors.right: parent.right
                         anchors.verticalCenter: parent.verticalCenter
-                        text: Qt.formatDate(new Date(), "ddd, MMM d, yyyy")
+                        text: Qt.formatDate(root.today, "ddd, MMM d, yyyy")
                         color: floatingTodayHover.containsMouse
                             ? (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.95))
                             : (theme ? theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.55))
@@ -811,7 +846,7 @@ Item {
                         }
 
                         Text {
-                            visible: root.modalEvents.length === 0
+                            visible: root.modalEvents.length === 0 && root.loadError === ""
                             text: "Nothing scheduled"
                             color: theme ? theme.textFaint : Qt.rgba(0.55, 0.55, 0.6, 1)
                             font.pixelSize: 12
@@ -1011,6 +1046,19 @@ Item {
                             onClicked: root.submitEvent()
                         }
                     }
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    visible: text !== ""
+                    text: root.actionError || root.loadError
+                    textFormat: Text.PlainText
+                    color: Qt.rgba(1, 0.5, 0.55, 1)
+                    font.pixelSize: 11
+                    font.family: "M PLUS 2"
+                    wrapMode: Text.Wrap
+                    maximumLineCount: 2
+                    elide: Text.ElideRight
                 }
             }
         }
