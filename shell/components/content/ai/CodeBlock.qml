@@ -119,7 +119,7 @@ Item {
                 wrapMode: TextEdit.Wrap
                 color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.95)
                 selectionColor: root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.35) : Qt.rgba(0.65, 0.55, 0.85, 0.35)
-                font.family: "JetBrainsMono Nerd Font, monospace"
+                font.family: "JetBrainsMono Nerd Font"
                 font.pixelSize: modeManager.scale(12)
             }
         }
