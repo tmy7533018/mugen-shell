@@ -550,13 +550,40 @@ ShellRoot {
         }
     }
 
+    // The first tick runs before SettingsManager has read the clock format.
+    Connections {
+        target: settingsManager
+        function onSettingsChanged() {
+            root.refreshClock()
+            root.scheduleClockTick()
+        }
+    }
+
+    property bool quitRequested: false
+
+    // Exit kills a running rm, and a lock.secure left behind makes the watcher lock again.
+    function quitAfterStamp() {
+        quitRequested = true
+        if (!readyStamp.running) Qt.quit()
+    }
+
     Timer {
         id: quitTimer
         interval: 300
+        onTriggered: root.quitAfterStamp()
+    }
+
+    Timer {
+        id: quitDeadline
+        interval: 2000
+        running: root.quitRequested
         onTriggered: Qt.quit()
     }
 
-    Process { id: readyStamp }
+    Process {
+        id: readyStamp
+        onRunningChanged: if (!running && root.quitRequested) Qt.quit()
+    }
 
     WlSessionLock {
         id: sessionLock
