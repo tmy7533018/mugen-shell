@@ -427,133 +427,142 @@ Item {
                 }
                 
                 Item { Layout.fillWidth: true }
-                
-                Rectangle {
-                    id: toggleButton
-                    width: 28
-                    height: 28
-                    color: notificationManager.notificationsEnabled
-                        ? Qt.rgba(0.45, 0.75, 0.55, toggleArea.containsMouse ? 0.4 : 0.3)
-                        : Qt.rgba(0.75, 0.45, 0.45, toggleArea.containsMouse ? 0.4 : 0.3)
-                    radius: height / 2
-                    
-                    Behavior on color {
-                        ColorAnimation {
-                            duration: Theme.Motion.standard
-                            easing.type: Easing.OutCubic
-                        }
-                    }
-                    
-                    UI.SvgIcon {
-                        id: toggleIcon
-                        anchors.centerIn: parent
-                        width: 16
-                        height: 16
-                        source: root.icons 
-                            ? (notificationManager.notificationsEnabled
-                                ? root.icons.notificationSvg
-                                : root.icons.notificationOffSvg)
-                            : ""
-                        color: notificationManager.notificationsEnabled
-                            ? Qt.rgba(0.55, 0.95, 0.65, toggleArea.containsMouse ? 1.0 : 0.9)
-                            : Qt.rgba(0.95, 0.55, 0.65, toggleArea.containsMouse ? 1.0 : 0.9)
-                        opacity: toggleArea.containsMouse ? 1.0 : 0.9
-                        scale: toggleArea.containsMouse ? 1.2 : 1.0
-                        
-                        Behavior on color {
-                            ColorAnimation {
-                                duration: Theme.Motion.standard
-                                easing.type: Easing.OutCubic
-                            }
-                        }
-                        
-                        Behavior on opacity {
-                            NumberAnimation {
-                                duration: Theme.Motion.standard
-                                easing.type: Easing.OutCubic
-                            }
-                        }
-                        
-                        Behavior on scale {
-                            NumberAnimation {
-                                duration: Theme.Motion.standard
-                                easing.type: Easing.OutCubic
-                            }
-                        }
-                    }
-                    
-                    MouseArea {
-                        id: toggleArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            root.toggleNotificationsAndPreview()
-                            root.resetAutoCloseTimer()
-                        }
-                    }
-                }
-                
-                Rectangle {
-                    id: clearAllButton
-                    property real baseWidth: clearAllText.implicitWidth + 24
-                    property real animatedWidth: (notifications.length > 0 && !root.isClearingAll) ? baseWidth : 0
-                    Layout.preferredWidth: animatedWidth
-                    Layout.fillWidth: false
-                    height: 28
-                    color: Qt.rgba(0.90, 0.45, 0.55, clearAllArea.containsMouse ? 0.3 : 0.2)
-                    radius: height / 2
-                    visible: opacity > 0.01
 
-                    opacity: (notifications.length > 0 && !root.isClearingAll) ? 1.0 : 0.0
-                    
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: Theme.Motion.standard
-                            easing.type: Easing.OutCubic
-                        }
-                    }
-                    
-                    Behavior on animatedWidth {
-                        NumberAnimation {
-                            duration: Theme.Motion.standard
-                            easing.type: Easing.OutCubic
-                        }
-                    }
-                    
-                    Behavior on color {
-                        ColorAnimation {
-                            duration: Theme.Motion.standard
-                            easing.type: Easing.OutCubic
-                        }
-                    }
-                    
-                    Text {
-                        id: clearAllText
-                        anchors.centerIn: parent
-                        text: "Clear All"
-                        color: Qt.rgba(0.95, 0.55, 0.65, clearAllArea.containsMouse ? 1.0 : 0.85)
-                        font.pixelSize: 12
-                        font.weight: Font.Medium
-                        font.family: "M PLUS 2"
-                        
+                // The gap lives inside clearAllSlot so it collapses with the button instead of vanishing in one frame.
+                Row {
+                    Rectangle {
+                        id: toggleButton
+                        width: 28
+                        height: 28
+                        color: notificationManager.notificationsEnabled
+                            ? Qt.rgba(0.45, 0.75, 0.55, toggleArea.containsMouse ? 0.4 : 0.3)
+                            : Qt.rgba(0.75, 0.45, 0.45, toggleArea.containsMouse ? 0.4 : 0.3)
+                        radius: height / 2
+
                         Behavior on color {
                             ColorAnimation {
                                 duration: Theme.Motion.standard
                                 easing.type: Easing.OutCubic
                             }
                         }
-                    }
+
+                        UI.SvgIcon {
+                            id: toggleIcon
+                            anchors.centerIn: parent
+                            width: 16
+                            height: 16
+                            source: root.icons
+                                ? (notificationManager.notificationsEnabled
+                                    ? root.icons.notificationSvg
+                                    : root.icons.notificationOffSvg)
+                                : ""
+                            color: notificationManager.notificationsEnabled
+                                ? Qt.rgba(0.55, 0.95, 0.65, toggleArea.containsMouse ? 1.0 : 0.9)
+                                : Qt.rgba(0.95, 0.55, 0.65, toggleArea.containsMouse ? 1.0 : 0.9)
+                            opacity: toggleArea.containsMouse ? 1.0 : 0.9
+                            scale: toggleArea.containsMouse ? 1.2 : 1.0
+                        
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Theme.Motion.standard
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+                        
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: Theme.Motion.standard
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+
+                            Behavior on scale {
+                                NumberAnimation {
+                                    duration: Theme.Motion.standard
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+                        }
                     
-                    MouseArea {
-                        id: clearAllArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        enabled: !root.isClearingAll
-                        onClicked: {
-                            root.clearAllNotifications()
-                            root.resetAutoCloseTimer()
+                        MouseArea {
+                            id: toggleArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.toggleNotificationsAndPreview()
+                                root.resetAutoCloseTimer()
+                            }
+                        }
+                    }
+                
+                    Item {
+                        id: clearAllSlot
+                        readonly property bool shown: notifications.length > 0 && !root.isClearingAll
+                        property real revealWidth: shown ? clearAllButton.width + modeManager.scale(10) : 0
+                        width: revealWidth
+                        height: 28
+                        clip: true
+                        visible: revealWidth > 0
+
+                        Behavior on revealWidth {
+                            NumberAnimation {
+                                duration: Theme.Motion.standard
+                                easing.type: Theme.Motion.easeMove
+                            }
+                        }
+
+                        Rectangle {
+                            id: clearAllButton
+                            anchors.right: parent.right
+                            width: clearAllText.implicitWidth + 24
+                            height: 28
+                            color: Qt.rgba(0.90, 0.45, 0.55, clearAllArea.containsMouse ? 0.3 : 0.2)
+                            radius: height / 2
+                            opacity: clearAllSlot.shown ? 1.0 : 0.0
+
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: Theme.Motion.fast
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Theme.Motion.standard
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+                    
+                            Text {
+                                id: clearAllText
+                                anchors.centerIn: parent
+                                text: "Clear All"
+                                color: Qt.rgba(0.95, 0.55, 0.65, clearAllArea.containsMouse ? 1.0 : 0.85)
+                                font.pixelSize: 12
+                                font.weight: Font.Medium
+                                font.family: "M PLUS 2"
+                        
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: Theme.Motion.standard
+                                        easing.type: Easing.OutCubic
+                                    }
+                                }
+                            }
+                    
+                            MouseArea {
+                                id: clearAllArea
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                enabled: clearAllSlot.shown
+                                onClicked: {
+                                    root.clearAllNotifications()
+                                    root.resetAutoCloseTimer()
+                                }
+                            }
                         }
                     }
                 }
