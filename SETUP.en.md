@@ -96,6 +96,8 @@ If you already had `~/.config/gtk-3.0/gtk.css` or `~/.config/gtk-4.0/gtk.css`, a
 
 Configure it under **Settings → Yura**. To edit by hand, **Edit toml** on the same page opens `~/.config/mugen-ai/`; edit `config.toml` there. The template is `ai/config.toml.example`, or `/usr/share/mugen-ai/config.toml.example` on Arch.
 
+If you don't want Yura, skip this section and turn off **Yura in the bar and the corner pop-up** under **Settings → System**.
+
 First steps:
 
 1. **Get a model.** Install Ollama yourself and pull a model, such as `ollama pull qwen3:4b`, or add an API key below.

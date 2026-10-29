@@ -111,6 +111,7 @@ QtObject {
     property bool _displayMonitorLatched: false
     property string barAiModel: ""  // "" = follow the backend default
     property bool barThinking: false
+    property bool yuraEnabled: true
     property string yuraPanelSide: "left"  // "left" | "right"
     property int yuraPanelWidth: 700
     property int yuraPanelHeight: 640
@@ -269,6 +270,7 @@ QtObject {
                 "barThinking": barThinking
             },
             "yura": {
+                "enabled": yuraEnabled,
                 "panelSide": yuraPanelSide,
                 "panelWidth": yuraPanelWidth,
                 "panelHeight": yuraPanelHeight,
@@ -642,6 +644,9 @@ QtObject {
 
             try {
                 if (settings.yura) {
+                    if (settings.yura.enabled !== undefined) {
+                        yuraEnabled = settings.yura.enabled
+                    }
                     if (settings.yura.panelSide !== undefined) {
                         yuraPanelSide = settings.yura.panelSide
                     }

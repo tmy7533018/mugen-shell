@@ -67,6 +67,7 @@ QtObject {
             console.warn("mode: refusing unknown mode " + newMode)
             return
         }
+        if (newMode === "ai" && currentMode !== "ai" && settingsManager && !settingsManager.yuraEnabled) return
         currentMode = newMode === currentMode ? "normal" : newMode
         interaction()
     }

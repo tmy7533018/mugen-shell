@@ -26,6 +26,7 @@ RowLayout {
     property var weatherManager
     property bool aiThinking: false
     property bool aiPanelOpen: false
+    readonly property bool yuraShown: !root.settingsManager || root.settingsManager.yuraEnabled
 
     function aiOrbScreenRect() {
         const p = aiContainer.mapToItem(null, 0, 0)
@@ -288,10 +289,11 @@ RowLayout {
         cavaManager: root.cavaManager
     }
 
-    Separator {}
+    Separator { visible: root.yuraShown }
 
     Item {
         id: aiContainer
+        visible: root.yuraShown
         implicitWidth: scaled(24)
         implicitHeight: scaled(24)
         Layout.alignment: Qt.AlignVCenter

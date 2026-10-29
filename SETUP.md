@@ -96,6 +96,8 @@ Hyprland の個人設定は `~/.config/hypr/configs/user-overrides.lua` (キー�
 
 設定は **Settings → Yura** から。手で編集する場合は、同じ画面の **Edit toml** で開く `~/.config/mugen-ai/` の `config.toml` を編集します。テンプレートは `ai/config.toml.example` で、Arch では `/usr/share/mugen-ai/config.toml.example` にあります。
 
+Yura を使わないなら、この節は飛ばして **Settings → System** の **Yura in the bar and the corner pop-up** を OFF にします。
+
 最初にやること:
 
 1. **モデルを用意する。** Ollama を自分で入れて `ollama pull qwen3:4b` のようにモデルを pull するか、下の API キーを置きます。

@@ -14,6 +14,12 @@ ShellRoot {
     Theme.AiBackend { id: aiBackend }
     Theme.SettingsManager { id: settingsManager }
 
+    // Every launch path (exec-once, install.sh, the monitor Restart) starts here, so this is the one gate.
+    Connections {
+        target: settingsManager
+        function onYuraEnabledChanged() { if (!settingsManager.yuraEnabled) Qt.quit() }
+    }
+
     Theme.YuraState {
         id: yuraState
         settingsManager: settingsManager
