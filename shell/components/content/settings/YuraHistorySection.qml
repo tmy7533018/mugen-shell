@@ -94,13 +94,10 @@ Rectangle {
         NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
-    Process {
+    AiCall {
         id: loadStatsProcess
-        running: false
-        property string buf: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/conversations/stats"]
-        stdout: SplitParser { onRead: data => loadStatsProcess.buf += data }
-        onRunningChanged: { if (running) buf = "" }
+        backend: aiBackend
+        path: "/conversations/stats"
         onExited: (exitCode) => {
             if (exitCode !== 0) { section.statusText = "load failed"; loadRetry.restart(); return }
             try {
@@ -116,13 +113,10 @@ Rectangle {
         }
     }
 
-    Process {
+    AiCall {
         id: loadConfigProcess
-        running: false
-        property string buf: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
-        stdout: SplitParser { onRead: data => loadConfigProcess.buf += data }
-        onRunningChanged: { if (running) buf = "" }
+        backend: aiBackend
+        path: "/config"
         onExited: (exitCode) => {
             if (exitCode !== 0) return
             try {
@@ -148,11 +142,11 @@ Rectangle {
         }
     }
 
-    Process {
+    AiCall {
         id: restartProcess
-        running: false
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3",
-                  "-X", "POST", aiBackend.baseUrl + "/config/restart"]
+        backend: aiBackend
+        path: "/config/restart"
+        method: "POST"
         onExited: (exitCode) => {
             section.saving = false
             section.savedRetainDays = section.retainDays
@@ -194,14 +188,12 @@ Rectangle {
         }
     }
 
-    Process {
+    AiCall {
         id: clearProcess
-        running: false
-        property string buf: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "5",
-                  "-X", "DELETE", aiBackend.baseUrl + "/conversations"]
-        stdout: SplitParser { onRead: data => clearProcess.buf += data }
-        onRunningChanged: { if (running) buf = "" }
+        backend: aiBackend
+        path: "/conversations"
+        method: "DELETE"
+        maxTime: "5"
         onExited: (exitCode) => {
             if (exitCode === 0 && clearProcess.buf.indexOf("cleared") >= 0) {
                 section.statusText = "all conversations cleared"

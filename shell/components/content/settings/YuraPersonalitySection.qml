@@ -147,13 +147,10 @@ Rectangle {
         NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
-    Process {
+    AiCall {
         id: loadProcess
-        running: false
-        property string buf: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
-        stdout: SplitParser { onRead: data => loadProcess.buf += data }
-        onRunningChanged: { if (running) buf = "" }
+        backend: aiBackend
+        path: "/config"
         onExited: (exitCode) => {
             if (exitCode !== 0) {
                 section.statusText = "load failed"
@@ -188,11 +185,11 @@ Rectangle {
         }
     }
 
-    Process {
+    AiCall {
         id: restartProcess
-        running: false
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3",
-                  "-X", "POST", aiBackend.baseUrl + "/config/restart"]
+        backend: aiBackend
+        path: "/config/restart"
+        method: "POST"
         onExited: (exitCode) => {
             section.saving = false
             section.statusText = exitCode === 0 ? "applied" : "applied (restart pending)"

@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import Quickshell.Io
 import "../../../lib" as Theme
 
 Rectangle {
@@ -219,13 +218,10 @@ Rectangle {
         NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.OutCubic }
     }
 
-    Process {
+    AiCall {
         id: loadConfigProcess
-        running: false
-        property string buf: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
-        stdout: SplitParser { onRead: data => loadConfigProcess.buf += data }
-        onRunningChanged: { if (running) buf = "" }
+        backend: aiBackend
+        path: "/config"
         onExited: (exitCode) => {
             if (exitCode !== 0) { section.statusText = "load failed"; loadRetry.restart(); return }
             try {
@@ -256,13 +252,10 @@ Rectangle {
         }
     }
 
-    Process {
+    AiCall {
         id: loadStatusProcess
-        running: false
-        property string buf: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/mcp/servers"]
-        stdout: SplitParser { onRead: data => loadStatusProcess.buf += data }
-        onRunningChanged: { if (running) buf = "" }
+        backend: aiBackend
+        path: "/mcp/servers"
         onExited: (exitCode) => {
             if (exitCode !== 0) return
             try {
@@ -274,13 +267,10 @@ Rectangle {
         }
     }
 
-    Process {
+    AiCall {
         id: getCurrentProcess
-        running: false
-        property string buf: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3", aiBackend.baseUrl + "/config"]
-        stdout: SplitParser { onRead: data => getCurrentProcess.buf += data }
-        onRunningChanged: { if (running) buf = "" }
+        backend: aiBackend
+        path: "/config"
         onExited: (exitCode) => {
             if (exitCode !== 0) {
                 section.saving = false
@@ -313,11 +303,11 @@ Rectangle {
         }
     }
 
-    Process {
+    AiCall {
         id: restartProcess
-        running: false
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "3",
-                  "-X", "POST", aiBackend.baseUrl + "/config/restart"]
+        backend: aiBackend
+        path: "/config/restart"
+        method: "POST"
         onExited: (exitCode) => {
             section.saving = false
             section.dirty = false
@@ -333,13 +323,11 @@ Rectangle {
         onTriggered: if (!section.dirty) loadConfigProcess.running = true
     }
 
-    Process {
+    AiCall {
         id: discoverProcess
-        running: false
-        property string buf: ""
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "8", aiBackend.baseUrl + "/mcp/discover"]
-        stdout: SplitParser { onRead: data => discoverProcess.buf += data }
-        onRunningChanged: { if (running) buf = "" }
+        backend: aiBackend
+        path: "/mcp/discover"
+        maxTime: "8"
         onExited: (exitCode) => {
             if (exitCode !== 0) { section.statusText = "discover failed"; return }
             try {
