@@ -107,14 +107,9 @@ Rectangle {
         }
     }
 
-    // systemd counts a Type=simple unit as started at fork, so a config that kills mugen-ai only shows in is-active.
-    Process {
+    YuraServiceRestart {
         id: serviceRestartProc
-        running: false
-        command: ["sh", "-c", "systemctl --user restart mugen-ai.service && sleep 1 && systemctl --user is-active --quiet mugen-ai.service && echo ok"]
-        stdout: StdioCollector {
-            onStreamFinished: section.restartStatus = this.text.trim() === "ok" ? "restarted" : "restart failed"
-        }
+        onResult: ok => section.restartStatus = ok ? "restarted" : "restart failed"
     }
 
     function restartService() {
