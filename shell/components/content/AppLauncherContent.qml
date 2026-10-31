@@ -5,6 +5,7 @@ import Quickshell.Io
 import "../common" as Common
 import "../ui" as UI
 import "../../lib" as Theme
+import "./launcher" as Launcher
 
 FocusScope {
     id: root
@@ -1031,64 +1032,16 @@ FocusScope {
             }
         }
 
-        Item {
+        Launcher.LauncherDragGhost {
             id: dragGhost
             z: 48
             visible: root.dragExec !== ""
             x: root.dragX - root.dragGrabX
             y: root.dragY - root.dragGrabY
-            width: 88
-            height: 98
-            rotation: -3
-            scale: 1.06
-            transformOrigin: Item.Center
-
-            Rectangle {
-                anchors.fill: parent
-                anchors.topMargin: 10
-                radius: 15
-                color: Qt.rgba(0, 0, 0, 0.45)
-            }
-
-            Rectangle {
-                anchors.fill: parent
-                radius: 15
-                color: Qt.rgba(1, 1, 1, 0.12)
-                border.width: 1
-                border.color: Qt.rgba(1, 1, 1, 0.18)
-
-                Column {
-                    anchors.centerIn: parent
-                    spacing: 8
-
-                    Image {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        width: 40
-                        height: 40
-                        fillMode: Image.PreserveAspectFit
-                        smooth: true
-                        sourceSize: Qt.size(96, 96)
-                        source: {
-                            if (!root.dragApp || !root.dragApp.icon) return ""
-                            let paths = launcherIcons.resolveIconPath(root.dragApp.icon)
-                            return paths && paths.length > 0 ? "file://" + paths[0] : ""
-                        }
-                    }
-
-                    Text {
-                        width: 76
-                        text: root.dragApp ? root.dragApp.name : ""
-                        textFormat: Text.PlainText
-                        color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                        font.pixelSize: root.typo ? root.typo.sizeSmall : 11
-                        font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
-                        horizontalAlignment: Text.AlignHCenter
-                        wrapMode: Text.WordWrap
-                        maximumLineCount: 2
-                        elide: Text.ElideRight
-                    }
-                }
-            }
+            app: root.dragApp
+            iconResolver: launcherIcons
+            theme: root.theme
+            typo: root.typo
         }
 
         MouseArea {
