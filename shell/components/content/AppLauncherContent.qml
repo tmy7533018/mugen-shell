@@ -33,7 +33,12 @@ FocusScope {
 
     property string searchText: ""
 
-    property var favoritesSet: ({})
+    Launcher.LauncherStore {
+        id: launcherStore
+        apps: root.apps
+        onCommitted: root.filterApps()
+        onLoaded: if (root.appsLoaded) root.filterApps()
+    }
 
     property string activeGenre: ""
 
@@ -62,78 +67,11 @@ FocusScope {
         modeManager.bump()
     }
 
-    // Groups live only on Home: a genre view or a search dissolves them into their apps.
-    property var groups: []
-
     property var homeFavorites: []
     property var homeGroups: []
     property var homeAllApps: []
 
     readonly property bool isHome: activeGenre === "" && searchText.trim() === ""
-
-    // An app may sit in any number of groups: they are ways of looking at the All band, not folders it moves into.
-    function groupsOf(execKey) {
-        return groups.filter(g => g.items.indexOf(execKey) >= 0)
-    }
-
-    function findGroup(id) {
-        for (let g = 0; g < groups.length; g++) {
-            if (groups[g].id === id) return groups[g]
-        }
-        return null
-    }
-
-    // Copy-on-write: QML only notices a var property when the reference changes.
-    function commitGroups(next) {
-        groups = next
-        saveState()
-        filterApps()
-    }
-
-    function createGroup(execA, execB) {
-        if (!execA || !execB || execA === execB) return null
-        let apps = [findApp(execA), findApp(execB)]
-        let genreA = Theme.LauncherSearch.genreOf(apps[0])
-        let name = genreA !== "" && genreA === Theme.LauncherSearch.genreOf(apps[1]) ? genreA : "Group"
-        let group = { id: "g-" + Date.now(), name: name, items: [execA, execB] }
-        commitGroups(groups.concat([group]))
-        return group
-    }
-
-    function addToGroup(id, execKey) {
-        if (!execKey) return
-        commitGroups(groups.map(g => ({
-            id: g.id, name: g.name,
-            items: g.id === id && g.items.indexOf(execKey) < 0 ? g.items.concat([execKey]) : g.items
-        })))
-    }
-
-    // A group is two or more apps; the last one left walks back to Home on its own.
-    function removeFromGroup(id, execKey) {
-        let next = groups.map(g => ({
-            id: g.id, name: g.name,
-            items: g.id === id ? g.items.filter(e => e !== execKey) : g.items
-        })).filter(g => g.items.length > 1)
-        commitGroups(next)
-    }
-
-    function renamedGroups(id, name) {
-        let trimmed = (name || "").trim()
-        if (trimmed === "") return null
-        return groups.map(g => ({ id: g.id, name: g.id === id ? trimmed : g.name, items: g.items }))
-    }
-
-    function renameGroup(id, name) {
-        let next = renamedGroups(id, name)
-        if (next) commitGroups(next)
-    }
-
-    function findApp(execKey) {
-        for (let i = 0; i < apps.length; i++) {
-            if (apps[i].exec === execKey) return apps[i]
-        }
-        return null
-    }
 
     property string dragExec: ""
     property var dragApp: null
@@ -186,13 +124,13 @@ FocusScope {
         dragCancel()
         if (!app) return
         if (target) {
-            if (target.kind === "group") addToGroup(target.id, app.exec)
+            if (target.kind === "group") launcherStore.addToGroup(target.id, app.exec)
             else createGroupAndOpen(target.exec, app.exec)
             return
         }
         if (fromGroup !== "" && !pointInPanel(x, y)) {
-            removeFromGroup(fromGroup, app.exec)
-            if (findGroup(fromGroup) === null) closeGroup()
+            launcherStore.removeFromGroup(fromGroup, app.exec)
+            if (launcherStore.findGroup(fromGroup) === null) closeGroup()
         }
     }
 
@@ -206,7 +144,7 @@ FocusScope {
     }
 
     function createGroupAndOpen(execA, execB) {
-        let g = createGroup(execA, execB)
+        let g = launcherStore.createGroup(execA, execB)
         if (g) openGroup(g.id, true)
     }
 
@@ -217,7 +155,7 @@ FocusScope {
             }
             return null
         }
-        return findApp(execKey)
+        return launcherStore.findApp(execKey)
     }
 
     function pointInPanel(x, y) {
@@ -239,34 +177,6 @@ FocusScope {
             return homeView.tileAt(p.x, p.y)
         }
         return null
-    }
-
-    function isFavorite(execKey) {
-        return execKey && favoritesSet[execKey] === true
-    }
-
-    function toggleFavorite(execKey) {
-        if (!execKey) return
-        let next = Object.assign({}, favoritesSet)
-        if (next[execKey]) {
-            delete next[execKey]
-        } else {
-            next[execKey] = true
-        }
-        favoritesSet = next
-        saveState()
-        filterApps()
-    }
-
-    function stateWriteArgv(groupList) {
-        let json = JSON.stringify({ favorites: Object.keys(favoritesSet), groups: groupList })
-        return Theme.JsonStore.atomicWriteArgv(
-            Theme.Paths.stateDir, Theme.Paths.stateDir + "/launcher.json", json)
-    }
-
-    function saveState() {
-        saveFavoritesProcess.command = stateWriteArgv(groups)
-        saveFavoritesProcess.running = true
     }
 
     function launchExec(execCmd, inTerminal) {
@@ -292,15 +202,15 @@ FocusScope {
     property string openGroupId: ""
     property bool groupNameEditing: false
     readonly property var openGroupMembers: {
-        let g = findGroup(openGroupId)
-        return g ? g.items.map(findApp).filter(a => a !== null) : []
+        let g = launcherStore.findGroup(openGroupId)
+        return g ? g.items.map(e => launcherStore.findApp(e)).filter(a => a !== null) : []
     }
     // What the panel draws: it keeps the last group on close so the fade-out still shows the members.
     property string shownGroupId: ""
-    readonly property var shownGroup: findGroup(shownGroupId)
+    readonly property var shownGroup: launcherStore.findGroup(shownGroupId)
     readonly property var shownGroupMembers: {
-        let g = findGroup(shownGroupId)
-        return g ? g.items.map(findApp).filter(a => a !== null) : []
+        let g = launcherStore.findGroup(shownGroupId)
+        return g ? g.items.map(e => launcherStore.findApp(e)).filter(a => a !== null) : []
     }
 
     function openGroup(id, editName) {
@@ -335,8 +245,8 @@ FocusScope {
 
     function openContextMenu(app, px, py) {
         if (!app || app.kind === "group") return
-        let leavable = openGroupId !== "" ? groupsOf(app.exec || "").filter(g => g.id === openGroupId) : groupsOf(app.exec || "")
-        contextMenu.openFor(app, isFavorite(app.exec || ""), leavable)
+        let leavable = openGroupId !== "" ? launcherStore.groupsOf(app.exec || "").filter(g => g.id === openGroupId) : launcherStore.groupsOf(app.exec || "")
+        contextMenu.openFor(app, launcherStore.isFavorite(app.exec || ""), leavable)
         contextMenu.x = Math.max(0, Math.min(px, launcherLayer.width - contextMenu.width))
         contextMenu.y = Math.max(0, Math.min(py, launcherLayer.height - contextMenu.height))
         modeManager.bump()
@@ -363,7 +273,7 @@ FocusScope {
     }
 
     function scoreApp(app, search) {
-        return Theme.LauncherSearch.scoreApp(app, search, app && isFavorite(app.exec))
+        return Theme.LauncherSearch.scoreApp(app, search, app && launcherStore.isFavorite(app.exec))
     }
 
     function applyPendingFilter() {
@@ -384,17 +294,17 @@ FocusScope {
         }
         if (search === "") {
             let byName = (a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase())
-            let favs = pool.filter(a => isFavorite(a.exec)).sort(byName)
+            let favs = pool.filter(a => launcherStore.isFavorite(a.exec)).sort(byName)
             if (activeGenre !== "") {
-                filteredApps = favs.concat(pool.filter(a => !isFavorite(a.exec)).sort(byName))
+                filteredApps = favs.concat(pool.filter(a => !launcherStore.isFavorite(a.exec)).sort(byName))
                 return
             }
             let groupTiles = []
-            for (let g = 0; g < groups.length; g++) {
-                let members = groups[g].items.map(findApp).filter(a => a !== null)
+            for (let g = 0; g < launcherStore.groups.length; g++) {
+                let members = launcherStore.groups[g].items.map(e => launcherStore.findApp(e)).filter(a => a !== null)
                 if (members.length < 2) continue
-                groupTiles.push({ kind: "group", id: groups[g].id, name: groups[g].name,
-                                  exec: "group:" + groups[g].id, members: members })
+                groupTiles.push({ kind: "group", id: launcherStore.groups[g].id, name: launcherStore.groups[g].name,
+                                  exec: "group:" + launcherStore.groups[g].id, members: members })
             }
             // The bottom band is the whole A-Z: favourites and grouped apps appear there too.
             let all = pool.slice().sort(byName)
@@ -489,42 +399,6 @@ FocusScope {
                 if (data.trim() !== "") appsProcess.lastError = data.trim()
             }
         }
-    }
-
-    Process {
-        id: loadFavoritesProcess
-        command: ["sh", "-c", "f=\"${XDG_STATE_HOME:-$HOME/.local/state}/mugen-shell/launcher.json\"; [ -f \"$f\" ] && cat \"$f\" || printf '{}'"]
-        running: false
-
-        property string output: ""
-
-        stdout: SplitParser {
-            onRead: data => {
-                loadFavoritesProcess.output += data
-            }
-        }
-
-        onExited: () => {
-            try {
-                let parsed = JSON.parse(loadFavoritesProcess.output || "{}")
-                let favs = Array.isArray(parsed.favorites) ? parsed.favorites : []
-                let set = {}
-                for (let i = 0; i < favs.length; i++) set[favs[i]] = true
-                root.favoritesSet = set
-                let gs = Array.isArray(parsed.groups) ? parsed.groups : []
-                root.groups = gs.filter(g => g && typeof g.id === "string" && Array.isArray(g.items))
-                    .map(g => ({ id: g.id, name: String(g.name || "Group"), items: g.items.filter(e => typeof e === "string") }))
-                if (root.appsLoaded) root.filterApps()
-            } catch (e) {
-            }
-            loadFavoritesProcess.output = ""
-        }
-    }
-
-    Process {
-        id: saveFavoritesProcess
-        command: ["true"]
-        running: false
     }
 
     Process {
@@ -641,7 +515,7 @@ FocusScope {
                 iconResolver: launcherIcons
                 modeManager: root.modeManager
                 // The star and tint mark the Favorites band and the genre grid; All and group panels list plain apps.
-                isFavorite: root.isFavorite(delegateWrapper.wrapperModelData ? delegateWrapper.wrapperModelData.exec : "")
+                isFavorite: launcherStore.isFavorite(delegateWrapper.wrapperModelData ? delegateWrapper.wrapperModelData.exec : "")
                     && delegateWrapper.GridView.view
                     && (delegateWrapper.GridView.view.sectionIndex === 0 || delegateWrapper.GridView.view === appGrid)
                 dragEnabled: {
@@ -1020,7 +894,7 @@ FocusScope {
                 text: {
                     if (root.isLoading) return "Loading..."
                     if (root.appsFailed) return "Listing apps failed"
-                    if (root.searchText === "" && root.activeGenre === "" && Object.keys(root.favoritesSet).length === 0) {
+                    if (root.searchText === "" && root.activeGenre === "" && Object.keys(launcherStore.favoritesSet).length === 0) {
                         return "Right-click for options"
                     }
                     // Home lists favourites twice and adds group tiles, so count the apps themselves.
@@ -1118,7 +992,7 @@ FocusScope {
                     }
                     // Whatever is in the field when it loses focus is the name; there is no cancel.
                     onActiveFocusChanged: {
-                        if (!activeFocus && root.shownGroupId !== "") root.renameGroup(root.shownGroupId, text)
+                        if (!activeFocus && root.shownGroupId !== "") launcherStore.renameGroup(root.shownGroupId, text)
                     }
                 }
 
@@ -1221,12 +1095,12 @@ FocusScope {
             }
 
             onGroupRemovalRequested: (app, groupId) => {
-                removeFromGroup(groupId, app.exec)
-                if (root.openGroupId !== "" && findGroup(root.openGroupId) === null) root.closeGroup()
+                launcherStore.removeFromGroup(groupId, app.exec)
+                if (root.openGroupId !== "" && launcherStore.findGroup(root.openGroupId) === null) root.closeGroup()
             }
 
             onFavoriteToggled: (app) => {
-                if (app) root.toggleFavorite(app.exec || "")
+                if (app) launcherStore.toggleFavorite(app.exec || "")
             }
 
             onOpenLocationRequested: (app) => {
@@ -1279,12 +1153,12 @@ FocusScope {
     // The Loader tears this down without moving focus, and saveFavoritesProcess kills its child as it goes.
     Component.onDestruction: {
         let renamed = groupNameInput.activeFocus && root.shownGroupId !== ""
-            ? root.renamedGroups(root.shownGroupId, groupNameInput.text) : null
-        if (renamed) Quickshell.execDetached(root.stateWriteArgv(renamed))
+            ? launcherStore.renamedGroups(root.shownGroupId, groupNameInput.text) : null
+        if (renamed) Quickshell.execDetached(launcherStore.stateWriteArgv(renamed))
     }
 
     Component.onCompleted: {
-        loadFavoritesProcess.running = true
+        launcherStore.load()
         iconThemeProcess.running = true
         if (modeManager) {
             modeManager.registerMode("launcher", root)
