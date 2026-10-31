@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../../common" as Common
 import "../../../lib" as Theme
 
 Rectangle {
@@ -596,58 +597,20 @@ Rectangle {
                 Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
             }
 
-            Rectangle {
-                Layout.preferredWidth: 88
-                Layout.preferredHeight: 28
-                radius: 14
-                color: editMouse.containsMouse
-                    ? Qt.rgba(0.55, 0.55, 0.65, 0.32)
-                    : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-                Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "Edit toml"
-                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                    font.pixelSize: 11
-                    font.family: "M PLUS 2"
-                    font.weight: Font.Medium
-                }
-
-                MouseArea {
-                    id: editMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: { section.editConfig(); section.bump() }
-                }
+            Common.ActionButton {
+                theme: section.theme
+                label: "Edit toml"
+                buttonWidth: 88
+                onClicked: { section.editConfig(); section.bump() }
             }
 
-            Rectangle {
-                Layout.preferredWidth: 88
-                Layout.preferredHeight: 28
-                radius: 14
-                color: restartMouse.containsMouse
-                    ? Qt.rgba(0.90, 0.45, 0.55, 0.45)
-                    : Qt.rgba(0.90, 0.45, 0.55, 0.3)
-                Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "Restart AI"
-                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                    font.pixelSize: 11
-                    font.family: "M PLUS 2"
-                    font.weight: Font.Medium
-                }
-
-                MouseArea {
-                    id: restartMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: { section.restartService(); section.bump() }
-                }
+            Common.ActionButton {
+                theme: section.theme
+                label: "Restart AI"
+                buttonWidth: 88
+                tint: Qt.rgba(0.90, 0.45, 0.55, 0.30)
+                tintHover: Qt.rgba(0.90, 0.45, 0.55, 0.45)
+                onClicked: { section.restartService(); section.bump() }
             }
 
             Rectangle {
