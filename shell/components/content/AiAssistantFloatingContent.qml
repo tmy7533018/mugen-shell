@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Dialogs
-import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Io
 import "../../lib" as Theme
@@ -427,10 +426,10 @@ FocusScope {
     }
 
     function restoreDraft(text, files) {
-        inputField.text = inputField.text.trim() === "" ? text : text + "\n" + inputField.text
+        inputBar.field.text = inputBar.field.text.trim() === "" ? text : text + "\n" + inputBar.field.text
         pendingAttachments = files.concat(pendingAttachments).slice(0, maxAttachments)
-        inputField.cursorPosition = inputField.length
-        inputField.forceActiveFocus()
+        inputBar.field.cursorPosition = inputBar.field.length
+        inputBar.field.forceActiveFocus()
     }
 
     function newChat() {
@@ -543,7 +542,7 @@ FocusScope {
         interval: 200
         repeat: false
         onTriggered: {
-            if (root.aiAvailable) inputField.forceActiveFocus()
+            if (root.aiAvailable) inputBar.field.forceActiveFocus()
         }
     }
 
@@ -1254,7 +1253,7 @@ FocusScope {
         }
     }
 
-    Item {
+    Ai.ChatComposer {
         id: inputBar
         anchors.left: parent.left
         anchors.right: parent.right
@@ -1264,259 +1263,21 @@ FocusScope {
         anchors.bottomMargin: modeManager.scale(22)
         z: 5
         visible: root.aiAvailable && root.hasModel
-
-        readonly property real rowHeight: modeManager.scale(46)
-        height: failureStrip.height + attachStrip.height
-            + Math.max(rowHeight, inputFlick.height + modeManager.scale(22))
-
-        Behavior on height { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
-
-        Rectangle {
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: 1
-            color: inputField.activeFocus
-                ? (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.85) : Qt.rgba(0.65, 0.55, 0.85, 0.85))
-                : Qt.rgba(0.5, 0.5, 0.65, 0.25)
-
-            Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-
-            layer.enabled: inputField.activeFocus
-            layer.effect: Glow {
-                samples: 18
-                radius: 8
-                spread: 0.3
-                color: root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.6) : Qt.rgba(0.65, 0.55, 0.85, 0.6)
-                transparentBorder: true
-            }
-        }
-
-        Item {
-            id: failureStrip
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: root.turnFailure !== ""
-                ? failureText.implicitHeight + root.modeManager.scale(10)
-                : 0
-            clip: true
-
-            Behavior on height { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
-
-            Text {
-                id: failureText
-                anchors.left: parent.left
-                anchors.leftMargin: root.modeManager.scale(42)
-                anchors.right: parent.right
-                anchors.rightMargin: root.modeManager.scale(12)
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: root.modeManager.scale(6)
-                text: root.turnFailure
-                textFormat: Text.PlainText
-                wrapMode: Text.Wrap
-                maximumLineCount: 2
-                elide: Text.ElideRight
-                color: root.theme ? root.theme.danger : Qt.rgba(0.95, 0.55, 0.65, 1.0)
-                font.pixelSize: root.modeManager.scale(11)
-                font.family: "M PLUS 2"
-            }
-        }
-
-        Item {
-            id: attachStrip
-            anchors.top: failureStrip.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: root.pendingAttachments.length > 0
-                ? composerThumbs.height + root.modeManager.scale(10)
-                : 0
-            clip: true
-
-            Behavior on height { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
-
-            Ai.AttachmentThumbs {
-                id: composerThumbs
-                anchors.left: parent.left
-                anchors.leftMargin: root.modeManager.scale(42)
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: root.modeManager.scale(6)
-                modeManager: root.modeManager
-                theme: root.theme
-                paths: root.pendingAttachments
-                thumbSize: root.modeManager.scale(52)
-                removable: true
-                onRemoveRequested: index => root.removeAttachment(index)
-            }
-        }
-
-        Flickable {
-            id: inputFlick
-            anchors.left: attachIcon.right
-            anchors.leftMargin: modeManager.scale(8)
-            anchors.right: sendIcon.left
-            anchors.rightMargin: modeManager.scale(12)
-            // Grows symmetrically, so a single line sits where it did before Shift+Enter existed.
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: (failureStrip.height + attachStrip.height) / 2
-            height: Math.min(inputField.implicitHeight, modeManager.scale(110))
-            contentWidth: width
-            contentHeight: inputField.implicitHeight
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
-            interactive: contentHeight > height
-
-            function revealCursor() {
-                let r = inputField.cursorRectangle
-                if (r.y < contentY) contentY = r.y
-                else if (r.y + r.height > contentY + height) contentY = r.y + r.height - height
-            }
-
-            TextEdit {
-                id: inputField
-                width: inputFlick.width
-                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
-                font.pixelSize: modeManager.scale(15)
-                font.family: "M PLUS 2"
-                font.letterSpacing: 0.3
-                selectByMouse: true
-                wrapMode: TextEdit.Wrap
-                inputMethodHints: Qt.ImhNone
-                selectionColor: root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.35) : Qt.rgba(0.65, 0.55, 0.85, 0.35)
-
-                onCursorRectangleChanged: inputFlick.revealCursor()
-
-                Keys.onPressed: (event) => {
-                    root.userActivity()
-                    if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_N) {
-                        root.newChat()
-                        inputField.text = ""
-                        event.accepted = true
-                        return
-                    }
-                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        // Unaccepted, so TextEdit inserts the newline itself.
-                        if (event.modifiers & Qt.ShiftModifier) return
-                        let txt = inputField.text.trim()
-                        if ((txt.length > 0 || root.pendingAttachments.length > 0) && !root.busy) {
-                            if (root.sendComposed(txt)) inputField.text = ""
-                        }
-                        event.accepted = true
-                    }
-                }
-
-                Text {
-                    anchors.left: parent.left
-                    anchors.top: parent.top
-                    width: parent.width
-                    text: root.streaming ? "Thinking..." : "Ask anything"
-                    color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.6)
-                    font.pixelSize: parent.font.pixelSize
-                    font.family: parent.font.family
-                    font.letterSpacing: parent.font.letterSpacing
-                    font.italic: true
-                    visible: parent.text.length === 0
-                        && parent.preeditText.length === 0
-                        && !parent.inputMethodComposing
-                }
-            }
-        }
-
-        Item {
-            id: attachIcon
-            anchors.left: parent.left
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: root.modeManager.scale(6)
-            width: root.modeManager.scale(34)
-            height: root.modeManager.scale(34)
-            enabled: root.pendingAttachments.length < root.maxAttachments
-            opacity: !enabled ? 0.25 : (attachHover.hovered ? 1.0 : 0.5)
-
-            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
-
-            Rectangle {
-                anchors.fill: parent
-                radius: width / 2
-                color: attachHover.hovered
-                    ? (root.theme ? Qt.rgba(root.theme.glowSecondary.r, root.theme.glowSecondary.g, root.theme.glowSecondary.b, 0.32) : Qt.rgba(0.55, 0.75, 0.85, 0.32))
-                    : "transparent"
-
-                Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-            }
-
-            UI.SvgIcon {
-                anchors.centerIn: parent
-                width: root.modeManager.scale(17)
-                height: root.modeManager.scale(17)
-                source: root.icons ? root.icons.plusSvg : ""
-                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
-            }
-
-            HoverHandler {
-                id: attachHover
-                cursorShape: Qt.PointingHandCursor
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    root.userActivity()
-                    attachDialog.open()
-                }
-            }
-        }
-
-
-
-        Item {
-            id: sendIcon
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: modeManager.scale(6)
-            width: modeManager.scale(34)
-            height: modeManager.scale(34)
-            opacity: (root.streaming || inputField.text.trim().length > 0
-                || root.pendingAttachments.length > 0) ? 1.0 : 0.35
-
-            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
-
-            Rectangle {
-                anchors.centerIn: parent
-                width: parent.width
-                height: parent.height
-                radius: width / 2
-                color: sendMouse.containsMouse
-                    ? (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.32) : Qt.rgba(0.65, 0.55, 0.85, 0.32))
-                    : (root.theme ? Qt.rgba(root.theme.glowPrimary.r, root.theme.glowPrimary.g, root.theme.glowPrimary.b, 0.18) : Qt.rgba(0.65, 0.55, 0.85, 0.18))
-
-                Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-            }
-
-            Text {
-                anchors.centerIn: parent
-                text: root.streaming ? "■" : "↑"
-                color: root.theme ? root.theme.textPrimary : Qt.rgba(0.95, 0.93, 0.98, 0.95)
-                font.pixelSize: modeManager.scale(root.streaming ? 12 : 16)
-                font.family: "M PLUS 2"
-            }
-
-            MouseArea {
-                id: sendMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    if (root.streaming) {
-                        root.stopStreaming()
-                    } else if (!root.rewinding) {
-                        let txt = inputField.text.trim()
-                        if (txt.length > 0 || root.pendingAttachments.length > 0) {
-                            if (root.sendComposed(txt)) inputField.text = ""
-                        }
-                    }
-                }
-            }
-        }
+        modeManager: root.modeManager
+        theme: root.theme
+        icons: root.icons
+        streaming: root.streaming
+        rewinding: root.rewinding
+        busy: root.busy
+        turnFailure: root.turnFailure
+        pendingAttachments: root.pendingAttachments
+        maxAttachments: root.maxAttachments
+        onUserActivity: root.userActivity()
+        onNewChatRequested: root.newChat()
+        onSendRequested: text => { if (root.sendComposed(text)) inputBar.field.text = "" }
+        onStopClicked: root.stopStreaming()
+        onAttachRequested: attachDialog.open()
+        onRemoveAttachmentRequested: index => root.removeAttachment(index)
     }
 
     FileDialog {
