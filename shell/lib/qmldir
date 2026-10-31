@@ -10,6 +10,7 @@ singleton Rig 1.0 Rig.qml
 singleton WallpaperRules 1.0 WallpaperRules.qml
 singleton Metrics 1.0 Metrics.qml
 singleton Paths 1.0 Paths.qml
+singleton LauncherSearch 1.0 LauncherSearch.qml
 AiBackend 1.0 AiBackend.qml
 Colors 1.0 Colors.qml
 IconProvider 1.0 IconProvider.qml
