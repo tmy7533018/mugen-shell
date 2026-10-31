@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Io
+import "../../common" as Common
 import "../../../lib" as Theme
 
 Rectangle {
@@ -215,52 +216,22 @@ Rectangle {
                 wrapMode: Text.WordWrap
             }
 
-            Rectangle {
-                Layout.preferredWidth: 56
-                Layout.preferredHeight: 24
-                radius: 12
-                color: allOnMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "All on"
-                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                    font.pixelSize: 10
-                    font.family: "M PLUS 2"
-                }
-
-                MouseArea {
-                    id: allOnMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: section.setAll(true)
-                }
+            Common.SubtleButton {
+                theme: section.theme
+                label: "All on"
+                buttonWidth: 56
+                buttonHeight: 24
+                fontSize: 10
+                onClicked: section.setAll(true)
             }
 
-            Rectangle {
-                Layout.preferredWidth: 56
-                Layout.preferredHeight: 24
-                radius: 12
-                color: allOffMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "All off"
-                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                    font.pixelSize: 10
-                    font.family: "M PLUS 2"
-                }
-
-                MouseArea {
-                    id: allOffMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: section.setAll(false)
-                }
+            Common.SubtleButton {
+                theme: section.theme
+                label: "All off"
+                buttonWidth: 56
+                buttonHeight: 24
+                fontSize: 10
+                onClicked: section.setAll(false)
             }
         }
 

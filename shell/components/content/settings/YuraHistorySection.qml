@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import "../../common" as Common
 import "../../../lib" as Theme
 
 Rectangle {
@@ -494,28 +495,11 @@ Rectangle {
 
                     Item { Layout.fillWidth: true }
 
-                    Rectangle {
-                        Layout.preferredWidth: 76
-                        Layout.preferredHeight: 28
-                        radius: 14
-                        color: cancelMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-                        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "Cancel"
-                            color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                            font.pixelSize: 11
-                            font.family: "M PLUS 2"
-                        }
-
-                        MouseArea {
-                            id: cancelMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: { section.confirmingClear = false; section.bump() }
-                        }
+                    Common.SubtleButton {
+                        theme: section.theme
+                        label: "Cancel"
+                        buttonWidth: 76
+                        onClicked: { section.confirmingClear = false; section.bump() }
                     }
 
                     Rectangle {
@@ -565,31 +549,14 @@ Rectangle {
                 Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
             }
 
-            Rectangle {
-                Layout.preferredWidth: 72
-                Layout.preferredHeight: 28
-                radius: 14
-                color: refreshMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "Refresh"
-                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                    font.pixelSize: 11
-                    font.family: "M PLUS 2"
-                }
-
-                MouseArea {
-                    id: refreshMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        loadStatsProcess.running = true
-                        loadConfigProcess.running = true
-                        section.bump()
-                    }
+            Common.SubtleButton {
+                theme: section.theme
+                label: "Refresh"
+                buttonWidth: 72
+                onClicked: {
+                    loadStatsProcess.running = true
+                    loadConfigProcess.running = true
+                    section.bump()
                 }
             }
         }

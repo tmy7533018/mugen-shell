@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../../common" as Common
 import "../../../lib" as Theme
 
 Rectangle {
@@ -789,61 +790,33 @@ Rectangle {
 
                     Item { Layout.fillWidth: true }
 
-                    Rectangle {
-                        Layout.preferredWidth: 70
-                        Layout.preferredHeight: 26
-                        radius: 13
-                        color: cancelMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-                        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "Cancel"
-                            color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                            font.pixelSize: 10
-                            font.family: "M PLUS 2"
-                        }
-
-                        MouseArea {
-                            id: cancelMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                section.addingServer = false
-                                section.formName = ""
-                                section.formCommand = ""
-                                section.formUrl = ""
-                                section.formEnv = ""
-                                section.statusText = ""
-                                section.bump()
-                            }
+                    Common.SubtleButton {
+                        theme: section.theme
+                        label: "Cancel"
+                        buttonWidth: 70
+                        buttonHeight: 26
+                        fontSize: 10
+                        onClicked: {
+                            section.addingServer = false
+                            section.formName = ""
+                            section.formCommand = ""
+                            section.formUrl = ""
+                            section.formEnv = ""
+                            section.statusText = ""
+                            section.bump()
                         }
                     }
 
-                    Rectangle {
-                        Layout.preferredWidth: 90
-                        Layout.preferredHeight: 26
-                        radius: 13
-                        color: addToListMouse.containsMouse ? Qt.rgba(0.45, 0.65, 0.90, 0.45) : Qt.rgba(0.45, 0.65, 0.90, 0.3)
-                        Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "Add to list"
-                            color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                            font.pixelSize: 10
-                            font.family: "M PLUS 2"
-                            font.weight: Font.Medium
-                        }
-
-                        MouseArea {
-                            id: addToListMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: { section.addServer(); section.bump() }
-                        }
+                    Common.SubtleButton {
+                        theme: section.theme
+                        label: "Add to list"
+                        buttonWidth: 90
+                        buttonHeight: 26
+                        fontSize: 10
+                        fontWeight: Font.Medium
+                        tint: Qt.rgba(0.45, 0.65, 0.90, 0.30)
+                        tintHover: Qt.rgba(0.45, 0.65, 0.90, 0.45)
+                        onClicked: { section.addServer(); section.bump() }
                     }
                 }
             }
@@ -866,54 +839,22 @@ Rectangle {
                 Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
             }
 
-            Rectangle {
-                Layout.preferredWidth: 72
-                Layout.preferredHeight: 28
-                radius: 14
-                color: refreshMouse.containsMouse ? Qt.rgba(0.55, 0.55, 0.65, 0.32) : Qt.rgba(0.55, 0.55, 0.65, 0.22)
-                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "Refresh"
-                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                    font.pixelSize: 11
-                    font.family: "M PLUS 2"
-                }
-
-                MouseArea {
-                    id: refreshMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    // Re-poll status only; never clobber unsaved edits to the list.
-                    onClicked: { (section.loaded ? loadStatusProcess : loadConfigProcess).running = true; section.bump() }
-                }
+            Common.SubtleButton {
+                theme: section.theme
+                label: "Refresh"
+                buttonWidth: 72
+                // Re-poll status only; never clobber unsaved edits to the list.
+                onClicked: { (section.loaded ? loadStatusProcess : loadConfigProcess).running = true; section.bump() }
             }
 
-            Rectangle {
-                Layout.preferredWidth: 72
-                Layout.preferredHeight: 28
+            Common.SubtleButton {
+                theme: section.theme
+                label: "Revert"
+                buttonWidth: 72
                 visible: section.dirty && !section.saving
-                radius: 14
-                color: revertMouse.containsMouse ? Qt.rgba(0.85, 0.55, 0.42, 0.32) : Qt.rgba(0.85, 0.55, 0.42, 0.18)
-                Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "Revert"
-                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                    font.pixelSize: 11
-                    font.family: "M PLUS 2"
-                }
-
-                MouseArea {
-                    id: revertMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: { section.revert(); section.bump() }
-                }
+                tint: Qt.rgba(0.85, 0.55, 0.42, 0.18)
+                tintHover: Qt.rgba(0.85, 0.55, 0.42, 0.32)
+                onClicked: { section.revert(); section.bump() }
             }
 
             Rectangle {
