@@ -757,136 +757,42 @@ FocusScope {
                 onActivity: modeManager.bump()
             }
 
-            GridView {
+            Launcher.LauncherGrid {
                 id: appGrid
                 visible: !root.isHome
                 Layout.fillHeight: true
                 Layout.preferredWidth: mainColumn.gridWidth
                 Layout.alignment: Qt.AlignHCenter
-
-                cellWidth: 100
-                cellHeight: 110
-                clip: true
-
-                cacheBuffer: 200
-                reuseItems: true
-
-                model: root.filteredApps
-
-                currentIndex: -1
-
-                // blocks GridView auto-select 0 until first hover/key
-                property bool userInteracted: false
-
-                onCountChanged: {
-                    if (!userInteracted && currentIndex !== -1) {
-                        currentIndex = -1
-                    }
-                }
-
-                highlight: null
-                highlightFollowsCurrentItem: false
-
-                function isModifierKey(k) {
-                    return k === Qt.Key_Shift || k === Qt.Key_Control || k === Qt.Key_Alt
-                        || k === Qt.Key_Meta || k === Qt.Key_AltGr || k === Qt.Key_CapsLock
-                        || k === Qt.Key_NumLock || k === Qt.Key_ScrollLock
-                }
-
-                Keys.onPressed: (event) => {
-                    if (modeManager.isMode("launcher")) {
-                        modeManager.bump()
-                    }
-                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        if (currentIndex >= 0 && root.filteredApps[currentIndex]) {
-                            root.launchApp(root.filteredApps[currentIndex])
-                        }
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Escape) {
-                        searchField.forceActiveFocus()
-                        modeManager.closeAllModes()
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H) {
-                        if (currentIndex > 0) {
-                            currentIndex--
-                            positionViewAtIndex(currentIndex, GridView.Visible)
-                        } else {
-                            currentIndex = count - 1
-                            positionViewAtIndex(currentIndex, GridView.Visible)
-                        }
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L) {
-                        if (currentIndex < count - 1) {
-                            currentIndex++
-                            positionViewAtIndex(currentIndex, GridView.Visible)
-                        } else {
-                            currentIndex = 0
-                            positionViewAtIndex(currentIndex, GridView.Visible)
-                        }
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
-                        if (currentIndex >= Math.floor(width / cellWidth)) {
-                            currentIndex -= Math.floor(width / cellWidth)
-                            positionViewAtIndex(currentIndex, GridView.Visible)
-                        } else {
-                            if (searchField && searchField.searchFieldItem) {
-                                searchField.searchFieldItem.forceActiveFocus()
-                            }
-                        }
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
-                        let colsPerRow = Math.floor(width / cellWidth)
-                        if (colsPerRow > 0 && currentIndex < count - colsPerRow) {
-                            currentIndex += colsPerRow
-                            positionViewAtIndex(currentIndex, GridView.Visible)
-                        }
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Menu
-                               || (event.key === Qt.Key_F10 && (event.modifiers & Qt.ShiftModifier))) {
-                        if (currentIndex >= 0 && root.filteredApps[currentIndex]) {
-                            let item = appGrid.itemAtIndex(currentIndex)
-                            let px = launcherLayer.width / 2
-                            let py = launcherLayer.height / 2
-                            if (item) {
-                                let p = item.mapToItem(launcherLayer, item.width * 0.7, item.height * 0.7)
-                                px = p.x
-                                py = p.y
-                            }
-                            root.openContextMenu(root.filteredApps[currentIndex], px, py)
-                        }
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
-                        if (event.modifiers & Qt.ShiftModifier || event.key === Qt.Key_Backtab) {
-                            if (currentIndex > 0) {
-                                currentIndex--
-                                positionViewAtIndex(currentIndex, GridView.Visible)
-                            } else {
-                                currentIndex = count - 1
-                                positionViewAtIndex(currentIndex, GridView.Visible)
-                            }
-                        } else {
-                            if (currentIndex < count - 1) {
-                                currentIndex++
-                                positionViewAtIndex(currentIndex, GridView.Visible)
-                            } else {
-                                currentIndex = 0
-                                positionViewAtIndex(currentIndex, GridView.Visible)
-                            }
-                        }
-                        event.accepted = true
-                    } else if (appGrid.isModifierKey(event.key)) {
-                        // A bare Shift keydown is not typing: handing focus over here sent Shift+Tab to the field.
-                        event.accepted = false
-                    } else {
-                        if (searchField && searchField.searchFieldItem) {
-                            searchField.searchFieldItem.forceActiveFocus()
-                            searchField.searchFieldItem.Keys.forwardTo = null
-                        }
-                        event.accepted = false
-                    }
-                }
-
+                results: root.filteredApps
                 delegate: tileDelegate
+
+                onActivity: if (root.modeManager.isMode("launcher")) root.modeManager.bump()
+                onLaunch: (app) => root.launchApp(app)
+                onCloseRequested: {
+                    searchField.forceActiveFocus()
+                    root.modeManager.closeAllModes()
+                }
+                onUpToSearch: {
+                    if (searchField && searchField.searchFieldItem) {
+                        searchField.searchFieldItem.forceActiveFocus()
+                    }
+                }
+                onLeaveToSearch: {
+                    if (searchField && searchField.searchFieldItem) {
+                        searchField.searchFieldItem.forceActiveFocus()
+                        searchField.searchFieldItem.Keys.forwardTo = null
+                    }
+                }
+                onMenuRequested: (app, tile) => {
+                    let px = launcherLayer.width / 2
+                    let py = launcherLayer.height / 2
+                    if (tile) {
+                        let p = tile.mapToItem(launcherLayer, tile.width * 0.7, tile.height * 0.7)
+                        px = p.x
+                        py = p.y
+                    }
+                    root.openContextMenu(app, px, py)
+                }
             }
 
             Text {
