@@ -359,66 +359,12 @@ Rectangle {
                 boundsBehavior: Flickable.StopAtBounds
                 clip: true
 
-                delegate: Rectangle {
+                delegate: YuraAppRow {
                     id: appRow
-                    required property var modelData
                     width: appList.width
-                    height: 32
-                    radius: 6
-                    color: section.isAllowed(modelData.binary)
-                        ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.18) : Qt.rgba(0.65, 0.55, 0.85, 0.18))
-                        : (rowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.04) : "transparent")
-                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 10
-                        anchors.rightMargin: 10
-                        spacing: 8
-
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 0
-                            spacing: 0
-
-                            Text {
-                                Layout.fillWidth: true
-                                text: appRow.modelData.display
-                                textFormat: Text.PlainText
-                                color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.92)
-                                font.pixelSize: 11
-                                font.family: "M PLUS 2"
-                                font.weight: Font.Medium
-                                elide: Text.ElideRight
-                            }
-
-                            Text {
-                                Layout.fillWidth: true
-                                text: appRow.modelData.binary
-                                textFormat: Text.PlainText
-                                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.65)
-                                font.pixelSize: 9
-                                font.family: "M PLUS 2"
-                                opacity: 0.65
-                                elide: Text.ElideRight
-                            }
-                        }
-
-                        YuraPill {
-                            id: pill
-                            theme: section.theme
-                            on: section.isAllowed(appRow.modelData.binary)
-                            interactive: false
-                        }
-                    }
-
-                    MouseArea {
-                        id: rowMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: section.toggleAllowed(appRow.modelData.binary)
-                    }
+                    theme: section.theme
+                    allowed: section.isAllowed(appRow.modelData.binary)
+                    onToggleRequested: section.toggleAllowed(appRow.modelData.binary)
                 }
             }
         }
