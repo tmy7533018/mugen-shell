@@ -238,52 +238,17 @@ Rectangle {
 
     Component.onCompleted: reload()
 
-    MouseArea {
+    YuraSectionHeader {
         id: header
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        height: 64
-        cursorShape: Qt.PointingHandCursor
-
-        TapHandler {
-            onTapped: {
-                section.isExpanded = !section.isExpanded
-                section.bump()
-            }
-        }
-
-        RowLayout {
-            anchors.fill: parent
-            anchors.margins: 12
-            spacing: 12
-
-            Text {
-                Layout.fillWidth: true
-                text: "Personality"
-                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-                font.pixelSize: 12
-                font.family: "M PLUS 2"
-                font.weight: Font.Normal
-                font.letterSpacing: 0.5
-            }
-
-            Text {
-                text: section.summary()
-                color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                font.pixelSize: 11
-                font.family: "M PLUS 2"
-                font.italic: !section.loaded || section.summary() === "not configured"
-                opacity: 0.85
-            }
-
-            Text {
-                text: section.isExpanded ? "▴" : "▾"
-                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-                font.pixelSize: 12
-                font.family: "M PLUS 2"
-                opacity: 0.7
-            }
+        theme: section.theme
+        title: "Personality"
+        summaryText: section.summary()
+        summaryItalic: !section.loaded || section.summary() === "not configured"
+        titleElide: Text.ElideNone
+        expanded: section.isExpanded
+        onToggleRequested: {
+            section.isExpanded = !section.isExpanded
+            section.bump()
         }
     }
 

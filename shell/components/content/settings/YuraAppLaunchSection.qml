@@ -244,53 +244,16 @@ Rectangle {
         onTriggered: if (!section.loaded) loadConfig.running = true
     }
 
-    MouseArea {
+    YuraSectionHeader {
         id: header
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        height: 64
-        cursorShape: Qt.PointingHandCursor
-
-        TapHandler {
-            onTapped: {
-                section.isExpanded = !section.isExpanded
-                section.bump()
-            }
-        }
-
-        RowLayout {
-            anchors.fill: parent
-            anchors.margins: 12
-            spacing: 12
-
-            Text {
-                Layout.fillWidth: true
-                Layout.minimumWidth: 0
-                text: "Allowed apps"
-                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-                font.pixelSize: 12
-                font.family: "M PLUS 2"
-                font.letterSpacing: 0.5
-                elide: Text.ElideRight
-            }
-
-            Text {
-                text: section.summary()
-                color: section.theme ? section.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                font.pixelSize: 11
-                font.family: "M PLUS 2"
-                font.italic: !section.loaded || section.allowedCount === 0
-                opacity: 0.85
-            }
-
-            Text {
-                text: section.isExpanded ? "▴" : "▾"
-                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-                font.pixelSize: 12
-                font.family: "M PLUS 2"
-                opacity: 0.7
-            }
+        theme: section.theme
+        title: "Allowed apps"
+        summaryText: section.summary()
+        summaryItalic: !section.loaded || section.allowedCount === 0
+        expanded: section.isExpanded
+        onToggleRequested: {
+            section.isExpanded = !section.isExpanded
+            section.bump()
         }
     }
 
