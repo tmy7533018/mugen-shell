@@ -250,41 +250,12 @@ Rectangle {
                     }
                 }
 
-                Rectangle {
+                YuraPill {
                     id: togglePill
-                    Layout.preferredWidth: 36
-                    Layout.preferredHeight: 20
-                    Layout.alignment: Qt.AlignVCenter
-                    radius: 10
-
-                    readonly property bool on: toggleRow.modelData.key === "enabled"
+                    theme: section.theme
+                    on: toggleRow.modelData.key === "enabled"
                         ? section.exposeEnabled : section.readonlyOn
-
-                    color: togglePill.on
-                        ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.55) : Qt.rgba(0.65, 0.55, 0.85, 0.55))
-                        : Qt.rgba(0.3, 0.3, 0.36, 0.5)
-                    border.width: 1
-                    border.color: togglePill.on
-                        ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95))
-                        : Qt.rgba(1, 1, 1, 0.10)
-                    Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-
-                    Rectangle {
-                        width: 14
-                        height: 14
-                        radius: 7
-                        color: section.theme ? section.theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
-                        y: 3
-                        x: togglePill.on ? togglePill.width - width - 3 : 3
-                        Behavior on x { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: section.toggleOption(toggleRow.modelData.key)
-                    }
+                    onClicked: section.toggleOption(toggleRow.modelData.key)
                 }
             }
         }
@@ -336,40 +307,13 @@ Rectangle {
                     }
                 }
 
-                Rectangle {
+                YuraPill {
                     id: catPill
-                    Layout.preferredWidth: 36
-                    Layout.preferredHeight: 20
-                    Layout.alignment: Qt.AlignVCenter
-                    radius: 10
-
-                    readonly property bool on: section.isExposed(catRow.modelData.id)
-
-                    color: catPill.on
-                        ? Qt.rgba(0.95, 0.74, 0.42, 0.45)
-                        : Qt.rgba(0.3, 0.3, 0.36, 0.5)
-                    border.width: 1
-                    border.color: catPill.on
-                        ? Qt.rgba(0.95, 0.74, 0.42, 0.95)
-                        : Qt.rgba(1, 1, 1, 0.10)
-                    Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-
-                    Rectangle {
-                        width: 14
-                        height: 14
-                        radius: 7
-                        color: section.theme ? section.theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
-                        y: 3
-                        x: catPill.on ? catPill.width - width - 3 : 3
-                        Behavior on x { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: section.setExposed(catRow.modelData.id, !catPill.on)
-                    }
+                    theme: section.theme
+                    on: section.isExposed(catRow.modelData.id)
+                    onFill: Qt.rgba(0.95, 0.74, 0.42, 0.45)
+                    onBorder: Qt.rgba(0.95, 0.74, 0.42, 0.95)
+                    onClicked: section.setExposed(catRow.modelData.id, !catPill.on)
                 }
             }
         }

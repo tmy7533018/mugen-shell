@@ -457,40 +457,11 @@ Rectangle {
                             horizontalAlignment: Text.AlignRight
                         }
 
-                        Rectangle {
+                        YuraPill {
                             id: pill
-                            Layout.preferredWidth: 36
-                            Layout.preferredHeight: 20
-                            Layout.alignment: Qt.AlignVCenter
-                            radius: 10
-
-                            readonly property bool on: !serverRow.modelData.disabled
-
-                            color: pill.on
-                                ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.55) : Qt.rgba(0.65, 0.55, 0.85, 0.55))
-                                : Qt.rgba(0.3, 0.3, 0.36, 0.5)
-                            border.width: 1
-                            border.color: pill.on
-                                ? (section.theme ? section.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 0.95))
-                                : Qt.rgba(1, 1, 1, 0.10)
-                            Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-
-                            Rectangle {
-                                width: 14
-                                height: 14
-                                radius: 7
-                                color: section.theme ? section.theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
-                                y: 3
-                                x: pill.on ? pill.width - width - 3 : 3
-                                Behavior on x { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: section.setDisabled(serverRow.modelData.name, pill.on)
-                            }
+                            theme: section.theme
+                            on: !serverRow.modelData.disabled
+                            onClicked: section.setDisabled(serverRow.modelData.name, pill.on)
                         }
 
                         Rectangle {
@@ -548,40 +519,16 @@ Rectangle {
                         Layout.topMargin: 2
                         spacing: 8
 
-                        Rectangle {
+                        YuraPill {
                             id: trustPill
-                            Layout.preferredWidth: 32
-                            Layout.preferredHeight: 18
-                            Layout.alignment: Qt.AlignVCenter
-                            radius: 9
-
-                            readonly property bool on: !!serverRow.modelData.trusted
-
-                            color: trustPill.on
-                                ? Qt.rgba(0.95, 0.74, 0.42, 0.45)
-                                : Qt.rgba(0.3, 0.3, 0.36, 0.5)
-                            border.width: 1
-                            border.color: trustPill.on
-                                ? Qt.rgba(0.95, 0.74, 0.42, 0.95)
-                                : Qt.rgba(1, 1, 1, 0.10)
-                            Behavior on color { ColorAnimation { duration: Theme.Motion.fast } }
-
-                            Rectangle {
-                                width: 12
-                                height: 12
-                                radius: 6
-                                color: section.theme ? section.theme.textPrimary : Qt.rgba(0.95, 0.95, 1.0, 0.95)
-                                y: 3
-                                x: trustPill.on ? trustPill.width - width - 3 : 3
-                                Behavior on x { NumberAnimation { duration: Theme.Motion.fast; easing.type: Easing.OutCubic } }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: section.setTrusted(serverRow.modelData.name, !trustPill.on)
-                            }
+                            theme: section.theme
+                            on: !!serverRow.modelData.trusted
+                            onFill: Qt.rgba(0.95, 0.74, 0.42, 0.45)
+                            onBorder: Qt.rgba(0.95, 0.74, 0.42, 0.95)
+                            pillWidth: 32
+                            pillHeight: 18
+                            knobSize: 12
+                            onClicked: section.setTrusted(serverRow.modelData.name, !trustPill.on)
                         }
 
                         Text {
