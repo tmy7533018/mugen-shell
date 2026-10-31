@@ -291,170 +291,23 @@ Rectangle {
             }
         }
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 8
-
-            Text {
-                Layout.preferredWidth: 80
-                Layout.alignment: Qt.AlignTop
-                Layout.topMargin: 6
-                text: "Language"
-                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-                font.pixelSize: 11
-                font.family: "M PLUS 2"
+        YuraLanguagePicker {
+            theme: section.theme
+            language: section.formLanguage
+            filter: section.languageFilter
+            open: section.languageDropdownOpen
+            options: section.filteredLanguages
+            allOptions: section.languageOptions
+            onOpenToggled: {
+                section.languageDropdownOpen = !section.languageDropdownOpen
+                section.bump()
             }
-
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 4
-
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 28
-                    radius: 8
-                    color: langHeaderMouse.containsMouse
-                        ? Qt.rgba(0.45, 0.45, 0.60, 0.2)
-                        : "transparent"
-                    border.width: 1
-                    border.color: section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.18)
-                    Behavior on color { ColorAnimation { duration: Theme.Motion.micro } }
-
-                    Text {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 10
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: {
-                            if (!section.formLanguage) return "Auto — match the user's language"
-                            let opt = section.languageOptions.find(l => l.code === section.formLanguage)
-                            return opt ? section.formLanguage + " — " + opt.name : section.formLanguage
-                        }
-                        color: section.theme ? section.theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.9)
-                        font.pixelSize: 11
-                        font.family: "M PLUS 2"
-                    }
-
-                    Text {
-                        anchors.right: parent.right
-                        anchors.rightMargin: 10
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: section.languageDropdownOpen ? "▴" : "▾"
-                        color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-                        font.pixelSize: 11
-                        font.family: "M PLUS 2"
-                        opacity: 0.7
-                    }
-
-                    MouseArea {
-                        id: langHeaderMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            section.languageDropdownOpen = !section.languageDropdownOpen
-                            section.bump()
-                        }
-                    }
-                }
-
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 200
-                    visible: section.languageDropdownOpen
-                    radius: 8
-                    color: section.theme ? section.theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.3)
-                    border.width: 1
-                    border.color: section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.18)
-                    clip: true
-
-                    ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 6
-                        spacing: 4
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 26
-                            color: "transparent"
-                            radius: 6
-                            border.width: 1
-                            border.color: filterInput.activeFocus
-                                ? (section.theme ? section.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
-                                : Qt.rgba(1, 1, 1, 0.10)
-                            Behavior on border.color { ColorAnimation { duration: Theme.Motion.micro } }
-
-                            TextInput {
-                                id: filterInput
-                                anchors.fill: parent
-                                anchors.leftMargin: 8
-                                anchors.rightMargin: 8
-                                text: section.languageFilter
-                                color: section.theme ? section.theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.9)
-                                selectionColor: section.theme ? Qt.rgba(section.theme.glowPrimary.r, section.theme.glowPrimary.g, section.theme.glowPrimary.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4)
-                                font.pixelSize: 11
-                                font.family: "M PLUS 2"
-                                verticalAlignment: TextInput.AlignVCenter
-                                clip: true
-                                onTextChanged: section.languageFilter = text
-
-                                Text {
-                                    anchors.fill: parent
-                                    verticalAlignment: Text.AlignVCenter
-                                    text: "filter by code or name…"
-                                    color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.5)
-                                    font: filterInput.font
-                                    opacity: filterInput.text.length === 0 ? 0.5 : 0
-                                }
-                            }
-                        }
-
-                        ListView {
-                            id: langList
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            clip: true
-                            spacing: 0
-                            model: section.filteredLanguages
-                            boundsBehavior: Flickable.StopAtBounds
-
-                            delegate: Rectangle {
-                                id: langRow
-                                required property var modelData
-                                width: langList.width
-                                height: 24
-                                radius: 4
-                                color: section.formLanguage === modelData.code
-                                    ? (section.theme ? Qt.rgba(section.theme.accent.r, section.theme.accent.g, section.theme.accent.b, 0.25) : Qt.rgba(0.65, 0.55, 0.85, 0.25))
-                                    : (langItemMouse.containsMouse
-                                        ? Qt.rgba(1, 1, 1, 0.05)
-                                        : "transparent")
-
-                                Text {
-                                    anchors.left: parent.left
-                                    anchors.leftMargin: 8
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    text: (modelData.code ? modelData.code + " — " : "") + modelData.name
-                                    color: section.theme ? section.theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.9)
-                                    font.pixelSize: 10
-                                    font.family: "M PLUS 2"
-                                }
-
-                                MouseArea {
-                                    id: langItemMouse
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        section.formLanguage = langRow.modelData.code
-                                        section.languageDropdownOpen = false
-                                        section.languageFilter = ""
-                                        section.bump()
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            onFilterEdited: text => section.languageFilter = text
+            onPicked: code => {
+                section.formLanguage = code
+                section.languageDropdownOpen = false
+                section.languageFilter = ""
+                section.bump()
             }
         }
 
