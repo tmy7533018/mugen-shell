@@ -175,33 +175,16 @@ Rectangle {
         }
     }
 
-    Process {
+    AiConfigPut {
         id: saveProcess
-        running: false
-        property string buf: ""
-        property string payload: ""
-        stdinEnabled: true
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "5",
-                  "-X", "PUT", aiBackend.baseUrl + "/config",
-                  "-H", "Content-Type: application/json",
-                  "--data-binary", "@-"]
-        // argv is world-readable through /proc and the config carries secrets, so the body goes over stdin.
-        onStarted: {
-            saveProcess.write(saveProcess.payload)
-            saveProcess.stdinEnabled = false
+        backend: aiBackend
+        onSavedOk: {
+            section.statusText = "saved, applying…"
+            restartProcess.running = true
         }
-        stdout: SplitParser { onRead: data => saveProcess.buf += data }
-        onRunningChanged: { if (running) buf = "" }
-        onExited: (exitCode) => {
-            // The onStarted assignment severs the binding, so re-arm or the next save never closes stdin.
-            saveProcess.stdinEnabled = true
-            if (exitCode === 0 && saveProcess.buf.indexOf("saved") >= 0) {
-                section.statusText = "saved, applying…"
-                restartProcess.running = true
-            } else {
-                section.saving = false
-                section.statusText = "save failed"
-            }
+        onSaveFailed: {
+            section.saving = false
+            section.statusText = "save failed"
         }
     }
 

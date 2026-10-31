@@ -82,34 +82,17 @@ Rectangle {
         section.bump()
     }
 
-    Process {
+    AiConfigPut {
         id: auditSaveProc
-        running: false
-        property string buf: ""
-        property string payload: ""
-        stdinEnabled: true
-        command: ["curl", ...aiBackend.transportArgs, "-fsS", "--max-time", "5",
-                  "-X", "PUT", aiBackend.baseUrl + "/config",
-                  "-H", "Content-Type: application/json",
-                  "--data-binary", "@-"]
-        // argv is world-readable through /proc and the config carries secrets, so the body goes over stdin.
-        onStarted: {
-            auditSaveProc.write(auditSaveProc.payload)
-            auditSaveProc.stdinEnabled = false
+        backend: aiBackend
+        onSavedOk: {
+            section.auditEnabled = section.auditTarget
+            section.auditStatus = "saved, applying…"
+            auditRestartProc.running = true
         }
-        stdout: SplitParser { onRead: data => auditSaveProc.buf += data }
-        onRunningChanged: { if (running) buf = "" }
-        onExited: (exitCode) => {
-            // The onStarted assignment severs the binding, so re-arm or the next save never closes stdin.
-            auditSaveProc.stdinEnabled = true
-            if (exitCode === 0 && auditSaveProc.buf.indexOf("saved") >= 0) {
-                section.auditEnabled = section.auditTarget
-                section.auditStatus = "saved, applying…"
-                auditRestartProc.running = true
-            } else {
-                section.auditBusy = false
-                section.auditStatus = "save failed"
-            }
+        onSaveFailed: {
+            section.auditBusy = false
+            section.auditStatus = "save failed"
         }
     }
 
