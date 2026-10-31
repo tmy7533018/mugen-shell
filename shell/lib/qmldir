@@ -12,6 +12,7 @@ singleton Metrics 1.0 Metrics.qml
 singleton Paths 1.0 Paths.qml
 singleton LauncherSearch 1.0 LauncherSearch.qml
 singleton AppUninstall 1.0 AppUninstall.qml
+singleton ChatText 1.0 ChatText.qml
 AiBackend 1.0 AiBackend.qml
 Colors 1.0 Colors.qml
 IconProvider 1.0 IconProvider.qml

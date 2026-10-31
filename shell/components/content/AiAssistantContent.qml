@@ -57,19 +57,10 @@ FocusScope {
     }
     readonly property bool isThinking: streaming && responseDisplay.length === 0
 
-    // The one-line pill can't render markdown.
-    function mdFlat(t) {
-        return t.replace(/```[\s\S]*?```/g, " ")
-                .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-                .replace(/[`*_#>]/g, "")
-                .replace(/\s*\n+\s*/g, " ")
-                .replace(/[ \t]+/g, " ")
-    }
-
     readonly property string activePlaceholder: {
         if (isThinking) return "thinking"
         if (responseDisplay.length > 0) {
-            return mdFlat(responseDisplay)
+            return Theme.ChatText.mdFlat(responseDisplay)
         }
         return idlePlaceholder
     }
@@ -117,7 +108,7 @@ FocusScope {
         stopRequested = false
         // Parked in the input field so it can be scrolled / copied.
         if (responseDisplay.length > 0) {
-            inputField.text = mdFlat(responseDisplay)
+            inputField.text = Theme.ChatText.mdFlat(responseDisplay)
             inputField.cursorPosition = 0
             displayingResponse = true
             inputField.forceActiveFocus()
