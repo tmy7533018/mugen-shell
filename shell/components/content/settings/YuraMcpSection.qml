@@ -507,173 +507,29 @@ Rectangle {
             }
         }
 
-        Rectangle {
-            Layout.fillWidth: true
-            Layout.preferredHeight: addForm.implicitHeight + 20
+        YuraMcpAddServerForm {
             visible: section.addingServer
-            radius: 10
-            color: section.theme ? section.theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.3)
-            border.width: 1
-            border.color: section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.12)
-
-            ColumnLayout {
-                id: addForm
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.top: parent.top
-                anchors.leftMargin: 10
-                anchors.rightMargin: 10
-                anchors.topMargin: 10
-                spacing: 6
-
-                Repeater {
-                    model: [
-                        { key: "name", label: "Name", hint: "memory" },
-                        { key: "command", label: "Command", hint: "npx -y @modelcontextprotocol/server-memory" },
-                        { key: "url", label: "URL", hint: "http://host:port/mcp — remote server, instead of a command" }
-                    ]
-
-                    RowLayout {
-                        id: fieldRow
-                        required property var modelData
-                        Layout.fillWidth: true
-                        spacing: 8
-
-                        Text {
-                            Layout.preferredWidth: 64
-                            text: fieldRow.modelData.label
-                            color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-                            font.pixelSize: 11
-                            font.family: "M PLUS 2"
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 28
-                            color: "transparent"
-                            radius: 8
-                            border.width: 1
-                            border.color: fieldInput.activeFocus
-                                ? (section.theme ? section.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
-                                : (section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.18))
-                            Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
-
-                            TextInput {
-                                id: fieldInput
-                                anchors.fill: parent
-                                anchors.leftMargin: 8
-                                anchors.rightMargin: 8
-                                text: fieldRow.modelData.key === "name" ? section.formName
-                                    : fieldRow.modelData.key === "command" ? section.formCommand
-                                    : section.formUrl
-                                color: section.theme ? section.theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.9)
-                                selectionColor: section.theme ? Qt.rgba(section.theme.glowPrimary.r, section.theme.glowPrimary.g, section.theme.glowPrimary.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4)
-                                font.pixelSize: 11
-                                font.family: "M PLUS 2"
-                                verticalAlignment: TextInput.AlignVCenter
-                                clip: true
-                                onTextChanged: {
-                                    if (fieldRow.modelData.key === "name") section.formName = text
-                                    else if (fieldRow.modelData.key === "command") section.formCommand = text
-                                    else section.formUrl = text
-                                }
-
-                                Text {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 0
-                                    verticalAlignment: Text.AlignVCenter
-                                    visible: parent.text.length === 0
-                                    text: fieldRow.modelData.hint
-                                    color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.45)
-                                    font.pixelSize: 10
-                                    font.family: "M PLUS 2"
-                                    opacity: 0.5
-                                    elide: Text.ElideRight
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Text {
-                    Layout.fillWidth: true
-                    text: "Env (optional) — KEY=value per line. Stored as plaintext in config.toml; use ${VAR} to read a secret from the environment instead."
-                    color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70)
-                    font.pixelSize: 10
-                    font.family: "M PLUS 2"
-                    opacity: 0.7
-                    wrapMode: Text.WordWrap
-                }
-
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 60
-                    color: "transparent"
-                    radius: 8
-                    border.width: 1
-                    border.color: envInput.activeFocus
-                        ? (section.theme ? section.theme.glowPrimary : Qt.rgba(0.65, 0.55, 0.85, 1))
-                        : (section.theme ? section.theme.surfaceBorder : Qt.rgba(1, 1, 1, 0.18))
-                    Behavior on border.color { ColorAnimation { duration: Theme.Motion.fast } }
-                    clip: true
-
-                    ScrollView {
-                        anchors.fill: parent
-                        anchors.margins: 8
-                        clip: true
-
-                        TextArea {
-                            id: envInput
-                            text: section.formEnv
-                            color: section.theme ? section.theme.textPrimary : Qt.rgba(0.91, 0.91, 0.94, 0.9)
-                            selectionColor: section.theme ? Qt.rgba(section.theme.glowPrimary.r, section.theme.glowPrimary.g, section.theme.glowPrimary.b, 0.4) : Qt.rgba(0.65, 0.55, 0.85, 0.4)
-                            font.pixelSize: 10
-                            font.family: "M PLUS 2"
-                            wrapMode: TextEdit.Wrap
-                            background: null
-                            padding: 0
-                            onTextChanged: section.formEnv = text
-                        }
-                    }
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.topMargin: 2
-                    spacing: 8
-
-                    Item { Layout.fillWidth: true }
-
-                    Common.SubtleButton {
-                        theme: section.theme
-                        label: "Cancel"
-                        buttonWidth: 70
-                        buttonHeight: 26
-                        fontSize: 10
-                        onClicked: {
-                            section.addingServer = false
-                            section.formName = ""
-                            section.formCommand = ""
-                            section.formUrl = ""
-                            section.formEnv = ""
-                            section.statusText = ""
-                            section.bump()
-                        }
-                    }
-
-                    Common.SubtleButton {
-                        theme: section.theme
-                        label: "Add to list"
-                        buttonWidth: 90
-                        buttonHeight: 26
-                        fontSize: 10
-                        fontWeight: Font.Medium
-                        tint: Qt.rgba(0.45, 0.65, 0.90, 0.30)
-                        tintHover: Qt.rgba(0.45, 0.65, 0.90, 0.45)
-                        onClicked: { section.addServer(); section.bump() }
-                    }
-                }
+            theme: section.theme
+            name: section.formName
+            command: section.formCommand
+            url: section.formUrl
+            env: section.formEnv
+            onFieldEdited: (key, text) => {
+                if (key === "name") section.formName = text
+                else if (key === "command") section.formCommand = text
+                else section.formUrl = text
             }
+            onEnvEdited: text => section.formEnv = text
+            onCancelRequested: {
+                section.addingServer = false
+                section.formName = ""
+                section.formCommand = ""
+                section.formUrl = ""
+                section.formEnv = ""
+                section.statusText = ""
+                section.bump()
+            }
+            onAddRequested: { section.addServer(); section.bump() }
         }
 
         RowLayout {
