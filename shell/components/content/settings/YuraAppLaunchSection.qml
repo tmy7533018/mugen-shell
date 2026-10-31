@@ -427,16 +427,9 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 8
 
-            Text {
-                Layout.fillWidth: true
-                Layout.minimumWidth: 0
+            YuraStatusText {
+                theme: section.theme
                 text: section.statusText || (section.appListFailed ? "listing installed apps failed" : "")
-                color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.70)
-                font.pixelSize: 10
-                font.family: "M PLUS 2"
-                opacity: text ? 0.85 : 0
-                elide: Text.ElideRight
-                Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast } }
             }
 
             Rectangle {
