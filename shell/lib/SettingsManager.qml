@@ -379,7 +379,7 @@ QtObject {
             settingsChanged()
         } catch (e) {
             _applyingExternal = false
-            // Unparseable on disk: nothing to preserve, so let saves through and overwrite it.
+            // Unparseable on disk: let saves through so the next one replaces it.
             _settingsLoaded = true
             console.error("Failed to parse settings JSON:", e)
             // Listeners seed from the first emit, and the defaults are what is in effect now.
