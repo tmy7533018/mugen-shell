@@ -84,11 +84,7 @@ QtObject {
     property bool blurIgnoreOpacity: true
 
     function blurParams() {
-        return {
-            "enabled": blurEnabled, "size": blurSize, "passes": blurPasses, "noise": blurNoise,
-            "contrast": blurContrast, "brightness": blurBrightness, "vibrancy": blurVibrancy,
-            "xray": blurXray, "ignoreOpacity": blurIgnoreOpacity
-        }
+        return _modeledOf(_domain("blur").rows)
     }
 
     function resetBlur() {
@@ -165,123 +161,7 @@ QtObject {
         if (_applyingExternal) return
         if (!_settingsLoaded) return
 
-        let modeled = {
-            "autoCloseTimer": {
-                "interval": autoCloseTimerInterval
-            },
-            "barBackground": {
-                "enabled": moduleBackdropEnabled,
-                "palette": moduleBackdropPalette,
-                "spread": moduleBackdropSpread
-            },
-            "battery": {
-                "showPercent": batteryShowPercent
-            },
-            "glass": {
-                "opacityDark": glassOpacityDark,
-                "opacityLight": glassOpacityLight
-            },
-            "blur": blurParams(),
-            "animations": {
-                "speed": animationSpeed,
-                "durationMultiplier": animationDurationMultiplier,
-                "reduceMotion": reduceMotion
-            },
-            "notification": {
-                "sound": notificationSound,
-                "enabled": notificationsEnabled,
-                "suppressOnFullscreen": notificationSuppressOnFullscreen,
-                "popupTimeout": notificationPopupTimeout
-            },
-            "launcher": {
-                "terminal": launcherTerminal,
-                "typeToSearch": launcherTypeToSearch
-            },
-            "timer": {
-                "sound": timerSound
-            },
-            "volume": {
-                "step": volumeStep
-            },
-            "wallpaper": {
-                "pauseWhen": wallpaperPauseWhen,
-                "pauseApps": wallpaperPauseApps,
-                "speed": wallpaperSpeed,
-                "sound": wallpaperSound,
-                "volume": wallpaperVolume,
-                "fit": wallpaperFit,
-                "brightness": wallpaperBrightness,
-                "saturation": wallpaperSaturation,
-                "transition": wallpaperTransition,
-                "transitionSeconds": wallpaperTransitionSeconds,
-                "slideshow": wallpaperSlideshow,
-                "slideshowMinutes": wallpaperSlideshowMinutes,
-                "slideshowOrder": wallpaperSlideshowOrder
-            },
-            "lockTimer": {
-                "minutes": lockTimerMinutes
-            },
-            "idle": {
-                "suspendMinutes": idleSuspendMinutes,
-                "dpmsMinutes": idleDpmsMinutes
-            },
-            "lockScreen": {
-                "showEvents": lockShowEvents,
-                "showLocation": lockShowLocation
-            },
-            "date": {
-                "format": dateFormat
-            },
-            "clock": {
-                "show24Hour": clockShow24Hour,
-                "showSeconds": clockShowSeconds
-            },
-            "weather": {
-                "enabled": weatherEnabled,
-                "location": weatherLocation,
-                "unit": weatherUnit
-            },
-            "calendar": {
-                "weekStart": calendarWeekStart
-            },
-            "bar": {
-                "height": barHeight,
-                "radius": barRadius,
-                "marginH": barMarginH,
-                "marginV": barMarginV,
-                "autoHide": barAutoHide,
-                "surface": {
-                    "custom": barSurfaceCustom,
-                    "hue": barSurfaceHue,
-                    "saturation": barSurfaceSaturation,
-                    "lightness": barSurfaceLightness,
-                    "opacity": barSurfaceOpacity,
-                    "border": barSurfaceBorder
-                }
-            },
-            "workspaces": {
-                "count": workspaceCount
-            },
-            "display": {
-                "monitor": displayMonitor
-            },
-            "ai": {
-                "barModel": barAiModel,
-                "barThinking": barThinking
-            },
-            "yura": {
-                "enabled": yuraEnabled,
-                "panelSide": yuraPanelSide,
-                "panelWidth": yuraPanelWidth,
-                "panelHeight": yuraPanelHeight,
-                "sidebarCollapsed": yuraSidebarCollapsed,
-                "idleBreath": yuraIdleBreath,
-                "autoCollapseMin": yuraAutoCollapseMin,
-                "typingSpeed": yuraTypingSpeed
-            }
-        }
-
-        let merged = _deepMerge(_rawSettings, modeled)
+        let merged = _deepMerge(_rawSettings, _modeled())
         _rawSettings = merged
         let jsonString = JSON.stringify(merged, null, 2)
 
@@ -311,6 +191,160 @@ QtObject {
         return (typeof v === "number" && isFinite(v)) ? Math.max(1, Math.min(10, Math.round(v))) : 2
     }
 
+    // A domain missing from the file is appended in this order; the rest follow in apply order.
+    readonly property var _saveOrderHead: ["autoCloseTimer", "barBackground", "battery", "glass", "blur"]
+
+    // Domains in apply order, rows in assignment order: listeners see the changes in exactly this sequence.
+    readonly property var _schema: [
+        { key: "autoCloseTimer", after: o => settingsManager._applyLegacyAutoClose(o), rows: [
+            { prop: "autoCloseTimerInterval", key: "interval" }] },
+        { key: "glass", rows: [
+            { prop: "glassOpacityDark", key: "opacityDark", read: (v, cur) => settingsManager._unitOr(v, cur) },
+            { prop: "glassOpacityLight", key: "opacityLight", read: (v, cur) => settingsManager._unitOr(v, cur) }] },
+        { key: "blur", rows: [
+            { prop: "blurEnabled", key: "enabled", read: v => !!v },
+            { prop: "blurSize", key: "size", finite: true, read: v => Math.round(v) },
+            { prop: "blurPasses", key: "passes", finite: true, read: v => Math.round(v) },
+            { prop: "blurNoise", key: "noise", finite: true },
+            { prop: "blurContrast", key: "contrast", finite: true },
+            { prop: "blurBrightness", key: "brightness", finite: true },
+            { prop: "blurVibrancy", key: "vibrancy", finite: true },
+            { prop: "blurXray", key: "xray", read: v => !!v },
+            { prop: "blurIgnoreOpacity", key: "ignoreOpacity", read: v => !!v }] },
+        { key: "barBackground", rows: [
+            // Pre-839a636 key: same on/off, renamed when the flat gradient was dropped.
+            { prop: "moduleBackdropEnabled", key: "enabled", legacyKey: "gradientEnabled" },
+            { prop: "moduleBackdropPalette", key: "palette" },
+            { prop: "moduleBackdropSpread", key: "spread" }] },
+        { key: "battery", rows: [
+            { prop: "batteryShowPercent", key: "showPercent" }] },
+        { key: "animations", rows: [
+            { prop: "animationSpeed", key: "speed" },
+            { prop: "animationDurationMultiplier", key: "durationMultiplier" },
+            { prop: "reduceMotion", key: "reduceMotion" }] },
+        { key: "notification", rows: [
+            { prop: "notificationSound", key: "sound" },
+            { prop: "notificationsEnabled", key: "enabled" },
+            { prop: "notificationSuppressOnFullscreen", key: "suppressOnFullscreen" },
+            { prop: "notificationPopupTimeout", key: "popupTimeout" }] },
+        { key: "launcher", rows: [
+            { prop: "launcherTerminal", key: "terminal" },
+            { prop: "launcherTypeToSearch", key: "typeToSearch" }] },
+        { key: "timer", rows: [
+            { prop: "timerSound", key: "sound" }] },
+        { key: "volume", rows: [
+            { prop: "volumeStep", key: "step", read: v => settingsManager._volumeStepOf(v) }] },
+        { key: "wallpaper", plainObject: true, rows: [
+            { prop: "wallpaperPauseWhen", key: "pauseWhen", read: v => WallpaperRules.enumOf(v, WallpaperRules.pauseWhenValues, "fullscreen") },
+            { prop: "wallpaperPauseApps", key: "pauseApps", read: v => WallpaperRules.pauseAppsOf(v) },
+            { prop: "wallpaperSpeed", key: "speed", read: v => WallpaperRules.speedOf(v) },
+            { prop: "wallpaperSound", key: "sound", read: v => WallpaperRules.boolOf(v, false) },
+            { prop: "wallpaperVolume", key: "volume", read: v => WallpaperRules.volumeOf(v) },
+            { prop: "wallpaperFit", key: "fit", read: v => WallpaperRules.enumOf(v, WallpaperRules.fitValues, "fill") },
+            { prop: "wallpaperBrightness", key: "brightness", read: v => WallpaperRules.brightnessOf(v) },
+            { prop: "wallpaperSaturation", key: "saturation", read: v => WallpaperRules.saturationOf(v) },
+            { prop: "wallpaperTransition", key: "transition", read: v => WallpaperRules.enumOf(v, WallpaperRules.transitionValues, "wave") },
+            { prop: "wallpaperTransitionSeconds", key: "transitionSeconds", read: v => WallpaperRules.transitionSecondsOf(v) },
+            { prop: "wallpaperSlideshow", key: "slideshow", read: v => WallpaperRules.boolOf(v, false) },
+            { prop: "wallpaperSlideshowMinutes", key: "slideshowMinutes", read: v => WallpaperRules.slideshowMinutesOf(v) },
+            { prop: "wallpaperSlideshowOrder", key: "slideshowOrder", read: v => WallpaperRules.enumOf(v, WallpaperRules.slideshowOrderValues, "shuffle") }] },
+        { key: "lockTimer", rows: [
+            { prop: "lockTimerMinutes", key: "minutes" }] },
+        { key: "idle", rows: [
+            { prop: "idleSuspendMinutes", key: "suspendMinutes" },
+            { prop: "idleDpmsMinutes", key: "dpmsMinutes" }] },
+        { key: "lockScreen", rows: [
+            { prop: "lockShowEvents", key: "showEvents" },
+            { prop: "lockShowLocation", key: "showLocation" }] },
+        { key: "date", rows: [
+            { prop: "dateFormat", key: "format" }] },
+        { key: "clock", rows: [
+            { prop: "clockShow24Hour", key: "show24Hour" },
+            { prop: "clockShowSeconds", key: "showSeconds" }] },
+        { key: "weather", rows: [
+            { prop: "weatherEnabled", key: "enabled" },
+            { prop: "weatherLocation", key: "location" },
+            { prop: "weatherUnit", key: "unit" }] },
+        { key: "calendar", rows: [
+            { prop: "calendarWeekStart", key: "weekStart" }] },
+        { key: "bar", rows: [
+            { prop: "barHeight", key: "height" },
+            { prop: "barRadius", key: "radius" },
+            { prop: "barMarginH", key: "marginH" },
+            { prop: "barMarginV", key: "marginV" },
+            { prop: "barAutoHide", key: "autoHide", read: v => !!v },
+            { key: "surface", rows: [
+                { prop: "barSurfaceCustom", key: "custom" },
+                { prop: "barSurfaceHue", key: "hue", read: (v, cur) => settingsManager._unitOr(v, cur) },
+                { prop: "barSurfaceSaturation", key: "saturation", read: (v, cur) => settingsManager._unitOr(v, cur) },
+                { prop: "barSurfaceLightness", key: "lightness", read: (v, cur) => settingsManager._unitOr(v, cur) },
+                { prop: "barSurfaceOpacity", key: "opacity", read: (v, cur) => settingsManager._unitOr(v, cur) },
+                { prop: "barSurfaceBorder", key: "border" }] }] },
+        { key: "workspaces", rows: [
+            { prop: "workspaceCount", key: "count" }] },
+        { key: "display", rows: [
+            { prop: "displayMonitor", key: "monitor" }] },
+        { key: "ai", rows: [
+            { prop: "barAiModel", key: "barModel" },
+            { prop: "barThinking", key: "barThinking" }] },
+        { key: "yura", rows: [
+            { prop: "yuraEnabled", key: "enabled" },
+            { prop: "yuraPanelSide", key: "panelSide" },
+            { prop: "yuraPanelWidth", key: "panelWidth" },
+            { prop: "yuraPanelHeight", key: "panelHeight" },
+            { prop: "yuraSidebarCollapsed", key: "sidebarCollapsed" },
+            { prop: "yuraIdleBreath", key: "idleBreath" },
+            { prop: "yuraAutoCollapseMin", key: "autoCollapseMin" },
+            { prop: "yuraTypingSpeed", key: "typingSpeed" }] }
+    ]
+
+    function _domain(key) {
+        return _schema.find(d => d.key === key)
+    }
+
+    function _modeledOf(rows) {
+        let out = {}
+        for (const r of rows)
+            out[r.key] = r.rows ? _modeledOf(r.rows) : settingsManager[r.prop]
+        return out
+    }
+
+    function _modeled() {
+        let out = {}
+        for (const key of _saveOrderHead)
+            out[key] = _modeledOf(_domain(key).rows)
+        for (const d of _schema) {
+            if (_saveOrderHead.indexOf(d.key) < 0)
+                out[d.key] = _modeledOf(d.rows)
+        }
+        return out
+    }
+
+    // Legacy key: enabled=false meant interval 0.
+    function _applyLegacyAutoClose(o) {
+        if (o.enabled === false) {
+            autoCloseTimerInterval = 0
+            delete o.enabled
+        }
+    }
+
+    function _applyRows(obj, rows) {
+        for (const r of rows) {
+            if (r.rows) {
+                if (obj[r.key]) _applyRows(obj[r.key], r.rows)
+                continue
+            }
+            let v = obj[r.key]
+            if (v === undefined && r.legacyKey) v = obj[r.legacyKey]
+            if (r.finite ? !isFinite(v) : v === undefined) continue
+            const current = settingsManager[r.prop]
+            const next = r.read ? r.read(v, current) : v
+            // A var property emits on every new array, even an equal one, and every save reloads every process.
+            if (typeof current === "object" && current !== null && JSON.stringify(next) === JSON.stringify(current)) continue
+            settingsManager[r.prop] = next
+        }
+    }
+
     function applySettingsFromJson(jsonString) {
         try {
             let settings = JSON.parse(jsonString)
@@ -319,358 +353,16 @@ QtObject {
 
             _applyingExternal = true
 
-            try {
-                if (settings.autoCloseTimer) {
-                    if (settings.autoCloseTimer.interval !== undefined) {
-                        autoCloseTimerInterval = settings.autoCloseTimer.interval
+            for (const d of _schema) {
+                try {
+                    const obj = settings[d.key]
+                    if (d.plainObject ? _isPlainObject(obj) : obj) {
+                        _applyRows(obj, d.rows)
+                        if (d.after) d.after(obj)
                     }
-                    // Legacy key: enabled=false meant interval 0.
-                    if (settings.autoCloseTimer.enabled === false) {
-                        autoCloseTimerInterval = 0
-                        delete settings.autoCloseTimer.enabled
-                    }
+                } catch (e) {
+                    console.error("Failed to apply settings." + d.key + ":", e)
                 }
-            } catch (e) {
-                console.error("Failed to apply settings.autoCloseTimer:", e)
-            }
-
-            try {
-                if (settings.glass) {
-                    if (settings.glass.opacityDark !== undefined) glassOpacityDark = _unitOr(settings.glass.opacityDark, glassOpacityDark)
-                    if (settings.glass.opacityLight !== undefined) glassOpacityLight = _unitOr(settings.glass.opacityLight, glassOpacityLight)
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.glass:", e)
-            }
-
-            try {
-                if (settings.blur) {
-                    const c = settings.blur
-                    if (c.enabled !== undefined) blurEnabled = !!c.enabled
-                    if (isFinite(c.size)) blurSize = Math.round(c.size)
-                    if (isFinite(c.passes)) blurPasses = Math.round(c.passes)
-                    if (isFinite(c.noise)) blurNoise = c.noise
-                    if (isFinite(c.contrast)) blurContrast = c.contrast
-                    if (isFinite(c.brightness)) blurBrightness = c.brightness
-                    if (isFinite(c.vibrancy)) blurVibrancy = c.vibrancy
-                    if (c.xray !== undefined) blurXray = !!c.xray
-                    if (c.ignoreOpacity !== undefined) blurIgnoreOpacity = !!c.ignoreOpacity
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.blur:", e)
-            }
-
-            try {
-                if (settings.barBackground) {
-                    if (settings.barBackground.enabled !== undefined) {
-                        moduleBackdropEnabled = settings.barBackground.enabled
-                    } else if (settings.barBackground.gradientEnabled !== undefined) {
-                        // Pre-839a636 key: same on/off, renamed when the flat gradient was dropped.
-                        moduleBackdropEnabled = settings.barBackground.gradientEnabled
-                    }
-                    if (settings.barBackground.palette !== undefined) {
-                        moduleBackdropPalette = settings.barBackground.palette
-                    }
-                    if (settings.barBackground.spread !== undefined) {
-                        moduleBackdropSpread = settings.barBackground.spread
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.barBackground:", e)
-            }
-
-            try {
-                if (settings.battery) {
-                    if (settings.battery.showPercent !== undefined) {
-                        batteryShowPercent = settings.battery.showPercent
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.battery:", e)
-            }
-
-            try {
-                if (settings.animations) {
-                    if (settings.animations.speed !== undefined) {
-                        animationSpeed = settings.animations.speed
-                    }
-                    if (settings.animations.durationMultiplier !== undefined) {
-                        animationDurationMultiplier = settings.animations.durationMultiplier
-                    }
-                    if (settings.animations.reduceMotion !== undefined) {
-                        reduceMotion = settings.animations.reduceMotion
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.animations:", e)
-            }
-
-            try {
-                if (settings.notification) {
-                    if (settings.notification.sound !== undefined) {
-                        notificationSound = settings.notification.sound
-                    }
-                    if (settings.notification.enabled !== undefined) {
-                        notificationsEnabled = settings.notification.enabled
-                    }
-                    if (settings.notification.suppressOnFullscreen !== undefined) {
-                        notificationSuppressOnFullscreen = settings.notification.suppressOnFullscreen
-                    }
-                    if (settings.notification.popupTimeout !== undefined) {
-                        notificationPopupTimeout = settings.notification.popupTimeout
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.notification:", e)
-            }
-
-            try {
-                if (settings.launcher) {
-                    if (settings.launcher.terminal !== undefined) {
-                        launcherTerminal = settings.launcher.terminal
-                    }
-                    if (settings.launcher.typeToSearch !== undefined) {
-                        launcherTypeToSearch = settings.launcher.typeToSearch
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.launcher:", e)
-            }
-
-            try {
-                if (settings.timer) {
-                    if (settings.timer.sound !== undefined) {
-                        timerSound = settings.timer.sound
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.timer:", e)
-            }
-
-            try {
-                if (settings.volume && settings.volume.step !== undefined) {
-                    volumeStep = _volumeStepOf(settings.volume.step)
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.volume:", e)
-            }
-
-            try {
-                const wp = settings.wallpaper
-                if (_isPlainObject(wp)) {
-                    const R = WallpaperRules
-                    if (wp.pauseWhen !== undefined)
-                        wallpaperPauseWhen = R.enumOf(wp.pauseWhen, R.pauseWhenValues, "fullscreen")
-                    if (wp.pauseApps !== undefined) {
-                        const apps = R.pauseAppsOf(wp.pauseApps)
-                        if (JSON.stringify(apps) !== JSON.stringify(wallpaperPauseApps))
-                            wallpaperPauseApps = apps
-                    }
-                    if (wp.speed !== undefined)
-                        wallpaperSpeed = R.speedOf(wp.speed)
-                    if (wp.sound !== undefined)
-                        wallpaperSound = R.boolOf(wp.sound, false)
-                    if (wp.volume !== undefined)
-                        wallpaperVolume = R.volumeOf(wp.volume)
-                    if (wp.fit !== undefined)
-                        wallpaperFit = R.enumOf(wp.fit, R.fitValues, "fill")
-                    if (wp.brightness !== undefined)
-                        wallpaperBrightness = R.brightnessOf(wp.brightness)
-                    if (wp.saturation !== undefined)
-                        wallpaperSaturation = R.saturationOf(wp.saturation)
-                    if (wp.transition !== undefined)
-                        wallpaperTransition = R.enumOf(wp.transition, R.transitionValues, "wave")
-                    if (wp.transitionSeconds !== undefined)
-                        wallpaperTransitionSeconds = R.transitionSecondsOf(wp.transitionSeconds)
-                    if (wp.slideshow !== undefined)
-                        wallpaperSlideshow = R.boolOf(wp.slideshow, false)
-                    if (wp.slideshowMinutes !== undefined)
-                        wallpaperSlideshowMinutes = R.slideshowMinutesOf(wp.slideshowMinutes)
-                    if (wp.slideshowOrder !== undefined)
-                        wallpaperSlideshowOrder = R.enumOf(wp.slideshowOrder, R.slideshowOrderValues, "shuffle")
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.wallpaper:", e)
-            }
-
-            try {
-                if (settings.lockTimer) {
-                    if (settings.lockTimer.minutes !== undefined) {
-                        lockTimerMinutes = settings.lockTimer.minutes
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.lockTimer:", e)
-            }
-
-            try {
-                if (settings.idle) {
-                    if (settings.idle.suspendMinutes !== undefined) {
-                        idleSuspendMinutes = settings.idle.suspendMinutes
-                    }
-                    if (settings.idle.dpmsMinutes !== undefined) {
-                        idleDpmsMinutes = settings.idle.dpmsMinutes
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.idle:", e)
-            }
-
-            try {
-                if (settings.lockScreen) {
-                    if (settings.lockScreen.showEvents !== undefined) {
-                        lockShowEvents = settings.lockScreen.showEvents
-                    }
-                    if (settings.lockScreen.showLocation !== undefined) {
-                        lockShowLocation = settings.lockScreen.showLocation
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.lockScreen:", e)
-            }
-
-            try {
-                if (settings.date) {
-                    if (settings.date.format !== undefined) {
-                        dateFormat = settings.date.format
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.date:", e)
-            }
-
-            try {
-                if (settings.clock) {
-                    if (settings.clock.show24Hour !== undefined) {
-                        clockShow24Hour = settings.clock.show24Hour
-                    }
-                    if (settings.clock.showSeconds !== undefined) {
-                        clockShowSeconds = settings.clock.showSeconds
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.clock:", e)
-            }
-
-            try {
-                if (settings.weather) {
-                    if (settings.weather.enabled !== undefined) {
-                        weatherEnabled = settings.weather.enabled
-                    }
-                    if (settings.weather.location !== undefined) {
-                        weatherLocation = settings.weather.location
-                    }
-                    if (settings.weather.unit !== undefined) {
-                        weatherUnit = settings.weather.unit
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.weather:", e)
-            }
-
-            try {
-                if (settings.calendar) {
-                    if (settings.calendar.weekStart !== undefined) {
-                        calendarWeekStart = settings.calendar.weekStart
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.calendar:", e)
-            }
-
-            try {
-                if (settings.bar) {
-                    if (settings.bar.height !== undefined) {
-                        barHeight = settings.bar.height
-                    }
-                    if (settings.bar.radius !== undefined) {
-                        barRadius = settings.bar.radius
-                    }
-                    if (settings.bar.marginH !== undefined) {
-                        barMarginH = settings.bar.marginH
-                    }
-                    if (settings.bar.marginV !== undefined) {
-                        barMarginV = settings.bar.marginV
-                    }
-                    if (settings.bar.autoHide !== undefined) {
-                        barAutoHide = !!settings.bar.autoHide
-                    }
-                    if (settings.bar.surface) {
-                        const sf = settings.bar.surface
-                        if (sf.custom !== undefined) barSurfaceCustom = sf.custom
-                        if (sf.hue !== undefined) barSurfaceHue = _unitOr(sf.hue, barSurfaceHue)
-                        if (sf.saturation !== undefined) barSurfaceSaturation = _unitOr(sf.saturation, barSurfaceSaturation)
-                        if (sf.lightness !== undefined) barSurfaceLightness = _unitOr(sf.lightness, barSurfaceLightness)
-                        if (sf.opacity !== undefined) barSurfaceOpacity = _unitOr(sf.opacity, barSurfaceOpacity)
-                        if (sf.border !== undefined) barSurfaceBorder = sf.border
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.bar:", e)
-            }
-
-            try {
-                if (settings.workspaces) {
-                    if (settings.workspaces.count !== undefined) {
-                        workspaceCount = settings.workspaces.count
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.workspaces:", e)
-            }
-
-            try {
-                if (settings.display) {
-                    if (settings.display.monitor !== undefined) {
-                        displayMonitor = settings.display.monitor
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.display:", e)
-            }
-
-            try {
-                if (settings.ai) {
-                    if (settings.ai.barModel !== undefined) {
-                        barAiModel = settings.ai.barModel
-                    }
-                    if (settings.ai.barThinking !== undefined) {
-                        barThinking = settings.ai.barThinking
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.ai:", e)
-            }
-
-            try {
-                if (settings.yura) {
-                    if (settings.yura.enabled !== undefined) {
-                        yuraEnabled = settings.yura.enabled
-                    }
-                    if (settings.yura.panelSide !== undefined) {
-                        yuraPanelSide = settings.yura.panelSide
-                    }
-                    if (settings.yura.panelWidth !== undefined) {
-                        yuraPanelWidth = settings.yura.panelWidth
-                    }
-                    if (settings.yura.panelHeight !== undefined) {
-                        yuraPanelHeight = settings.yura.panelHeight
-                    }
-                    if (settings.yura.sidebarCollapsed !== undefined) {
-                        yuraSidebarCollapsed = settings.yura.sidebarCollapsed
-                    }
-                    if (settings.yura.idleBreath !== undefined) {
-                        yuraIdleBreath = settings.yura.idleBreath
-                    }
-                    if (settings.yura.autoCollapseMin !== undefined) {
-                        yuraAutoCollapseMin = settings.yura.autoCollapseMin
-                    }
-                    if (settings.yura.typingSpeed !== undefined) {
-                        yuraTypingSpeed = settings.yura.typingSpeed
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to apply settings.yura:", e)
             }
 
             updateAnimationMultiplier()
