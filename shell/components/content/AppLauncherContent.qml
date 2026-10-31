@@ -120,7 +120,7 @@ FocusScope {
     function dragEnd(x, y) {
         let app = dragApp
         let target = dropArmed ? findDropTarget(dropTargetExec) : null
-        let fromGroup = dragSourceView === groupGridView ? openGroupId : ""
+        let fromGroup = dragSourceView === groupPanel.grid ? openGroupId : ""
         dragCancel()
         if (!app) return
         if (target) {
@@ -167,9 +167,9 @@ FocusScope {
     // Which tile is under a point in layer coordinates, across whichever view is showing.
     function tileAt(x, y) {
         if (openGroupId !== "") {
-            let p = groupGridView.mapFromItem(launcherLayer, x, y)
-            if (p.x < 0 || p.y < 0 || p.x >= groupGridView.width || p.y >= groupGridView.height) return null
-            let i = groupGridView.indexAt(p.x, p.y + groupGridView.contentY)
+            let p = groupPanel.grid.mapFromItem(launcherLayer, x, y)
+            if (p.x < 0 || p.y < 0 || p.x >= groupPanel.grid.width || p.y >= groupPanel.grid.height) return null
+            let i = groupPanel.grid.indexAt(p.x, p.y + groupPanel.grid.contentY)
             return i >= 0 && i < openGroupMembers.length ? { item: openGroupMembers[i] } : null
         }
         if (isHome) {
@@ -217,7 +217,7 @@ FocusScope {
         shownGroupId = id
         openGroupId = id
         groupNameEditing = editName === true
-        groupGridView.currentIndex = -1
+        groupPanel.grid.currentIndex = -1
         modeManager.bump()
         groupFocusTimer.restart()
     }
@@ -229,10 +229,10 @@ FocusScope {
         onTriggered: {
             if (root.openGroupId === "") return
             if (root.groupNameEditing) {
-                groupNameInput.forceActiveFocus()
-                groupNameInput.selectAll()
+                groupPanel.nameInput.forceActiveFocus()
+                groupPanel.nameInput.selectAll()
             } else {
-                groupGridView.forceActiveFocus()
+                groupPanel.grid.forceActiveFocus()
             }
         }
     }
@@ -520,7 +520,7 @@ FocusScope {
                     && (delegateWrapper.GridView.view.sectionIndex === 0 || delegateWrapper.GridView.view === appGrid)
                 dragEnabled: {
                     let view = delegateWrapper.GridView.view
-                    return view ? (view.sectionIndex !== undefined || view === groupGridView) : false
+                    return view ? (view.sectionIndex !== undefined || view === groupPanel.grid) : false
                 }
                 willGroup: root.dropArmed && delegateWrapper.wrapperModelData
                     && root.dropTargetExec === delegateWrapper.wrapperModelData.exec
@@ -617,7 +617,7 @@ FocusScope {
 
         // With a group open its grid is the only key target; anything else would leak into the Home behind it.
         Keys.forwardTo: root.openGroupId !== ""
-            ? [groupGridView]
+            ? [groupPanel.grid]
             : [searchField ? searchField.searchFieldItem : null, root.isHome ? homeView : appGrid]
 
         Keys.onPressed: (event) => {
@@ -837,131 +837,23 @@ FocusScope {
             onPositionChanged: modeManager.bump()
         }
 
-        Rectangle {
+        Launcher.LauncherGroupPanel {
             id: groupPanel
             z: 45
-            readonly property bool open: root.openGroupId !== ""
-            opacity: open ? 1.0 : 0.0
-            scale: open ? 1.0 : 0.94
-            visible: opacity > 0.01
             anchors.centerIn: parent
-            Behavior on opacity { NumberAnimation { duration: Theme.Motion.fast; easing.type: Theme.Motion.easeOut } }
-            Behavior on scale { NumberAnimation { duration: Theme.Motion.fast; easing.type: Theme.Motion.easeOut } }
-
-            readonly property int columns: Math.max(2, Math.min(mainColumn.gridColumns - 2, root.shownGroupMembers.length))
-            readonly property int rows: Math.max(1, Math.ceil(root.shownGroupMembers.length / columns))
-
-            width: columns * 100 + 48
-            height: 26 + 40 + 14 + rows * 110 + 20
-            radius: 24
-            color: root.theme ? root.theme.popupFace : Qt.rgba(13 / 255, 8 / 255, 26 / 255, 0.92)
-            border.width: 1
-            border.color: root.theme ? root.theme.surfaceBorder : Qt.rgba(0.70, 0.65, 0.90, 0.3)
-
-            // Swallow clicks so they do not fall through to the dismiss area.
-            MouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-                onClicked: (mouse) => { mouse.accepted = true }
-                onWheel: (wheel) => { wheel.accepted = true }
+            theme: root.theme
+            typo: root.typo
+            open: root.openGroupId !== ""
+            group: root.shownGroup
+            members: root.shownGroupMembers
+            openMembers: root.openGroupMembers
+            gridColumns: mainColumn.gridColumns
+            tileComponent: tileDelegate
+            onLaunch: (app) => root.launchApp(app)
+            onNameCommitted: (name) => {
+                if (root.shownGroupId !== "") launcherStore.renameGroup(root.shownGroupId, name)
             }
-
-            Item {
-                id: groupNameRow
-                anchors.top: parent.top
-                anchors.topMargin: 26
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: Math.max(groupNameInput.contentWidth, 40) + 20
-                height: 40
-
-                TextInput {
-                    id: groupNameInput
-                    anchors.centerIn: parent
-                    anchors.verticalCenterOffset: -3
-                    text: root.shownGroup ? root.shownGroup.name : ""
-                    font.family: root.typo ? root.typo.fontFamily : "M PLUS 2"
-                    font.pixelSize: 20
-                    color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-                    selectionColor: root.theme ? Qt.rgba(root.theme.accent.r, root.theme.accent.g, root.theme.accent.b, 0.35) : Qt.rgba(0.65, 0.55, 0.85, 0.35)
-                    selectedTextColor: color
-                    horizontalAlignment: TextInput.AlignHCenter
-                    activeFocusOnPress: true
-                    selectByMouse: true
-                    onTextEdited: root.modeManager.bump()
-                    onPreeditTextChanged: root.modeManager.bump()
-
-                    Keys.onPressed: (event) => {
-                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Escape) {
-                            groupGridView.forceActiveFocus()
-                            event.accepted = true
-                        }
-                    }
-                    // Whatever is in the field when it loses focus is the name; there is no cancel.
-                    onActiveFocusChanged: {
-                        if (!activeFocus && root.shownGroupId !== "") launcherStore.renameGroup(root.shownGroupId, text)
-                    }
-                }
-
-                Rectangle {
-                    anchors.bottom: parent.bottom
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    width: parent.width
-                    height: 2
-                    radius: 1
-                    color: root.theme ? root.theme.accent : Qt.rgba(0.65, 0.55, 0.85, 1.0)
-                    opacity: groupNameInput.activeFocus ? 0.75 : (groupNameHover.hovered ? 0.3 : 0.0)
-
-                    Behavior on opacity { NumberAnimation { duration: Theme.Motion.micro } }
-                }
-
-                HoverHandler { id: groupNameHover }
-            }
-
-            GridView {
-                id: groupGridView
-                anchors.top: groupNameRow.bottom
-                anchors.topMargin: 14
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: groupPanel.columns * 100
-                height: groupPanel.rows * 110
-                interactive: false
-                cellWidth: 100
-                cellHeight: 110
-                model: root.shownGroupMembers
-                delegate: tileDelegate
-                currentIndex: -1
-                highlight: null
-                highlightFollowsCurrentItem: false
-                property bool userInteracted: false
-
-                // GridView selects 0 whenever its model changes; nothing is chosen until hover or a key.
-                onCountChanged: {
-                    if (!userInteracted && currentIndex !== -1) currentIndex = -1
-                }
-
-                Keys.onPressed: (event) => {
-                    modeManager.bump()
-                    let cols = groupPanel.columns
-                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        if (currentIndex >= 0 && root.openGroupMembers[currentIndex]) root.launchApp(root.openGroupMembers[currentIndex])
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Left || event.key === Qt.Key_H || event.key === Qt.Key_Backtab) {
-                        currentIndex = count === 0 ? -1 : (currentIndex < 0 ? count - 1 : (currentIndex - 1 + count) % count)
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Right || event.key === Qt.Key_L || event.key === Qt.Key_Tab) {
-                        currentIndex = count === 0 ? -1 : (currentIndex + 1) % count
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Down || event.key === Qt.Key_J) {
-                        if (currentIndex < 0) currentIndex = 0
-                        else if (currentIndex + cols < count) currentIndex += cols
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Up || event.key === Qt.Key_K) {
-                        if (currentIndex >= cols) currentIndex -= cols
-                        else groupNameInput.forceActiveFocus()
-                        event.accepted = true
-                    }
-                }
-            }
+            onActivity: root.modeManager.bump()
         }
 
         MouseArea {
@@ -986,7 +878,7 @@ FocusScope {
 
             onDismissed: {
                 if (!modeManager.isMode("launcher")) return
-                if (root.openGroupId !== "") groupGridView.forceActiveFocus()
+                if (root.openGroupId !== "") groupPanel.grid.forceActiveFocus()
                 else if (root.isHome) homeView.forceActiveFocus()
                 else appGrid.forceActiveFocus()
             }
@@ -1058,8 +950,8 @@ FocusScope {
 
     // The Loader tears this down without moving focus, and saveFavoritesProcess kills its child as it goes.
     Component.onDestruction: {
-        let renamed = groupNameInput.activeFocus && root.shownGroupId !== ""
-            ? launcherStore.renamedGroups(root.shownGroupId, groupNameInput.text) : null
+        let renamed = groupPanel.nameInput.activeFocus && root.shownGroupId !== ""
+            ? launcherStore.renamedGroups(root.shownGroupId, groupPanel.nameInput.text) : null
         if (renamed) Quickshell.execDetached(launcherStore.stateWriteArgv(renamed))
     }
 
