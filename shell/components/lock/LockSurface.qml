@@ -5,7 +5,6 @@ import Qt5Compat.GraphicalEffects
 import "../../lib" as Theme
 import "../ui" as UI
 import "../common" as Common
-import "../content" as Content
 import "../content/ai" as Ai
 
 Item {
@@ -388,71 +387,28 @@ Item {
                     }
                 }
 
-                LockBox {
+                LockWeatherTile {
                     x: root.contentX + root.colLeft(0)
                     y: root.contentY + root.rowTop(2)
                     width: root.colSpan(0, 1)
                     height: root.rowSpan(2)
                     cornerRadius: root.boxRadius
                     opacity: root.columnReveal(0)
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: root.boxRadius
-                        gradient: Gradient {
-                            GradientStop {
-                                position: 0
-                                color: root.weatherPalette ? root.weatherPalette.bg2 : "transparent"
-                            }
-                            GradientStop {
-                                position: 0.55
-                                color: root.weatherPalette ? root.weatherPalette.bg1 : "transparent"
-                            }
-                            GradientStop {
-                                position: 1
-                                color: root.weatherPalette ? root.weatherPalette.bg3 : "transparent"
-                            }
-                        }
-                        opacity: root.weatherPalette ? 0.65 : 0
-
-                        Behavior on opacity {
-                            NumberAnimation { duration: 400; easing.type: Easing.InOutCubic }
-                        }
-                    }
-
-                    Rectangle {
-                        id: weatherMask
-                        anchors.fill: parent
-                        radius: root.boxRadius
-                        color: "white"
-                        antialiasing: true
-                        visible: false
-                        layer.enabled: true
-                    }
-
-                    Content.WeatherParticles {
-                        anchors.fill: parent
-                        wtype: root.weatherParticleType
-                        windKmh: root.weatherWind
-                        tint: root.weatherPalette ? root.weatherPalette.accent : root.accentColor
-                        // A ParticleSystem does not stop just because its surface is hidden.
-                        active: !root.reduceMotion && root.uiVisible
-                        layer.enabled: true
-                        layer.effect: OpacityMask { maskSource: weatherMask }
-                    }
-
-                    LockWeatherBox {
-                        anchors.fill: parent
-                        anchors.margins: root.cellH * 0.2
-                        fontFamily: root.faceFontFamily
-                        tint: root.clockColor
-                        faintTint: root.subtleColor
-                        unit: Math.round(root.cellH * 0.2)
-                        iconSource: root.weatherIconSource
-                        temperature: root.weatherText
-                        highLow: root.weatherHighLow
-                        condition: root.weatherCondition
-                        location: root.weatherLocation
-                    }
+                    cellH: root.cellH
+                    faceFontFamily: root.faceFontFamily
+                    clockColor: root.clockColor
+                    subtleColor: root.subtleColor
+                    accentColor: root.accentColor
+                    reduceMotion: root.reduceMotion
+                    uiVisible: root.uiVisible
+                    weatherPalette: root.weatherPalette
+                    weatherIconSource: root.weatherIconSource
+                    weatherText: root.weatherText
+                    weatherHighLow: root.weatherHighLow
+                    weatherCondition: root.weatherCondition
+                    weatherLocation: root.weatherLocation
+                    weatherParticleType: root.weatherParticleType
+                    weatherWind: root.weatherWind
                 }
 
                 LockBox {
