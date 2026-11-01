@@ -240,68 +240,13 @@ PanelWindow {
     Theme.AiBackend { id: aiBackend }
 
     readonly property string soundsDir: Theme.Paths.soundsDir
-    readonly property string timerSoundsDir: Theme.Paths.timerSoundsDir
 
-    Theme.TimerManager {
-        id: timerManager
+    Theme.TimerManager { id: timerManager }
 
-        onCompleted: {
-            // Don't yank focus from another open panel.
-            if (modeManager.isMode("normal")) {
-                modeManager.switchMode("timer")
-            }
-        }
-
-        onAlertingChanged: {
-            if (alerting) {
-                barWindow._playTimerSound()
-                timerLoopTimer.restart()
-                timerSafetyTimer.restart()
-            } else {
-                timerLoopTimer.stop()
-                timerSafetyTimer.stop()
-                if (timerSoundProcess.running) timerSoundProcess.running = false
-            }
-        }
-    }
-
-    function _playTimerSound() {
-        const name = settingsManager ? settingsManager.timerSound : "None"
-        if (!name || name === "None" || name === "") return
-        timerSoundProcess.command = ["paplay", barWindow.timerSoundsDir + "/" + name]
-        timerSoundProcess.running = true
-    }
-
-    Process {
-        id: timerSoundProcess
-        command: []
-        running: false
-
-        stderr: StdioCollector { id: timerSoundError }
-
-        // Dismissing the alert ends paplay with SIGTERM, which is not a failure.
-        onExited: (exitCode) => {
-            if (exitCode !== 0 && timerManager.alerting)
-                console.warn("timer sound: paplay exited " + exitCode + ": " + timerSoundError.text.trim())
-        }
-    }
-
-    Timer {
-        id: timerLoopTimer
-        interval: 4000
-        repeat: true
-        running: false
-        onTriggered: barWindow._playTimerSound()
-    }
-
-    Timer {
-        id: timerSafetyTimer
-        interval: 60000
-        repeat: false
-        running: false
-        onTriggered: {
-            if (timerManager.alerting) timerManager.dismissAlert()
-        }
+    BarComponents.TimerAlertSound {
+        timerManagerRef: timerManager
+        modeManagerRef: modeManager
+        settingsManagerRef: settingsManager
     }
 
     Managers.AudioManager { id: audioManager }
