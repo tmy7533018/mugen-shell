@@ -227,8 +227,8 @@ Item {
 
     // Pooled: replacing the model restarts every mote in flight.
     function spawnMote() {
-        const mote = moteField.itemAt(moteCursor)
-        if (mote) mote.launch()
+        const mote = moteField.itemAt(moteCursor) as LockMote
+        if (mote) mote.launch(moteInner, moteOuter)
         moteCursor = (moteCursor + 1) % moteField.count
     }
 
@@ -587,45 +587,11 @@ Item {
                     id: moteField
                     model: 14
 
-                    Rectangle {
-                        id: mote
-                        required property int index
-
-                        property real progress: 1
-                        property real angle: 0
-                        property real travel: 0
-
-                        function launch() {
-                            angle = Math.random() * Math.PI * 2
-                            // Clamped: a long password leaves only a sliver to start in.
-                            const inner = Math.min(root.moteInner,
-                                                   root.moteOuter * 0.96)
-                            travel = inner + (root.moteOuter - inner) * Math.random()
-                            flight.restart()
-                        }
-
-                        NumberAnimation {
-                            id: flight
-                            target: mote
-                            property: "progress"
-                            from: 0
-                            to: 1
-                            duration: 620
-                            // Accelerating inwards, so it reads as pulled rather than drifting.
-                            easing.type: Easing.InCubic
-                        }
-
-                        width: Math.max(2, root.orbSize * 0.024)
-                        height: width
-                        radius: width / 2
-                        color: root.orbBase
-                        visible: progress < 1
-                        opacity: Math.min(1, (1 - progress) * 2.4) * 0.4
-                        scale: 0.45 + (1 - progress) * 0.6
-                        x: root.orbCX - width / 2
-                            + Math.cos(angle) * travel * (1 - progress)
-                        y: root.orbCY - height / 2
-                            + Math.sin(angle) * travel * (1 - progress)
+                    LockMote {
+                        orbSize: root.orbSize
+                        orbBase: root.orbBase
+                        orbCX: root.orbCX
+                        orbCY: root.orbCY
                     }
                 }
 
