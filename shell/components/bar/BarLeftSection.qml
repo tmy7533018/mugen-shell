@@ -38,17 +38,6 @@ RowLayout {
         return val
     }
     
-    component Separator: UI.SvgIcon {
-        width: 1
-        height: scaled(16)
-        Layout.alignment: Qt.AlignVCenter
-        Layout.leftMargin: scaled(-4)
-        Layout.rightMargin: scaled(-4)
-        source: Quickshell.shellDir + "/assets/icons/divider.svg"
-        color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.40)
-        opacity: 0.5
-    }
-    
     Common.IconButton {
         rig: Common.LauncherRig {}
         modeManager: root.modeManager
@@ -67,7 +56,7 @@ RowLayout {
         }
     }
     
-    Separator {}
+    BarSeparator { theme: root.theme; modeManager: root.modeManager }
 
     ColumnLayout {
         id: timeBlock
@@ -232,7 +221,7 @@ RowLayout {
         }
     }
 
-    Separator { visible: root.weatherManager && root.weatherManager.enabled && root.weatherManager.ready }
+    BarSeparator { theme: root.theme; modeManager: root.modeManager; visible: root.weatherManager && root.weatherManager.enabled && root.weatherManager.ready }
 
     Left.WeatherIndicator {
         theme: root.theme
@@ -242,7 +231,7 @@ RowLayout {
         weatherManager: root.weatherManager
     }
 
-    Separator {}
+    BarSeparator { theme: root.theme; modeManager: root.modeManager }
 
     Common.IconButton {
         rig: Common.WallpaperRig {}
@@ -270,7 +259,7 @@ RowLayout {
         modeManager: root.modeManager
     }
     
-    Separator {}
+    BarSeparator { theme: root.theme; modeManager: root.modeManager }
 
     Left.VolumeIndicator {
         theme: root.theme
@@ -289,7 +278,7 @@ RowLayout {
         cavaManager: root.cavaManager
     }
 
-    Separator { visible: root.yuraShown }
+    BarSeparator { theme: root.theme; modeManager: root.modeManager; visible: root.yuraShown }
 
     Item {
         id: aiContainer

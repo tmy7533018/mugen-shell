@@ -16,17 +16,6 @@ RowLayout {
     spacing: scaled(4)
     Layout.alignment: Qt.AlignVCenter
     
-    component Separator: UI.SvgIcon {
-        width: 1
-        height: scaled(16)
-        Layout.alignment: Qt.AlignVCenter
-        Layout.leftMargin: scaled(-4)  // Negate parent RowLayout spacing
-        Layout.rightMargin: scaled(-4)  // Negate parent RowLayout spacing
-        source: Quickshell.shellDir + "/assets/icons/divider.svg"
-        color: root.theme ? root.theme.textFaint : Qt.rgba(0.62, 0.62, 0.72, 0.40)
-        opacity: 0.5
-    }
-    
     property var theme
     property var typo
     property var icons
@@ -49,7 +38,7 @@ RowLayout {
         theme: root.theme
     }
 
-    Separator {}
+    BarSeparator { theme: root.theme; modeManager: root.modeManager }
 
     Right.NotificationIcon {
         theme: root.theme
@@ -58,7 +47,7 @@ RowLayout {
         notificationManager: root.notificationManager
     }
 
-    Separator {}
+    BarSeparator { theme: root.theme; modeManager: root.modeManager }
 
     UI.ImeIndicator {
         Layout.alignment: Qt.AlignVCenter
@@ -92,7 +81,7 @@ RowLayout {
         settingsManager: root.settingsManager
     }
 
-    Separator {}
+    BarSeparator { theme: root.theme; modeManager: root.modeManager }
 
     Right.AirplaneToggle {
         theme: root.theme
@@ -116,7 +105,7 @@ RowLayout {
         bluetoothManager: root.bluetoothManager
     }
     
-    Separator {}
+    BarSeparator { theme: root.theme; modeManager: root.modeManager }
 
     UI.PowerMenu {
         modeManager: root.modeManager
