@@ -478,47 +478,10 @@ PanelWindow {
             onPointChanged: chatWindow.noteActivity()
         }
 
-        Item {
-            id: resizeHandle
-            width: 18
-            height: 18
-            z: 20
-
-            anchors.top: parent.top
-            anchors.right: yuraState.isLeft ? parent.right : undefined
-            anchors.left: yuraState.isLeft ? undefined : parent.left
-
-            MouseArea {
-                anchors.fill: parent
-                anchors.margins: -8
-                cursorShape: yuraState.isLeft ? Qt.SizeBDiagCursor : Qt.SizeFDiagCursor
-                preventStealing: true
-
-                property real pressX: 0
-                property real pressY: 0
-                property int pressW: 0
-                property int pressH: 0
-
-                onPressed: (mouse) => {
-                    let p = mapToItem(chatWindow.contentItem, mouse.x, mouse.y)
-                    pressX = p.x
-                    pressY = p.y
-                    pressW = yuraState.panelWidth
-                    pressH = yuraState.panelHeight
-                }
-                onPositionChanged: (mouse) => {
-                    if (!pressed || !chatWindow.settingsManager) return
-                    let p = mapToItem(chatWindow.contentItem, mouse.x, mouse.y)
-                    let dx = p.x - pressX
-                    let dy = p.y - pressY
-                    let widthSign = yuraState.isLeft ? 1 : -1
-                    chatWindow.settingsManager.yuraPanelWidth = Math.max(480, Math.min(1100, pressW + dx * widthSign))
-                    chatWindow.settingsManager.yuraPanelHeight = Math.max(480, Math.min(1100, pressH - dy))
-                }
-                onReleased: {
-                    if (chatWindow.settingsManager) chatWindow.settingsManager.saveSettings()
-                }
-            }
+        PanelResizeHandle {
+            yuraState: chatWindow.yuraState
+            settingsManager: chatWindow.settingsManager
+            mapTarget: chatWindow.contentItem
         }
 
         Keys.onPressed: (event) => {
