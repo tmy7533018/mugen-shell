@@ -145,7 +145,7 @@ PanelWindow {
     property alias notificationManager: notificationManager
 
     // AI only counts down while quiet: no streamed reply, no unsent draft.
-    readonly property bool aiQuiet: !yuraFloatThinking
+    readonly property bool aiQuiet: !yuraMirror.yuraFloatThinking
         && (!aiAssistantLoader.item
             || (!aiAssistantLoader.item.streaming && !aiAssistantLoader.item.hasDraft))
     readonly property bool wifiQuiet: !wifiLoader.item || !(wifiLoader.item as Content.WiFiContent).hasDraft
@@ -270,27 +270,11 @@ PanelWindow {
         weatherManager: weatherManager
     }
 
-    // Float Yura mirrors its state here over IPC, so auto-close waits for its stream too.
-    property bool yuraFloatThinking: false
-    property bool yuraPanelOpen: false
-
-    IpcHandler {
-        target: "yura"
-        function set_thinking(on: bool): void {
-            barWindow.yuraFloatThinking = on
-            if (on) yuraThinkingFailsafe.restart()
-            else yuraThinkingFailsafe.stop()
-        }
-        function set_panel_open(on: bool): void {
-            barWindow.yuraPanelOpen = on
-            if (on) yuraPanelFailsafe.restart()
-            else yuraPanelFailsafe.stop()
-        }
-        function orb_home(): string {
-            if (barWindow.barHidden || !modeManager.isMode("normal")) return ""
-            const r = leftSection.aiOrbScreenRect()
-            return Math.round(r.x) + " " + Math.round(r.y) + " " + Math.round(r.size)
-        }
+    BarComponents.YuraMirror {
+        id: yuraMirror
+        barHidden: barWindow.barHidden
+        modeManagerRef: modeManager
+        orbHost: leftSection
     }
 
     BarComponents.LockHide {
@@ -366,19 +350,6 @@ PanelWindow {
             lockHide.showAfterLock()
             return "ok"
         }
-    }
-
-    // If yura-shell dies mid-stream its clearing IPC never arrives, so the icon would glow forever.
-    Timer {
-        id: yuraThinkingFailsafe
-        interval: 15 * 60 * 1000
-        onTriggered: barWindow.yuraFloatThinking = false
-    }
-
-    Timer {
-        id: yuraPanelFailsafe
-        interval: 30 * 60 * 1000
-        onTriggered: barWindow.yuraPanelOpen = false
     }
 
     Managers.WallpaperManager {
@@ -675,8 +646,8 @@ PanelWindow {
                 timerManager: timerManager
                 weatherManager: weatherManager
                 aiThinking: (aiAssistantLoader.item ? aiAssistantLoader.item.streaming : false)
-                    || barWindow.yuraFloatThinking
-                aiPanelOpen: barWindow.yuraPanelOpen
+                    || yuraMirror.yuraFloatThinking
+                aiPanelOpen: yuraMirror.yuraPanelOpen
             }
 
             Item { Layout.fillWidth: true }
