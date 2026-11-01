@@ -39,9 +39,7 @@ PanelWindow {
         : false
     readonly property bool fullscreenHidden: fullscreenActive && modeManager.isMode("normal")
 
-    property bool lockHidden: false
-    property real lockOpacity: 1.0
-    property int lockClientPid: 0
+    readonly property bool lockHidden: lockHide.lockHidden
 
     readonly property bool barHidden: fullscreenHidden || lockHidden || autoHide.hidden
 
@@ -295,19 +293,16 @@ PanelWindow {
         }
     }
 
-    function showAfterLock() {
-        if (!lockHidden) return
-        lockFadeOut.stop()
-        lockClientPid = 0
-        lockHidden = false
-        lockFadeIn.start()
+    BarComponents.LockHide {
+        id: lockHide
+        modeManagerRef: modeManager
     }
 
     // On contentItem, so surface.opacity and its Behavior stay untouched.
     Binding {
         target: barWindow.contentItem
         property: "opacity"
-        value: barWindow.lockOpacity
+        value: lockHide.lockOpacity
     }
 
     IdleMonitor {
@@ -320,25 +315,6 @@ PanelWindow {
         target: Theme.Motion
         property: "ambientPaused"
         value: ambientIdle.isIdle || barWindow.barHidden
-    }
-
-    NumberAnimation {
-        id: lockFadeOut
-        target: barWindow
-        property: "lockOpacity"
-        to: 0
-        duration: Theme.Motion.micro
-        easing.type: Easing.OutCubic
-        onFinished: modeManager.closeAllModes()
-    }
-
-    NumberAnimation {
-        id: lockFadeIn
-        target: barWindow
-        property: "lockOpacity"
-        to: 1
-        duration: Theme.Motion.standard
-        easing.type: Easing.OutCubic
     }
 
     IpcHandler {
@@ -381,49 +357,15 @@ PanelWindow {
         }
 
         function hide(pid: int): string {
-            barWindow.lockClientPid = pid
-            if (!barWindow.lockHidden) {
-                barWindow.lockHidden = true
-                lockFadeIn.stop()
-                lockFadeOut.start()
-            }
+            lockHide.hide(pid)
             return "ok"
         }
 
         // Not `show`: IpcHandler resolves that against QObject and answers with its handler listing.
         function restore(): string {
-            barWindow.showAfterLock()
+            lockHide.showAfterLock()
             return "ok"
         }
-    }
-
-    Timer {
-        id: lockAliveCheck
-        interval: 60000
-        repeat: true
-        running: barWindow.lockHidden && barWindow.lockClientPid > 0
-        onTriggered: lockProbe.running = true
-    }
-
-    Process {
-        id: lockProbe
-        running: false
-        // The verdict is on stdout because qmllint rejects any onExited handler.
-        command: ["sh", "-c",
-                  "kill -0 \"$1\" 2>/dev/null && echo alive || echo dead",
-                  "sh", String(barWindow.lockClientPid)]
-
-        stdout: StdioCollector {
-            onStreamFinished: {
-                if (this.text.trim() !== "alive") barWindow.showAfterLock()
-            }
-        }
-    }
-
-    Timer {
-        interval: 15 * 60 * 1000
-        running: barWindow.lockHidden && barWindow.lockClientPid <= 0
-        onTriggered: barWindow.showAfterLock()
     }
 
     // If yura-shell dies mid-stream its clearing IPC never arrives, so the icon would glow forever.
