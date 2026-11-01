@@ -4,7 +4,6 @@ import Quickshell
 import Quickshell.Io
 import "../../lib" as Theme
 import "../ui" as UI
-import "../common" as Common
 import "../content/ai" as Ai
 import "./left" as Left
 
@@ -38,22 +37,11 @@ RowLayout {
         return val
     }
     
-    Common.IconButton {
-        rig: Common.LauncherRig {}
+    Left.LauncherButton {
+        theme: root.theme
+        typo: root.typo
+        icons: root.icons
         modeManager: root.modeManager
-        iconSource: root.icons ? (root.icons.iconData.launcher.type === "svg" ? root.icons.iconData.launcher.value : "") : ""
-        iconText: root.icons ? (root.icons.iconData.launcher.type === "text" ? root.icons.iconData.launcher.value : "") : ""
-        iconColor: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-        fontSize: root.typo ? root.typo.clockStyle.size : 14
-        fontFamily: root.typo ? root.typo.clockStyle.family : "M PLUS 2"
-        fontWeight: root.typo ? root.typo.clockStyle.weight : Font.Normal
-        letterSpacing: root.typo ? root.typo.clockStyle.letterSpacing : 0
-        
-        onClicked: {
-            if (root.modeManager) {
-                root.modeManager.switchMode("launcher")
-            }
-        }
     }
     
     BarSeparator { theme: root.theme; modeManager: root.modeManager }
@@ -233,22 +221,11 @@ RowLayout {
 
     BarSeparator { theme: root.theme; modeManager: root.modeManager }
 
-    Common.IconButton {
-        rig: Common.WallpaperRig {}
+    Left.WallpaperButton {
+        theme: root.theme
+        typo: root.typo
+        icons: root.icons
         modeManager: root.modeManager
-        iconSource: root.icons ? (root.icons.iconData.wallpaper.type === "svg" ? root.icons.iconData.wallpaper.value : "") : ""
-        iconText: root.icons ? (root.icons.iconData.wallpaper.type === "text" ? root.icons.iconData.wallpaper.value : "") : ""
-        iconColor: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
-        fontSize: root.typo ? root.typo.clockStyle.size : 14
-        fontFamily: root.typo ? root.typo.clockStyle.family : "M PLUS 2"
-        fontWeight: root.typo ? root.typo.clockStyle.weight : Font.Normal
-        letterSpacing: root.typo ? root.typo.clockStyle.letterSpacing : 0
-        
-        onClicked: {
-            if (root.modeManager) {
-                root.modeManager.switchMode("wallpaper")
-            }
-        }
     }
     
     UI.ScreenshotButton {
