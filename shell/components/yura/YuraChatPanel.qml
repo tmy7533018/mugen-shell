@@ -396,81 +396,12 @@ PanelWindow {
             value: contentLoader.item ? contentLoader.item.modelDropdownOpen : false
         }
 
-        Item {
+        PanelOrb {
             id: orb
-            x: yuraState.orbX
-            y: yuraState.orbY
-            width: yuraState.orbSize
-            height: yuraState.orbSize
-            z: 4
-
-            property real expandGate: 0
-
-            SequentialAnimation {
-                id: orbOpenAnim
-                PauseAnimation { duration: Theme.Motion.fast }
-                NumberAnimation { target: orb; property: "expandGate"; to: 1.0; duration: Theme.Motion.drift; easing.type: Easing.InOutSine }
-            }
-
-            NumberAnimation {
-                id: orbCloseAnim
-                target: orb; property: "expandGate"; to: 0; duration: Theme.Motion.drift; easing.type: Easing.OutCubic
-            }
-
-            Connections {
-                target: yuraState
-                function onExpandedChanged() {
-                    if (yuraState.expanded) {
-                        orbCloseAnim.stop()
-                        if (yuraState.flyFromX >= 0) {
-                            // The stand-in orb performs the entrance, so the real one must already be grown.
-                            orbOpenAnim.stop()
-                            orb.expandGate = 1.0
-                        } else {
-                            orb.expandGate = 0
-                            orbOpenAnim.restart()
-                        }
-                    } else {
-                        orbOpenAnim.stop()
-                        orbCloseAnim.restart()
-                    }
-                }
-            }
-
-            opacity: (yuraState.aiDropdownOpen || chatWindow.flying) ? 0 : 1
-            Behavior on opacity { NumberAnimation { duration: Theme.Motion.standard; easing.type: Easing.InOutCubic } }
-
-            scale: 0.4 + expandGate * 0.6
-            transformOrigin: Item.Center
-
-            smooth: true
-            antialiasing: true
-
-            Behavior on x { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
-            Behavior on y { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
-            Behavior on width { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
-            Behavior on height { NumberAnimation { duration: Theme.Motion.slow; easing.type: Easing.OutCubic } }
-
-            Ai.AmbientOrb {
-                anchors.fill: parent
-                orbColor: chatWindow.theme ? chatWindow.theme.glowTertiary : Qt.rgba(0.95, 0.72, 0.74, 0.9)
-                showHalo: false
-                coreOpacity: 0.6
-                corePointCount: 48
-                coreWaveAmplitude: 0.5
-                idleBreathPeak: 1.20
-                idleBreathDuration: 1400
-                active: yuraState.expanded
-                breathEnabled: chatWindow.settingsManager ? chatWindow.settingsManager.yuraIdleBreath : true
-            }
-
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                // The orb is invisible but still hit-testable while it flies.
-                enabled: !yuraState.aiDropdownOpen && !chatWindow.flying
-                onClicked: yuraState.toggle()
-            }
+            yuraState: chatWindow.yuraState
+            theme: chatWindow.theme
+            settingsManager: chatWindow.settingsManager
+            flying: chatWindow.flying
         }
 
         // Not a full-fill hoverEnabled MouseArea: it would swallow hover and leave row states dead.
