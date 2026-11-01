@@ -18,7 +18,6 @@ Item {
     implicitWidth: isPlaying ? scaled(33) : scaled(24)
     implicitHeight: scaled(24)
     Layout.alignment: Qt.AlignVCenter
-    Layout.leftMargin: scaled(4)
 
     property bool isPlaying: musicPlayerManager ? musicPlayerManager.isPlaying : false
     property color baseColor: theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)

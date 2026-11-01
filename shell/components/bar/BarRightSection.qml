@@ -1,7 +1,5 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell
-import "../../lib" as Theme
 import "../ui" as UI
 import "./right" as Right
 
@@ -50,19 +48,17 @@ RowLayout {
     BarSeparator { theme: root.theme; modeManager: root.modeManager }
 
     UI.ImeIndicator {
-        Layout.alignment: Qt.AlignVCenter
-        visible: root.imeStatus && root.imeStatus.available
         theme: root.theme
         imeStatus: root.imeStatus
         modeManager: root.modeManager
     }
 
     Right.IdleInhibitorToggle {
+        Layout.leftMargin: root.spacing
         theme: root.theme
         icons: root.icons
         modeManager: root.modeManager
         idleInhibitorManager: root.idleInhibitorManager
-        spacing: root.spacing
     }
 
     Right.BrightnessIndicator {
@@ -88,7 +84,7 @@ RowLayout {
         icons: root.icons
         modeManager: root.modeManager
         airplaneManager: root.airplaneManager
-        visible: root.batteryManager && root.batteryManager.present
+        batteryManager: root.batteryManager
     }
 
     Right.WifiButton {
@@ -99,6 +95,7 @@ RowLayout {
     }
     
     Right.BluetoothButton {
+        Layout.leftMargin: root.scaled(4)
         theme: root.theme
         icons: root.icons
         modeManager: root.modeManager
@@ -109,18 +106,8 @@ RowLayout {
 
     UI.PowerMenu {
         modeManager: root.modeManager
-        textColor: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
         icons: root.icons
         theme: root.theme
-        onClicked: {
-            if (root.modeManager) {
-                root.modeManager.switchMode("powermenu")
-            }
-        }
-        onRightClicked: {
-            if (root.modeManager) root.modeManager.closeAllModes()
-            Theme.Hypr.exec(Quickshell.shellDir + "/scripts/toggle-settings.sh")
-        }
     }
 }
 

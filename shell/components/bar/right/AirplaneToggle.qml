@@ -9,9 +9,11 @@ Common.IconButton {
     required property var theme
     required property var icons
     required property var airplaneManager
+    property var batteryManager
     required modeManager
 
     Layout.alignment: Qt.AlignVCenter
+    visible: airplaneToggleButton.batteryManager && airplaneToggleButton.batteryManager.present
     opacityDuration: Theme.Motion.micro
 
     rig: Common.ShakeRig { source: airplaneToggleButton.icons ? airplaneToggleButton.icons.airplaneSvg : "" }

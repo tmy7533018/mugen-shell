@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../common" as Common
 import "../../lib" as Theme
 
@@ -18,6 +19,16 @@ Item {
 
     signal clicked()
     signal rightClicked()
+
+    onClicked: {
+        if (powerMenuRoot.modeManager) {
+            powerMenuRoot.modeManager.switchMode("powermenu")
+        }
+    }
+    onRightClicked: {
+        if (powerMenuRoot.modeManager) powerMenuRoot.modeManager.closeAllModes()
+        Theme.Hypr.exec(Quickshell.shellDir + "/scripts/toggle-settings.sh")
+    }
 
     property color textColor: (theme ? theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90))
 

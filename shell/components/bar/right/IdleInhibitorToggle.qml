@@ -9,11 +9,9 @@ Common.IconButton {
     required property var theme
     required property var icons
     required property var idleInhibitorManager
-    required property real spacing
     required modeManager
 
     Layout.alignment: Qt.AlignVCenter
-    Layout.leftMargin: spacing
     opacityDuration: Theme.Motion.micro
 
     readonly property bool isInhibited: idleInhibitorManager ? idleInhibitorManager.isInhibited : false

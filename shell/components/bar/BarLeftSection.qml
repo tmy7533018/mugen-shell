@@ -252,8 +252,7 @@ RowLayout {
     }
     
     UI.ScreenshotButton {
-        Layout.alignment: Qt.AlignVCenter
-        Layout.leftMargin: scaled(4)
+        Layout.leftMargin: root.scaled(4)
         theme: root.theme
         icons: root.icons
         modeManager: root.modeManager
@@ -270,6 +269,7 @@ RowLayout {
     }
     
     Left.MusicButton {
+        Layout.leftMargin: root.scaled(4)
         theme: root.theme
         typo: root.typo
         icons: root.icons

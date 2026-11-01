@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import "../common" as Common
 
 Common.IconButton {
@@ -7,6 +8,8 @@ Common.IconButton {
     required property var theme
     required property var icons
     required modeManager
+
+    Layout.alignment: Qt.AlignVCenter
 
     rig: Common.ScreenshotRig {}
 

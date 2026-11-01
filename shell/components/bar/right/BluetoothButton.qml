@@ -16,7 +16,6 @@ Item {
     implicitWidth: scaled(24)
     implicitHeight: scaled(24)
     Layout.alignment: Qt.AlignVCenter
-    Layout.leftMargin: scaled(4)
 
     property bool isPowered: bluetoothManager ? bluetoothManager.isPowered : false
     property bool isScanning: bluetoothManager ? bluetoothManager.isScanning : false

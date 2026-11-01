@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import "../../lib" as Theme
@@ -9,6 +10,9 @@ Item {
     required property var theme
     required property var imeStatus
     property var modeManager
+
+    Layout.alignment: Qt.AlignVCenter
+    visible: root.imeStatus && root.imeStatus.available
 
     function scaled(val) {
         if (modeManager) return modeManager.barScale(val)
