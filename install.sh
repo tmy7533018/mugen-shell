@@ -7,6 +7,7 @@ repo=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # AUR-only, so pacman cannot resolve them and the helper has to.
 aur_deps=(mpvpaper ttf-mplus-git libcava)
 default_apps=(kitty thunar firefox)
+default_app_deps=(ttf-firacode-nerd tumbler ffmpegthumbnailer gvfs)
 zsh_pkgs=(zsh starship jp2a fastfetch fzf eza bat ugrep
           zsh-syntax-highlighting zsh-autosuggestions zsh-history-substring-search)
 
@@ -258,7 +259,7 @@ main() {
 
   build_core
   enable_services
-  if (( want_apps ));  then say "Installing the default applications"; pac_install "${default_apps[@]}"; fi
+  if (( want_apps ));  then say "Installing the default applications"; pac_install "${default_apps[@]}" "${default_app_deps[@]}"; fi
   if (( want_ime ));   then setup_ime; fi
   if (( want_zsh ));   then setup_zsh; fi
   if (( want_dm ));    then setup_dm; fi
