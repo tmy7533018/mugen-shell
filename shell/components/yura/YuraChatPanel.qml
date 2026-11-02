@@ -30,6 +30,13 @@ PanelWindow {
 
     visible: false
     screen: chatWindow.screenByName(chatWindow.settingsManager ? chatWindow.settingsManager.initialDisplayMonitor : "")
+    // Quickshell never re-creates a layer surface the compositor closed because its output went away.
+    onScreenChanged: Qt.callLater(chatWindow.restoreClosedSurface)
+    function restoreClosedSurface() {
+        if (chatWindow.visible || !chatWindow.yuraState.expanded || !Quickshell.screens.some(s => s === chatWindow.screen && s.name !== "")) return
+        chatWindow.visible = false
+        chatWindow.visible = true
+    }
 
     function screenByName(name) {
         if (!name || name === "") return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null

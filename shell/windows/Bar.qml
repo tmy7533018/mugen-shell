@@ -57,6 +57,13 @@ PanelWindow {
     exclusiveZone: (fullscreenHidden || settingsManager.barAutoHide) ? 0 : modeManager.normalBarSize.height
     // The lock path fades to zero instead of unmapping: an unmapped layer has no exclusive zone.
     visible: !fullscreenHidden
+    // Quickshell never re-creates a layer surface the compositor closed because its output went away.
+    onScreenChanged: Qt.callLater(barWindow.restoreClosedSurface)
+    function restoreClosedSurface() {
+        if (barWindow.visible || barWindow.fullscreenHidden || !Quickshell.screens.some(s => s === barWindow.screen && s.name !== "")) return
+        barWindow.visible = false
+        barWindow.visible = Qt.binding(() => !barWindow.fullscreenHidden)
+    }
     focusable: modeManager.wantsKeyboard
     color: "transparent"
 
