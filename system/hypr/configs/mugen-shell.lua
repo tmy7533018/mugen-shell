@@ -13,6 +13,9 @@ local configHome = MUGEN_CONFIG_HOME or (os.getenv("HOME") .. "/.config")
 -- so a dispatch fired at shell startup picks the hl.dsp.* syntax right away.
 hl.env("HYPR_CONFIG_LUA", "1")
 
+-- Hyprland 0.57+ otherwise starts hyprland-session.target itself, raising the bar unordered with its env import and again at hyprland.start.
+hl.env("HYPRLAND_NO_SD_TARGET", "1")
+
 -- Compositor settings the lock screen depends on. Split out from autostart
 -- because these change how the session behaves while locked.
 hl.config({
