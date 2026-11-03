@@ -1,10 +1,7 @@
--- mugen-shell autostart for a Hyprland Lua config — the Lua counterpart of
--- mugen-shell.conf. If you already have your own hyprland.lua, adopt just this
--- snippet by adding near the top:
+-- mugen-shell autostart for a Hyprland Lua config. If you already have your own
+-- hyprland.lua, adopt just this snippet by adding near the top:
 --
 --     dofile(os.getenv("HOME") .. "/.config/hypr/configs/mugen-shell.lua")
---
--- (equivalent to `source = ~/.config/hypr/configs/mugen-shell.conf` on hyprlang.)
 
 -- hyprland.lua already resolved this; adopting the snippet from your own config leaves it unset.
 local configHome = MUGEN_CONFIG_HOME or (os.getenv("HOME") .. "/.config")

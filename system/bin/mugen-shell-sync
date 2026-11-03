@@ -110,12 +110,11 @@ rewrite_paths() {
   done
 }
 
-# matugen, hypridle and the hyprlang snippet expand ~ but not $XDG_CONFIG_HOME.
+# matugen and hypridle expand ~ but not $XDG_CONFIG_HOME.
 if [[ "$CONFIG" != "$HOME/.config" ]]; then
   rewrite_paths "s|~/\.config/|$CONFIG/|g; s|\$HOME/\.config/|$CONFIG/|g" \
                 "$CONFIG/matugen/config.toml" \
-                "$CONFIG/hypr/hypridle.conf" \
-                "$CONFIG/hypr/configs/mugen-shell.conf"
+                "$CONFIG/hypr/hypridle.conf"
 fi
 
 # matugen expands ~ but not $XDG_CACHE_HOME either, and the bar reads the palette from the latter.
