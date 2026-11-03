@@ -54,7 +54,9 @@ local function nothingTakesKeys()
     if hl.get_active_window() then return false end
     -- A focused layer (a shell panel, floating Yura) leaves the active window unset.
     for _, layer in ipairs(hl.get_layers()) do
-        if layer.mapped and layer.interactivity ~= KEYBOARD_INTERACTIVITY_NONE then return false end
+        -- Hyprland 0.57 renamed the field to keyboard_interactivity.
+        local interactivity = layer.keyboard_interactivity or layer.interactivity
+        if layer.mapped and interactivity ~= KEYBOARD_INTERACTIVITY_NONE then return false end
     end
     return true
 end
