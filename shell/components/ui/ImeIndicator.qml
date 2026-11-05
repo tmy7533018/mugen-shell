@@ -12,7 +12,8 @@ Item {
     property var modeManager
 
     Layout.alignment: Qt.AlignVCenter
-    visible: root.imeStatus && root.imeStatus.available
+    readonly property bool available: root.imeStatus && root.imeStatus.available
+    visible: root.available
 
     function scaled(val) {
         if (modeManager) return modeManager.barScale(val)

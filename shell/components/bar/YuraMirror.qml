@@ -26,7 +26,8 @@ Item {
         }
         function orb_home(): string {
             if (root.barHidden || !root.modeManagerRef.isMode("normal")) return ""
-            const r = root.orbHost.aiOrbScreenRect()
+            if (!root.orbHost || !root.orbHost.available) return ""
+            const r = root.orbHost.screenRect()
             return Math.round(r.x) + " " + Math.round(r.y) + " " + Math.round(r.size)
         }
     }

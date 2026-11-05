@@ -45,6 +45,36 @@ QtObject {
     property bool wallpaperSlideshow: false
     property int wallpaperSlideshowMinutes: 15
     property string wallpaperSlideshowOrder: "shuffle"
+    property var barLayoutItems: [
+        { id: "launcher", side: "left", visible: true },
+        { id: "separator", side: "left", visible: true },
+        { id: "clock", side: "left", visible: true },
+        { id: "timer", side: "left", visible: true },
+        { id: "separator", side: "left", visible: true },
+        { id: "weather", side: "left", visible: true },
+        { id: "separator", side: "left", visible: true },
+        { id: "wallpaper", side: "left", visible: true },
+        { id: "screenshot", side: "left", visible: true },
+        { id: "separator", side: "left", visible: true },
+        { id: "volume", side: "left", visible: true },
+        { id: "music", side: "left", visible: true },
+        { id: "separator", side: "left", visible: true },
+        { id: "yura", side: "left", visible: true },
+        { id: "tray", side: "right", visible: true },
+        { id: "separator", side: "right", visible: true },
+        { id: "notifications", side: "right", visible: true },
+        { id: "separator", side: "right", visible: true },
+        { id: "ime", side: "right", visible: true },
+        { id: "idle", side: "right", visible: true },
+        { id: "brightness", side: "right", visible: true },
+        { id: "battery", side: "right", visible: true },
+        { id: "separator", side: "right", visible: true },
+        { id: "airplane", side: "right", visible: true },
+        { id: "wifi", side: "right", visible: true },
+        { id: "bluetooth", side: "right", visible: true },
+        { id: "separator", side: "right", visible: true },
+        { id: "power", side: "right", visible: true }
+    ]
     property int lockTimerMinutes: 10  // hypridle screen-lock idle timeout
     property int idleSuspendMinutes: 30  // hypridle suspend timeout, 0 = disabled
     property int idleDpmsMinutes: 0  // hypridle screen-off timeout, 0 = disabled
@@ -301,7 +331,9 @@ QtObject {
             { prop: "yuraSidebarCollapsed", key: "sidebarCollapsed" },
             { prop: "yuraIdleBreath", key: "idleBreath" },
             { prop: "yuraAutoCollapseMin", key: "autoCollapseMin" },
-            { prop: "yuraTypingSpeed", key: "typingSpeed" }] }
+            { prop: "yuraTypingSpeed", key: "typingSpeed" }] },
+        { key: "barLayout", rows: [
+            { prop: "barLayoutItems", key: "items", read: v => BarLayoutRules.itemsOf(v) }] }
     ]
 
     function _domain(key) {

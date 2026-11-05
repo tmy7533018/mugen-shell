@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Io
+import Quickshell.Services.SystemTray
 import "../components/ui" as UI
 import "../components/content" as Content
 import "../components/managers" as Managers
@@ -43,10 +44,16 @@ PanelWindow {
 
     readonly property bool barHidden: fullscreenHidden || lockHidden || autoHide.hidden
 
+    readonly property bool aiThinking: (barPanels.aiItem ? barPanels.aiItem.streaming : false)
+        || yuraMirror.yuraFloatThinking
+
+    // First touch of this singleton starts the StatusNotifier watcher, and apps need it while the Tray icon is hidden.
+    readonly property var trayService: SystemTray
+
     BarComponents.AutoHide {
         id: autoHide
         enabled: settingsManager.barAutoHide
-        held: !modeManager.isMode("normal") || rightSection.trayMenuOpen
+        held: !modeManager.isMode("normal") || leftSection.trayMenuOpen || rightSection.trayMenuOpen
         stripHovered: revealStripHover.hovered
         barHovered: barBodyHover.hovered
         suspended: barWindow.fullscreenHidden || barWindow.lockHidden
@@ -281,7 +288,7 @@ PanelWindow {
         id: yuraMirror
         barHidden: barWindow.barHidden
         modeManagerRef: modeManager
-        orbHost: leftSection
+        orbHost: leftSection.orbItem || rightSection.orbItem
     }
 
     BarComponents.LockHide {
@@ -640,31 +647,19 @@ PanelWindow {
                 }
             ]
 
-            BarComponents.BarLeftSection {
+            BarComponents.BarSection {
                 id: leftSection
+                side: "left"
                 theme: theme
                 typo: typo
                 icons: icons
                 modeManager: modeManager
+                settingsManager: settingsManager
                 audioManager: audioManager
                 musicPlayerManager: musicPlayerManager
                 cavaManager: cavaManager
-                settingsManager: settingsManager
                 timerManager: timerManager
                 weatherManager: weatherManager
-                aiThinking: (barPanels.aiItem ? barPanels.aiItem.streaming : false)
-                    || yuraMirror.yuraFloatThinking
-                aiPanelOpen: yuraMirror.yuraPanelOpen
-            }
-
-            Item { Layout.fillWidth: true }
-
-            BarComponents.BarRightSection {
-                id: rightSection
-                theme: theme
-                typo: typo
-                icons: icons
-                modeManager: modeManager
                 notificationManager: notificationManager
                 wifiManager: wifiManager
                 bluetoothManager: bluetoothManager
@@ -673,7 +668,35 @@ PanelWindow {
                 imeStatus: imeStatus
                 idleInhibitorManager: idleInhibitorManager
                 brightnessManager: brightnessManager
+                aiThinking: barWindow.aiThinking
+                aiPanelOpen: yuraMirror.yuraPanelOpen
+            }
+
+            Item { Layout.fillWidth: true }
+
+            BarComponents.BarSection {
+                id: rightSection
+                side: "right"
+                theme: theme
+                typo: typo
+                icons: icons
+                modeManager: modeManager
                 settingsManager: settingsManager
+                audioManager: audioManager
+                musicPlayerManager: musicPlayerManager
+                cavaManager: cavaManager
+                timerManager: timerManager
+                weatherManager: weatherManager
+                notificationManager: notificationManager
+                wifiManager: wifiManager
+                bluetoothManager: bluetoothManager
+                airplaneManager: airplaneManager
+                batteryManager: batteryManager
+                imeStatus: imeStatus
+                idleInhibitorManager: idleInhibitorManager
+                brightnessManager: brightnessManager
+                aiThinking: barWindow.aiThinking
+                aiPanelOpen: yuraMirror.yuraPanelOpen
             }
             }
         }

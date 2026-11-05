@@ -18,7 +18,8 @@ Item {
     Layout.alignment: Qt.AlignVCenter
     Layout.preferredWidth: visible ? pillText.implicitWidth + root.scaled(22) : 0
     Layout.preferredHeight: root.scaled(26)
-    visible: root.timerManager && (root.timerManager.running || root.timerManager.alerting)
+    readonly property bool available: root.timerManager && (root.timerManager.running || root.timerManager.alerting)
+    visible: root.available
 
     function _formatRemaining(sec) {
         if (sec < 0) sec = 0

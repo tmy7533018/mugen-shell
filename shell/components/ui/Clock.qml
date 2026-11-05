@@ -13,7 +13,8 @@ Text {
     property bool reduceMotion: false
     property color glowColor: Qt.rgba(0.65, 0.55, 0.85, 0.6)
     
-    property string timeString: "--:--:--"
+    // A placeholder of another width leaves ClockDate's column off-centre when its first tick lands during creation.
+    property string timeString: Theme.Format.clockTime(new Date(), use24Hour, showSeconds)
     
     text: timeString
     

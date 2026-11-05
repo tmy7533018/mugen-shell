@@ -13,7 +13,8 @@ Common.IconButton {
     required modeManager
 
     Layout.alignment: Qt.AlignVCenter
-    visible: airplaneToggleButton.batteryManager && airplaneToggleButton.batteryManager.present
+    readonly property bool available: airplaneToggleButton.batteryManager && airplaneToggleButton.batteryManager.present
+    visible: airplaneToggleButton.available
     opacityDuration: Theme.Motion.micro
 
     rig: Common.ShakeRig { source: airplaneToggleButton.icons ? airplaneToggleButton.icons.airplaneSvg : "" }

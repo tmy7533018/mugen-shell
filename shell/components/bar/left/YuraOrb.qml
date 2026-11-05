@@ -23,7 +23,8 @@ Item {
         return val
     }
 
-    visible: root.yuraShown
+    readonly property bool available: root.yuraShown
+    visible: root.available
     implicitWidth: root.scaled(24)
     implicitHeight: root.scaled(24)
     Layout.alignment: Qt.AlignVCenter

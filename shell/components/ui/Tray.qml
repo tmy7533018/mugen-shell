@@ -15,6 +15,7 @@ RowLayout {
     property var blockedKeywords: ["nm-applet", "networkmanager", "blueman", "bluetooth", "fcitx"]
 
     property bool expanded: false
+    property bool opensTowardRight: false
     readonly property bool menuOpen: trayMenuAnchor.shown
 
     function isBlocked(item) {
@@ -48,6 +49,7 @@ RowLayout {
         return n
     }
 
+    layoutDirection: root.opensTowardRight ? Qt.RightToLeft : Qt.LeftToRight
     spacing: scaled(8)
     Layout.alignment: Qt.AlignVCenter
 
@@ -145,7 +147,7 @@ RowLayout {
             height: root.scaled(20)
             color: root.theme ? root.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.90)
             opacity: chevronMouse.containsMouse ? 1.0 : 0.6
-            rotation: root.expanded ? 180 : 0
+            rotation: (root.expanded ? 180 : 0) + (root.opensTowardRight ? 180 : 0)
 
             Behavior on rotation {
                 NumberAnimation { duration: Theme.Motion.standard; easing.type: Theme.Motion.easeMove }

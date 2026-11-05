@@ -15,7 +15,8 @@ Item {
 
     function scaled(v) { return modeManager ? modeManager.barScale(v) : v }
 
-    visible: weatherManager ? (weatherManager.enabled && weatherManager.ready) : false
+    readonly property bool available: weatherManager ? (weatherManager.enabled && weatherManager.ready) : false
+    visible: root.available
     implicitWidth: content.implicitWidth
     implicitHeight: scaled(28)
     Layout.alignment: Qt.AlignVCenter

@@ -30,7 +30,8 @@ Item {
     // battery.svg leaves this much empty on each side, as wifi.svg does; the label keeps it too.
     readonly property real iconInset: scaled(2)
 
-    visible: batteryManager && batteryManager.present
+    readonly property bool available: batteryManager && batteryManager.present
+    visible: root.available
     implicitWidth: !visible ? 0 : alwaysShowPercent ? percentLabel.x + percentLabel.implicitWidth + iconInset : scaled(24)
     implicitHeight: scaled(24)
     Layout.alignment: Qt.AlignVCenter

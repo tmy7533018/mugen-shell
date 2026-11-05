@@ -12,7 +12,8 @@ Item {
 
     function scaled(v) { return modeManager ? modeManager.barScale(v) : v }
 
-    visible: brightnessManager && brightnessManager.isAvailable
+    readonly property bool available: brightnessManager && brightnessManager.isAvailable
+    visible: brightnessContainer.available
     implicitWidth: visible ? scaled(24) : 0
     implicitHeight: scaled(24)
     Layout.alignment: Qt.AlignVCenter
