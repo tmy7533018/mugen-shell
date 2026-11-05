@@ -184,10 +184,7 @@ Rectangle {
                             Text {
                                 Layout.fillWidth: true
                                 textFormat: Text.PlainText
-                                text: {
-                                    let v = confirmCard.pc.arguments[argRow.modelData]
-                                    return (typeof v === "string") ? v : JSON.stringify(v)
-                                }
+                                text: Theme.ChatText.toolArgumentText(confirmCard.pc.arguments[argRow.modelData])
                                 color: confirmCard.theme ? confirmCard.theme.textPrimary : Qt.rgba(0.92, 0.92, 0.96, 0.95)
                                 font.pixelSize: confirmCard.modeManager.scale(12)
                                 font.family: "M PLUS 2"

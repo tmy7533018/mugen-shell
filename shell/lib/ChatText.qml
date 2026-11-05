@@ -4,6 +4,10 @@ import QtQuick
 QtObject {
     id: root
 
+    function toolArgumentText(value) {
+        return typeof value === "string" ? value : JSON.stringify(value)
+    }
+
     function utf8Length(s) {
         let n = 0
         for (const ch of s) {

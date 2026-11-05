@@ -36,7 +36,7 @@ Column {
             readonly property string label: {
                 let args = chip.modelData.arguments || ({})
                 let parts = []
-                for (let k in args) parts.push(k + "=" + args[k])
+                for (let k in args) parts.push(k + "=" + Theme.ChatText.toolArgumentText(args[k]))
                 let head = (chip.modelData.name || "")
                     + (parts.length > 0 ? "(" + parts.join(", ") + ")" : "")
                 if (chip.pending) return head + " …"

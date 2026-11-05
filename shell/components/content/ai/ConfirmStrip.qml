@@ -26,10 +26,7 @@ Rectangle {
         let a = pc.arguments
         if (!a) return ""
         let parts = []
-        for (let k of Object.keys(a)) {
-            let v = a[k]
-            parts.push(k + ": " + ((typeof v === "string") ? v : JSON.stringify(v)))
-        }
+        for (let k of Object.keys(a)) parts.push(k + ": " + Theme.ChatText.toolArgumentText(a[k]))
         return parts.join("   ·   ")
     }
 
