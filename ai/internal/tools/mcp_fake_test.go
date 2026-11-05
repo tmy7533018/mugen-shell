@@ -9,8 +9,10 @@ import (
 )
 
 type fakeMCPTool struct {
-	name   string
-	result string
+	name        string
+	result      string
+	description string
+	schema      map[string]any
 }
 
 func newFakeMCPServer(t *testing.T, toolList []fakeMCPTool) *httptest.Server {
@@ -43,10 +45,17 @@ func newFakeMCPServer(t *testing.T, toolList []fakeMCPTool) *httptest.Server {
 		case "tools/list":
 			tools := make([]map[string]any, len(toolList))
 			for i, tl := range toolList {
+				description, schema := tl.description, tl.schema
+				if description == "" {
+					description = "fake tool"
+				}
+				if schema == nil {
+					schema = map[string]any{"type": "object", "properties": map[string]any{}}
+				}
 				tools[i] = map[string]any{
 					"name":        tl.name,
-					"description": "fake tool",
-					"inputSchema": map[string]any{"type": "object", "properties": map[string]any{}},
+					"description": description,
+					"inputSchema": schema,
 				}
 			}
 			resp["result"] = map[string]any{"tools": tools}
