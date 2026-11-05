@@ -41,6 +41,9 @@ type firedState struct {
 // Notify fires a desktop notification for each of today's events whose moment
 // has come, and records them so a later run does not repeat one.
 func Notify(now time.Time) error {
+	tighten(filepath.Dir(firedPath()), 0o700)
+	tighten(firedPath(), 0o600)
+
 	fired := loadFired()
 	currentHM := now.Format("15:04")
 
@@ -168,12 +171,12 @@ func saveFired(fired map[string]bool) error {
 	sort.Strings(keys)
 
 	path := firedPath()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
 	raw, err := json.Marshal(firedState{Fired: keys})
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, raw, 0o644)
+	return os.WriteFile(path, raw, 0o600)
 }

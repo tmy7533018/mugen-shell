@@ -109,9 +109,11 @@ func Open(path string) (*Store, error) {
 	if path == "" {
 		path = DefaultPath()
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
+	tighten(dir, 0o700)
 
 	// The driver defaults busy_timeout to 0, and the notify timer runs every minute.
 	db, err := sql.Open("sqlite", path+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)")
@@ -121,6 +123,10 @@ func Open(path string) (*Store, error) {
 	if _, err := db.Exec(schema); err != nil {
 		db.Close()
 		return nil, err
+	}
+	// WAL parks the same rows in two sidecar files, so they get the same mode.
+	for _, p := range []string{path, path + "-wal", path + "-shm"} {
+		tighten(p, 0o600)
 	}
 
 	s := &Store{db: db, path: path}
@@ -133,6 +139,14 @@ func Open(path string) (*Store, error) {
 		return nil, err
 	}
 	return s, nil
+}
+
+func tighten(path string, mode os.FileMode) {
+	info, err := os.Stat(path)
+	if err != nil || info.Mode().Perm()&0o077 == 0 {
+		return
+	}
+	_ = os.Chmod(path, mode)
 }
 
 func (s *Store) Close() error { return s.db.Close() }
