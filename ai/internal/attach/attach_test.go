@@ -158,3 +158,62 @@ func TestLoadBestEffortSkipsMissing(t *testing.T) {
 		t.Fatalf("want the readable image only, got %+v", att)
 	}
 }
+
+func TestLoadRejectsTextThatIsNotUTF8(t *testing.T) {
+	tests := map[string][]byte{
+		"latin-1":        []byte("caf\xe9 au lait, s'il vous pla\xeet\n"),
+		"cp932":          {0x93, 0xfa, 0x96, 0x7b, 0x8c, 0xea, 0x0a},
+		"bad byte early": []byte("ok\xe9" + strings.Repeat("a", MaxTextBytes)),
+	}
+	for name, data := range tests {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "note.txt")
+			if err := os.WriteFile(path, data, 0o644); err != nil {
+				t.Fatalf("write: %v", err)
+			}
+			att, err := Load([]string{path})
+			if err == nil {
+				t.Fatalf("want an error, got %+v", att)
+			}
+			if !strings.Contains(err.Error(), "UTF-8") {
+				t.Errorf("error %q does not name the encoding", err)
+			}
+		})
+	}
+}
+
+func TestLoadCutsAtTheCapWithoutSplittingARune(t *testing.T) {
+	for lead := 1; lead <= 3; lead++ {
+		data := strings.Repeat("a", MaxTextBytes-lead) + "あ" + strings.Repeat("b", 100)
+		path := filepath.Join(t.TempDir(), "note.txt")
+		if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		att, err := Load([]string{path})
+		if err != nil {
+			t.Fatalf("lead %d: %v", lead, err)
+		}
+		doc := att.Documents[0]
+		want := data[:MaxTextBytes]
+		if lead < 3 {
+			want = data[:MaxTextBytes-lead]
+		}
+		if doc.Content != want || !doc.Truncated {
+			t.Errorf("lead %d: content is %d bytes (want %d), truncated=%v", lead, len(doc.Content), len(want), doc.Truncated)
+		}
+	}
+}
+
+func TestLoadKeepsTextAtExactlyTheCap(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "note.txt")
+	if err := os.WriteFile(path, []byte(strings.Repeat("あ", MaxTextBytes/3)), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	att, err := Load([]string{path})
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if doc := att.Documents[0]; doc.Truncated {
+		t.Errorf("a %d byte file claims it was truncated", len(doc.Content))
+	}
+}

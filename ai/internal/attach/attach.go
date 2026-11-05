@@ -126,7 +126,7 @@ func load(path string) (*provider.Image, *Document, error) {
 	if doc, ok := asDocument(filepath.Base(path), data); ok {
 		return nil, &doc, nil
 	}
-	return nil, nil, fmt.Errorf("attachment %q is neither a supported image nor a text file (%s)", path, mediaType)
+	return nil, nil, fmt.Errorf("attachment %q is neither a supported image nor UTF-8 text (%s)", path, mediaType)
 }
 
 // DetectContentType calls anything unsigned octet-stream, so judge these on their bytes.
@@ -134,15 +134,13 @@ func asDocument(name string, data []byte) (Document, bool) {
 	head := data
 	if len(head) > MaxTextBytes {
 		head = head[:MaxTextBytes]
-	}
-	if !utf8.Valid(head) {
 		// A cut in the middle of a rune is not a reason to reject the file.
-		for len(head) > 0 && !utf8.Valid(head) {
+		for i := 0; i < utf8.UTFMax-1 && !utf8.Valid(head); i++ {
 			head = head[:len(head)-1]
 		}
-		if len(head) == 0 {
-			return Document{}, false
-		}
+	}
+	if !utf8.Valid(head) {
+		return Document{}, false
 	}
 	for _, b := range head {
 		if b == 0 {
