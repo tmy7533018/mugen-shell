@@ -57,6 +57,7 @@ Rectangle {
     }
 
     function removeServer(name) {
+        if (section.saving) return
         let next = []
         for (let i = 0; i < servers.length; i++) {
             if (servers[i].name !== name) next.push(servers[i])
@@ -68,6 +69,7 @@ Rectangle {
 
     // Copies every field so toggling one never drops sibling state.
     function patchServer(name, key, value) {
+        if (section.saving) return
         let next = []
         for (let i = 0; i < servers.length; i++) {
             let s = servers[i]
@@ -141,6 +143,7 @@ Rectangle {
     }
 
     function addServer() {
+        if (section.saving) return
         let name = formName.trim().toLowerCase()
         if (name.length === 0) { section.statusText = "name is required"; return }
         if (!/^[a-z][a-z0-9-]*$/.test(name)) { section.statusText = "name: a-z first, then a-z, 0-9 or -"; return }
