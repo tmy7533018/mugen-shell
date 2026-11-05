@@ -611,3 +611,26 @@ func TestWithholdingDoesNotTouchTheHistoryItself(t *testing.T) {
 		}
 	}
 }
+
+func TestDeleteAllResetsPointerWithAnotherConnectionOpen(t *testing.T) {
+	h, s := newTestHistory(t)
+	chat, err := store.Open(s.Path())
+	if err != nil {
+		t.Fatalf("open second connection: %v", err)
+	}
+	defer chat.Close()
+	seedExchange(t, h, 1)
+
+	if err := h.DeleteAll(); err != nil {
+		t.Fatalf("delete all: %v", err)
+	}
+	if id := h.ConvID(); id != 0 {
+		t.Errorf("current conversation = %d, want none", id)
+	}
+	if id, err := s.GetCurrentConversationID(); err != nil || id != 0 {
+		t.Errorf("stored pointer = %d, %v", id, err)
+	}
+	if _, err := h.NewConversation("m", false); err != nil {
+		t.Errorf("new conversation after delete all: %v", err)
+	}
+}

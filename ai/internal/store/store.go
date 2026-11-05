@@ -303,22 +303,31 @@ func (s *Store) ConversationCount() (int, error) {
 	return n, err
 }
 
-// DeleteAllConversations removes every conversation; messages cascade, then a VACUUM
-// returns the pages. Under WAL that needs the drop to rollback mode and back.
+// DeleteAllConversations removes every conversation; messages cascade. A failed compaction
+// only leaves the pages allocated, so it is logged rather than returned.
 func (s *Store) DeleteAllConversations() error {
 	if _, err := s.db.Exec(`DELETE FROM conversations`); err != nil {
 		return err
 	}
-	if _, err := s.db.Exec(`PRAGMA journal_mode=DELETE`); err != nil {
+	if err := s.compact(); err != nil {
+		fmt.Fprintf(os.Stderr, "store: compact after clearing history: %v\n", err)
+	}
+	return nil
+}
+
+// Stays in WAL because leaving it fails while `mugen-ai chat` has the database open.
+func (s *Store) compact() error {
+	if _, err := s.db.Exec(`VACUUM`); err != nil {
 		return err
 	}
-	_, vacErr := s.db.Exec(`VACUUM`)
-	// Restore WAL even if the VACUUM failed, so the store keeps working.
-	_, walErr := s.db.Exec(`PRAGMA journal_mode=WAL`)
-	if vacErr != nil {
-		return vacErr
+	var busy, walFrames, checkpointed int
+	if err := s.db.QueryRow(`PRAGMA wal_checkpoint(TRUNCATE)`).Scan(&busy, &walFrames, &checkpointed); err != nil {
+		return err
 	}
-	return walErr
+	if busy != 0 {
+		return errors.New("a reader blocked the checkpoint")
+	}
+	return nil
 }
 
 // PruneConversationsOlderThan deletes conversations whose last activity is
