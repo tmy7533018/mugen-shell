@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import "../../common" as Common
@@ -9,8 +10,13 @@ Rectangle {
     required property var modeManager
     required property var settingsManager
 
+    readonly property var rows: [
+        { key: "volumeStep", label: "Volume step", from: 1, to: 10, stepSize: 1, fallback: 2 },
+        { key: "volumeMax", label: "Volume limit", from: 100, to: 150, stepSize: 5, fallback: 100 }
+    ]
+
     width: parent ? parent.width : 420
-    height: 64
+    height: rowsColumn.implicitHeight + 24
     color: theme ? theme.surfaceInsetSubtle : Qt.rgba(0, 0, 0, 0.25)
     radius: 20
     border.width: 1
@@ -20,37 +26,51 @@ Rectangle {
         if (modeManager && modeManager.isMode("settings")) modeManager.bump()
     }
 
-    RowLayout {
+    ColumnLayout {
+        id: rowsColumn
         anchors.fill: parent
         anchors.margins: 12
-        spacing: 12
+        spacing: 10
 
-        Text {
-            Layout.fillWidth: true
-            text: "Volume step"
-            color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
-            font.pixelSize: 12
-            font.family: "M PLUS 2"
-            font.weight: Font.Normal
-            font.letterSpacing: 0.5
-        }
+        Repeater {
+            model: section.rows
 
-        Common.Slider {
-            Layout.preferredWidth: 180
-            theme: section.theme
-            from: 1
-            to: 10
-            stepSize: 1
-            value: section.settingsManager ? section.settingsManager.volumeStep : 2
-            display: Math.round(value) + "%"
+            RowLayout {
+                id: settingRow
+                required property var modelData
 
-            onMoved: nv => {
-                if (section.settingsManager) section.settingsManager.volumeStep = Math.round(nv)
-                section.bump()
-            }
-            onReleased: {
-                if (section.settingsManager) section.settingsManager.saveSettings()
-                section.bump()
+                Layout.fillWidth: true
+                Layout.preferredHeight: 24
+                spacing: 12
+
+                Text {
+                    Layout.fillWidth: true
+                    text: settingRow.modelData.label
+                    color: section.theme ? section.theme.textSecondary : Qt.rgba(0.72, 0.72, 0.82, 0.90)
+                    font.pixelSize: 12
+                    font.family: "M PLUS 2"
+                    font.weight: Font.Normal
+                    font.letterSpacing: 0.5
+                }
+
+                Common.Slider {
+                    Layout.preferredWidth: 180
+                    theme: section.theme
+                    from: settingRow.modelData.from
+                    to: settingRow.modelData.to
+                    stepSize: settingRow.modelData.stepSize
+                    value: section.settingsManager ? section.settingsManager[settingRow.modelData.key] : settingRow.modelData.fallback
+                    display: Math.round(value) + "%"
+
+                    onMoved: nv => {
+                        if (section.settingsManager) section.settingsManager[settingRow.modelData.key] = Math.round(nv)
+                        section.bump()
+                    }
+                    onReleased: {
+                        if (section.settingsManager) section.settingsManager.saveSettings()
+                        section.bump()
+                    }
+                }
             }
         }
     }

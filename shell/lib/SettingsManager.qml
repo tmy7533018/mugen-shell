@@ -31,6 +31,7 @@ QtObject {
     property bool launcherTypeToSearch: true
     property string timerSound: "None"  // filename in Paths.timerSoundsDir, or "None"
     property int volumeStep: 2
+    property int volumeMax: 100
     property string wallpaperPauseWhen: "fullscreen"
     property var wallpaperPauseApps: []
     property real wallpaperSpeed: 1
@@ -191,6 +192,10 @@ QtObject {
         return (typeof v === "number" && isFinite(v)) ? Math.max(1, Math.min(10, Math.round(v))) : 2
     }
 
+    function _volumeMaxOf(v) {
+        return (typeof v === "number" && isFinite(v)) ? Math.max(100, Math.min(150, Math.round(v))) : 100
+    }
+
     // A domain missing from the file is appended in this order; the rest follow in apply order.
     readonly property var _saveOrderHead: ["autoCloseTimer", "barBackground", "battery", "glass", "blur"]
 
@@ -233,7 +238,8 @@ QtObject {
         { key: "timer", rows: [
             { prop: "timerSound", key: "sound" }] },
         { key: "volume", rows: [
-            { prop: "volumeStep", key: "step", read: v => settingsManager._volumeStepOf(v) }] },
+            { prop: "volumeStep", key: "step", read: v => settingsManager._volumeStepOf(v) },
+            { prop: "volumeMax", key: "max", read: v => settingsManager._volumeMaxOf(v) }] },
         { key: "wallpaper", plainObject: true, rows: [
             { prop: "wallpaperPauseWhen", key: "pauseWhen", read: v => WallpaperRules.enumOf(v, WallpaperRules.pauseWhenValues, "fullscreen") },
             { prop: "wallpaperPauseApps", key: "pauseApps", read: v => WallpaperRules.pauseAppsOf(v) },

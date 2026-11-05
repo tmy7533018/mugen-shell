@@ -34,23 +34,34 @@ Item {
         : (cavaManager ? cavaManager.audioLevel : 0.0)
     readonly property int currentVolume: isMicMode ? audioManager.micVolume : audioManager.volume
     readonly property bool currentMuted: isMicMode ? audioManager.micMuted : audioManager.isMuted
+    readonly property int currentLimit: (isMicMode || !settingsManager) ? 100 : settingsManager.volumeMax
     readonly property string speakerLabel: "speaker"
     readonly property string micLabel: "mic"
     readonly property string currentLabel: isMicMode ? micLabel : speakerLabel
 
-    function setCurrentVolume(v) {
+    function unmuteCurrent() {
         if (isMicMode) {
             if (audioManager.micMuted) audioManager.unmuteMic()
-            audioManager.setMicVolume(v)
         } else {
             if (audioManager.isMuted) audioManager.unmute()
-            audioManager.setVolume(v)
         }
+    }
+
+    function setCurrentVolume(v) {
+        unmuteCurrent()
+        if (isMicMode) audioManager.setMicVolume(v)
+        else audioManager.setVolume(v, currentLimit)
+    }
+
+    function moveCurrentVolume(from, delta) {
+        // pavucontrol can leave a volume past the limit, and clamping a raise from there would lower it.
+        if (delta >= 0 && from > currentLimit) unmuteCurrent()
+        else setCurrentVolume(Math.max(0, Math.min(currentLimit, from + delta)))
     }
 
     function nudgeVolume(direction, coarse) {
         const step = coarse ? 10 : (settingsManager ? settingsManager.volumeStep : 2)
-        setCurrentVolume(Math.max(0, Math.min(100, currentVolume + direction * step)))
+        moveCurrentVolume(currentVolume, direction * step)
     }
 
     function toggleCurrentMute() {
@@ -547,9 +558,7 @@ Item {
                         }
 
                         if (isDragging) {
-                            let volumeChange = Math.round((startY - mouse.y) * 0.5)
-                            let newVolume = Math.max(0, Math.min(100, startVolume + volumeChange))
-                            root.setCurrentVolume(newVolume)
+                            root.moveCurrentVolume(startVolume, Math.round((startY - mouse.y) * 0.5))
                             contentLayer.startInteraction()
                             root.startVolumeChangeTimer()
                         }

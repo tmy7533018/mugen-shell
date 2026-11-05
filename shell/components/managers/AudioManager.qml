@@ -97,8 +97,8 @@ QtObject {
         command: ["pactl", "set-sink-mute", "@DEFAULT_SINK@", "0"]
     }
 
-    function setVolume(newVolume) {
-        let clampedVolume = Math.max(0, Math.min(100, Math.round(newVolume)))
+    function setVolume(newVolume, limit = 100) {
+        let clampedVolume = Math.max(0, Math.min(limit, Math.round(newVolume)))
 
         setVolumeProcess.command = ["pactl", "set-sink-volume", "@DEFAULT_SINK@", clampedVolume + "%"]
         setVolumeProcess.running = true

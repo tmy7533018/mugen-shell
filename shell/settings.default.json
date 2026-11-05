@@ -44,7 +44,8 @@
     "sound": "None"
   },
   "volume": {
-    "step": 2
+    "step": 2,
+    "max": 100
   },
   "wallpaper": {
     "pauseWhen": "fullscreen",
