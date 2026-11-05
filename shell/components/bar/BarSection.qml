@@ -56,7 +56,8 @@ RowLayout {
         root.unavailable = next
     }
 
-    spacing: root.side === "left" ? 4 : root.scaled(4)
+    // Not scaled(8): that rounds to 11 at 2560 and would widen the default row.
+    spacing: 2 * root.scaled(4)
     Layout.alignment: Qt.AlignVCenter
 
     Repeater {
@@ -70,6 +71,10 @@ RowLayout {
                 BarSeparator {
                     id: separator
                     required property int index
+                    // Past half its box the cell would go negative, and the layout then clamps one side only.
+                    readonly property int spacingCancel: -Math.min(root.spacing, separator.implicitWidth / 2)
+                    Layout.leftMargin: separator.spacingCancel
+                    Layout.rightMargin: separator.spacingCancel
                     theme: root.theme
                     modeManager: root.modeManager
                     visible: root.shownSeparators[separator.index] === true
@@ -99,7 +104,6 @@ RowLayout {
             DelegateChoice {
                 roleValue: "timer"
                 Left.TimerPill {
-                    Layout.leftMargin: root.scaled(8)
                     id: timerPill
                     theme: root.theme
                     typo: root.typo
@@ -137,7 +141,6 @@ RowLayout {
             DelegateChoice {
                 roleValue: "screenshot"
                 UI.ScreenshotButton {
-                    Layout.leftMargin: root.scaled(4)
                     theme: root.theme
                     icons: root.icons
                     modeManager: root.modeManager
@@ -158,7 +161,6 @@ RowLayout {
             DelegateChoice {
                 roleValue: "music"
                 Left.MusicButton {
-                    Layout.leftMargin: root.scaled(4)
                     theme: root.theme
                     typo: root.typo
                     icons: root.icons
@@ -235,7 +237,6 @@ RowLayout {
             DelegateChoice {
                 roleValue: "idle"
                 Right.IdleInhibitorToggle {
-                    Layout.leftMargin: root.spacing
                     theme: root.theme
                     icons: root.icons
                     modeManager: root.modeManager
@@ -298,7 +299,6 @@ RowLayout {
             DelegateChoice {
                 roleValue: "bluetooth"
                 Right.BluetoothButton {
-                    Layout.leftMargin: root.scaled(4)
                     theme: root.theme
                     icons: root.icons
                     modeManager: root.modeManager
