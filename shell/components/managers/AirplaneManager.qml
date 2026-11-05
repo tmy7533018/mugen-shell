@@ -6,6 +6,8 @@ QtObject {
 
     property bool isEnabled: false
     property bool active: true
+    // rfkill translates the states, and the status parser matches the English word.
+    readonly property var cLocaleEnv: ({ "LC_ALL": "C" })
 
     onActiveChanged: {
         if (active) refreshStatus()
@@ -29,6 +31,7 @@ QtObject {
     property Process statusProcess: Process {
         command: ["bash", "-c", "rfkill --output SOFT --noheadings 2>/dev/null"]
         running: false
+        environment: airplaneManager.cLocaleEnv
 
         property int total: 0
         property int blocked: 0
