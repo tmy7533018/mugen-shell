@@ -422,8 +422,11 @@ Item {
     }
 
     function deleteConversation(convId) {
-        // The stream would keep writing into whichever conversation becomes current.
-        if (streaming && convId === currentConvId) stopStreaming()
+        // The stream would keep writing into whichever conversation becomes current, and its read-back would race the DELETE.
+        if (streaming && convId === currentConvId) {
+            discardStreamTail = true
+            stopStreaming()
+        }
         if (truncateProcess.running && convId === currentConvId) truncateProcess.abandoned = true
         deleteConvProcess.payload = String(convId)
         deleteConvProcess.running = true
@@ -733,13 +736,20 @@ Item {
         onRunningChanged: { if (running) { buf = ""; startedId = parseInt(payload) } }
 
         onExited: (exitCode) => {
-            if (exitCode !== 0) return
+            const wasCurrent = deleteConvProcess.startedId === root.currentConvId
+            if (exitCode !== 0) {
+                // The conversation stayed, and a stop mid-reply skipped the read-back that gives its rows their ids.
+                if (wasCurrent) root.loadCurrentConversation()
+                return
+            }
             let newCurrent = 0
             try {
                 let obj = JSON.parse(deleteConvProcess.buf)
                 newCurrent = obj.current_id || 0
             } catch (e) {}
-            if (deleteConvProcess.startedId === root.currentConvId) {
+            if (wasCurrent) {
+                // A read that left before this answer may still carry the deleted conversation.
+                root.turnSeq += 1
                 root.currentConvId = newCurrent
                 root.messages = []
                 if (newCurrent !== 0) {
