@@ -14,6 +14,9 @@ import (
 // All-day events have no minute to match, so they fire once the morning is up.
 const allDayFireTime = "08:00"
 
+// A run after suspend still fires what the sleep crossed, without unloading a whole morning at once.
+const missedEventGrace = 30 * time.Minute
+
 const firedRetention = 7 * 24 * time.Hour
 
 func stateHome() string {
@@ -39,7 +42,6 @@ type firedState struct {
 // has come, and records them so a later run does not repeat one.
 func Notify(now time.Time) error {
 	fired := loadFired()
-	today := now.Format("2006-01-02")
 	currentHM := now.Format("15:04")
 
 	store, err := Open("")
@@ -48,7 +50,7 @@ func Notify(now time.Time) error {
 	}
 	defer store.Close()
 
-	events, err := store.ListDay(now)
+	events, err := store.notifyCandidates(now.Add(-missedEventGrace), now)
 	if err != nil {
 		return nil
 	}
@@ -58,13 +60,13 @@ func Notify(now time.Time) error {
 		if e.ID == "" || e.Title == "" {
 			continue
 		}
-		key := today + ":" + e.ID
+		key := e.Date + ":" + e.ID
 		if fired[key] {
 			continue
 		}
 
 		switch {
-		case e.Time != "" && e.Time == currentHM:
+		case e.Time != "" && e.dueAt(now):
 			send("Mugen Calendar", e.Time+" — "+e.Title)
 			added = append(added, key)
 		case e.Time == "" && currentHM >= allDayFireTime:
@@ -80,6 +82,40 @@ func Notify(now time.Time) error {
 		fired[key] = true
 	}
 	return saveFired(pruneFired(fired, now))
+}
+
+type notifyCandidate struct {
+	Event
+	lastWritten int64
+}
+
+func (s *Store) notifyCandidates(from, to time.Time) ([]notifyCandidate, error) {
+	rows, err := s.db.Query("SELECT id, date, time, title, MAX(created_at, modified_at) FROM events WHERE date >= ? AND date <= ? "+orderClause,
+		from.Format("2006-01-02"), to.Format("2006-01-02"))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []notifyCandidate
+	for rows.Next() {
+		var c notifyCandidate
+		if err := rows.Scan(&c.ID, &c.Date, &c.Time, &c.Title, &c.lastWritten); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+// An event written after its own minute was never pending, so the grace does not apply to it.
+func (c notifyCandidate) dueAt(now time.Time) bool {
+	due, err := time.ParseInLocation("2006-01-02 15:04", c.Date+" "+c.Time, now.Location())
+	if err != nil {
+		return false
+	}
+	age := now.Sub(due)
+	return age >= 0 && age <= missedEventGrace && c.lastWritten < due.Add(time.Minute).Unix()
 }
 
 // Reported to the journal: a silent failure here is a notification the user never learns was due.

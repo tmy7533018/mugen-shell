@@ -51,7 +51,7 @@ const legacyMigrated = 1
 // Rows are ordered so all-day events lead the day, matching the shell's layout.
 const orderClause = `ORDER BY date, CASE WHEN time = '' THEN 0 ELSE 1 END, time`
 
-// Padded so orderClause and notify.go's exact-minute match both see "09:00".
+// Padded so orderClause sorts "09:00" ahead of "10:00".
 func normalizeTime(s string) (string, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
