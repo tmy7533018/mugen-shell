@@ -268,6 +268,11 @@ Item {
     // Retry and edit are one server-side move: drop this message and everything after, then resend.
     property int pendingRewindId: 0
     property int editingIndex: -1
+    // Lives here, not in the bubble: a change in the message count rebuilds every delegate.
+    readonly property var editDraft: QtObject {
+        property string text: ""
+        property int cursor: 0
+    }
 
     function retryFrom(index) {
         if (busy || index < 0 || index >= messages.length) return
@@ -284,7 +289,18 @@ Item {
         if (busy || index < 0 || index >= messages.length) return
         const msg = messages[index]
         if (!msg.id || msg.role !== "user") return
+        editDraft.text = msg.content
+        editDraft.cursor = msg.content.length
         root.editingIndex = index
+    }
+
+    // Another process can drop or shift the rows under an open editor, and its index must not land on a different message.
+    function followEditedMessage(rows) {
+        const edited = messages[editingIndex]
+        if (!edited) return
+        const index = rows.findIndex(m => m.id === edited.id)
+        if (index < 0 && editDraft.text.trim() !== "" && editDraft.text !== edited.content) root.draftReturned(editDraft.text, edited.attachments || [])
+        editingIndex = index
     }
 
     function cancelEdit() {
@@ -654,6 +670,7 @@ Item {
                 if (!sameConv) root.revealActive = false
                 root.currentConvId = obj.id || 0
                 let msgs = obj.messages || []
+                if (sameConv) root.followEditedMessage(msgs)
                 let prev = sameConv ? root.messages : []
                 const aligned = msgs.length === prev.length && prev.every((o, j) => !o.id || o.id === msgs[j].id)
                 root.messages = msgs.map((m, i) => {

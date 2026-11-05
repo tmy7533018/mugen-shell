@@ -14,6 +14,7 @@ Item {
     property var message: ({ content: "" })
     property int messageCount: 0
     property int editingIndex: -1
+    property var editDraft: null
     property bool streaming: false
     property bool busy: false
     property var openDetails: ({})
@@ -134,9 +135,11 @@ Item {
                 readonly property real vPad: delegateRoot.modeManager.scale(8)
                 readonly property real trailingLeading: (userText.lineHeight - 1) * userMetrics.lineSpacing
                 // Editing takes the full allowance so the text grows instead of reflowing.
-                width: delegateRoot.isEditing
-                    ? parent.width * 0.85
-                    : Math.min(userText.implicitWidth + hPad * 2, parent.width * 0.85)
+                width: {
+                    // Text measures implicitWidth on its first read, which loops if that read waits for an editor built open to close.
+                    const fitted = userText.implicitWidth + hPad * 2
+                    return delegateRoot.isEditing ? parent.width * 0.85 : Math.min(fitted, parent.width * 0.85)
+                }
                 height: (delegateRoot.isEditing
                     ? userEdit.implicitHeight
                     : userText.height - trailingLeading) + vPad * 2
@@ -187,11 +190,38 @@ Item {
                     font.family: "M PLUS 2"
                     font.letterSpacing: 0.3
 
+                    function restoreDraft() {
+                        const cursor = delegateRoot.editDraft.cursor
+                        userEdit.text = delegateRoot.editDraft.text
+                        userEdit.cursorPosition = cursor
+                    }
+
+                    function keepDraft() {
+                        if (!delegateRoot.isEditing) return
+                        delegateRoot.editDraft.text = userEdit.text
+                        delegateRoot.editDraft.cursor = userEdit.cursorPosition
+                    }
+
+                    function focusUnlessTaken() {
+                        const focused = userEdit.Window.activeFocusItem
+                        if (!focused || !("cursorPosition" in focused)) userEdit.forceActiveFocus()
+                    }
+
                     onVisibleChanged: {
                         if (!visible) return
-                        userEdit.text = delegateRoot.message.content
-                        userEdit.cursorPosition = userEdit.text.length
+                        restoreDraft()
                         userEdit.forceActiveFocus()
+                    }
+
+                    onTextChanged: keepDraft()
+                    onCursorPositionChanged: keepDraft()
+
+                    // A delegate built already editing never sees visible change.
+                    Component.onCompleted: {
+                        if (!delegateRoot.isEditing) return
+                        restoreDraft()
+                        // The ListView gives its focus scope to the current delegate right after this.
+                        Qt.callLater(userEdit.focusUnlessTaken)
                     }
 
                     Keys.onPressed: (event) => {

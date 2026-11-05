@@ -102,6 +102,7 @@ FocusScope {
     property alias revealActive: session.revealActive
     property alias openDetails: session.openDetails
     property alias editingIndex: session.editingIndex
+    property alias editDraft: session.editDraft
 
     function toggleDetail(key) { return session.toggleDetail(key) }
     function resolveConfirm(approved) { return session.resolveConfirm(approved) }
@@ -115,6 +116,11 @@ FocusScope {
     function selectConversation(convId) { return session.selectConversation(convId) }
     function deleteConversation(convId) { return session.deleteConversation(convId) }
     function showConversation(convId) { return session.showConversation(convId) }
+
+    function copyText(text) {
+        copyProcess.text = text
+        copyProcess.running = true
+    }
 
     function sendComposed(text) {
         if (!root.sendMessage(text, root.pendingAttachments)) return false
@@ -442,6 +448,7 @@ FocusScope {
                 message: root.messages[index] || ({ content: "" })
                 messageCount: root.messages.length
                 editingIndex: root.editingIndex
+                editDraft: root.editDraft
                 streaming: root.streaming
                 busy: root.busy
                 openDetails: root.openDetails
@@ -454,10 +461,7 @@ FocusScope {
                 onDetailToggled: key => root.toggleDetail(key)
                 onRetryRequested: root.retryFrom(index)
                 onEditRequested: root.beginEdit(index)
-                onCopyRequested: text => {
-                    copyProcess.text = text
-                    copyProcess.running = true
-                }
+                onCopyRequested: text => root.copyText(text)
             }
 
             footer: Item {
