@@ -142,7 +142,7 @@ Item {
                 return "error: brightness control not available on this machine"
             }
             ipcRouter.brightnessManager.setBrightness(percent)
-            return String(percent)
+            return String(ipcRouter.brightnessManager.brightness)
         }
 
         function get(): string {

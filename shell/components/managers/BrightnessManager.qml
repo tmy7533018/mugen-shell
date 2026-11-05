@@ -10,6 +10,7 @@ QtObject {
     property bool hasSyncedOnce: false
     property int setCount: 0
     property int setCountAtRead: 0
+    readonly property int minPercent: 1
 
     // Never fires for the startup sync, so the panel's auto-close timer only arms on real changes.
     signal userChanged()
@@ -22,7 +23,7 @@ QtObject {
     }
 
     function setBrightness(percent) {
-        let v = Math.max(0, Math.min(100, Math.round(percent)))
+        let v = Math.max(minPercent, Math.min(100, Math.round(percent)))
         if (v === brightness) return
         brightness = v
         setCount++
@@ -75,7 +76,8 @@ QtObject {
     property Process setProcess: Process {
         running: false
         property string payload: ""
-        command: ["brightnessctl", "--class", "backlight", "set", payload]
+        // On a panel with a small max, even 1% rounds to raw 0; -n holds the raw value at 1.
+        command: ["brightnessctl", "--class", "backlight", "-n", "set", payload]
     }
 
     property Timer pollTimer: Timer {

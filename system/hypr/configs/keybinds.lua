@@ -199,7 +199,7 @@ local binds = {
       action = brightnessKey("brightnessctl --class backlight set +5%") },
     { id = "media.brightnessDown", cat = "media", desc = "Brightness down (5%)",
       keys = "XF86MonBrightnessDown", display = "Brightness Down key",
-      action = brightnessKey("brightnessctl --class backlight set 5%-") },
+      action = brightnessKey("brightnessctl --class backlight -n set 5%-") },
 
     { id = "sys.reload", cat = "system", desc = "Reload Hyprland config",
       keys = mainMod .. " + SHIFT + R", action = hl.dsp.exec_cmd("hyprctl reload") },
