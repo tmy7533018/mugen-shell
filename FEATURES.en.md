@@ -94,7 +94,7 @@ The details behind each item in the [README](README.en.md) feature list.
 ## Customization
 
 - Change it all in the Settings window (`Super + ,`), where you can search for any option
-- **Appearance**: bar shape, color, size, margins and auto-hide, transparency, blur, animation speed, reduce motion, clock format, first day of the week
+- **Appearance**: bar shape, color, size, margins and auto-hide, which bar icons show and in what order, left or right side, separators (drag to rearrange), transparency, blur, animation speed, reduce motion, clock format, first day of the week
 - **Wallpaper**: when videos pause, speed and sound, apps that pause them, brightness and saturation, fit, the switch effect, slideshow
 - **Sound**: the volume step and limit, notification and timer sounds; drop in audio files of your own to use any sound you like
 - **Connectivity**: connect to WiFi and Bluetooth, auto-join and forget saved networks, forget paired devices, airplane mode (only on machines with a battery)

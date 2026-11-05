@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import "./settings" as Settings
 
@@ -34,7 +35,7 @@ Item {
     property bool hasBattery: false
 
     readonly property var categories: [
-        { id: "appearance", label: "Appearance",   types: ["theme", "barSurface", "moduleBackground", "blur", "animation", "dateFormat", "clock", "weather", "calendarWeekStart", "barLayout"] },
+        { id: "appearance", label: "Appearance",   types: ["theme", "barSurface", "moduleBackground", "blur", "animation", "dateFormat", "clock", "weather", "calendarWeekStart", "barLayout", "barIcons"] },
         { id: "wallpaper",  label: "Wallpaper",    types: ["wallpaperPlayback", "wallpaperPauseApps", "wallpaperDisplay", "wallpaperTransition", "wallpaperSlideshow"] },
         { id: "sound",      label: "Sound",        types: ["volumeStep", "notificationSound", "timerSound"] },
         { id: "connectivity", label: "Connectivity", types: root.hasAirplane ? ["airplaneMode", "wifi", "knownNetworks", "bluetooth"] : ["wifi", "knownNetworks", "bluetooth"] },
@@ -75,6 +76,7 @@ Item {
             case "weather":           return weatherSection
             case "calendarWeekStart": return calendarWeekStartSection
             case "barLayout":         return barLayoutSection
+            case "barIcons":          return barIconsSection
             case "doNotDisturb":      return doNotDisturbSection
             case "notificationTimeout": return notificationTimeoutSection
             case "launcherTerminal":  return launcherTerminalSection
@@ -234,6 +236,11 @@ Item {
         settingsManager: root.settingsManager
     }}
     Component { id: barLayoutSection; Settings.BarLayoutSection {
+        theme: root.theme
+        modeManager: root.modeManager
+        settingsManager: root.settingsManager
+    }}
+    Component { id: barIconsSection; Settings.BarIconsSection {
         theme: root.theme
         modeManager: root.modeManager
         settingsManager: root.settingsManager
