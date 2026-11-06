@@ -86,9 +86,20 @@ programs.mugen-shell.fcitx5Addons = with pkgs; [ fcitx5-mozc ];
 
 </details>
 
-Hyprland の個人設定は `~/.config/hypr/configs/user-overrides.lua` (キーバインドは `keybind-overrides.lua`) に書きます。`~/.config/hypr` (`hypridle.conf` を除く) と `~/.config/matugen` にある同梱のファイルは編集しても元に戻ります。mugen-shell が最初に置き換えた自分のファイルは `*.pre-mugen-shell` として残ります。`~/.config/hypr/hyprland.conf` は以後 (素の Hyprland セッションでも) 読まれなくなるので、必要な設定は `user-overrides.lua` に移してください。matugen のテンプレートを自分で足すときは `~/.config/matugen/user.toml` に書きます (先頭に `[config]` の行が要ります)。`~/.config/hypr` 自体がシンボリックリンク (dotfiles 管理など) だと mugen-shell はそこに手を付けず、バーも起動しません。実体のディレクトリにしてください。中の `hyprland.lua` だけがシンボリックリンクでも、そのファイルには手を付けず、バーも起動しません。実体のファイルにすると、mugen-shell が同梱のものに置き換えます。自分の `hyprland.lua` を使い続けるなら、`~/.config/hypr/configs/mugen-shell.lua` の先頭にある `dofile` の行を、行頭の `--` を外してそのファイルに足してください。これで起動するのはバーだけです。mugen-shell のキーバインドとウィンドウルールは読み込まれないので、バーにぼかしがかからず、設定の Blur も効きません。
+Hyprland の個人設定は `~/.config/hypr/configs/user-overrides.lua` (キーバインドは `keybind-overrides.lua`) に書きます。`~/.config/hypr` (`hypridle.conf` を除く) と `~/.config/matugen` にある同梱のファイルは編集しても元に戻ります。
 
-`~/.config/gtk-3.0/gtk.css` や `~/.config/gtk-4.0/gtk.css` を元から持っていた場合は、先頭に `@import url("colors.css");` を足してください。足さないと GTK アプリが壁紙の配色に追従しません。
+<details>
+<summary><b>Hyprland や GTK の設定をすでに持っている場合</b></summary>
+
+- mugen-shell が最初に置き換えた自分のファイルは `*.pre-mugen-shell` として残ります。
+- `~/.config/hypr/hyprland.conf` は以後 (素の Hyprland セッションでも) 読まれなくなるので、必要な設定は `user-overrides.lua` に移してください。
+- `~/.config/hypr` 自体がシンボリックリンク (dotfiles 管理など) だと mugen-shell はそこに手を付けず、バーも起動しません。実体のディレクトリにしてください。
+- 中の `hyprland.lua` だけがシンボリックリンクでも、そのファイルには手を付けず、バーも起動しません。実体のファイルにすると、mugen-shell が同梱のものに置き換えます。
+- 自分の `hyprland.lua` を使い続けるなら、`~/.config/hypr/configs/mugen-shell.lua` の先頭にある `dofile` の行を、行頭の `--` を外してそのファイルに足してください。これで起動するのはバーだけです。mugen-shell のキーバインドとウィンドウルールは読み込まれないので、バーにぼかしがかからず、設定の Blur も効きません。
+- `~/.config/gtk-3.0/gtk.css` や `~/.config/gtk-4.0/gtk.css` を元から持っていた場合は、先頭に `@import url("colors.css");` を足してください。足さないと GTK アプリが壁紙の配色に追従しません。
+- matugen のテンプレートを自分で足すときは `~/.config/matugen/user.toml` に書きます (先頭に `[config]` の行が要ります)。
+
+</details>
 
 ---
 
