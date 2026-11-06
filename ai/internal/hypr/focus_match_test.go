@@ -3,6 +3,7 @@ package hypr
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -43,9 +44,13 @@ func TestFocusOrLaunchReportsAnEntryThatDoesNotExist(t *testing.T) {
 }
 
 func TestFocusOrLaunchDoesNotWaitForASlowLauncher(t *testing.T) {
+	sleep, err := exec.LookPath("sleep")
+	if err != nil {
+		t.Fatal(err)
+	}
 	hyprStubs(t, `[]`)
 	dir := filepath.Dir(firstOnPath(t, "hyprctl"))
-	stubBin(t, dir, "gtk-launch", "sleep 10")
+	stubBin(t, dir, "gtk-launch", sleep+" 5")
 
 	start := time.Now()
 	if _, err := FocusOrLaunch(context.Background(), "slow-app"); err != nil {
