@@ -68,12 +68,17 @@ func Notify(now time.Time) error {
 			continue
 		}
 
+		var body string
 		switch {
 		case e.Time != "" && e.dueAt(now):
-			send("Mugen Calendar", e.Time+" — "+e.Title)
-			added = append(added, key)
+			body = e.Time + " — " + e.Title
 		case e.Time == "" && currentHM >= allDayFireTime:
-			send("Mugen Calendar", "Today — "+e.Title)
+			body = "Today — " + e.Title
+		default:
+			continue
+		}
+		// The login catch-up runs before the shell serves notifications, so a failure stays due for the next run.
+		if send("Mugen Calendar", body) {
 			added = append(added, key)
 		}
 	}
@@ -122,12 +127,14 @@ func (c notifyCandidate) dueAt(now time.Time) bool {
 }
 
 // Reported to the journal: a silent failure here is a notification the user never learns was due.
-func send(summary, body string) {
+func send(summary, body string) bool {
 	out, err := exec.Command("notify-send", "-a", "mugen-shell",
 		"-i", "x-office-calendar", summary, body).CombinedOutput()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "notify-send: %v: %s\n", err, out)
+		return false
 	}
+	return true
 }
 
 func loadFired() map[string]bool {
