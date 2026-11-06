@@ -271,6 +271,10 @@ func (s *Server) handleChat(w http.ResponseWriter, r *http.Request) {
 			}
 			// A denial is fed back as an ordinary result, without the action having happened.
 			switch {
+			// A native tool can ignore its context, and a gated call above may be how the client left.
+			case r.Context().Err() != nil:
+				result = "error: the client left before this action ran, so it did not run. Tell the user it was not done; call it again only if they ask again."
+				s.tools.Audit(tc.Name, tc.Arguments, result, nil)
 			case approved:
 				result, callErr = s.tools.Call(r.Context(), tc.Name, tc.Arguments)
 			case answered:

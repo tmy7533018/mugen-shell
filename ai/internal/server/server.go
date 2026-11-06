@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -119,9 +120,14 @@ func (s *Server) Routes() http.Handler {
 
 // NewHTTPServer serves Routes and ends the /events streams as soon as Shutdown starts.
 func (s *Server) NewHTTPServer() *http.Server {
-	hs := &http.Server{Handler: s.Routes()}
-	// Shutdown waits for handlers without cancelling them, so an open /events stream would hold it to the deadline.
+	// Shutdown waits for handlers without cancelling them, so an open stream or turn would hold it to the deadline.
+	base, cancel := context.WithCancel(context.Background())
+	hs := &http.Server{
+		Handler:     s.Routes(),
+		BaseContext: func(net.Listener) context.Context { return base },
+	}
 	hs.RegisterOnShutdown(s.events.closeAll)
+	hs.RegisterOnShutdown(cancel)
 	return hs
 }
 
