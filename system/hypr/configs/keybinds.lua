@@ -233,7 +233,9 @@ end
 
 -- Exported so Settings -> Keyboard reads what is actually bound, not a copy that can drift.
 local function jsonString(v)
-    return '"' .. tostring(v):gsub('[\\"]', '\\%0'):gsub('\n', '\\n') .. '"'
+    local escaped = tostring(v):gsub('[\\"]', '\\%0'):gsub('\n', '\\n')
+        :gsub('%c', function(c) return string.format('\\u%04x', c:byte()) end)
+    return '"' .. escaped .. '"'
 end
 
 local function exportBinds()
