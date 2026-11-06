@@ -53,7 +53,7 @@ func newHTTPTransport(name, rawURL string) (*httpTransport, error) {
 		ctx:    ctx,
 		cancel: cancel,
 		// Bounds a single hung POST; close() cancels ctx to abort an in-flight SSE read.
-		client:   &http.Client{Timeout: 5 * time.Minute},
+		client:   &http.Client{Timeout: 5 * time.Minute, CheckRedirect: stayOnOrigin},
 		outbound: make(chan outMsg, 32),
 		queue:    make(chan []byte, 32),
 		done:     make(chan struct{}),
@@ -61,6 +61,18 @@ func newHTTPTransport(name, rawURL string) (*httpTransport, error) {
 	}
 	go t.sendLoop()
 	return t, nil
+}
+
+// Go only strips its own list of sensitive headers across hosts, and Mcp-Session-Id is not on it.
+func stayOnOrigin(req *http.Request, via []*http.Request) error {
+	first := via[0].URL
+	if req.URL.Scheme != first.Scheme || req.URL.Host != first.Host {
+		return http.ErrUseLastResponse
+	}
+	if len(via) >= 10 {
+		return errors.New("stopped after 10 redirects")
+	}
+	return nil
 }
 
 // rejectedError is a transport failure where the server answered without running the request.
@@ -159,6 +171,9 @@ func (t *httpTransport) post(callCtx context.Context, data []byte) {
 			return
 		}
 		t.deliverError(probe.ID, hasID, text)
+		return
+	case resp.StatusCode >= 300:
+		t.deliverError(probe.ID, hasID, fmt.Sprintf("http transport: server returned status %d: not following a redirect to another origin", resp.StatusCode))
 		return
 	}
 
