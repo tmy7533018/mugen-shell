@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -181,6 +182,8 @@ func (w *weatherAPI) forecast(ctx context.Context, loc geoPlace) (string, error)
 	return strings.TrimSuffix(b.String(), "\n"), nil
 }
 
+const maxWeatherResponseBytes = 1 << 20
+
 func (w *weatherAPI) getJSON(ctx context.Context, u string, out any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
@@ -194,7 +197,7 @@ func (w *weatherAPI) getJSON(ctx context.Context, u string, out any) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
-	return json.NewDecoder(resp.Body).Decode(out)
+	return json.NewDecoder(io.LimitReader(resp.Body, maxWeatherResponseBytes)).Decode(out)
 }
 
 func wmoText(code int) string {
