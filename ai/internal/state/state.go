@@ -31,5 +31,21 @@ func SaveModel(model string) error {
 	if err := os.MkdirAll(dir(), 0755); err != nil {
 		return err
 	}
-	return os.WriteFile(path(), []byte(model+"\n"), 0644)
+	tmp, err := os.CreateTemp(dir(), filename+".*.tmp")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.WriteString(model + "\n"); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), path())
 }

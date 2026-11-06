@@ -253,6 +253,11 @@ func Save(cfg Config) error {
 		tmp.Close()
 		return err
 	}
+	// Without this, a power cut can leave the rename durable and the file empty, which loads as a blank config.
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return err
+	}
 	if err := tmp.Close(); err != nil {
 		return err
 	}
