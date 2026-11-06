@@ -133,8 +133,9 @@ func dial(ctx context.Context, name string, sc ServerConfig) (*Client, error) {
 // merge right after Connect, before any re-dial can race it.
 func (m *Manager) Clients() map[string]*Client { return m.clients }
 
-// A server that crashed since startup is re-dialed once and the call
-// retried, so a crash self-heals instead of failing until mugen-ai restarts.
+// A server that crashed since startup is re-dialed once and the call retried, so a crash
+// self-heals instead of failing until mugen-ai restarts. A call the crash may have
+// interrupted is not retried unless repeating it is harmless: approval covers one run.
 func (m *Manager) Call(ctx context.Context, server, tool string, args map[string]any) (string, error) {
 	m.mu.Lock()
 	client := m.clients[server]
@@ -143,9 +144,13 @@ func (m *Manager) Call(ctx context.Context, server, tool string, args map[string
 		return "", fmt.Errorf("mcp server %q is not connected", server)
 	}
 
+	closedBefore := client.Closed()
 	out, err := client.CallTool(ctx, tool, args)
 	if err == nil || !client.Closed() {
 		return out, err
+	}
+	if !closedBefore && !client.repeatIsHarmless(tool) {
+		return "", fmt.Errorf("mcp server %q went away during %s, which may have run, so it was not repeated: %w", server, tool, err)
 	}
 
 	fresh, derr := m.redial(ctx, server)

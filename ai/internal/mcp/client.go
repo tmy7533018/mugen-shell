@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -48,10 +49,11 @@ type Client struct {
 	tr      transport
 	trusted bool
 
-	mu      sync.Mutex
-	nextID  int64
-	pending map[int64]chan rpcMessage
-	closed  bool
+	mu       sync.Mutex
+	nextID   int64
+	pending  map[int64]chan rpcMessage
+	closed   bool
+	closedBy error
 
 	tools []ToolDef
 }
@@ -96,6 +98,7 @@ func (c *Client) readLoop() {
 func (c *Client) fail(err error) {
 	c.mu.Lock()
 	c.closed = true
+	c.closedBy = err
 	pending := c.pending
 	c.pending = map[int64]chan rpcMessage{}
 	c.mu.Unlock()
@@ -320,6 +323,23 @@ func (c *Client) CallTool(ctx context.Context, name string, args map[string]any)
 }
 
 func (c *Client) Close() error { return c.tr.close() }
+
+// A retry cannot run a tool twice when the server refused the request, or when the tool only reads.
+func (c *Client) repeatIsHarmless(tool string) bool {
+	c.mu.Lock()
+	closedBy := c.closedBy
+	c.mu.Unlock()
+	var rejected rejectedError
+	if errors.As(closedBy, &rejected) {
+		return true
+	}
+	for _, def := range c.Tools() {
+		if def.Name == tool {
+			return def.ReadOnly && !def.Destructive
+		}
+	}
+	return false
+}
 
 // Closed reports whether the connection has dropped. A closed client cannot
 // be revived; the Manager re-dials a fresh one in its place.

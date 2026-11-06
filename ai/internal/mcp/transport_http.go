@@ -63,6 +63,11 @@ func newHTTPTransport(name, rawURL string) (*httpTransport, error) {
 	return t, nil
 }
 
+// rejectedError is a transport failure where the server answered without running the request.
+type rejectedError string
+
+func (e rejectedError) Error() string { return string(e) }
+
 type outMsg struct {
 	ctx  context.Context
 	data []byte
@@ -150,7 +155,7 @@ func (t *httpTransport) post(callCtx context.Context, data []byte) {
 		// A rejected session cannot be re-initialized in place; python-sdk < 1.26 and the TS SDK's example server answer one with 400, not the spec's 404.
 		staleSession := resp.StatusCode == http.StatusBadRequest && sentSession != "" && !rejectsOnlyThisMessage(body)
 		if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusUnauthorized || staleSession {
-			t.fail(errors.New(text))
+			t.fail(rejectedError(text))
 			return
 		}
 		t.deliverError(probe.ID, hasID, text)
