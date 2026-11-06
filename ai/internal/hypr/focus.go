@@ -68,14 +68,37 @@ func Focus(ctx context.Context, desktopEntry string) (bool, error) {
 
 		if term == cls || term == initial ||
 			// An empty class is a substring of everything, so it would swallow the match.
-			(cls != "" && (strings.Contains(cls, term) || strings.Contains(term, cls))) ||
-			(initial != "" && (strings.Contains(initial, term) || strings.Contains(term, initial))) {
+			(cls != "" && (strings.Contains(cls, term) || wrapsClass(term, cls))) ||
+			(initial != "" && (strings.Contains(initial, term) || wrapsClass(term, initial))) {
 			return true, focusWindow(ctx, c.Address, c.Floating)
 		}
 	}
 
 	return false, nil
 }
+
+// Below this a class is too short to tell apart: a window of class "st" must not answer for "steam".
+const minWrappedClassLen = 3
+
+// An entry often wraps its class at the start of a word: "org.mozilla.firefox" for "firefox", "com.obsproject.Studio" for "obs".
+func wrapsClass(entry, class string) bool {
+	if len(class) < minWrappedClassLen {
+		return false
+	}
+	for from := 0; ; {
+		i := strings.Index(entry[from:], class)
+		if i < 0 {
+			return false
+		}
+		start := from + i
+		if start == 0 || isWordSeparator(entry[start-1]) {
+			return true
+		}
+		from = start + 1
+	}
+}
+
+func isWordSeparator(c byte) bool { return c == '.' || c == '-' || c == '_' || c == ' ' }
 
 // FocusOrLaunch raises the window matching desktopEntry, or starts it when none
 // is open. Reports whether a matching window was focused.
@@ -120,9 +143,24 @@ func dispatch(ctx context.Context, address string, args []string) error {
 	return nil
 }
 
+// gtk-launch exits right after starting the app, so one still running after this has not failed.
+const launchVerdictWait = 2 * time.Second
+
 // Detached so the app outlives the short-lived process that asked for it.
 func launch(desktopEntry string) error {
 	cmd := exec.Command("gtk-launch", desktopEntry)
 	cmd.SysProcAttr = detachedAttr()
-	return cmd.Start()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	exited := make(chan error, 1)
+	go func() { exited <- cmd.Wait() }()
+	select {
+	case err := <-exited:
+		if err != nil {
+			return fmt.Errorf("gtk-launch %s: %w", desktopEntry, err)
+		}
+	case <-time.After(launchVerdictWait):
+	}
+	return nil
 }
