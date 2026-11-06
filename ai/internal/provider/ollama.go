@@ -32,7 +32,7 @@ const ollamaStallTimeout = 60 * time.Second
 
 func NewOllama(host string, numCtx int, keepAlive string) *Ollama {
 	return &Ollama{
-		host:         host,
+		host:         strings.TrimRight(host, "/"),
 		numCtx:       numCtx,
 		keepAlive:    keepAlive,
 		http:         streamingHTTPClient(),
