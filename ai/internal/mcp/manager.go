@@ -149,7 +149,7 @@ func (m *Manager) Call(ctx context.Context, server, tool string, args map[string
 	if err == nil || !client.Closed() {
 		return out, err
 	}
-	if !closedBefore && !client.repeatIsHarmless(tool) {
+	if !closedBefore && !client.repeatIsHarmless(tool, err) {
 		return "", fmt.Errorf("mcp server %q went away during %s, which may have run, so it was not repeated: %w", server, tool, err)
 	}
 

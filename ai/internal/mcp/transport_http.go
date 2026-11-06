@@ -75,10 +75,13 @@ func stayOnOrigin(req *http.Request, via []*http.Request) error {
 	return nil
 }
 
-// rejectedError is a transport failure where the server answered without running the request.
-type rejectedError string
+// rejectedError is a transport failure where the server answered one request without running it.
+type rejectedError struct {
+	id   json.RawMessage
+	text string
+}
 
-func (e rejectedError) Error() string { return string(e) }
+func (e rejectedError) Error() string { return e.text }
 
 type outMsg struct {
 	ctx  context.Context
@@ -167,7 +170,7 @@ func (t *httpTransport) post(callCtx context.Context, data []byte) {
 		// A rejected session cannot be re-initialized in place; python-sdk < 1.26 and the TS SDK's example server answer one with 400, not the spec's 404.
 		staleSession := resp.StatusCode == http.StatusBadRequest && sentSession != "" && !rejectsOnlyThisMessage(body)
 		if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusUnauthorized || staleSession {
-			t.fail(rejectedError(text))
+			t.fail(rejectedError{id: probe.ID, text: text})
 			return
 		}
 		t.deliverError(probe.ID, hasID, text)

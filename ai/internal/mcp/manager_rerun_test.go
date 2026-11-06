@@ -98,3 +98,50 @@ func TestManagerDoesNotTrustAReadOnlyHintItRefusedElsewhere(t *testing.T) {
 		t.Errorf("the tool reached the server %d times, want 1", n)
 	}
 }
+
+// failingTransport never answers and fails with err once told to.
+type failingTransport struct {
+	sent chan struct{}
+	err  chan error
+}
+
+func (f *failingTransport) send(context.Context, []byte) error { f.sent <- struct{}{}; return nil }
+func (f *failingTransport) recv() ([]byte, error)              { return nil, <-f.err }
+func (f *failingTransport) close() error                       { return nil }
+
+func TestARefusalOnlyVouchesForTheCallItAnswered(t *testing.T) {
+	tr := &failingTransport{sent: make(chan struct{}, 2), err: make(chan error, 1)}
+	c := newClient("notes", tr, false)
+
+	first := make(chan error, 1)
+	go func() {
+		_, err := c.call(context.Background(), "tools/call", nil)
+		first <- err
+	}()
+	<-tr.sent
+	second := make(chan error, 1)
+	go func() {
+		_, err := c.call(context.Background(), "tools/call", nil)
+		second <- err
+	}()
+	<-tr.sent
+
+	tr.err <- rejectedError{id: json.RawMessage("2"), text: "status 404"}
+	if err := <-first; c.repeatIsHarmless("delete_note", err) {
+		t.Errorf("the call that was still pending counts as refused: %v", err)
+	}
+	if err := <-second; !c.repeatIsHarmless("delete_note", err) {
+		t.Errorf("the refused call does not count as refused: %v", err)
+	}
+}
+
+func TestARepeatIsNotVouchedForByAServerError(t *testing.T) {
+	c := newClient("notes", &failingTransport{sent: make(chan struct{}, 1), err: make(chan error)}, false)
+	var msg rpcMessage
+	if err := json.Unmarshal([]byte(`{"error":{"code":-1,"message":"x","refused":true}}`), &msg); err != nil {
+		t.Fatal(err)
+	}
+	if c.repeatIsHarmless("delete_note", msg.Error) {
+		t.Error("a field in the server's reply marked the call as refused")
+	}
+}

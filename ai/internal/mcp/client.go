@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -27,6 +28,8 @@ type rpcMessage struct {
 type rpcError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+	// Set by this client, never from the wire: the server turned this request away without running it.
+	refused bool
 }
 
 func (e *rpcError) Error() string { return fmt.Sprintf("mcp error %d: %s", e.Code, e.Message) }
@@ -49,11 +52,10 @@ type Client struct {
 	tr      transport
 	trusted bool
 
-	mu       sync.Mutex
-	nextID   int64
-	pending  map[int64]chan rpcMessage
-	closed   bool
-	closedBy error
+	mu      sync.Mutex
+	nextID  int64
+	pending map[int64]chan rpcMessage
+	closed  bool
 
 	tools []ToolDef
 }
@@ -98,12 +100,17 @@ func (c *Client) readLoop() {
 func (c *Client) fail(err error) {
 	c.mu.Lock()
 	c.closed = true
-	c.closedBy = err
 	pending := c.pending
 	c.pending = map[int64]chan rpcMessage{}
 	c.mu.Unlock()
-	for _, ch := range pending {
-		ch <- rpcMessage{Error: &rpcError{Code: -1, Message: fmt.Sprintf("connection lost: %v", err)}}
+	var rejected rejectedError
+	errors.As(err, &rejected)
+	for id, ch := range pending {
+		ch <- rpcMessage{Error: &rpcError{
+			Code:    -1,
+			Message: fmt.Sprintf("connection lost: %v", err),
+			refused: string(rejected.id) == strconv.FormatInt(id, 10),
+		}}
 	}
 }
 
@@ -324,13 +331,10 @@ func (c *Client) CallTool(ctx context.Context, name string, args map[string]any)
 
 func (c *Client) Close() error { return c.tr.close() }
 
-// A retry cannot run a tool twice when the server refused the request, or when the tool only reads.
-func (c *Client) repeatIsHarmless(tool string) bool {
-	c.mu.Lock()
-	closedBy := c.closedBy
-	c.mu.Unlock()
-	var rejected rejectedError
-	if errors.As(closedBy, &rejected) {
+// A retry cannot run a tool twice when the server refused this very call, or when the tool only reads.
+func (c *Client) repeatIsHarmless(tool string, callErr error) bool {
+	var failure *rpcError
+	if errors.As(callErr, &failure) && failure.refused {
 		return true
 	}
 	for _, def := range c.Tools() {
