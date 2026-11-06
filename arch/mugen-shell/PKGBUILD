@@ -83,6 +83,8 @@ package_mugen-shell() {
     'networkmanager' 'bluez' 'bluez-utils' 'pipewire-pulse' 'wireplumber'
     # FileChooser backend for QT_QPA_PLATFORMTHEME=xdgdesktopportal; dconf is what gsettings writes to.
     'xdg-desktop-portal-gtk' 'dconf'
+    # hyprland only lists it as optional, and it is the one backend with ScreenCast: no screen sharing without it.
+    'xdg-desktop-portal-hyprland'
     'python' 'python-gobject' 'gtk3' 'ttf-mplus-git'
     'ttf-jetbrains-mono-nerd' 'noto-fonts-emoji' 'qt6-declarative'
     # quickshell does not pull qt5compat, and 34 QML files import it.
