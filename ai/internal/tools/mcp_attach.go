@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"os"
+	"strings"
 
 	"github.com/tmy7533018/mugen-ai/internal/mcp"
 )
@@ -76,7 +77,7 @@ func untrustedDescription(def mcp.ToolDef) (string, error) {
 	}
 	desc := clip(oneLine(def.Description), maxUntrustedDescriptionRunes)
 	if resemblesInstructions(desc) || resemblesInstructions(schema.String()) {
-		desc = injectionWarning + desc
+		desc = strings.TrimSuffix(injectionWarning, "\n") + " " + desc
 	}
 	return untrustedToolNotice + desc, nil
 }
